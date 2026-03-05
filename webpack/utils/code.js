@@ -112,7 +112,7 @@ function extractJavaMethodToc(sourceCode) {
     if (
       (node.name === 'methodDeclaration' ||
         node.name === 'interfaceMethodDeclaration') &&
-      typeDepth === 1
+      typeDepth <= 1
     ) {
       const method = extractJavaMethodMeta(node);
       if (method) {
