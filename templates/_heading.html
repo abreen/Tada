@@ -1,0 +1,19 @@
+<div class="title-and-info">
+  <% if (page.parent) { %>
+  <a class="breadcrumb" href="<%= applyBasePath(page.parent) %>" data-pagefind-ignore><%= page.parentLabel %></a>
+  <% } %>
+  <h1 data-pagefind-weight="10"><%= page.titleHtml %></h1>
+
+  <div class="info" data-pagefind-ignore>
+    <% if (page.published) { %>
+    <div class="publish-date">
+      <time datetime="<%= isoDate(page.published) %>">
+        <%= readableDate(page.published) %>
+      </time>
+    </div>
+    <% } %>
+    <% if (page.author) { %>
+      <%= render('_author.html') %>
+    <% } %>
+  </div>
+</div>

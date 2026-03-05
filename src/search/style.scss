@@ -1,0 +1,170 @@
+@import '../_mixins.scss';
+
+.search-container,
+.header-overlay-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .search-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+
+    input.search {
+      background-color: var(--bg-color);
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'><circle cx='11' cy='11' r='7' stroke='hsl(20deg 8% 8%)' stroke-width='2' fill='none'/><line x1='16.5' y1='16.5' x2='22' y2='22' stroke='hsl(20deg 8% 8%)' stroke-width='2' stroke-linecap='round'/></svg>");
+      background-repeat: no-repeat;
+      background-position: left 6px center;
+      background-size: 16px 16px;
+      padding-left: 2rem;
+
+      border-radius: 18px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      input.search {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'><circle cx='11' cy='11' r='7' stroke='hsl(20deg 20% 90%)' stroke-width='2' fill='none'/><line x1='16.5' y1='16.5' x2='22' y2='22' stroke='hsl(20deg 20% 90%)' stroke-width='2' stroke-linecap='round'/></svg>");
+      }
+    }
+  }
+
+  .results-container.is-hidden .results {
+    opacity: 0;
+    transform: translateY(-16px);
+    pointer-events: none;
+  }
+
+  .results {
+    min-height: 80px;
+    opacity: 1;
+    transform: translateY(0);
+    @include user-select(none);
+
+    .results-info {
+      display: block;
+      color: var(--fg2-color);
+      @include user-select(none);
+      padding: 8px 0 8px 8px;
+      font-weight: 700;
+    }
+
+    .no-results {
+      display: inline-block;
+      @include user-select(none);
+      margin: 0 auto;
+    }
+
+    ol {
+      margin: 0;
+      padding: 0;
+      list-style-type: none;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0;
+
+      @media (max-width: 580px) {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      a.result:hover {
+        background: var(--bg2-color);
+      }
+    }
+
+    ol a {
+      text-decoration: none;
+      display: grid;
+      border: none;
+      position: relative;
+      color: var(--fg-color);
+
+      &.is-active {
+        background: var(--bg2-color);
+      }
+    }
+
+    ol a,
+    .no-results {
+      padding: 8px;
+    }
+
+    @media (hover: hover) {
+      ol a:hover {
+        cursor: pointer;
+      }
+    }
+
+    ol a .title {
+      font-weight: 500;
+    }
+
+    ol li .subtitle {
+      font-family: var(--mono-font);
+      font-size: var(--font-size-small);
+      color: var(--fg2-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    ol li .excerpt {
+      grid-row-start: 3;
+      font-size: var(--font-size-small);
+      color: var(--fg2-color);
+      line-height: 2.5ex;
+      height: 7.5ex; // 3 lines (3 * 2.5ex)
+      overflow: hidden;
+
+      mark {
+        background: transparent;
+        font-weight: 600;
+        color: var(--theme-color);
+      }
+    }
+
+    ol li .sub-results {
+      list-style-type: none;
+      margin: 0;
+      padding: 0 8px 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      a.sub-result {
+        display: block;
+        padding: 4px 8px;
+        text-decoration: none;
+        color: var(--fg2-color);
+        border-left: 2px solid var(--bg2-color);
+
+        &:hover {
+          background: var(--bg2-color);
+        }
+
+        .title {
+          font-size: var(--font-size-small);
+          font-weight: 500;
+          color: var(--fg-color);
+        }
+
+        .excerpt {
+          font-size: var(--font-size-small);
+          color: var(--fg2-color);
+          line-height: 2.5ex;
+          height: 2.5ex;
+          overflow: hidden;
+
+          mark {
+            background: transparent;
+            font-weight: 600;
+            color: var(--theme-color);
+          }
+        }
+      }
+    }
+  }
+}

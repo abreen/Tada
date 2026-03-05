@@ -1,0 +1,33 @@
+<%
+  const authorEntry = json('authors.json')[page.author];
+  if (!authorEntry) {
+    throw new Error(`Unknown author handle "${page.author}" on page "${page.title || 'untitled'}"`);
+  }
+%>
+<aside class="author">
+  Written by
+  <% if (authorEntry.url) { %>
+  <a href="<%= applyBasePath(authorEntry.url) %>">
+  <% } %>
+  <span class="text"><%= authorEntry.name %></span>
+  <% if (authorEntry.avatar) { %>
+  <img
+    width="32"
+    height="32"
+    src="<%= applyBasePath(authorEntry.avatar) %>"
+    alt="Picture of <%= authorEntry.name %>"
+    class="avatar"
+  />
+  <% } else { %>
+  <img
+    width="32"
+    height="32"
+    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><rect width='32' height='32'/></svg>"
+    alt=""
+    class="avatar"
+  />
+  <% } %>
+  <% if (authorEntry.url) { %>
+  </a>
+  <% } %>
+</aside>

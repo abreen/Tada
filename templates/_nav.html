@@ -1,0 +1,18 @@
+<nav>
+<% json('nav.json').forEach(function(section) { %>
+  <div>
+    <p><%= section.title %></p>
+    <ul>
+      <% section.links.forEach(function(link) { %>
+        <li>
+          <a
+            class="<%= cx({disabled: link.disabled, external: link.external}) %>"
+            <% if (!link.disabled) { %>href="<%= link.internal ? applyBasePath(link.internal) : link.external %>"<% } %>
+          >
+            <%= link.text %></a>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+<% }) %>
+</nav>

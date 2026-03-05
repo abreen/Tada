@@ -1,0 +1,18 @@
+time[datetime] {
+  border-radius: 4px;
+
+  &.is-modified {
+    background: var(--bg2-color);
+  }
+}
+
+span.next-prev-day {
+  color: var(--fg2-color);
+  font-style: italic;
+}
+
+.timezone-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

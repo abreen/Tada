@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "required": ["defaultTimeZone"],
+  "properties": {
+    "features": {
+      "type": "object",
+      "default": { "search": true, "code": true },
+      "properties": {
+        "search": { "type": "boolean", "default": true },
+        "code": { "type": "boolean", "default": true },
+        "favicon": { "type": "boolean", "default": false }
+      },
+      "required": ["search", "code", "favicon"],
+      "additionalProperties": false
+    },
+    "base": { "type": "string", "pattern": "^https?:\\/\\/[-.:a-zA-Z0-9]+$" },
+    "basePath": {
+      "type": "string",
+      "default": "/",
+      "pattern": "^\\/[-a-zA-Z0-9]*?$"
+    },
+    "internalDomains": {
+      "type": "array",
+      "default": [],
+      "items": { "type": "string", "pattern": "^[-.:a-zA-Z0-9]+$" }
+    },
+    "titlePostfix": { "type": "string" },
+    "courseId": { "type": "string" },
+    "faviconColor": {
+      "type": "string",
+      "pattern": "^hsl\\(\\d+(deg)? \\d+% \\d+%\\)$"
+    },
+    "faviconSymbol": { "type": "string", "pattern": "^[A-Z0-9\\- ]{1,5}$" },
+    "faviconFont": { "type": "string" },
+    "faviconFontWeight": { "type": "integer", "minimum": 1, "maximum": 1000 },
+    "defaultTimeZone": { "type": "string" },
+    "vars": { "type": "object" },
+    "codeLanguages": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

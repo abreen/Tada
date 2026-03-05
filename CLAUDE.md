@@ -1,0 +1,86 @@
+# Claude guidelines
+
+This codebase is a static site generator written in JavaScript/TypeScript.
+The runtime is Bun. Build logic is implemented as Webpack plugins in `webpack/`.
+
+- Site content lives in `content/`
+- Markdown & HTML content is processed; other file types are copied into `dist/`
+- Lodash templates in `templates/` assemble pages
+- Client-side TypeScript is in `src/`
+- Static assets are in `public/`
+
+## Bun commands
+
+- Build development: `bun run dev` (uses `config/site.dev.json`)
+- Build production: `bun run prod` (uses `config/site.prod.json`)
+- Start dev web server: `bun run serve`
+- Watch files: `bun run watch`
+- Format code: `bun run format`
+- Run tests: `bun test`
+- Clean build artifacts: `bun run clean`
+
+## Templates
+
+- `templates/default.html` --- default page layout
+- `templates/code.html` --- source code page layout
+- Partials: `_nav.html`, `_top.html`, `_bottom.html`, `_heading.html`, `_author.html`
+- `templates/nav.json` --- navigation structure (validated against `nav.schema.json`)
+- `templates/authors.json` --- author/staff data (validated against `authors.schema.json`)
+
+Use `<%= page.* %>` to access a page's front matter and `<%= site.* %>` for
+values from the active site config.
+
+## Config files
+
+- `config/site.dev.json` --- development config (`base: http://localhost:8080`, `basePath: /`)
+- `config/site.prod.json` --- production config (real domain and base path)
+- `config/_theme.scss` --- shared SCSS theme variables
+- Arbitrary template variables live under the `vars` key in the site config JSON
+
+## Client-side components
+
+Each component lives in `src/<name>/` and exports an async `mount()` function
+called after page load.
+
+| Component | Directory | Purpose |
+|-----------|-----------|---------|
+| Table of contents | `src/toc/` | Generates in-page TOC |
+| Anchor headings | `src/anchor/` | Turns headings into links |
+| Time zone chooser | `src/timezone/` | Dynamically updates `<datetime>` elements |
+| Back to top | `src/top/` | Hovering button, appears after scroll |
+| Search UI | `src/search/` | Reads Pagefind index and displays results |
+| Footnotes | `src/footnotes/` | Footnote formatting |
+| Header | `src/header/` | Page header |
+| Print styles | `src/print/` | Print-specific CSS |
+| Global event bus | `src/global/` | `trigger()` / `subscribe()` utilities |
+
+Global styles: `src/style.scss`, `src/layout.scss`, `src/code.scss`,
+`src/print.scss`, `src/_mixins.scss`.  
+Shared utilities: `src/util.ts` --- includes `applyBasePath()` for prefixing
+internal links client-side.
+
+Import Sass styles in `src/index.ts` to include them in the bundle.
+
+## Markdown processing
+
+- `webpack/external-links-plugin.js` --- rewrites external links (uses `site.internalDomains`)
+- `webpack/apply-base-path-plugin.js` --- prefixes internal links and image URLs with `site.basePath`
+- Markdown is processed with markdown-it and plugins: anchor, container, deflist, footnote
+- Code fences are highlighted at build time using Shiki
+
+## Search index
+
+- When enabled via site config, Pagefind creates a search index after the build
+- `src/search/` reads the index client-side and renders results
+
+## PDF processing
+
+- PDFs are copied into `dist/` unchanged
+- When search is enabled via site config, text from reachable PDFs is indexed by Pagefind
+
+## Code page generation
+
+- When enabled via site config, a special HTML page is generated for Java source files
+- A syntax tree is built from the Java source to generate a table of contents
+- Method line numbers are embedded in HTML for Pagefind to index
+- Syntax highlighting is done at build time using Shiki (`webpack/utils/shiki-highlighter.js`)

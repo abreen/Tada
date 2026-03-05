@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": ["name", "avatar"],
+    "properties": {
+      "name": { "type": "string" },
+      "avatar": { "type": "string", "pattern": "^\\/[-a-zA-Z0-9_./#]*$" },
+      "url": { "type": "string", "pattern": "^\\/[-a-zA-Z0-9_./#]*$" }
+    },
+    "additionalProperties": false
+  }
+}

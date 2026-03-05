@@ -1,0 +1,25 @@
+.to-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.to-top button {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.to-top button.is-visible {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+@media (max-width: 419px) {
+  .to-top {
+    display: none;
+  }
+}

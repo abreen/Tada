@@ -1,0 +1,107 @@
+@import './_mixins.scss';
+
+body.code {
+  --code-gutter-width: 3.5rem;
+}
+
+body.code .file-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--gap);
+  border-bottom: 1px solid var(--fg2-color);
+  background: var(--bg2-color);
+  tt {
+    background: none;
+  }
+}
+
+body.code pre {
+  display: block;
+  padding: var(--gap) 0;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+body.code pre .code-row {
+  display: grid;
+  grid-template-columns: var(--code-gutter-width) 1fr;
+}
+
+body.code pre .line-number {
+  cursor: pointer;
+  display: block;
+  padding: 0 0.75em 0 0.75em;
+  text-align: right;
+  @include user-select(none);
+  color: var(--fg2-color);
+  font-family: var(--mono-font);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--fg-color);
+  }
+
+  &:target {
+    background: var(--fg2-color);
+    color: var(--bg-color);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+body.code pre code {
+  display: block;
+  min-width: 0;
+  padding: 0 var(--gap) 0 var(--gap);
+}
+
+body.code .code-prose {
+  background-color: var(--bg2-color);
+  display: grid;
+  grid-template-columns: var(--code-gutter-width) 1fr;
+
+  .code-prose-gutter {
+    margin-right: 0;
+  }
+
+  .code-prose-content {
+    min-width: 0;
+    position: relative;
+    padding: 0 var(--gap) 0 calc(var(--gap) + var(--prose-indent, 0ch) + 1rem);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: calc(var(--gap) + var(--prose-indent, 0ch));
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--fg2-color);
+    }
+
+    color: var(--fg2-color);
+
+    *:last-of-type {
+      margin-bottom: 0;
+    }
+
+    ol,
+    ul,
+    li {
+      margin: 0;
+    }
+  }
+}
+
+body.code .code-search-index {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

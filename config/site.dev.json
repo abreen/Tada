@@ -1,0 +1,21 @@
+{
+  "features": { "search": true, "code": true, "favicon": true },
+  "base": "http://localhost:8080",
+  "basePath": "/",
+  "internalDomains": ["localhost"],
+  "defaultTimeZone": "America/New_York",
+  "codeLanguages": { "java": "java" },
+  "titlePostfix": " - CS 0",
+  "faviconColor": "hsl(184 70% 40%)",
+  "faviconSymbol": "CS 0",
+  "faviconFont": "Inter",
+  "faviconFontWeight": 700,
+  "vars": {
+    "courseCode": "CS 0",
+    "courseTitle": "Computation",
+    "fullCourseName": "CS 0 Computation",
+    "instructorName": "Alex Breen",
+    "staffEmail": "staff@example.edu",
+    "discordServerUrl": "https://discord.com/"
+  }
+}

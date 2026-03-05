@@ -1,0 +1,63 @@
+@import '../_mixins.scss';
+
+.question {
+  margin-bottom: 2rem;
+}
+
+.question-q,
+.question-a {
+  display: flex;
+  gap: 0.5em;
+  align-items: flex-start;
+}
+
+.question-q {
+  margin-bottom: 0.5em;
+}
+
+.question-label,
+.question-a-label {
+  color: var(--theme-color-text);
+  font-weight: 600;
+  flex-shrink: 0;
+  margin: 0;
+  @include user-select(none);
+}
+
+.question-q > span:last-child {
+  color: var(--fg-color);
+  font-weight: var(--font-weight);
+}
+
+.question-a-body {
+  flex: 1;
+  cursor: pointer;
+  @include user-select(none);
+}
+
+.question-a-body > ol:first-child,
+.question-a-body > ul:first-child {
+  margin-top: 0;
+}
+
+.question-a-body > * {
+  transition:
+    color 0.25s,
+    background-color 0.25s;
+}
+
+.question-a-body:not([data-revealed]) > * {
+  color: transparent;
+  background-color: var(--bg2-color);
+  pointer-events: none;
+}
+
+.question-a-body:not([data-revealed]) > * * {
+  color: transparent;
+  background-color: var(--bg2-color);
+}
+
+.question-a-body[data-revealed] {
+  cursor: default;
+  @include user-select(text);
+}

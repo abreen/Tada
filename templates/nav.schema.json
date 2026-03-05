@@ -1,0 +1,27 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["title", "links"],
+    "properties": {
+      "title": { "type": "string" },
+      "links": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["text"],
+          "properties": {
+            "text": { "type": "string" },
+            "internal": { "type": "string", "pattern": "^\\/.*$" },
+            "external": { "type": "string", "pattern": "^https?:\\/\\/.*$" },
+            "disabled": { "type": "boolean" },
+            "keywords": { "type": "array", "items": { "type": "string" } }
+          },
+          "oneOf": [{ "required": ["internal"] }, { "required": ["external"] }],
+          "additionalProperties": false
+        }
+      }
+    },
+    "additionalProperties": false
+  }
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "title": "Information",
+    "links": [{ "text": "Home", "internal": "/index.html" }]
+  },
+  {
+    "title": "Topics",
+    "links": [
+      { "text": "Lectures", "internal": "/lectures/index.html" },
+      {
+        "text": "Problem Sets",
+        "internal": "/problem_sets/index.html",
+        "disabled": true
+      }
+    ]
+  },
+  {
+    "title": "Links",
+    "links": [
+      { "text": "Zoom", "external": "https://zoom.com" },
+      {
+        "text": "Discord",
+        "external": "<%= discordServerUrl %>",
+        "disabled": true
+      }
+    ]
+  }
+]
