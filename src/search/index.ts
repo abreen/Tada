@@ -374,7 +374,9 @@ export default (window: Window) => {
   async function loadPagefind() {
     if (pagefind) return;
     // @ts-ignore pagefind.js is generated post-build, not resolvable at compile time
-    pagefind = await import(/* webpackIgnore: true */ '/pagefind/pagefind.js');
+    pagefind = await import(
+      /* webpackIgnore: true */ applyBasePath('/pagefind/pagefind.js')
+    );
     await pagefind.init();
     const res = await fetch(applyBasePath('/pagefind/pagefind-entry.json'), {
       cache: 'no-cache',
