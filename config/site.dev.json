@@ -4,7 +4,7 @@
   "basePath": "/",
   "internalDomains": ["localhost"],
   "defaultTimeZone": "America/New_York",
-  "codeLanguages": { "java": "java" },
+  "codeLanguages": { "java": "java", "py": "python" },
   "titlePostfix": " - CS 0",
   "faviconColor": "hsl(184 70% 40%)",
   "faviconSymbol": "CS 0",

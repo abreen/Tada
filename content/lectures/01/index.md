@@ -16,6 +16,7 @@ Here is a sample description of the topics covered at the first lecture.
 
 * [`App.java`](./App.java)
 * [`Rectangle.java`](./Rectangle.java)
+* [`demo.py`](./demo.py)
 
 
 ## Review questions
