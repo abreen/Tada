@@ -21,10 +21,10 @@ const JAVA_TYPE_DECLARATION_NODES = new Set([
   'recordDeclaration',
 ]);
 
-function extractJavaMethodMeta(methodNode) {
+function extractJavaMethodMeta(methodNode, requireBody = true) {
   const methodBody = methodNode.children?.methodBody?.[0];
   const hasBody = Boolean(methodBody?.children?.block?.length);
-  if (!hasBody) {
+  if (requireBody && !hasBody) {
     return null;
   }
 
@@ -109,12 +109,13 @@ function extractJavaMethodToc(sourceCode) {
       return;
     }
 
-    if (
-      (node.name === 'methodDeclaration' ||
-        node.name === 'interfaceMethodDeclaration') &&
-      typeDepth <= 1
-    ) {
+    if (node.name === 'methodDeclaration' && typeDepth <= 1) {
       const method = extractJavaMethodMeta(node);
+      if (method) {
+        callables.push(method);
+      }
+    } else if (node.name === 'interfaceMethodDeclaration' && typeDepth <= 1) {
+      const method = extractJavaMethodMeta(node, false);
       if (method) {
         callables.push(method);
       }

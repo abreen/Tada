@@ -79,13 +79,13 @@ public interface Greeter {
     expect(toc).toEqual([{ name: 'greet(name)', line: 3 }]);
   });
 
-  test('returns empty array for abstract interface methods (no body)', () => {
+  test('returns abstract interface methods (no body)', () => {
     const toc = extractJavaMethodToc(`
 public interface Greeter {
   String greet(String name);
 }
 `);
-    expect(toc).toEqual([]);
+    expect(toc).toEqual([{ name: 'greet(name)', line: 3 }]);
   });
 });
 
