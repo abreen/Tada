@@ -93,6 +93,63 @@ function formatCallableName(baseName, parameterNames) {
   return `${baseName}(${parameterNames.join(', ')})`;
 }
 
+function collectTokensInOrder(node) {
+  const tokens = [];
+  function collect(n) {
+    if (!n) return;
+    if (n.image !== undefined) {
+      tokens.push(n);
+      return;
+    }
+    const children = n.children || {};
+    for (const childArray of Object.values(children)) {
+      for (const child of childArray) {
+        if (child) collect(child);
+      }
+    }
+  }
+  collect(node);
+  tokens.sort((a, b) => a.startOffset - b.startOffset);
+  return tokens;
+}
+
+function buildTypeString(unannTypeNode) {
+  return collectTokensInOrder(unannTypeNode)
+    .map(t => (t.image === ',' ? ', ' : t.image))
+    .join('');
+}
+
+function extractJavaFieldMetas(fieldNode) {
+  const unannType = fieldNode.children?.unannType?.[0];
+  if (!unannType) return [];
+  const typeStr = buildTypeString(unannType);
+
+  const variableDeclaratorList =
+    fieldNode.children?.variableDeclaratorList?.[0];
+  if (!variableDeclaratorList) return [];
+
+  const results = [];
+  for (const declarator of variableDeclaratorList.children
+    ?.variableDeclarator || []) {
+    const declaratorId = declarator.children?.variableDeclaratorId?.[0];
+    const identifier = declaratorId?.children?.Identifier?.[0];
+    if (!identifier?.image || !identifier.startLine) continue;
+
+    const dimsNode = declaratorId.children?.dims?.[0];
+    const dimsStr = dimsNode
+      ? collectTokensInOrder(dimsNode)
+          .map(t => t.image)
+          .join('')
+      : '';
+
+    results.push({
+      name: `${typeStr}${dimsStr} ${identifier.image}`,
+      line: identifier.startLine,
+    });
+  }
+  return results;
+}
+
 function extractJavaMethodToc(sourceCode) {
   let cst;
   try {
@@ -124,6 +181,14 @@ function extractJavaMethodToc(sourceCode) {
       if (constructor) {
         callables.push(constructor);
       }
+    } else if (
+      (node.name === 'fieldDeclaration' ||
+        node.name === 'constantDeclaration') &&
+      typeDepth <= 1
+    ) {
+      for (const field of extractJavaFieldMetas(node)) {
+        callables.push(field);
+      }
     }
 
     const nextTypeDepth = JAVA_TYPE_DECLARATION_NODES.has(node.name)
@@ -142,6 +207,7 @@ function extractJavaMethodToc(sourceCode) {
   visit(cst, 0);
 
   return callables.map(callable => {
+    if (callable.name !== undefined) return callable;
     return {
       name: formatCallableName(callable.baseName, callable.params),
       line: callable.line,

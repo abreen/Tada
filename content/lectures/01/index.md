@@ -15,6 +15,7 @@ Here is a sample description of the topics covered at the first lecture.
 ## Code
 
 * [`App.java`](./App.java)
+* [`Rectangle.java`](./Rectangle.java)
 
 
 ## Review questions

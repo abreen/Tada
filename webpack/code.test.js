@@ -39,10 +39,9 @@ void main() {
     ]);
   });
 
-  test('returns empty array when class has no methods', () => {
+  test('returns empty array when class has no methods or fields', () => {
     const toc = extractJavaMethodToc(`
 public class Empty {
-  private int x = 0;
 }
 `);
     expect(toc).toEqual([]);
@@ -51,11 +50,10 @@ public class Empty {
   test('returns constructor from a class', () => {
     const toc = extractJavaMethodToc(`
 public class Point {
-  private int x;
-  public Point(int x) { this.x = x; }
+  public Point(int x) {}
 }
 `);
-    expect(toc).toEqual([{ name: 'Point(x)', line: 4 }]);
+    expect(toc).toEqual([{ name: 'Point(x)', line: 3 }]);
   });
 
   test('excludes methods on inner classes', () => {
@@ -77,6 +75,52 @@ public interface Greeter {
 }
 `);
     expect(toc).toEqual([{ name: 'greet(name)', line: 3 }]);
+  });
+
+  test('returns fields from a class with type but not access modifier', () => {
+    const toc = extractJavaMethodToc(`
+public class Counter {
+  private int count;
+  public String label;
+}
+`);
+    expect(toc.map(e => e.name)).toEqual(['int count', 'String label']);
+  });
+
+  test('returns one entry per variable in a multi-variable declaration', () => {
+    const toc = extractJavaMethodToc(`
+public class Coords {
+  int x, y;
+}
+`);
+    expect(toc.map(e => e.name)).toEqual(['int x', 'int y']);
+  });
+
+  test('returns array type field', () => {
+    const toc = extractJavaMethodToc(`
+public class Arr {
+  int[] values;
+}
+`);
+    expect(toc).toEqual([{ name: 'int[] values', line: 3 }]);
+  });
+
+  test('returns generic type field', () => {
+    const toc = extractJavaMethodToc(`
+public class Container {
+  List<String> items;
+}
+`);
+    expect(toc).toEqual([{ name: 'List<String> items', line: 3 }]);
+  });
+
+  test('returns interface constant', () => {
+    const toc = extractJavaMethodToc(`
+public interface Config {
+  int TIMEOUT = 30;
+}
+`);
+    expect(toc).toEqual([{ name: 'int TIMEOUT', line: 3 }]);
   });
 
   test('returns abstract interface methods (no body)', () => {
