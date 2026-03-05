@@ -1,5 +1,5 @@
 {
-  "features": { "search": true, "code": true, "favicon": true },
+  "features": { "search": true, "code": true, "favicon": false },
   "base": "https://abreen.io",
   "basePath": "/Tada",
   "internalDomains": ["abreen.io"],
