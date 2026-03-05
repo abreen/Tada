@@ -22,6 +22,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install MuPDF
+      run: sudo apt install -y mupdf-tools
+
     - name: Use Bun
       uses: oven-sh/setup-bun@v2
 
