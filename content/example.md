@@ -252,6 +252,43 @@ Sunlight is scattered by air molecules.
 Blue light scatters more than other colors because of its shorter wavelength.
 ???
 
+### Generic section
+
+Break up a long page by introducing a `<section>` (a standard HTML 5 element)
+which must start with a heading. Generic sections are displayed with a slightly
+different background.
+
+Use
+
+```markdown
+::: section
+
+### Submitting your work
+
+Here are the steps to follow when you are ready to submit your work for
+this problem set.
+
+...
+:::
+```
+
+to create:
+
+::: section
+
+### Submitting your work
+
+Here are the steps to follow when you are ready to submit your work for
+this problem set.
+
+1. Step one
+2. Step two
+3. Step three
+4. Step four
+
+Email the files you changed to `<%= staffEmail %>`.
+
+:::
 
 
 [^example-footnote]: Footnotes render inside a numbered list at the bottom of
