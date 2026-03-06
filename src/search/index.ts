@@ -1,7 +1,7 @@
 import { getElement, applyBasePath } from '../util';
 import { on, remove } from '../global';
 
-const SEARCH_MAX_RESULTS = 24;
+const MAX_RESULTS = 24;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pagefind: any = null;
@@ -19,98 +19,13 @@ type Result = {
 type State = {
   value: string;
   showResults: boolean;
-  maxNumResults: number;
   results: Result[];
   totalResults: number;
-  // -1 means no active selection
   activeIndex: number;
 };
 
 function normalizeSearchUrl(url: string): string {
   return url.replace(/#m(\d+)$/, '#L$1');
-}
-
-async function update(
-  input: HTMLInputElement,
-  container: HTMLElement,
-  isQuickSearch: boolean,
-  state: State,
-) {
-  if (pagefind == null) {
-    return;
-  }
-
-  if (!state.value) {
-    state.results = [];
-    state.totalResults = 0;
-    state.activeIndex = -1;
-    renderResults(
-      input,
-      container,
-      state.results,
-      state.showResults,
-      state.maxNumResults,
-      state.activeIndex,
-      isQuickSearch,
-      state.totalResults,
-    );
-    return;
-  }
-
-  const search = await pagefind.search(state.value);
-  state.totalResults = search.results.length;
-  const limit = SEARCH_MAX_RESULTS;
-  const slice = search.results.slice(0, limit);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = await Promise.all(slice.map((r: any) => r.data()));
-
-  const titlePostfix = window.siteVariables.titlePostfix ?? '';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const results: Result[] = data.map((d: any) => {
-    let title: string = d.meta?.title ?? d.url;
-    if (titlePostfix && title.endsWith(titlePostfix)) {
-      title = title.slice(0, -titlePostfix.length);
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawSubResults: SubResult[] = (d.sub_results ?? [])
-      .filter((s: any) => {
-        try {
-          return new URL(s.url, window.location.href).hash !== '';
-        } catch {
-          return s.url !== d.url;
-        }
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((s: any) => ({
-        title: s.title ?? '',
-        url: normalizeSearchUrl(s.url),
-        excerpt: s.excerpt ?? '',
-      }));
-    return {
-      title,
-      url: normalizeSearchUrl(d.url),
-      excerpt: d.excerpt,
-      score: d.score ?? 0,
-      subResults: rawSubResults,
-      pageNumber: getPdfPageNumber(d.url, d.meta?.page),
-    };
-  });
-
-  const groupedResults = groupPdfResults(results);
-  state.maxNumResults = SEARCH_MAX_RESULTS;
-  state.totalResults = groupedResults.length;
-  state.results = groupedResults;
-
-  renderResults(
-    input,
-    container,
-    state.results,
-    state.showResults,
-    state.maxNumResults,
-    state.activeIndex,
-    isQuickSearch,
-    state.totalResults,
-  );
 }
 
 function getPdfPageNumber(
@@ -121,18 +36,10 @@ function getPdfPageNumber(
   if (Number.isInteger(fromMeta) && fromMeta > 0) {
     return fromMeta;
   }
-
   const match = url.match(/#(?:.*&)?page=(\d+)\b/i);
-  if (!match) {
-    return null;
-  }
-
+  if (!match) return null;
   const fromUrl = Number.parseInt(match[1], 10);
-  if (!Number.isInteger(fromUrl) || fromUrl < 1) {
-    return null;
-  }
-
-  return fromUrl;
+  return Number.isInteger(fromUrl) && fromUrl >= 1 ? fromUrl : null;
 }
 
 function getPdfBaseUrl(url: string): string | null {
@@ -151,7 +58,6 @@ function groupPdfResults(results: Result[]): Result[] {
       other.push(result);
       continue;
     }
-
     if (!pdfGroups.has(baseUrl)) {
       pdfGroups.set(baseUrl, []);
     }
@@ -190,181 +96,181 @@ function groupPdfResults(results: Result[]): Result[] {
   return grouped;
 }
 
-function renderInfo(
-  parent: HTMLElement,
-  numResults: number,
-  maxNumResults: number,
-) {
-  let span = parent.querySelector('.results-info') as HTMLSpanElement | null;
-  if (!span) {
-    span = window.document.createElement('span');
-    span.className = 'results-info';
-    parent.insertBefore(span, parent.firstChild);
+async function doSearch(state: State) {
+  if (pagefind == null) return;
+
+  if (!state.value) {
+    state.results = [];
+    state.totalResults = 0;
+    state.activeIndex = -1;
+    return;
   }
 
-  if (numResults === 0) {
-    span.innerText = 'No results';
-  } else if (numResults === 1) {
-    span.innerText = 'One result';
-  } else if (numResults <= maxNumResults) {
-    span.innerText = `${numResults} results`;
-  } else {
-    span.innerText = `Showing first ${maxNumResults} results`;
-  }
+  const search = await pagefind.search(state.value);
+  const slice = search.results.slice(0, MAX_RESULTS);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = await Promise.all(slice.map((r: any) => r.data()));
+
+  const titlePostfix = window.siteVariables.titlePostfix ?? '';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const results: Result[] = data.map((d: any) => {
+    let title: string = d.meta?.title ?? d.url;
+    if (titlePostfix && title.endsWith(titlePostfix)) {
+      title = title.slice(0, -titlePostfix.length);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subResults: SubResult[] = (d.sub_results ?? [])
+      .filter((s: any) => {
+        try {
+          return new URL(s.url, window.location.href).hash !== '';
+        } catch {
+          return s.url !== d.url;
+        }
+      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((s: any) => ({
+        title: s.title ?? '',
+        url: normalizeSearchUrl(s.url),
+        excerpt: s.excerpt ?? '',
+      }));
+    return {
+      title,
+      url: normalizeSearchUrl(d.url),
+      excerpt: d.excerpt,
+      score: d.score ?? 0,
+      subResults,
+      pageNumber: getPdfPageNumber(d.url, d.meta?.page),
+    };
+  });
+
+  const grouped = groupPdfResults(results);
+  state.totalResults = grouped.length;
+  state.results = grouped;
 }
 
-function renderResults(
+function render(
   input: HTMLInputElement,
-  parent: HTMLElement,
-  results: Result[],
-  showResults: boolean,
-  maxNumResults: number,
-  activeIndex: number,
-  isQuickSearch: boolean,
-  totalResults: number,
+  resultsContainer: HTMLElement,
+  state: State,
 ) {
-  const resultsContainer = getElement(parent, '.results-container');
+  let resultsDiv = resultsContainer.querySelector(
+    '.results',
+  ) as HTMLElement | null;
+  if (!resultsDiv) {
+    resultsDiv = document.createElement('div');
+    resultsDiv.className = 'results';
+    resultsContainer.appendChild(resultsDiv);
+  }
 
-  const ol = window.document.createElement('ol');
+  const ol = document.createElement('ol');
+  ol.id = `${input.name}-results`;
+  ol.role = 'listbox';
 
-  results.slice(0, maxNumResults).forEach((result, i) => {
-    const isActive = i === activeIndex;
+  state.results.slice(0, MAX_RESULTS).forEach((result, i) => {
+    const isActive = i === state.activeIndex;
 
-    const a = window.document.createElement('a');
+    const a = document.createElement('a');
     a.id = `result-${i}`;
     a.role = 'option';
     a.setAttribute('aria-labelledby', `title-${i}`);
-    a.setAttribute('data-index', String(i));
-
-    const classes = ['result'];
-    if (isActive) {
-      classes.push('is-active');
-    }
-    a.className = classes.join(' ');
-
+    a.className = isActive ? 'result is-active' : 'result';
     a.href = result.url;
-    if (activeIndex < 0) {
-      a.tabIndex = 0;
-    } else if (isActive) {
-      a.tabIndex = 0;
-      a.setAttribute('aria-selected', 'true');
-    } else {
-      a.tabIndex = -1;
-    }
+    a.tabIndex = isActive || state.activeIndex < 0 ? 0 : -1;
+    if (isActive) a.setAttribute('aria-selected', 'true');
 
-    const titleEl = window.document.createElement('div');
+    const titleEl = document.createElement('div');
     titleEl.id = `title-${i}`;
     titleEl.className = 'title';
-    titleEl.textContent = String(result.title);
+    titleEl.textContent = result.title;
     a.appendChild(titleEl);
 
-    const subtitle = window.document.createElement('div');
+    const subtitle = document.createElement('div');
     subtitle.className = 'subtitle';
     subtitle.innerText = result.url;
     a.appendChild(subtitle);
 
-    const excerpt = window.document.createElement('div');
+    const excerpt = document.createElement('div');
     excerpt.className = 'excerpt';
-    // Pagefind returns excerpts with <mark> tags, use innerHTML to render highlights
     excerpt.innerHTML = result.excerpt;
     a.appendChild(excerpt);
 
-    const li = window.document.createElement('li');
+    const li = document.createElement('li');
     li.appendChild(a);
 
-    const maxSubResults = 5;
-    const subResultsToShow = result.subResults.slice(0, maxSubResults);
-
-    if (subResultsToShow.length > 0) {
-      const subList = window.document.createElement('ul');
+    const subsToShow = result.subResults.slice(0, 5);
+    if (subsToShow.length > 0) {
+      const subList = document.createElement('ul');
       subList.className = 'sub-results';
-
-      subResultsToShow.forEach(sub => {
-        const subA = window.document.createElement('a');
+      for (const sub of subsToShow) {
+        const subA = document.createElement('a');
         subA.href = sub.url;
         subA.className = 'sub-result';
 
-        const subTitle = window.document.createElement('div');
+        const subTitle = document.createElement('div');
         subTitle.className = 'title';
         subTitle.textContent = sub.title;
         subA.appendChild(subTitle);
 
         if (sub.excerpt) {
-          const subExcerpt = window.document.createElement('div');
+          const subExcerpt = document.createElement('div');
           subExcerpt.className = 'excerpt';
           subExcerpt.innerHTML = sub.excerpt;
           subA.appendChild(subExcerpt);
         }
 
-        const subLi = window.document.createElement('li');
+        const subLi = document.createElement('li');
         subLi.appendChild(subA);
         subList.appendChild(subLi);
-      });
-
+      }
       li.appendChild(subList);
     }
 
     ol.appendChild(li);
   });
 
-  if (!showResults) {
-    resultsContainer.classList.add('is-hidden');
+  resultsDiv.replaceChildren(ol);
+
+  let infoSpan = resultsDiv.querySelector(
+    '.results-info',
+  ) as HTMLSpanElement | null;
+  if (!infoSpan) {
+    infoSpan = document.createElement('span');
+    infoSpan.className = 'results-info';
+    resultsDiv.insertBefore(infoSpan, resultsDiv.firstChild);
+  }
+  const n = state.totalResults;
+  if (n === 0) infoSpan.innerText = 'No results';
+  else if (n === 1) infoSpan.innerText = 'One result';
+  else if (n <= MAX_RESULTS) infoSpan.innerText = `${n} results`;
+  else infoSpan.innerText = `Showing first ${MAX_RESULTS} results`;
+
+  if (state.showResults) {
+    resultsContainer.classList.add('is-showing');
+    resultsContainer.setAttribute('aria-hidden', 'false');
+  } else {
+    resultsContainer.classList.remove('is-showing');
     resultsContainer.setAttribute('aria-hidden', 'true');
   }
 
-  let div = resultsContainer.querySelector('.results') as HTMLElement | null;
-  if (div) {
-    div.replaceChildren(ol);
-  } else {
-    div = window.document.createElement('div');
-    div.className = 'results';
-    div.appendChild(ol);
+  input.setAttribute('aria-expanded', String(state.showResults));
+  input.setAttribute('aria-controls', ol.id);
+  if (state.activeIndex !== -1) {
+    ol.setAttribute('aria-activedescendant', `result-${state.activeIndex}`);
   }
-
-  renderInfo(div, totalResults, maxNumResults);
-
-  if (showResults) {
-    resultsContainer.setAttribute('aria-hidden', 'false');
-    resultsContainer.classList.remove('is-hidden');
-  }
-
-  input.setAttribute('aria-expanded', String(showResults));
-
-  const listboxId = `${input.name}-results`;
-  input.setAttribute('aria-controls', listboxId);
-  ol.id = listboxId;
-  ol.role = 'listbox';
-
-  if (activeIndex !== -1) {
-    ol.setAttribute('aria-activedescendant', `result-${activeIndex}`);
-  }
-}
-
-function getSearchInputs(): HTMLInputElement[] {
-  return Array.from(window.document.querySelectorAll('input.search'));
-}
-
-function isQuickSearch(el: HTMLInputElement | null) {
-  if (!el) {
-    return false;
-  }
-  return el.classList.contains('quick-search');
-}
-
-function dispatchInputEvents(inputs: HTMLInputElement[]) {
-  inputs.forEach(el => {
-    if (el.value) {
-      const event = new Event('input');
-      el.dispatchEvent(event);
-    }
-  });
 }
 
 export default (window: Window) => {
-  const searchInputs = getSearchInputs();
-  if (searchInputs.length === 0) {
-    return;
-  }
+  const input = document.querySelector(
+    'input.quick-search',
+  ) as HTMLInputElement | null;
+  if (!input) return;
+
+  const container = input.closest('.header-overlay-container') as HTMLElement;
+  const resultsContainer = getElement(container, '.results-container');
+  const resultsDiv = getElement(resultsContainer, '.results');
+
+  // Unhide (hidden via inline style in template to prevent FOUC)
+  resultsDiv.style.display = '';
 
   let entryETag: string | null = null;
   let entryLastModified: string | null = null;
@@ -405,286 +311,118 @@ export default (window: Window) => {
           newLastModified !== null &&
           newLastModified !== entryLastModified);
       if (changed) {
-        // Reset pagefind so it reloads on next query
         pagefind = null;
         await loadPagefind();
-        searchInputs.forEach((input, i) => {
-          update(input, containers[i], isQuickSearch(input), state).catch(
-            () => {},
-          );
-        });
+        await update();
       }
-    } catch (_) {
+    } catch {
       // best-effort
     } finally {
       indexCheckInFlight = false;
     }
   }
 
-  loadPagefind()
-    .then(() => dispatchInputEvents(searchInputs))
-    .catch(err => {
-      console.log(`failed to load Pagefind: ${err}`);
-    });
+  loadPagefind().catch(err => {
+    console.log(`failed to load Pagefind: ${err}`);
+  });
 
   const state: State = {
     value: '',
     showResults: false,
-    maxNumResults: -1,
     results: [],
     totalResults: 0,
     activeIndex: -1,
   };
 
-  const containers = searchInputs.map(
-    el => el.parentElement?.parentElement as HTMLDivElement,
-  );
+  async function update() {
+    await doSearch(state);
+    render(input!, resultsContainer, state);
+  }
 
-  // Clicks inside .header-overlay-container don't bubble to window → results stay open
-  containers.forEach(container =>
-    container.addEventListener('click', e => e.stopPropagation()),
-  );
+  function hide() {
+    state.showResults = false;
+    state.activeIndex = -1;
+    render(input!, resultsContainer, state);
+  }
 
-  const resultsContainers = containers.map(el =>
-    getElement(el, '.results-container'),
-  );
+  function handleInput(e: Event) {
+    const value = (e.target as HTMLInputElement).value;
+    if (value === state.value) return;
+    state.value = value;
+    state.activeIndex = -1;
+    input!.removeAttribute('aria-activedescendant');
+    update().catch(() => {});
+  }
 
-  const inputHandlers: Array<(e: Event) => void> = searchInputs.map((_, i) => {
-    return function handleInput(e: Event) {
-      const value = (e.target as HTMLInputElement).value;
-      if (value === state.value) {
-        return;
+  function handleKeyDown(e: KeyboardEvent) {
+    if (!state.showResults) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (state.activeIndex >= 0 && state.results[state.activeIndex]) {
+        window.location.href = state.results[state.activeIndex].url;
       }
+    }
+  }
 
-      if (window.IS_DEV) {
-        console.info(`searchbox input value: "${value}"`);
-      }
+  function handleFocus() {
+    checkForIndexUpdate().catch(() => {});
+    if (!state.showResults) {
+      state.showResults = true;
+      update().catch(() => {});
+    }
+  }
 
-      state.value = value;
-      state.activeIndex = -1;
-      searchInputs[i].removeAttribute('aria-activedescendant');
-      update(
-        searchInputs[i],
-        containers[i],
-        isQuickSearch(searchInputs[i]),
-        state,
-      ).catch(() => {});
-    };
-  });
-
-  const keyDownHandlers: Array<(e: KeyboardEvent) => void> = searchInputs.map(
-    (_, i) => {
-      return function handleKeyDown(e: KeyboardEvent) {
-        if (!state.showResults) {
-          return;
-        }
-
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          if (state.activeIndex >= 0 && state.results[state.activeIndex]) {
-            window.location.href = state.results[state.activeIndex].url;
-          }
-          return;
-        }
-      };
-    },
-  );
-
-  const focusHandlers: Array<(e: Event) => void> = searchInputs.map((_, i) => {
-    return function handleFocus() {
-      checkForIndexUpdate().catch(() => {});
-      if (!state.showResults) {
-        if (window.IS_DEV) {
-          console.info('showing search results due to searchbox focus');
-        }
-
-        state.showResults = true;
-        update(
-          searchInputs[i],
-          containers[i],
-          isQuickSearch(searchInputs[i]),
-          state,
-        ).catch(() => {});
-      }
-    };
-  });
-
-  const clickHandlers: Array<(e: MouseEvent) => void> = searchInputs.map(_ => {
-    return function handleClick(e: MouseEvent) {
-      // Prevent this click from closing the header <details> element
-      e.stopPropagation();
-    };
-  });
-
-  const mouseOverResultsHandlers: Array<(e: MouseEvent) => void> =
-    resultsContainers.map((_, i) => {
-      return function handleMouseOver(e: MouseEvent) {
-        if (!state.showResults) {
-          return;
-        }
-
-        const result = (e.target as HTMLElement).closest('.result');
-        if (!result) {
-          return;
-        }
-      };
-    });
-
-  const clickResultsHandlers: Array<(e: MouseEvent) => void> =
-    resultsContainers.map((_, i) => {
-      return function handleResultClick(e: MouseEvent) {
-        if (!state.showResults || !isQuickSearch(searchInputs[i])) {
-          return;
-        }
-
-        const resultLink = (e.target as HTMLElement).closest(
-          'a.result, a.sub-result',
-        );
-        if (!resultLink) {
-          return;
-        }
-
-        const href = resultLink.getAttribute('href');
-        if (!href) {
-          return;
-        }
-
-        let target: URL;
-        try {
-          target = new URL(href, window.location.href);
-        } catch {
-          return;
-        }
-
-        if (target.pathname !== window.location.pathname) {
-          return;
-        }
-
-        state.showResults = false;
-        state.activeIndex = -1;
-        update(
-          searchInputs[i],
-          containers[i],
-          isQuickSearch(searchInputs[i]),
-          state,
-        ).catch(() => {});
-      };
-    });
-
-  inputHandlers.forEach((handleInput, i) => {
-    searchInputs[i].addEventListener('input', handleInput);
-  });
-
-  keyDownHandlers.forEach((handleKeyDown, i) => {
-    searchInputs[i].addEventListener('keydown', handleKeyDown);
-  });
-
-  focusHandlers.forEach((handleFocus, i) => {
-    searchInputs[i].addEventListener('focus', handleFocus);
-  });
-
-  clickHandlers.forEach((handleClick, i) => {
-    searchInputs[i].addEventListener('click', handleClick);
-  });
-
-  mouseOverResultsHandlers.forEach((handleMouseOver, i) => {
-    resultsContainers[i].addEventListener('mouseover', handleMouseOver);
-  });
-  clickResultsHandlers.forEach((handleClick, i) => {
-    resultsContainers[i].addEventListener('click', handleClick);
-  });
+  function handleResultClick(e: MouseEvent) {
+    if (!state.showResults) return;
+    const link = (e.target as HTMLElement).closest('a.result, a.sub-result');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (!href) return;
+    let target: URL;
+    try {
+      target = new URL(href, window.location.href);
+    } catch {
+      return;
+    }
+    if (target.pathname === window.location.pathname) {
+      hide();
+    }
+  }
 
   function handleWindowKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape' && state.showResults) {
-      if (window.IS_DEV) {
-        console.info('hiding search results due to Esc on window');
-      }
-
       state.value = '';
-      state.showResults = false;
-      state.activeIndex = -1;
-      containers.forEach((container, i) => {
-        searchInputs[i].blur();
-        update(
-          searchInputs[i],
-          container,
-          isQuickSearch(searchInputs[i]),
-          state,
-        ).catch(() => {});
-      });
-      return;
+      input!.value = '';
+      input!.blur();
+      hide();
     }
   }
 
-  window.addEventListener('keydown', handleWindowKeyDown);
-
-  function handleWindowClick(e: MouseEvent) {
-    if (state.showResults) {
-      if (window.IS_DEV) {
-        console.info('closing search results due to outside window click');
-      }
-
-      state.showResults = false;
-      state.activeIndex = -1;
-      containers.forEach((container, i) => {
-        update(
-          searchInputs[i],
-          container,
-          isQuickSearch(searchInputs[i]),
-          state,
-        ).catch(() => {});
-      });
-    }
+  function handleWindowClick() {
+    if (state.showResults) hide();
   }
-
-  window.addEventListener('click', handleWindowClick);
 
   function handleHeaderExpand() {
-    if (state.showResults) {
-      if (window.IS_DEV) {
-        console.info('hiding search results due to header expansion');
-      }
-      state.showResults = false;
-      state.activeIndex = -1;
-      containers.forEach((container, i) => {
-        update(
-          searchInputs[i],
-          container,
-          isQuickSearch(searchInputs[i]),
-          state,
-        ).catch(() => {});
-      });
-    }
+    if (state.showResults) hide();
   }
+
+  input.addEventListener('input', handleInput);
+  input.addEventListener('keydown', handleKeyDown);
+  input.addEventListener('focus', handleFocus);
+  input.addEventListener('click', e => e.stopPropagation());
+  container.addEventListener('click', e => e.stopPropagation());
+  resultsContainer.addEventListener('click', handleResultClick);
+  window.addEventListener('keydown', handleWindowKeyDown);
+  window.addEventListener('click', handleWindowClick);
   on('headerWillExpand', handleHeaderExpand);
 
   return () => {
     remove('headerWillExpand', handleHeaderExpand);
     window.removeEventListener('click', handleWindowClick);
-
     window.removeEventListener('keydown', handleWindowKeyDown);
-
-    mouseOverResultsHandlers.forEach((handleMouseOver, i) => {
-      resultsContainers[i].removeEventListener('mouseover', handleMouseOver);
-    });
-    clickResultsHandlers.forEach((handleClick, i) => {
-      resultsContainers[i].removeEventListener('click', handleClick);
-    });
-
-    clickHandlers.forEach((handleClick, i) => {
-      searchInputs[i].removeEventListener('click', handleClick);
-    });
-
-    focusHandlers.forEach((handleFocus, i) => {
-      searchInputs[i].removeEventListener('focus', handleFocus);
-    });
-
-    keyDownHandlers.forEach((handleKeyDown, i) => {
-      searchInputs[i].removeEventListener('keydown', handleKeyDown);
-    });
-
-    inputHandlers.forEach((handleInput, i) => {
-      searchInputs[i].removeEventListener('input', handleInput);
-    });
+    resultsContainer.removeEventListener('click', handleResultClick);
+    input!.removeEventListener('focus', handleFocus);
+    input!.removeEventListener('keydown', handleKeyDown);
+    input!.removeEventListener('input', handleInput);
   };
 };

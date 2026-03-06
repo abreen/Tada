@@ -65,11 +65,6 @@ header nav div {
   flex: 1 1 150px;
 }
 
-@media (prefers-color-scheme: dark) {
-  header {
-  }
-}
-
 header nav ul {
   list-style-type: none;
   padding: 0;
@@ -121,9 +116,6 @@ header details summary::-webkit-details-marker {
 
 header details summary::marker {
   content: '';
-}
-
-header details {
 }
 
 header summary::after {
@@ -239,7 +231,6 @@ header .content {
     grid-column: 3 / 4;
     grid-row: 1;
     pointer-events: auto;
-    display: flex;
     align-items: center;
     justify-self: end;
     height: var(--header-collapsed-height);
@@ -264,40 +255,13 @@ header .content {
   .results-container {
     grid-column: 1 / -1;
     grid-row: 2;
-    pointer-events: auto;
     box-sizing: border-box;
     width: 100%;
     max-width: 640px;
     justify-self: center;
     padding: var(--gap);
     z-index: 1;
-  }
-
-  .results-container.is-hidden {
     pointer-events: none;
-
-    .results {
-      opacity: 0;
-      transform: translateY(-6px);
-      pointer-events: none;
-    }
-  }
-
-  .results {
-    transition:
-      opacity 0.25s ease,
-      transform 0.25s ease;
-    pointer-events: all;
-    margin: 0 auto;
-    background: var(--bg-color);
-    color: var(--fg-color);
-    border: var(--control-border-width) solid var(--fg2-color);
-    box-shadow: var(--box-shadow);
-    border-radius: var(--border-radius);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - var(--header-collapsed-height) - 2 * var(--gap));
   }
 
   ol {

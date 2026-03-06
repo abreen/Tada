@@ -1,11 +1,6 @@
 @import '../_mixins.scss';
 
-.search-container,
 .header-overlay-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-
   .search-controls {
     display: flex;
     flex-wrap: wrap;
@@ -32,17 +27,31 @@
     }
   }
 
-  .results-container.is-hidden .results {
-    opacity: 0;
-    transform: translateY(-16px);
-    pointer-events: none;
+  .results-container.is-showing .results {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
   }
 
   .results {
-    min-height: 80px;
-    opacity: 1;
-    transform: translateY(0);
+    opacity: 0;
+    transform: translateY(-16px);
+    pointer-events: none;
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s ease;
+    margin: 0 auto;
+    background: var(--bg-color);
+    color: var(--fg-color);
+    border: var(--control-border-width) solid var(--fg2-color);
+    box-shadow: var(--box-shadow);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - var(--header-collapsed-height) - 2 * var(--gap));
     @include user-select(none);
+    min-height: 80px;
 
     .results-info {
       display: block;
@@ -50,12 +59,6 @@
       @include user-select(none);
       padding: 8px 0 8px 8px;
       font-weight: 700;
-    }
-
-    .no-results {
-      display: inline-block;
-      @include user-select(none);
-      margin: 0 auto;
     }
 
     ol {
@@ -81,15 +84,11 @@
       border: none;
       position: relative;
       color: var(--fg-color);
+      padding: 8px;
 
       &.is-active {
         background: var(--bg2-color);
       }
-    }
-
-    ol a,
-    .no-results {
-      padding: 8px;
     }
 
     @media (hover: hover) {
@@ -116,7 +115,7 @@
       font-size: var(--font-size-small);
       color: var(--fg2-color);
       line-height: 2.5ex;
-      height: 7.5ex; // 3 lines (3 * 2.5ex)
+      height: 7.5ex;
       overflow: hidden;
 
       mark {
