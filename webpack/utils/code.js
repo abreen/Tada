@@ -251,6 +251,11 @@ function splitHighlightedHtmlIntoLines(highlightedHtml, lineCount) {
   let currentLineHasContent = false;
 
   function finishCurrentLine() {
+    if (!currentLineHasContent) {
+      currentContainers[currentContainers.length - 1].appendChild(
+        document.createTextNode('\u00A0'),
+      );
+    }
     lines.push(currentLine);
     currentLine = createCodeLine(document);
     currentContainers = cloneOpenElements(openElements, currentLine);
@@ -296,6 +301,11 @@ function splitHighlightedHtmlIntoLines(highlightedHtml, lineCount) {
   }
 
   if (currentLineHasContent || lines.length < lineCount) {
+    if (!currentLineHasContent) {
+      currentContainers[currentContainers.length - 1].appendChild(
+        document.createTextNode('\u00A0'),
+      );
+    }
     lines.push(currentLine);
   }
 
