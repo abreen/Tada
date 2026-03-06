@@ -48,7 +48,9 @@ function createFaviconSvg(size, color, symbol, font, cssWeight) {
 
   // Apply variation axes for variable fonts
   const instance =
-    typeof font.getVariation === 'function' && font.variationAxes
+    typeof font.getVariation === 'function' &&
+    font.variationAxes &&
+    Object.keys(font.variationAxes).length > 0
       ? font.getVariation({ wght: cssWeight })
       : font;
 
