@@ -86,7 +86,7 @@ body.default main table {
   }
 
   :not(.toc-is-active) > .container > .main-content {
-    width: var(--main-width);
+    max-width: var(--main-width);
     margin: 0 auto;
   }
 
