@@ -65,7 +65,9 @@ function injectWebpackAssets(html, compilation, applyBasePath) {
     )
     .join('');
 
-  return html.replace('</head>', `${scriptTags}${linkTags}</head>`);
+  return html
+    .replace('<head>', `<head>${linkTags}`)
+    .replace('</head>', `${scriptTags}</head>`);
 }
 
 function toContentAssetPath(contentDir, filePath) {
