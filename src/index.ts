@@ -19,6 +19,7 @@ import mountAnchor from './anchor';
 import mountFootnotes from './footnotes';
 import mountQuestion from './question';
 import mountTimezone from './timezone';
+import mountCode from './code';
 
 import { scheduleTask, formatDuration } from './util';
 
@@ -32,6 +33,7 @@ const COMPONENTS = {
   footnotes: mountFootnotes,
   question: mountQuestion,
   timezone: mountTimezone,
+  code: mountCode,
 };
 
 let startTime = -1;

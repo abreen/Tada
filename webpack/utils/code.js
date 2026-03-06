@@ -215,6 +215,10 @@ function extractJavaMethodToc(sourceCode) {
   });
 }
 
+function escapeAttr(str) {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
 function escapeHtml(text) {
   return text
     .replace(/&/g, '&amp;')
@@ -399,7 +403,8 @@ function renderCodeWithComments(sourceCode, lang, siteVariables) {
         const prose = segment.lines
           .map(line => line.replace(/^\s*\/\/\/(\s?)/, ''))
           .join('\n');
-        return `<div class="code-prose" style="--prose-indent: ${indent}ch"><div class="code-prose-gutter"></div><div class="code-prose-content">${md.render(prose)}</div></div>`;
+        const source = escapeAttr(segment.lines.join('\n'));
+        return `<div class="code-prose" data-prose-source="${source}" style="--prose-indent: ${indent}ch"><div class="code-prose-gutter"></div><div class="code-prose-content">${md.render(prose)}</div></div>`;
       }
     })
     .join('');
