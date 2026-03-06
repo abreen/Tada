@@ -58,6 +58,6 @@
 }
 
 .question-a-body[data-revealed] {
-  cursor: default;
+  cursor: unset;
   @include user-select(text);
 }
