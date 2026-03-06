@@ -37,27 +37,28 @@ values from the active site config.
 - `config/_theme.scss` --- shared SCSS theme variables
 - Arbitrary template variables live under the `vars` key in the site config JSON
 
-## Client-side components
+## Client-side components (plus styles)
 
 Each component lives in `src/<name>/` and exports an async `mount()` function
 called after page load.
 
 | Component | Directory | Purpose |
 |-----------|-----------|---------|
-| Table of contents | `src/toc/` | Generates in-page TOC |
 | Anchor headings | `src/anchor/` | Turns headings into links |
-| Time zone chooser | `src/timezone/` | Dynamically updates `<datetime>` elements |
-| Back to top | `src/top/` | Hovering button, appears after scroll |
-| Search UI | `src/search/` | Reads Pagefind index and displays results |
-| Footnotes | `src/footnotes/` | Footnote formatting |
-| Header | `src/header/` | Page header |
-| Print styles | `src/print/` | Print-specific CSS |
+| Code pages | `src/code/` | Styles for code pages, copy event handling |
 | Global event bus | `src/global/` | `trigger()` / `subscribe()` utilities |
+| Header | `src/header/` | Styles and animation for page header |
+| Printing | `src/print/` | Printing-specific CSS and JavaScript logic |
+| Q&A | `src/question` | Styles and logic for clicking hidden answers to reveal them |
+| Search | `src/search/` | Styles and handling for Pagefind-powered search input |
+| Time zone chooser | `src/timezone/` | Styles and logic for dynamically updating `<datetime>` elements |
+| Table of contents | `src/toc/` | Styles and highlighting logic for TOC |
+| Back to top | `src/top/` | Hovering button, appears after scroll |
 
-Global styles: `src/style.scss`, `src/layout.scss`, `src/code.scss`,
-`src/print.scss`, `src/_mixins.scss`.  
+Global styles: `src/style.scss`, `src/layout.scss`  
+Shared styles: `src/_mixins.scss`, imported by some components  
 Shared utilities: `src/util.ts` --- includes `applyBasePath()` for prefixing
-internal links client-side.
+internal links client-side
 
 Import Sass styles in `src/index.ts` to include them in the bundle.
 
