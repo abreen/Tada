@@ -1,14 +1,15 @@
 import './style.scss';
-import './code.scss';
 import './layout.scss';
-import './print.scss';
-import './toc/style.scss';
-import './search/style.scss';
-import './header/style.scss';
-import './top/style.scss';
+
 import './anchor/style.scss';
-import './timezone/style.scss';
+import './code/style.scss';
+import './header/style.scss';
+import './print/style.scss';
 import './question/style.scss';
+import './search/style.scss';
+import './timezone/style.scss';
+import './toc/style.scss';
+import './top/style.scss';
 
 import mountTableOfContents from './toc';
 import mountSearch from './search';
