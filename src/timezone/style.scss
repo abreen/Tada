@@ -1,8 +1,6 @@
 time[datetime] {
-  border-radius: 4px;
-
   &.is-modified {
-    background: var(--bg2-color);
+    text-decoration: var(--fg2-color) underline dotted;
   }
 }
 

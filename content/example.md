@@ -290,6 +290,57 @@ Email the files you changed to `<%= staffEmail %>`.
 
 :::
 
+---
+
+## Additional features
+
+These features aren't Markdown-specific, but are included here for reference.
+
+### Time zone chooser
+
+Allows the user to see times in their local time zone.
+Include a `<select>` element with the `time-zone` class and no options and
+the options will automatically be inserted.
+
+Use
+
+```html
+<select class="time-zone"></select>
+```
+
+to get:
+
+<select class="time-zone"></select>
+
+Wrap your time in the `<time datetime="...">` element and it will be updated
+when the user makes a time zone selection.
+
+Here's an example time: <time datetime="17:30">5:30 PM</time>
+
+- When a `<time>` element is adjusted,
+  * the appearance of the element changes slightly to indicate it was updated,
+  * hovering over the text produces a tooltip telling the user the original time
+    and time zone, and
+  * if the time adjustment crosses a day boundary, *(next day)* or *(prev. day)*
+    is shown after the adjusted time.
+- Whichever style is used for AM/PM (`am`, `a.m.`, `AM`, etc.) is maintained
+  when the time is adjusted.
+- The selected time zone is saved in the browser's storage for the site, so
+  it will persist through refreshes, navigations, and browser restarts.
+- On any page where you use a `<time>` element, you should include the
+  time zone chooser somewhere so the user can adjust it.
+- The default time zone is set in the config file under `site.defaultTimeZone`.
+
+!!! warning
+The `<select>` element ***cannot*** be self-closing, so this syntax is **not**
+valid:
+
+```html
+<select class="time-zone" />
+```
+!!!
+
+
 
 [^example-footnote]: Footnotes render inside a numbered list at the bottom of
 the page.

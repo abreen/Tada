@@ -234,7 +234,7 @@ export default (window: Window) => {
   }
 
   window.document
-    .querySelectorAll('select.timezone-chooser')
+    .querySelectorAll('select.time-zone')
     .forEach(el => init(el as HTMLSelectElement, initialTz));
 
   const choosers: Array<{ sync: (val: string) => void }> = [];
@@ -243,7 +243,7 @@ export default (window: Window) => {
     choosers.forEach(({ sync }) => sync(val));
   };
 
-  window.document.querySelectorAll('select.timezone-chooser').forEach(sel => {
+  window.document.querySelectorAll('select.time-zone').forEach(sel => {
     const selectEl = sel as HTMLSelectElement;
 
     const resetBtn = window.document.createElement('button');
