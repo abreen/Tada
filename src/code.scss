@@ -11,6 +11,13 @@ body.code .file-header {
   padding: var(--gap);
   border-bottom: 1px solid var(--fg2-color);
   background: var(--bg2-color);
+
+  h1 {
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
   tt {
     background: none;
   }

@@ -2,9 +2,9 @@
 
 <div class="main-content">
   <main class="body" data-pagefind-body>
-    <div class="file-header" data-pagefind-ignore>
-      <span><%= page.titleHtml %></span>
-      <a class="button" href="<%= page.codeFilePath %>" download="<%= page.title %>">Download</a>
+    <div class="file-header">
+      <h1 data-pagefind-weight="10"><%= page.titleHtml %></h1>
+      <a class="button" href="<%= page.codeFilePath %>" download="<%= page.title %>" data-pagefind-ignore>Download</a>
     </div>
     <% if (page.tocItems && page.tocItems.length > 0) { %>
     <div class="code-search-index" aria-hidden="true">
