@@ -66,7 +66,6 @@ body.default main table {
   width: 100%;
 }
 
-/* Mobile TOC */
 @media (max-width: 899px) {
   body.default.toc-is-active nav.toc {
     background: var(--bg2-color);

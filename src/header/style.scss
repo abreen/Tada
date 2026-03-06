@@ -240,15 +240,19 @@ header .content {
     z-index: 1;
 
     input.search {
-      width: 240px;
+      width: 200px;
       flex: none;
 
-      @media (max-width: 720px) {
-        width: 180px;
+      @media (max-width: 760px) {
+        width: 160px;
       }
 
-      @media (max-width: 540px) {
+      @media (max-width: 440px) {
         width: 140px;
+      }
+
+      @media (max-width: 280px) {
+        display: none;
       }
     }
   }
@@ -263,6 +267,10 @@ header .content {
     padding: var(--gap);
     z-index: 1;
     pointer-events: none;
+
+    @media (max-width: 280px) {
+      display: none;
+    }
   }
 
   ol {
@@ -280,6 +288,12 @@ header .content {
 
 @media (max-width: 760px) {
   #header-overlay .site-title-and-logo .site-title {
+    display: none;
+  }
+}
+
+@media (max-width: 440px) {
+  #header-overlay .site-title-and-logo .title {
     display: none;
   }
 }

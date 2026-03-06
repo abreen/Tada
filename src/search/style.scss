@@ -49,9 +49,9 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - var(--header-collapsed-height) - 2 * var(--gap));
-    @include user-select(none);
+    max-height: 66vh;
     min-height: 80px;
+    @include user-select(none);
 
     .results-info {
       display: block;
