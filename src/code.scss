@@ -2,18 +2,24 @@
 
 body.code {
   --code-gutter-width: 3.5rem;
+
+  .body {
+    background: var(--bg2-color);
+  }
 }
 
 body.code .file-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: var(--gap);
   padding: var(--gap);
   border-bottom: 1px solid var(--fg2-color);
-  background: var(--bg2-color);
+  margin-bottom: var(--gap);
 
   h1 {
     margin: 0;
+    padding: 0;
     font-size: inherit;
     font-weight: inherit;
   }
