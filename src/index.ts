@@ -16,7 +16,6 @@ import mountHeader from './header';
 import mountPrint from './print';
 import mountTop from './top';
 import mountAnchor from './anchor';
-import mountFootnotes from './footnotes';
 import mountQuestion from './question';
 import mountTimezone from './timezone';
 import mountCode from './code';
@@ -30,7 +29,6 @@ const COMPONENTS = {
   print: mountPrint,
   top: mountTop,
   anchor: mountAnchor,
-  footnotes: mountFootnotes,
   question: mountQuestion,
   timezone: mountTimezone,
   code: mountCode,
