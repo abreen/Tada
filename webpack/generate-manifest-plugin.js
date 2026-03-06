@@ -42,7 +42,7 @@ function createManifest(siteVariables) {
 
   return {
     name: siteVariables.title,
-    start_url: applyBasePath('/'),
+    start_url: applyBasePath('/index.html'),
     display: 'minimal-ui',
     icons: [
       {
