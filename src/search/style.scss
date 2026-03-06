@@ -73,8 +73,10 @@
         grid-template-columns: minmax(0, 1fr);
       }
 
-      a.result:hover {
-        background: var(--bg2-color);
+      @media (hover: hover) {
+        a.result:hover {
+          background: var(--bg2-color);
+        }
       }
     }
 

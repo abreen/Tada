@@ -83,18 +83,19 @@ header nav a {
 }
 
 @media (hover: hover) {
-  header nav a:hover {
-    border: none;
-    color: var(--fg2-color);
+  header nav a {
+    &:hover {
+      color: var(--fg2-color);
+    }
+
+    &:active {
+      color: var(--link-active-color);
+    }
   }
 }
 
 header nav a.external {
   border: none;
-}
-
-header nav a:active {
-  color: var(--link-active-color);
 }
 
 @media only screen and (min-width: 740px) {

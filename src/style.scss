@@ -266,8 +266,14 @@ details .content {
 }
 
 @media (hover: hover) {
-  details summary:hover {
-    color: var(--fg2-color);
+  details summary {
+    &:hover {
+      color: var(--fg2-color);
+    }
+
+    &:active {
+      color: var(--link-active-color);
+    }
   }
 }
 

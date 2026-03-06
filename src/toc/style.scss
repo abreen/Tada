@@ -54,6 +54,10 @@ body.code .toc ol li {
   .toc ol li:hover a {
     color: var(--fg2-color);
   }
+
+  .toc ol li a:active {
+    color: var(--link-active-color);
+  }
 }
 
 @media (min-width: 900px) {
