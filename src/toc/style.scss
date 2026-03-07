@@ -13,8 +13,14 @@
   line-height: 1.4;
 }
 
-body.code .toc ol li {
+body.code .toc ol li:has(a) {
   font-family: var(--mono-font);
+}
+
+body.code .toc ol a {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .toc ol::before {
@@ -37,10 +43,6 @@ body.code .toc ol li {
   margin-bottom: 0;
 }
 
-.toc ol li:first-of-type.level1 {
-  display: none;
-}
-
 .toc ol a {
   text-decoration: none;
   border: none;
@@ -50,8 +52,8 @@ body.code .toc ol li {
 }
 
 @media (hover: hover) {
-  .toc ol li:hover,
-  .toc ol li:hover a {
+  .toc ol li:has(a):hover,
+  .toc ol li:has(a):hover a {
     color: var(--fg2-color);
   }
 
@@ -63,11 +65,6 @@ body.code .toc ol li {
 @media (min-width: 900px) {
   .toc ol li.current a {
     background: var(--bg2-color);
-  }
-
-  .toc ol li:first-of-type.level1 {
-    display: inherit;
-    font-weight: 600;
   }
 
   .toc ol li:last-child {
@@ -184,4 +181,9 @@ body.code .toc ol li {
     // fg2-color
     content: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='none' stroke='hsl(20deg 6% 55%)' stroke-width='2'/><line x1='12' y1='10' x2='12' y2='16' stroke='hsl(20deg 6% 55%)' stroke-width='2' stroke-linecap='round'/><line x1='12' y1='7' x2='12' y2='7' stroke='hsl(20deg 6% 55%)' stroke-width='2' stroke-linecap='round'/></svg>");
   }
+}
+
+.toc ol li.label {
+  font-size: var(--font-size-smaller);
+  color: var(--fg2-color);
 }

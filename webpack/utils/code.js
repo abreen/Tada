@@ -169,17 +169,17 @@ function extractJavaMethodToc(sourceCode) {
     if (node.name === 'methodDeclaration' && typeDepth <= 1) {
       const method = extractJavaMethodMeta(node);
       if (method) {
-        callables.push(method);
+        callables.push({ ...method, kind: 'method' });
       }
     } else if (node.name === 'interfaceMethodDeclaration' && typeDepth <= 1) {
       const method = extractJavaMethodMeta(node, false);
       if (method) {
-        callables.push(method);
+        callables.push({ ...method, kind: 'method' });
       }
     } else if (node.name === 'constructorDeclaration' && typeDepth === 1) {
       const constructor = extractJavaConstructorMeta(node);
       if (constructor) {
-        callables.push(constructor);
+        callables.push({ ...constructor, kind: 'constructor' });
       }
     } else if (
       (node.name === 'fieldDeclaration' ||
@@ -187,7 +187,7 @@ function extractJavaMethodToc(sourceCode) {
       typeDepth <= 1
     ) {
       for (const field of extractJavaFieldMetas(node)) {
-        callables.push(field);
+        callables.push({ ...field, kind: 'field' });
       }
     }
 
@@ -209,6 +209,7 @@ function extractJavaMethodToc(sourceCode) {
   return callables.map(callable => {
     if (callable.name !== undefined) return callable;
     return {
+      kind: callable.kind,
       name: formatCallableName(callable.baseName, callable.params),
       line: callable.line,
     };

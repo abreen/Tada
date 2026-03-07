@@ -24,10 +24,6 @@ type State = {
   activeIndex: number;
 };
 
-function normalizeSearchUrl(url: string): string {
-  return url.replace(/#m(\d+)$/, '#L$1');
-}
-
 function getPdfPageNumber(
   url: string,
   pageMeta: string | undefined,
@@ -130,12 +126,12 @@ async function doSearch(state: State) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((s: any) => ({
         title: s.title ?? '',
-        url: normalizeSearchUrl(s.url),
+        url: s.url,
         excerpt: s.excerpt ?? '',
       }));
     return {
       title,
-      url: normalizeSearchUrl(d.url),
+      url: d.url,
       excerpt: d.excerpt,
       score: d.score ?? 0,
       subResults,

@@ -120,15 +120,35 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+const GROUP_LABELS = {
+  field: 'Fields',
+  constructor: 'Constructors',
+  method: 'Methods',
+};
+
 function generateCodeTocHtml(codeTocItems) {
   if (!codeTocItems || codeTocItems.length === 0) return '';
 
-  const parts = ['<ol>'];
+  const groups = Object.create(null);
+  const kindOrder = [];
   for (const item of codeTocItems) {
-    parts.push(
-      `<li class="heading-item level2">` +
-        `<a href="#L${item.line}">${escapeHtml(item.name)}</a></li>`,
-    );
+    if (!groups[item.kind]) {
+      groups[item.kind] = [];
+      kindOrder.push(item.kind);
+    }
+    groups[item.kind].push(item);
+  }
+
+  const parts = ['<ol>'];
+  for (const kind of kindOrder) {
+    const label = GROUP_LABELS[kind];
+    if (label) parts.push(`<li class="label">${label}</li>`);
+    for (const item of groups[kind]) {
+      parts.push(
+        `<li class="heading-item level2">` +
+          `<a href="#L${item.line}">${escapeHtml(item.name)}</a></li>`,
+      );
+    }
   }
   parts.push('</ol>');
   return parts.join('');

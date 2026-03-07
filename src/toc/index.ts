@@ -148,36 +148,6 @@ function switchCurrent(
   newCurrent.classList.add('current');
 }
 
-function parseCodeHashLine(hash: string): number | null {
-  const method = hash.match(/^#m(\d+)$/);
-  if (method) {
-    return parseInt(method[1], 10);
-  }
-
-  const single = hash.match(/^#L(\d+)$/);
-  if (single) {
-    return parseInt(single[1], 10);
-  }
-
-  const range = hash.match(/^#L(\d+)-L(\d+)$/);
-  if (range) {
-    return parseInt(range[1], 10);
-  }
-
-  return null;
-}
-
-function getCodeLineScrollOffset(): number {
-  const value = window.getComputedStyle(
-    document.documentElement,
-  ).scrollPaddingTop;
-  const parsed = parseFloat(value);
-  if (Number.isFinite(parsed)) {
-    return parsed;
-  }
-  return getHeaderOffset();
-}
-
 function wireAlertClickHandlers(
   toc: HTMLElement,
   headingsAndAlerts: (HTMLHeadingElement | HTMLDivElement)[],
@@ -238,76 +208,42 @@ export default (window: Window) => {
       return;
     }
 
-    // Extract line numbers from href="#L{n}" attributes
     const codeLines: number[] = elements.map(a => {
       const match = a.getAttribute('href')?.match(/^#L(\d+)$/);
       return match ? parseInt(match[1], 10) : 0;
     });
 
-    const setCurrentByIndex = (index: number) => {
-      const clamped = Math.max(0, Math.min(index, elements.length - 1));
-      const existingItem = getCurrentListItem(document.body);
-      const nextItem = elements[clamped]?.parentElement;
+    const parseHash = (hash: string): number | null => {
+      const single = hash.match(/^#L(\d+)$/);
+      if (single) return parseInt(single[1], 10);
+      const range = hash.match(/^#L(\d+)-L(\d+)$/);
+      if (range) return parseInt(range[1], 10);
+      return null;
+    };
 
+    const updateFromHash = () => {
+      const line = parseHash(window.location.hash);
+      if (line == null) return;
+
+      let best = 0;
+      for (let i = 0; i < codeLines.length; i++) {
+        if (codeLines[i] <= line) best = i;
+        else break;
+      }
+
+      const existingItem = getCurrentListItem(document.body);
+      const nextItem = elements[best]?.parentElement ?? null;
       if (nextItem != null && nextItem !== existingItem) {
         switchCurrent(existingItem, nextItem);
         scrollIfNeeded(nextItem);
       }
     };
 
-    const getHashIndex = (): number | null => {
-      const line = parseCodeHashLine(window.location.hash);
-      if (line == null) {
-        return null;
-      }
-
-      let current = 0;
-      for (let i = 0; i < codeLines.length; i++) {
-        if (codeLines[i] <= line) {
-          current = i;
-        } else {
-          break;
-        }
-      }
-
-      return current;
-    };
-
-    const updateCurrentFromHash = () => {
-      setCurrentByIndex(getHashIndex() ?? 0);
-    };
-
-    const updateCurrentFromScroll = () => {
-      let current = 0;
-
-      for (let i = 0; i < codeLines.length; i++) {
-        const lineAnchor = window.document.getElementById(`L${codeLines[i]}`);
-        if (!lineAnchor) {
-          continue;
-        }
-
-        const scrollOffset = getCodeLineScrollOffset();
-        const anchorTop = lineAnchor.getBoundingClientRect().top;
-        if (anchorTop <= scrollOffset + 1) {
-          current = i;
-        } else {
-          break;
-        }
-      }
-
-      setCurrentByIndex(current);
-    };
-
-    const debouncedCodeScroll = debounce(updateCurrentFromScroll, LATENCY_MS);
-
-    window.addEventListener('hashchange', updateCurrentFromHash);
-    window.addEventListener('scroll', debouncedCodeScroll, { passive: true });
-
-    updateCurrentFromHash();
+    window.addEventListener('hashchange', updateFromHash);
+    updateFromHash();
 
     return () => {
-      window.removeEventListener('hashchange', updateCurrentFromHash);
-      window.removeEventListener('scroll', debouncedCodeScroll);
+      window.removeEventListener('hashchange', updateFromHash);
     };
   }
 
