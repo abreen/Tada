@@ -37,7 +37,12 @@ export default (window: Window) => {
 
   link.onclick = e => {
     e.preventDefault();
-    window.location.hash = 'top';
+    const hash = window.location.hash;
+    if (hash && hash !== '#top') {
+      window.location.assign('#top'); // preserves current hash entry in history
+    } else {
+      window.location.replace('#top'); // no meaningful hash to preserve
+    }
     history.replaceState(
       null,
       '',
