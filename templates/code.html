@@ -12,7 +12,7 @@
       <% page.tocItems.forEach(function(item) { %>
       <section>
         <h2 id="L<%= item.line %>"><%= item.name %></h2>
-        <p>Method defined at line <%= item.line %>.</p>
+        <p><%= item.label %> defined at line <%= item.line %>.</p>
       </section>
       <% }); %>
     </div>

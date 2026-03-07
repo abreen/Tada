@@ -14,6 +14,12 @@ function createCodeMarkdown(siteVariables, options = {}) {
     .use(require('../apply-base-path-plugin'), siteVariables, options);
 }
 
+const KIND_LABELS = {
+  constructor: 'Constructor',
+  field: 'Field',
+  method: 'Method',
+};
+
 const JAVA_TYPE_DECLARATION_NODES = new Set([
   'classDeclaration',
   'interfaceDeclaration',
@@ -207,9 +213,11 @@ function extractJavaMethodToc(sourceCode) {
   visit(cst, 0);
 
   return callables.map(callable => {
-    if (callable.name !== undefined) return callable;
+    const label = KIND_LABELS[callable.kind] ?? 'Member';
+    if (callable.name !== undefined) return { ...callable, label };
     return {
       kind: callable.kind,
+      label,
       name: formatCallableName(callable.baseName, callable.params),
       line: callable.line,
     };
