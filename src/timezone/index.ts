@@ -1,63 +1,5 @@
 const STORAGE_KEY = 'timezoneSelection';
 
-interface TimezoneDef {
-  value: string;
-  label: string;
-  abbreviation: string;
-  offsetMinutes?: number; // computed at runtime (includes DST adjustment)
-}
-
-/*
- * A subset of the possible time zones to be sure, but enough to cover ~80%
- * of the population of the world.
- */
-const TIMEZONES: TimezoneDef[] = [
-  { value: 'Pacific/Honolulu', label: 'Hawaii', abbreviation: 'HT' },
-  { value: 'America/Anchorage', label: 'Alaska', abbreviation: 'AKT' },
-  { value: 'America/Los_Angeles', label: 'US Pacific', abbreviation: 'PT' },
-  { value: 'America/Denver', label: 'US Mountain', abbreviation: 'MT' },
-  { value: 'America/Chicago', label: 'US Central', abbreviation: 'CT' },
-  { value: 'America/Mexico_City', label: 'Mexico City', abbreviation: 'CST' },
-  { value: 'America/New_York', label: 'US Eastern', abbreviation: 'ET' },
-  { value: 'America/Halifax', label: 'Atlantic', abbreviation: 'AT' },
-  { value: 'America/St_Johns', label: 'Newfoundland', abbreviation: 'NT' },
-  { value: 'America/Sao_Paulo', label: 'São Paulo', abbreviation: 'BRT' },
-  {
-    value: 'America/Argentina/Buenos_Aires',
-    label: 'Buenos Aires',
-    abbreviation: 'ART',
-  },
-  { value: 'UTC', label: 'UTC', abbreviation: 'UTC' },
-  { value: 'Europe/London', label: 'London', abbreviation: 'GMT' },
-  { value: 'Europe/Paris', label: 'Paris', abbreviation: 'CET' },
-  { value: 'Africa/Lagos', label: 'Lagos', abbreviation: 'WAT' },
-  { value: 'Africa/Cairo', label: 'Cairo', abbreviation: 'EET' },
-  { value: 'Africa/Johannesburg', label: 'Johannesburg', abbreviation: 'SAST' },
-  { value: 'Europe/Moscow', label: 'Moscow', abbreviation: 'MSK' },
-  { value: 'Africa/Nairobi', label: 'Nairobi', abbreviation: 'EAT' },
-  { value: 'Asia/Tehran', label: 'Tehran', abbreviation: 'IRST' },
-  { value: 'Asia/Dubai', label: 'Dubai', abbreviation: 'GST' },
-  { value: 'Asia/Karachi', label: 'Karachi', abbreviation: 'PKT' },
-  { value: 'Asia/Kolkata', label: 'India', abbreviation: 'IST' },
-  { value: 'Asia/Dhaka', label: 'Dhaka', abbreviation: 'BST' },
-  { value: 'Asia/Jakarta', label: 'Jakarta', abbreviation: 'WIB' },
-  { value: 'Asia/Ho_Chi_Minh', label: 'Ho Chi Minh City', abbreviation: 'ICT' },
-  { value: 'Asia/Shanghai', label: 'Shanghai', abbreviation: 'CST' },
-  { value: 'Asia/Singapore', label: 'Singapore', abbreviation: 'SGT' },
-  { value: 'Asia/Tokyo', label: 'Tokyo', abbreviation: 'JST' },
-  { value: 'Asia/Seoul', label: 'Seoul', abbreviation: 'KST' },
-  { value: 'Australia/Sydney', label: 'Sydney', abbreviation: 'AEST' },
-  { value: 'Pacific/Auckland', label: 'Auckland', abbreviation: 'NZST' },
-];
-
-function getDefaultTimezone() {
-  const value = window.siteVariables.defaultTimeZone;
-  return (
-    TIMEZONES.find(tz => tz.value === value) ??
-    TIMEZONES.find(tz => tz.value === 'America/New_York')!
-  );
-}
-
 type PeriodStyle = [am: string, pm: string];
 
 const DEFAULT_PERIOD_STYLE: PeriodStyle = ['a.m.', 'p.m.'];
@@ -133,6 +75,17 @@ function getOffsetMinutes(tz: string, date: Date): number {
   return (utcTs - date.getTime()) / 60000;
 }
 
+// window.siteVariables.timezones is replaced by DefinePlugin at build time.
+// The typeof guard prevents a ReferenceError in test environments where
+// window is not defined.
+const TIMEZONES: TimezoneDef[] =
+  typeof window !== 'undefined' ? window.siteVariables.timezones : [];
+
+function getDefaultTimezone() {
+  const value = window.siteVariables.defaultTimeZone;
+  return TIMEZONES.find(tz => tz.value === value)!;
+}
+
 function computeOffsets(baseDate: Date) {
   TIMEZONES.forEach(tz => {
     tz.offsetMinutes = getOffsetMinutes(tz.value, baseDate);
@@ -156,6 +109,8 @@ function init(element: HTMLDataListElement, selectedTz: string) {
     }
     element.appendChild(opt);
   });
+
+  element.removeAttribute('hidden');
 }
 
 export default (window: Window) => {

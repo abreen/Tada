@@ -10,6 +10,9 @@ function createDefinePlugin(siteVariables, isDev = false) {
     'window.siteVariables.defaultTimeZone': JSON.stringify(
       siteVariables.defaultTimeZone,
     ),
+    'window.siteVariables.timezones': JSON.stringify(
+      require('../../src/timezone/timezones.json'),
+    ),
     'window.IS_DEV': JSON.stringify(isDev),
   });
 }

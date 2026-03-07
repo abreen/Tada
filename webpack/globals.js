@@ -1,10 +1,19 @@
+const timezones = require('../src/timezone/timezones.json');
+
 module.exports = function createGlobals(site, page, subPath) {
+  const siteVars = page; // second arg receives siteVariables per render.js call convention
+  const defaultTz = timezones.find(t => t.value === siteVars.defaultTimeZone);
+  const timezoneChooser = defaultTz
+    ? `<select class="time-zone" hidden></select><noscript>Times shown in ${defaultTz.abbreviation}.</noscript>`
+    : '<select class="time-zone" hidden></select>';
+
   return {
     isHomePage: subPath === 'index',
     isoDate,
     readableDate,
     classNames,
     cx: classNames,
+    timezoneChooser,
   };
 };
 

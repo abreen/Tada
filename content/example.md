@@ -299,21 +299,23 @@ These features aren't Markdown-specific, but are included here for reference.
 ### Time zone chooser
 
 Allows the user to see times in their local time zone.
-Include a `<select>` element with the `time-zone` class and no options and
-the options will automatically be inserted.
+
+!!! note
+Look at the source code for this file to see how to insert it.
+!!!
+
+<%= timezoneChooser %>
+
+Wrap your times in `<time datetime="...">` elements and they will be updated
+when the user makes a time zone selection.
 
 Use
 
 ```html
-<select class="time-zone"></select>
+Here's an example time: <time datetime="17:30">5:30 PM</time>
 ```
 
-to get:
-
-<select class="time-zone"></select>
-
-Wrap your time in the `<time datetime="...">` element and it will be updated
-when the user makes a time zone selection.
+To produce:
 
 Here's an example time: <time datetime="17:30">5:30 PM</time>
 
@@ -330,15 +332,8 @@ Here's an example time: <time datetime="17:30">5:30 PM</time>
 - On any page where you use a `<time>` element, you should include the
   time zone chooser somewhere so the user can adjust it.
 - The default time zone is set in the config file under `site.defaultTimeZone`.
-
-!!! warning
-The `<select>` element ***cannot*** be self-closing, so this syntax is **not**
-valid:
-
-```html
-<select class="time-zone" />
-```
-!!!
+- With JavaScript disabled, the chooser is hidden and a fallback message
+  is shown (e.g., *Times shown in ET.*).
 
 
 
