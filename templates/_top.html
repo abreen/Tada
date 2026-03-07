@@ -45,6 +45,11 @@
       }]
     }
   </script>
+  <noscript><style>
+    .question-a-body:not([data-revealed]) > * { color: unset; background-color: unset; }
+    .question-a-body:not([data-revealed]) > * * { color: unset; background-color: unset; }
+    .question-a-body { cursor: unset; }
+  </style></noscript>
   </head>
 
   <body class="<%= page.template %><% if (isHomePage) { %> header-is-frozen<% } %><% if (page.tocHtml) { %> toc-is-active<% } %>">
