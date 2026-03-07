@@ -694,17 +694,18 @@ code {
   font-family: var(--mono-font);
   font-weight: 400;
   font-style: normal;
-  font-size: var(--mono-font-size);
 }
 
 tt,
 code {
+  font-size: var(--mono-font-size-percent);
   background: var(--bg2-color);
   padding: 2px 3px;
   overflow-wrap: anywhere;
 }
 
 pre code {
+  font-size: 1em;
   padding: 0;
   white-space: pre-wrap;
   white-space: -moz-pre-wrap;
