@@ -113,7 +113,7 @@ function createMarkdown(siteVariables, options = {}) {
           '</span></p>' +
           '<div class="question-a">' +
           '<p class="question-a-label">A.</p>' +
-          '<div class="question-a-body">\n'
+          '<div class="question-a-body" data-pagefind-ignore>\n'
         );
       } else {
         return '</div></div></div>\n';
