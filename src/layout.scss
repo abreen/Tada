@@ -117,6 +117,11 @@ body.default main table {
     scrollbar-color: var(--fg2-color) transparent;
     margin-bottom: 0;
   }
+
+  body.code.toc-is-active nav.toc {
+    top: calc(var(--header-collapsed-height) + var(--gap));
+    height: calc(100vh - var(--header-collapsed-height) - var(--gap));
+  }
 }
 
 @media (min-width: 1300px) {
