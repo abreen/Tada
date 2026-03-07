@@ -40,6 +40,10 @@
   margin-top: 0;
 }
 
+.question-a-body > *:last-child {
+  margin-bottom: 0;
+}
+
 .question-a-body > * {
   transition:
     color 0.25s,
@@ -55,6 +59,28 @@
 .question-a-body:not([data-revealed]) > * * {
   color: transparent;
   background-color: var(--bg2-color);
+}
+
+.question-a-body::after {
+  content: 'Click to reveal';
+  display: block;
+  margin-top: 0.5em;
+  font-size: var(--font-size-small);
+  font-style: italic;
+  color: var(--fg2-color);
+  text-align: center;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+
+.question-a-body[data-revealed]::after {
+  opacity: 0;
+}
+
+@media (hover: none) {
+  .question-a-body::after {
+    content: 'Tap to reveal';
+  }
 }
 
 .question-a-body[data-revealed] {

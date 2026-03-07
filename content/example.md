@@ -252,6 +252,14 @@ Sunlight is scattered by air molecules.
 Blue light scatters more than other colors because of its shorter wavelength.
 ???
 
+??? question What is a base case? Give an example.
+
+The <dfn>base case</dfn> is the simplest version of the problem that can be
+solved directly without any further recursive calls. For recursive methods that
+process strings, the base case is the empty string.
+
+???
+
 ### Generic section
 
 Break up a long page by introducing a `<section>` (a standard HTML 5 element)
