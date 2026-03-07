@@ -11,11 +11,11 @@ const PERIOD_PATTERNS: { pattern: RegExp; style: PeriodStyle }[] = [
   { pattern: /[ap]m/, style: ['am', 'pm'] },
 ];
 
-export function detectPeriodStyle(text: string): PeriodStyle {
+export function detectPeriodStyle(text: string): PeriodStyle | null {
   for (const { pattern, style } of PERIOD_PATTERNS) {
     if (pattern.test(text)) return style;
   }
-  return DEFAULT_PERIOD_STYLE;
+  return null;
 }
 
 function pad(n: number | string) {
@@ -25,10 +25,11 @@ function pad(n: number | string) {
 export function to12Hour(
   h: number,
   m: number,
-  style: PeriodStyle = DEFAULT_PERIOD_STYLE,
+  style: PeriodStyle | null = DEFAULT_PERIOD_STYLE,
 ) {
-  const period = h >= 12 ? style[1] : style[0];
   const hour12 = ((h + 11) % 12) + 1;
+  if (!style) return `${hour12}:${pad(m)}`;
+  const period = h >= 12 ? style[1] : style[0];
   return `${hour12}:${pad(m)} ${period}`;
 }
 
@@ -113,6 +114,24 @@ function init(element: HTMLDataListElement, selectedTz: string) {
   element.removeAttribute('hidden');
 }
 
+function dominantPeriodStyle(
+  styles: Map<HTMLTimeElement, PeriodStyle | null>,
+): PeriodStyle {
+  const counts = new Map<PeriodStyle, number>();
+  for (const style of styles.values()) {
+    if (style !== null) counts.set(style, (counts.get(style) ?? 0) + 1);
+  }
+  let best: PeriodStyle = DEFAULT_PERIOD_STYLE;
+  let bestCount = 0;
+  for (const [style, count] of counts) {
+    if (count > bestCount) {
+      best = style;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
 export default (window: Window) => {
   const defaultTz = getDefaultTimezone();
   const resetTitle = `Reset time zone to ${defaultTz.abbreviation} (default)`;
@@ -133,12 +152,13 @@ export default (window: Window) => {
   const defaultOffset = defaultTz.offsetMinutes ?? 0;
 
   // Snapshot the original AM/PM style from each <time> element's text
-  const periodStyles = new Map<HTMLTimeElement, PeriodStyle>();
+  const periodStyles = new Map<HTMLTimeElement, PeriodStyle | null>();
   Array.from(window.document.querySelectorAll('time[datetime]'))
     .filter((el): el is HTMLTimeElement => el instanceof HTMLTimeElement)
     .forEach(el => {
       periodStyles.set(el, detectPeriodStyle(el.textContent ?? ''));
     });
+  const pagePeriodStyle = dominantPeriodStyle(periodStyles);
 
   function updateTimes(targetTz: string) {
     const target = TIMEZONES.find(t => t.value === targetTz) || defaultTz;
@@ -175,7 +195,13 @@ export default (window: Window) => {
             suffix = ' <span class="next-prev-day">(prev. day)</span>';
         }
 
-        const style = periodStyles.get(el) ?? DEFAULT_PERIOD_STYLE;
+        const originalStyle = periodStyles.get(el) ?? null;
+        const originalIsPm = Math.floor(baseMinutes / 60) >= 12;
+        const periodChanged = originalIsPm !== h >= 12 || dayShift !== 0;
+        const style =
+          originalStyle === null && periodChanged
+            ? pagePeriodStyle
+            : originalStyle;
         el.innerHTML = to12Hour(h, m, style) + suffix;
 
         if (isDefault) {
@@ -183,7 +209,7 @@ export default (window: Window) => {
           el.title = '';
         } else {
           el.classList.add('is-modified');
-          el.title = `${to12Hour(...normalizeHM(baseMinutes), style)} ${defaultTz.abbreviation}`;
+          el.title = `${to12Hour(...normalizeHM(baseMinutes), style ?? pagePeriodStyle)} ${defaultTz.abbreviation}`;
         }
       });
   }

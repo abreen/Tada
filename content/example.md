@@ -316,12 +316,18 @@ when the user makes a time zone selection.
 Use
 
 ```html
-Here's an example time: <time datetime="17:30">5:30 PM</time>
+Here's an example time: <time datetime="17:30">5:30 pm</time>
 ```
 
 To produce:
 
-Here's an example time: <time datetime="17:30">5:30 PM</time>
+Here's an example time: <time datetime="17:30">5:30 pm</time>
+
+Time ranges work since the `datetime` attribute should be specified in 24-hour
+time, like this:
+
+Here's a time range:
+<time datetime="12:45">12:45</time>--<time datetime="13:45">1:45 pm</time>
 
 - When a `<time>` element is adjusted,
   * the appearance of the element changes slightly to indicate it was updated,
