@@ -81,6 +81,11 @@ export default (window: Window) => {
   }
 
   function collapse() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      finish(false);
+      return;
+    }
+
     details.style.overflow = 'hidden';
     if (isCollapsing || isExpanding) {
       animation?.cancel();
@@ -102,6 +107,11 @@ export default (window: Window) => {
   }
 
   function expand() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      finish(true);
+      return;
+    }
+
     details.style.overflow = 'hidden';
     if (isCollapsing || isExpanding) {
       animation?.cancel();

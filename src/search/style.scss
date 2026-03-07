@@ -40,11 +40,14 @@
 
   .results {
     opacity: 0;
-    transform: translateY(-16px);
     pointer-events: none;
-    transition:
-      opacity 0.25s ease,
-      transform 0.25s ease;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transform: translateY(-16px);
+      transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+    }
     margin: 0 auto;
     background: var(--bg-color);
     color: var(--fg-color);

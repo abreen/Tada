@@ -125,6 +125,10 @@ header summary::after {
   content: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><polyline points='6 9 12 15 18 9' stroke='hsl(20deg 8% 8%)' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
   display: inline-block;
   transition: transform 0.5s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
   vertical-align: text-bottom;
   margin-left: 0;
   margin-right: 8px;

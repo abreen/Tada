@@ -46,9 +46,11 @@
 
 .question-a-body > *,
 .question-a-body > * * {
-  transition:
-    color 0.25s,
-    background-color 0.25s;
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      color 0.25s,
+      background-color 0.25s;
+  }
 }
 
 .question-a-body:not([data-revealed]) > * {
@@ -70,7 +72,10 @@
   color: var(--fg2-color);
   text-align: center;
   pointer-events: none;
-  transition: opacity 0.25s;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity 0.25s;
+  }
 }
 
 .question-a-body[data-revealed]::after {

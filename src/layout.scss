@@ -116,9 +116,6 @@ body.default main table {
     overflow-y: auto;
     scrollbar-color: var(--fg2-color) transparent;
     margin-bottom: 0;
-    @media (prefers-reduced-motion: no-preference) {
-      scroll-behavior: smooth;
-    }
   }
 }
 
