@@ -44,7 +44,8 @@
   margin-bottom: 0;
 }
 
-.question-a-body > * {
+.question-a-body > *,
+.question-a-body > * * {
   transition:
     color 0.25s,
     background-color 0.25s;
@@ -64,7 +65,6 @@
 .question-a-body::after {
   content: 'Click to reveal';
   display: block;
-  margin-top: 0.5em;
   font-size: var(--font-size-small);
   font-style: italic;
   color: var(--fg2-color);

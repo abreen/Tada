@@ -617,6 +617,12 @@ dl {
   }
 }
 
+dfn {
+  font-weight: 500;
+  color: var(--theme-color);
+  font-style: normal;
+}
+
 .breadcrumb {
   @include user-select(none);
 
