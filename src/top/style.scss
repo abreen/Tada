@@ -7,7 +7,7 @@
   pointer-events: none;
 }
 
-.to-top button {
+.to-top a {
   pointer-events: none;
   opacity: 0;
 
@@ -16,7 +16,7 @@
   }
 }
 
-.to-top button.is-visible {
+.to-top a.is-visible {
   pointer-events: auto;
   opacity: 1;
 }

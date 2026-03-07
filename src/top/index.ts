@@ -12,60 +12,60 @@ export default (window: Window) => {
       'to-top-container',
     ) as HTMLElement | null) ?? document.body;
 
-  function createButton(parent: HTMLElement): HTMLButtonElement {
+  function createLink(parent: HTMLElement): HTMLAnchorElement {
     const div = document.createElement('div');
     div.className = 'to-top';
 
-    const button = window.document.createElement('button');
-    button.innerText = 'Back to top';
-    div.appendChild(button);
+    const link = window.document.createElement('a');
+    link.href = '#top';
+    link.className = 'button';
+    link.innerText = 'Back to top';
+    div.appendChild(link);
 
     parent.appendChild(div);
 
-    return button;
+    return link;
   }
 
   if (window.document.body.classList.contains('header-is-frozen')) {
     return () => {};
   }
 
-  const button = createButton(mountParent);
+  const link = createLink(mountParent);
 
   let isShowing = false;
 
-  button.onclick = () => {
-    window.scroll({ top: 0 });
-    if (window.location.hash) {
-      history.pushState(
-        null,
-        '',
-        window.location.pathname + window.location.search,
-      );
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
-    }
+  link.onclick = e => {
+    e.preventDefault();
+    window.location.hash = 'top';
+    history.replaceState(
+      null,
+      '',
+      window.location.pathname + window.location.search,
+    );
     const toc = window.document.querySelector('nav.toc') as HTMLElement | null;
     if (toc) toc.scrollTop = 0;
   };
 
-  function show(button: HTMLButtonElement) {
+  function show(link: HTMLAnchorElement) {
     if (!isShowing) {
-      button.classList.add('is-visible');
+      link.classList.add('is-visible');
     }
     isShowing = true;
   }
 
-  function hide(button: HTMLButtonElement) {
+  function hide(link: HTMLAnchorElement) {
     if (isShowing) {
-      removeClass(button, 'is-visible');
+      removeClass(link, 'is-visible');
     }
     isShowing = false;
   }
 
   function updateVisibility() {
     if (window.scrollY > SHOW_THRESHOLD_PX) {
-      show(button);
+      show(link);
     } else {
-      hide(button);
+      hide(link);
     }
   }
 
