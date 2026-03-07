@@ -70,7 +70,9 @@
           <input type="search" class="search quick-search" tabindex="0"
                  autocomplete="off" name="quick-search"
                  placeholder="Search"
-                 aria-autocomplete="list" aria-expanded="false" />
+                 aria-autocomplete="list" aria-expanded="false"
+                 disabled />
+          <script>document.currentScript.previousElementSibling.disabled=false;</script>
         </div>
         <div class="results-container" role="region"
              aria-live="polite" aria-hidden="true">
