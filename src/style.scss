@@ -651,16 +651,29 @@ img {
   max-width: 100px;
   border-radius: 999px;
   object-fit: cover;
+}
 
-  &.bio {
-    margin: 1rem;
-    shape-outside: circle();
-    shape-margin: 1rem;
-    float: left;
+figure.bio {
+  float: left;
+  margin: 1rem 1rem 1rem 0;
+  max-width: 125px;
 
-    @media (width > 540px) {
-      max-width: 200px;
-    }
+  @media (width > 540px) {
+    max-width: 200px;
+  }
+
+  .avatar {
+    max-width: 100%;
+    width: 100%;
+    display: block;
+  }
+
+  figcaption {
+    font-size: var(--font-size-small);
+    color: var(--fg2-color);
+    text-align: center;
+    margin-top: var(--gap);
+    font-style: italic;
   }
 }
 
