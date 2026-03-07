@@ -35,6 +35,16 @@ export default (window: Window) => {
 
   button.onclick = () => {
     window.scroll({ top: 0 });
+    if (window.location.hash) {
+      history.pushState(
+        null,
+        '',
+        window.location.pathname + window.location.search,
+      );
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    }
+    const toc = window.document.querySelector('nav.toc') as HTMLElement | null;
+    if (toc) toc.scrollTop = 0;
   };
 
   function show(button: HTMLButtonElement) {

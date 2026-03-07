@@ -223,7 +223,12 @@ export default (window: Window) => {
 
     const updateFromHash = () => {
       const line = parseHash(window.location.hash);
-      if (line == null) return;
+      const existingItem = getCurrentListItem(document.body);
+
+      if (line == null) {
+        if (existingItem) existingItem.classList.remove('current');
+        return;
+      }
 
       let best = 0;
       for (let i = 0; i < codeLines.length; i++) {
@@ -231,7 +236,6 @@ export default (window: Window) => {
         else break;
       }
 
-      const existingItem = getCurrentListItem(document.body);
       const nextItem = elements[best]?.parentElement ?? null;
       if (nextItem != null && nextItem !== existingItem) {
         switchCurrent(existingItem, nextItem);
