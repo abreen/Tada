@@ -142,15 +142,21 @@ unique hash that links back to the heading.
 
 ### Heading subtitles
 
-Write headings using
+Write headings using an extra `#` at the end
 
 ```
 ## Heading # Subtitle
 ```
 
-to render a subtitle inside the heading, like this:
+to render a subtitle inside the heading, like these:
+
+## Course Logistics # Week 1 Overview
+
+### Course Logistics # Week 1 Overview
+*20 points, 5 points per part*
 
 #### Course Logistics # Week 1 Overview
+*20 points, 5 points per part*
 
 The subtitle is given special text styling, and a horizontal line is added
 after the heading. The special text styling for the subtitle also appears in
@@ -209,7 +215,17 @@ The `note` variation is blue and is styled with an information icon.
 The `warning` variation is yellow and styled with a warning triangle.
 
 !!! note
-Keep this information in mind.
+Keep this information in mind. Here's a bulleted list inside the note:
+
+- Here's a bullet point
+- Here's another point
+- Here's the final bullet point.
+
+An example of `monospace` text.
+
+1. Ordered list item one
+2. Ordered list item two
+3. Ordered list item three
 !!!
 
 !!! warning

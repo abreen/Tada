@@ -10,9 +10,8 @@
   --link-text-color: hsl(var(--theme-hue) 80% 35%);
   --link-active-color: #000;
 
-  --section-bg-color: hsl(209 80% 94%);
-  --warning-bg-color: hsl(0 83% 85%);
-  --note-bg-color: hsl(209 54% 85%);
+  --warning-bg-color: hsl(36 95% 70%);
+  --note-bg-color: hsl(209 95% 75%);
 
   // Main foreground color (the color of most text)
   --fg-color: hsl(var(--tint-hue) 8% 8%);
@@ -38,19 +37,17 @@
   --heading-font: var(--font);
   --mono-font: 'Google Sans Code', Consolas, Courier, monospace;
 
-  --font-size: 17px;
+  --font-size: 16px;
   --font-size-smaller: 15px;
   --font-size-small: 13px;
 
   --font-weight: 400;
   --line-height: 1.7;
 
-  /*
-   * Must be a percentage. How much to adjust the font size of <code> or <tt>
-   * when they appear inside of normal text, to compensate for the differences
-   * between var(--font) and var(--mono-font).
-   */
-  --mono-font-size-percent: 94%;
+  // Use em units to specify a size relative to normal body text
+  --mono-font-size: 0.94em;
+  --mono-line-height: 1.5;
+  --mono-border-radius: 0.375em;
 
   color-scheme: light dark;
 }
@@ -72,8 +69,7 @@
     --link-text-color: hsl(var(--theme-hue) 85% 55%);
     --link-active-color: #fff;
 
-    --section-bg-color: hsl(209 28% 11%);
-    --warning-bg-color: hsl(0 25% 22%);
-    --note-bg-color: hsl(209 28% 20%);
+    --warning-bg-color: hsl(36 77% 27%);
+    --note-bg-color: hsl(209 90% 25%);
   }
 }

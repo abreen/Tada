@@ -19,7 +19,9 @@ export default async function mount(window: Window): Promise<void> {
     fragment.querySelectorAll('.line-number').forEach(el => el.remove());
 
     const lines: string[] = [];
-    fragment.childNodes.forEach(node => {
+    const container = fragment.querySelector('.code-body');
+    const topNodes = container ? container.childNodes : fragment.childNodes;
+    topNodes.forEach(node => {
       if (node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent ?? '';
         if (text.trim()) lines.push(text);
@@ -42,4 +44,54 @@ export default async function mount(window: Window): Promise<void> {
     e.clipboardData!.setData('text/plain', lines.join('\n'));
     e.preventDefault();
   });
+
+  const downloadLink = document.querySelector<HTMLAnchorElement>(
+    '.file-header a[download]',
+  );
+  if (downloadLink && 'showSaveFilePicker' in window) {
+    downloadLink.addEventListener('click', async (e: MouseEvent) => {
+      e.preventDefault();
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: downloadLink.download,
+        });
+        const response = await fetch(downloadLink.href);
+        const writable = await handle.createWritable();
+        await writable.write(await response.blob());
+        await writable.close();
+      } catch (err: any) {
+        if (err.name !== 'AbortError') throw err;
+      }
+    });
+  }
+
+  const codeBody = document.querySelector<HTMLElement>('.code-body');
+  const scrollbar = document.querySelector<HTMLElement>('.code-scrollbar');
+  if (!codeBody || !scrollbar) return;
+
+  const inner = scrollbar.firstElementChild as HTMLElement;
+  let syncing = false;
+
+  function updateScrollbar(): void {
+    const hasOverflow = codeBody!.scrollWidth > codeBody!.clientWidth;
+    scrollbar!.style.display = hasOverflow ? '' : 'none';
+    inner.style.width = codeBody!.scrollWidth + 'px';
+  }
+
+  codeBody.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    scrollbar!.scrollLeft = codeBody!.scrollLeft;
+    syncing = false;
+  });
+
+  scrollbar.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    codeBody!.scrollLeft = scrollbar!.scrollLeft;
+    syncing = false;
+  });
+
+  new ResizeObserver(updateScrollbar).observe(codeBody);
+  updateScrollbar();
 }

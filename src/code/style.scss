@@ -1,21 +1,15 @@
 @import '../_mixins.scss';
 
 body.code {
-  --code-gutter-width: 3.5rem;
-
-  .body {
-    background: var(--bg2-color);
-  }
+  --code-gutter-width: 4rem;
 }
 
 body.code .file-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: start;
   gap: var(--gap);
-  padding: var(--gap);
-  border-bottom: 1px solid var(--fg2-color);
-  margin-bottom: var(--gap);
+  padding: var(--gap) 0;
 
   h1 {
     margin: 0;
@@ -26,14 +20,45 @@ body.code .file-header {
 
   tt {
     background: none;
+    padding: 0;
   }
+}
+
+body.code .code-body {
+  background: var(--bg2-color);
+  border-radius: var(--mono-border-radius);
+  display: grid;
+  grid-template-columns: minmax(100%, max-content);
+  overflow-x: auto;
+  overscroll-behavior-x: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body.code .code-scrollbar {
+  position: sticky;
+  bottom: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: none;
+  z-index: 10;
+
+  > div {
+    height: 1px;
+  }
+}
+
+body.code .code-body > pre {
+  margin: 0;
 }
 
 body.code pre {
   display: block;
-  padding: var(--gap) 0;
-  margin: 0;
-  overflow-x: hidden;
+  padding: 0;
+  overflow: visible;
 }
 
 body.code pre .code-row {
@@ -50,6 +75,12 @@ body.code pre .line-number {
   color: var(--fg2-color);
   font-family: var(--mono-font);
   text-decoration: none;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg2-color);
+  border-right: 1px solid var(--fg2-color);
+  margin-right: var(--gap);
 
   &:hover {
     color: var(--fg-color);
@@ -65,37 +96,26 @@ body.code pre .line-number {
   }
 }
 
-body.code pre code {
-  display: block;
-  min-width: 0;
-  padding: 0 var(--gap) 0 var(--gap);
-}
-
 body.code .code-prose {
   background-color: var(--bg2-color);
   display: grid;
   grid-template-columns: var(--code-gutter-width) 1fr;
 
   .code-prose-gutter {
-    margin-right: 0;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg2-color);
+    border-right: 1px solid var(--fg2-color);
+    margin-right: var(--gap);
   }
 
   .code-prose-content {
+    color: var(--fg2-color);
     min-width: 0;
     position: relative;
-    padding: 0 var(--gap) 0 calc(var(--gap) + var(--prose-indent, 0ch) + 1rem);
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: calc(var(--gap) + var(--prose-indent, 0ch));
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--fg2-color);
-    }
-
-    color: var(--fg2-color);
+    padding: var(--gap) var(--gap) var(--gap)
+      calc(var(--prose-indent, 0ch) - 0.2em);
 
     *:last-of-type {
       margin-bottom: 0;
@@ -105,6 +125,10 @@ body.code .code-prose {
     ul,
     li {
       margin: 0;
+    }
+
+    dfn {
+      color: inherit;
     }
   }
 }

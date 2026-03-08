@@ -1,6 +1,6 @@
 /// A class representing a rectangle with integer side lengths.
 ///
-/// Objects of this class may be _mutated_ (that is, changed after construction)
+/// Objects of this class may be mutated (changed after construction)
 /// by scaling using a _scale factor_ (a floating-point number between 0 and 1).
 public class Rectangle {
     private int width;

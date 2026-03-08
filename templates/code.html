@@ -6,7 +6,12 @@
       <h1 data-pagefind-weight="10"><%= page.titleHtml %></h1>
       <a class="button" href="<%= page.codeFilePath %>" download="<%= page.title %>" data-pagefind-ignore>Download</a>
     </div>
-    <%= content %>
+    <div class="code-body">
+      <%= content %>
+    </div>
+    <div class="code-scrollbar" aria-hidden="true">
+      <div></div>
+    </div>
     <% if (page.tocItems && page.tocItems.length > 0) { %>
     <div class="code-search-index" aria-hidden="true">
       <% page.tocItems.forEach(function(item) { %>

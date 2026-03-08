@@ -15,6 +15,7 @@
 
 body.code .toc ol li:has(a) {
   font-family: var(--mono-font);
+  font-size: var(--mono-font-size);
 }
 
 body.code .toc ol a {
@@ -92,16 +93,19 @@ body.code .toc ol a {
 
 .toc ol li.level4 {
   font-size: var(--font-size-small);
+  font-weight: 450;
   margin-left: 18px;
 }
 
 .toc ol li.level5 {
   font-size: var(--font-size-small);
+  font-weight: 450;
   margin-left: 24px;
 }
 
 .toc ol li.level6 {
   font-size: var(--font-size-small);
+  font-weight: 450;
   margin-left: 32px;
 }
 

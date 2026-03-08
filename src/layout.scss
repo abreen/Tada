@@ -33,12 +33,7 @@ body.code > .container {
 }
 
 body.default .body {
-  > h1:first-child,
-  > h2:first-child,
-  > h3:first-child,
-  > h4:first-child,
-  > h5:first-child,
-  > h6:first-child {
+  > *:first-child {
     margin-top: 0;
   }
 }
@@ -66,7 +61,7 @@ body.default main table {
   width: 100%;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 899px) {
   body.default.toc-is-active nav.toc {
     background: var(--bg2-color);
     padding: var(--gap);
@@ -114,7 +109,6 @@ body.default main table {
     top: var(--header-collapsed-height);
     height: calc(100vh - var(--header-collapsed-height));
     overflow-y: auto;
-    scrollbar-color: var(--fg2-color) transparent;
     margin-bottom: 0;
   }
 
