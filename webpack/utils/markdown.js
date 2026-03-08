@@ -129,13 +129,6 @@ function createMarkdown(siteVariables, options = {}) {
 
   markdown.renderer.rules.footnote_block_close = () => '</ol></div>';
 
-  // Remove unused CSS class
-  const footnoteOpen = markdown.renderer.rules.footnote_open;
-  markdown.renderer.rules.footnote_open = (...args) =>
-    footnoteOpen(...args)
-      .replace(' class="footnote-item"', '')
-      .replace('>', ' tabindex="-1">');
-
   // Change appearance of reference
   const caption = markdown.renderer.rules.footnote_caption;
   markdown.renderer.rules.footnote_caption = (...args) => {
@@ -149,6 +142,10 @@ function createMarkdown(siteVariables, options = {}) {
       .replace('<sup class="footnote-ref">', '')
       .replace('</sup>', '')
       .replace('<a href="', '<a class="footnote-ref" href="');
+
+  const footnoteAnchor = markdown.renderer.rules.footnote_anchor;
+  markdown.renderer.rules.footnote_anchor = (...args) =>
+    footnoteAnchor(...args).replace('\u21a9\uFE0E', '\u2191');
 
   /*
    * Customize lists (add wrapper element)

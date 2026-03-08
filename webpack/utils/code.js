@@ -353,7 +353,7 @@ function renderCodeSegment(lines, startLine, lang) {
 
   const rows = lineHtml.map((line, i) => {
     const lineNumber = startLine + i;
-    return `<span class="code-row"><a class="line-number" data-pagefind-ignore id="L${lineNumber}" href="#L${lineNumber}">${lineNumber}</a><code class="shiki language-${lang}">${line}</code></span>`;
+    return `<span class="code-row"><a class="line-number" data-pagefind-ignore tabindex="-1" id="L${lineNumber}" href="#L${lineNumber}">${lineNumber}</a><code class="shiki language-${lang}">${line}</code></span>`;
   });
 
   return `<pre>${rows.join('')}</pre>`;

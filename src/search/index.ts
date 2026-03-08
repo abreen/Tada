@@ -368,6 +368,13 @@ export default (window: Window) => {
     }
   }
 
+  function handleBlur(e: FocusEvent) {
+    if (!state.showResults) return;
+    const related = e.relatedTarget as HTMLElement | null;
+    if (related && resultsContainer.contains(related)) return;
+    hide();
+  }
+
   function handleResultClick(e: MouseEvent) {
     if (!state.showResults) return;
     const link = (e.target as HTMLElement).closest('a.result, a.sub-result');
@@ -394,10 +401,6 @@ export default (window: Window) => {
     }
   }
 
-  function handleWindowClick() {
-    if (state.showResults) hide();
-  }
-
   function handleHeaderExpand() {
     if (state.showResults) hide();
   }
@@ -405,19 +408,17 @@ export default (window: Window) => {
   input.addEventListener('input', handleInput);
   input.addEventListener('keydown', handleKeyDown);
   input.addEventListener('focus', handleFocus);
-  input.addEventListener('click', e => e.stopPropagation());
-  container.addEventListener('click', e => e.stopPropagation());
+  input.addEventListener('blur', handleBlur);
   resultsContainer.addEventListener('click', handleResultClick);
   window.addEventListener('keydown', handleWindowKeyDown);
-  window.addEventListener('click', handleWindowClick);
   on('headerWillExpand', handleHeaderExpand);
 
   return () => {
     remove('headerWillExpand', handleHeaderExpand);
-    window.removeEventListener('click', handleWindowClick);
     window.removeEventListener('keydown', handleWindowKeyDown);
     resultsContainer.removeEventListener('click', handleResultClick);
     input!.removeEventListener('focus', handleFocus);
+    input!.removeEventListener('blur', handleBlur);
     input!.removeEventListener('keydown', handleKeyDown);
     input!.removeEventListener('input', handleInput);
   };

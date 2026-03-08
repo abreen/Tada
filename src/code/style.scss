@@ -90,10 +90,6 @@ body.code pre .line-number {
     background: var(--fg2-color);
     color: var(--bg-color);
   }
-
-  &:focus-visible {
-    outline: none;
-  }
 }
 
 body.code .code-prose {

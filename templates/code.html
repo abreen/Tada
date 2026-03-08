@@ -13,7 +13,7 @@
       <div></div>
     </div>
     <% if (page.tocItems && page.tocItems.length > 0) { %>
-    <div class="code-search-index" aria-hidden="true">
+    <div class="code-search-index" aria-hidden="true" inert>
       <% page.tocItems.forEach(function(item) { %>
       <section>
         <h2 id="L<%= item.line %>"><%= item.name %></h2>

@@ -50,6 +50,10 @@ body.code .toc ol a {
   display: block;
   padding: 4px 6px;
   color: var(--fg-color);
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
 }
 
 @media (hover: hover) {

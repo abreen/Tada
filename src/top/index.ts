@@ -17,8 +17,9 @@ export default (window: Window) => {
     div.className = 'to-top';
 
     const link = window.document.createElement('a');
-    link.href = '#top';
+    link.href = '#';
     link.className = 'button';
+    link.tabIndex = -1;
     link.innerText = 'Back to top';
     div.appendChild(link);
 
@@ -37,17 +38,13 @@ export default (window: Window) => {
 
   link.onclick = e => {
     e.preventDefault();
-    const hash = window.location.hash;
-    if (hash && hash !== '#top') {
-      window.location.assign('#top'); // preserves current hash entry in history
+    const cleanUrl = window.location.pathname + window.location.search;
+    if (window.location.hash) {
+      history.pushState(null, '', cleanUrl);
     } else {
-      window.location.replace('#top'); // no meaningful hash to preserve
+      history.replaceState(null, '', cleanUrl);
     }
-    history.replaceState(
-      null,
-      '',
-      window.location.pathname + window.location.search,
-    );
+    window.scrollTo({ top: 0 });
     const toc = window.document.querySelector('nav.toc') as HTMLElement | null;
     if (toc) toc.scrollTop = 0;
   };
@@ -55,6 +52,7 @@ export default (window: Window) => {
   function show(link: HTMLAnchorElement) {
     if (!isShowing) {
       link.classList.add('is-visible');
+      link.tabIndex = 0;
     }
     isShowing = true;
   }
@@ -62,6 +60,7 @@ export default (window: Window) => {
   function hide(link: HTMLAnchorElement) {
     if (isShowing) {
       removeClass(link, 'is-visible');
+      link.tabIndex = -1;
     }
     isShowing = false;
   }

@@ -38,6 +38,11 @@ p {
   background: var(--fg-color);
 }
 
+:focus-visible {
+  outline: 2px solid var(--theme-color);
+  outline-offset: 1px;
+}
+
 h1,
 h2,
 h3,
@@ -237,6 +242,13 @@ a.footnote-ref {
   font-size: 0.8em;
 }
 
+.footnote-item {
+  &:target {
+    outline: 2px solid var(--theme-color);
+    outline-offset: 1px;
+  }
+}
+
 a.footnote-ref,
 .footnotes .footnote-backref {
   display: inline-block;
@@ -342,13 +354,12 @@ input[type='submit']:active {
   }
 }
 
-button::focus-visible,
-a.button::focus-visible,
+button:focus-visible,
+a.button:focus-visible,
 input[type='submit']:focus-visible,
 input[type='text']:focus-visible,
 input[type='search']:focus-visible {
   border-color: var(--fg-color);
-  outline: var(--focus-border-width) solid var(--fg2-color);
   background: var(--bg2-color);
 }
 
