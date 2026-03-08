@@ -7,9 +7,9 @@ body.code {
 body.code .file-header {
   display: flex;
   align-items: center;
-  justify-content: start;
+  justify-content: center;
   gap: var(--gap);
-  padding: var(--gap) 0;
+  padding: 0 0 var(--gap) 0;
 
   h1 {
     margin: 0;
