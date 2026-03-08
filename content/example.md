@@ -230,6 +230,18 @@ An example of `monospace` text.
 
 !!! warning
 Beware of this rule.
+
+A time zone chooser for testing styles (see the "time zone chooser" section
+below):
+
+<%= timezoneChooser %>
+
+A `<time>` element for testing styles: <time datetime="15:00">3 pm</time>
+
+Testing [internal link style](./example.html)  
+Testing [external link style](https://www.google.com)
+
+Testing <dfn>definition</dfn> style
 !!!
 
 You can specify a custom title:

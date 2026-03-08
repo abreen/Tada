@@ -488,6 +488,19 @@ tbody tr:last-child td {
     background: inherit;
     padding: inherit;
   }
+
+  time[datetime].is-modified {
+    // Reset the underline color
+    text-decoration: underline dotted;
+  }
+
+  a {
+    text-decoration-color: inherit;
+  }
+
+  dfn {
+    color: inherit;
+  }
 }
 
 .alert .content > *:last-child {
