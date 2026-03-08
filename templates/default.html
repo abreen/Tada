@@ -2,12 +2,12 @@
 
 <div class="main-content">
   <%= render('_heading.html') %>
-  <% if (page.toc && page.tocHtml) { %>
-  <nav class="toc"><%= page.tocHtml %></nav>
-  <% } %>
   <main class="body" data-pagefind-body>
     <%= content %>
   </main>
+  <% if (page.toc && page.tocHtml) { %>
+  <nav class="toc"><%= page.tocHtml %></nav>
+  <% } %>
 </div>
 
 <%= render('_bottom.html') %>

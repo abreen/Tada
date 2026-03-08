@@ -62,6 +62,23 @@ body.default main table {
 }
 
 @media (max-width: 899px) {
+  .toc-is-active .main-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .toc-is-active .main-content > .title-and-info {
+    order: 0;
+  }
+
+  .toc-is-active .main-content > nav.toc {
+    order: 1;
+  }
+
+  .toc-is-active .main-content > .body {
+    order: 2;
+  }
+
   body.default.toc-is-active nav.toc {
     background: var(--bg2-color);
     padding: var(--gap);
