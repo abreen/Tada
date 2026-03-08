@@ -18,14 +18,7 @@ body {
 body > .container {
   position: relative;
   padding: 0 var(--gap);
-}
-
-body.default .title-and-info {
   margin-top: calc(var(--header-collapsed-height) + var(--gap));
-}
-
-body.code > .container {
-  padding-top: var(--gap);
 }
 
 .body {

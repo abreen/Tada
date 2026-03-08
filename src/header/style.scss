@@ -140,6 +140,7 @@ header summary .logo {
   color: #fff;
   background: var(--theme-color);
   padding: 1px 6px;
+  margin: 0 8px 0 0;
   font-size: var(--font-size-smaller);
   font-weight: 600;
   pointer-events: none;
@@ -153,10 +154,10 @@ header summary .site-title {
   min-width: 0;
   font-weight: 500;
   pointer-events: none;
-  padding: 0 8px;
+  margin: 0 8px 0 0;
 }
 
-@container (max-width: 480px) {
+@container (max-width: 520px) {
   header summary .site-title {
     display: none;
   }
@@ -165,14 +166,13 @@ header summary .site-title {
 header summary .to-top-container {
   display: none;
   align-items: center;
-  justify-content: center;
   height: var(--header-collapsed-height);
-  padding-left: 8px;
   pointer-events: none;
   white-space: nowrap;
 
   &:has(.is-visible) {
     display: flex;
+    pointer-events: auto;
   }
 }
 
@@ -186,9 +186,9 @@ header summary .search-controls {
   min-width: 0;
 
   input.search {
-    width: 200px;
+    width: 260px;
 
-    @container (max-width: 260px) {
+    @container (max-width: 280px) {
       display: none;
     }
   }

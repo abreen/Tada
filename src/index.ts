@@ -9,7 +9,6 @@ import './question/style.scss';
 import './search/style.scss';
 import './timezone/style.scss';
 import './toc/style.scss';
-import './top/style.scss';
 
 import mountTableOfContents from './toc';
 import mountSearch from './search';

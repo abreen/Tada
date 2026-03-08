@@ -13,18 +13,12 @@ export default (window: Window) => {
     ) as HTMLElement | null) ?? document.body;
 
   function createLink(parent: HTMLElement): HTMLAnchorElement {
-    const div = document.createElement('div');
-    div.className = 'to-top';
-
     const link = window.document.createElement('a');
     link.href = '#';
     link.className = 'button';
     link.tabIndex = -1;
     link.innerText = 'Back to top';
-    div.appendChild(link);
-
-    parent.appendChild(div);
-
+    parent.appendChild(link);
     return link;
   }
 
