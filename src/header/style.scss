@@ -29,11 +29,15 @@ header details summary {
   cursor: pointer;
   position: relative;
   container-type: inline-size;
-}
 
-@media (hover: hover) {
-  header details summary:hover {
-    color: inherit;
+  @media (hover: hover) {
+    &:hover {
+      color: inherit;
+    }
+  }
+
+  &:focus-visible {
+    outline-offset: -2px;
   }
 }
 
