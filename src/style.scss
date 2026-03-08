@@ -506,7 +506,7 @@ tbody tr:last-child td {
   }
 
   a {
-    text-decoration-color: inherit;
+    text-decoration-color: var(--fg-color);
   }
 
   dfn {
