@@ -20,7 +20,6 @@ type State = {
   showResults: boolean;
   results: Result[];
   totalResults: number;
-  activeIndex: number;
 };
 
 function getPdfPageNumber(
@@ -97,7 +96,6 @@ async function doSearch(state: State) {
   if (!state.value) {
     state.results = [];
     state.totalResults = 0;
-    state.activeIndex = -1;
     return;
   }
 
@@ -162,16 +160,13 @@ function render(
   ol.role = 'listbox';
 
   state.results.slice(0, MAX_RESULTS).forEach((result, i) => {
-    const isActive = i === state.activeIndex;
-
     const a = document.createElement('a');
     a.id = `result-${i}`;
     a.role = 'option';
     a.setAttribute('aria-labelledby', `title-${i}`);
-    a.className = isActive ? 'result is-active' : 'result';
+    a.className = 'result';
     a.href = result.url;
-    a.tabIndex = isActive || state.activeIndex < 0 ? 0 : -1;
-    if (isActive) a.setAttribute('aria-selected', 'true');
+    a.tabIndex = 0;
 
     const titleEl = document.createElement('div');
     titleEl.id = `title-${i}`;
@@ -249,9 +244,6 @@ function render(
 
   input.setAttribute('aria-expanded', String(state.showResults));
   input.setAttribute('aria-controls', ol.id);
-  if (state.activeIndex !== -1) {
-    ol.setAttribute('aria-activedescendant', `result-${state.activeIndex}`);
-  }
 }
 
 export default (window: Window) => {
@@ -326,7 +318,6 @@ export default (window: Window) => {
     showResults: false,
     results: [],
     totalResults: 0,
-    activeIndex: -1,
   };
 
   async function update() {
@@ -336,7 +327,6 @@ export default (window: Window) => {
 
   function hide() {
     state.showResults = false;
-    state.activeIndex = -1;
     render(input!, resultsContainer, state);
   }
 
@@ -344,19 +334,7 @@ export default (window: Window) => {
     const value = (e.target as HTMLInputElement).value;
     if (value === state.value) return;
     state.value = value;
-    state.activeIndex = -1;
-    input!.removeAttribute('aria-activedescendant');
     update().catch(() => {});
-  }
-
-  function handleKeyDown(e: KeyboardEvent) {
-    if (!state.showResults) return;
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (state.activeIndex >= 0 && state.results[state.activeIndex]) {
-        window.location.href = state.results[state.activeIndex].url;
-      }
-    }
   }
 
   function handleFocus() {
@@ -367,28 +345,31 @@ export default (window: Window) => {
     }
   }
 
+  let pointerDownInResults = false;
+
   function handleBlur(e: FocusEvent) {
     if (!state.showResults) return;
     const related = e.relatedTarget as HTMLElement | null;
     if (related && resultsContainer.contains(related)) return;
+    if (pointerDownInResults) return;
     hide();
   }
 
-  function handleResultClick(e: MouseEvent) {
-    if (!state.showResults) return;
-    const link = (e.target as HTMLElement).closest('a.result, a.sub-result');
-    if (!link) return;
-    const href = link.getAttribute('href');
-    if (!href) return;
-    let target: URL;
-    try {
-      target = new URL(href, window.location.href);
-    } catch {
-      return;
-    }
-    if (target.pathname === window.location.pathname) {
-      hide();
-    }
+  function handlePointerDown() {
+    pointerDownInResults = true;
+  }
+
+  function handleWindowPointerUp(e: PointerEvent) {
+    if (!pointerDownInResults) return;
+    // If released inside results, let the click handler hide instead
+    if (resultsContainer.contains(e.target as Node)) return;
+    pointerDownInResults = false;
+    hide();
+  }
+
+  function handleResultClick() {
+    pointerDownInResults = false;
+    hide();
   }
 
   function handleWindowKeyDown(e: KeyboardEvent) {
@@ -401,18 +382,20 @@ export default (window: Window) => {
   }
 
   input.addEventListener('input', handleInput);
-  input.addEventListener('keydown', handleKeyDown);
   input.addEventListener('focus', handleFocus);
   input.addEventListener('blur', handleBlur);
+  resultsContainer.addEventListener('pointerdown', handlePointerDown);
   resultsContainer.addEventListener('click', handleResultClick);
+  window.addEventListener('pointerup', handleWindowPointerUp);
   window.addEventListener('keydown', handleWindowKeyDown);
 
   return () => {
     window.removeEventListener('keydown', handleWindowKeyDown);
+    window.removeEventListener('pointerup', handleWindowPointerUp);
     resultsContainer.removeEventListener('click', handleResultClick);
+    resultsContainer.removeEventListener('pointerdown', handlePointerDown);
     input!.removeEventListener('focus', handleFocus);
     input!.removeEventListener('blur', handleBlur);
-    input!.removeEventListener('keydown', handleKeyDown);
     input!.removeEventListener('input', handleInput);
   };
 };

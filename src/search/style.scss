@@ -100,10 +100,6 @@ header {
       color: var(--fg-color);
       padding: 8px;
 
-      &.is-active {
-        background: var(--bg2-color);
-      }
-
       &:focus {
         outline-offset: -2px;
       }
