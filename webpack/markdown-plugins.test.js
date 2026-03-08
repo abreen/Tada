@@ -171,7 +171,9 @@ describe('custom markdown containers', () => {
       '<p class="question-q"><span class="question-label">Q.</span><span>What is a data structure?</span></p>',
     );
     expect(html).toContain('<p class="question-a-label">A.</p>');
-    expect(html).toContain('<div class="question-a-body">');
+    expect(html).toContain(
+      '<div class="question-a-body" data-pagefind-ignore>',
+    );
     expect(html).toContain('<p>An organized collection.</p>');
   });
 

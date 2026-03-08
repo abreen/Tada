@@ -18,8 +18,8 @@ public class Foo {
 }
 `);
     expect(toc).toEqual([
-      { name: 'foo()', line: 3 },
-      { name: 'bar(x)', line: 4 },
+      { kind: 'method', label: 'Method', name: 'foo()', line: 3 },
+      { kind: 'method', label: 'Method', name: 'bar(x)', line: 4 },
     ]);
   });
 
@@ -34,8 +34,8 @@ void main() {
 }
 `);
     expect(toc).toEqual([
-      { name: 'hello()', line: 2 },
-      { name: 'main()', line: 6 },
+      { kind: 'method', label: 'Method', name: 'hello()', line: 2 },
+      { kind: 'method', label: 'Method', name: 'main()', line: 6 },
     ]);
   });
 
@@ -53,7 +53,9 @@ public class Point {
   public Point(int x) {}
 }
 `);
-    expect(toc).toEqual([{ name: 'Point(x)', line: 3 }]);
+    expect(toc).toEqual([
+      { kind: 'constructor', label: 'Constructor', name: 'Point(x)', line: 3 },
+    ]);
   });
 
   test('excludes methods on inner classes', () => {
@@ -74,7 +76,9 @@ public interface Greeter {
   default String greet(String name) { return "Hello, " + name; }
 }
 `);
-    expect(toc).toEqual([{ name: 'greet(name)', line: 3 }]);
+    expect(toc).toEqual([
+      { kind: 'method', label: 'Method', name: 'greet(name)', line: 3 },
+    ]);
   });
 
   test('returns fields from a class with type but not access modifier', () => {
@@ -102,7 +106,9 @@ public class Arr {
   int[] values;
 }
 `);
-    expect(toc).toEqual([{ name: 'int[] values', line: 3 }]);
+    expect(toc).toEqual([
+      { kind: 'field', label: 'Field', name: 'int[] values', line: 3 },
+    ]);
   });
 
   test('returns generic type field', () => {
@@ -111,7 +117,9 @@ public class Container {
   List<String> items;
 }
 `);
-    expect(toc).toEqual([{ name: 'List<String> items', line: 3 }]);
+    expect(toc).toEqual([
+      { kind: 'field', label: 'Field', name: 'List<String> items', line: 3 },
+    ]);
   });
 
   test('returns interface constant', () => {
@@ -120,7 +128,9 @@ public interface Config {
   int TIMEOUT = 30;
 }
 `);
-    expect(toc).toEqual([{ name: 'int TIMEOUT', line: 3 }]);
+    expect(toc).toEqual([
+      { kind: 'field', label: 'Field', name: 'int TIMEOUT', line: 3 },
+    ]);
   });
 
   test('returns abstract interface methods (no body)', () => {
@@ -129,7 +139,9 @@ public interface Greeter {
   String greet(String name);
 }
 `);
-    expect(toc).toEqual([{ name: 'greet(name)', line: 3 }]);
+    expect(toc).toEqual([
+      { kind: 'method', label: 'Method', name: 'greet(name)', line: 3 },
+    ]);
   });
 });
 

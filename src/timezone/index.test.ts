@@ -35,11 +35,11 @@ describe('detectPeriodStyle', () => {
   });
 
   test('returns default for text with no AM/PM', () => {
-    expect(detectPeriodStyle('no time here')).toEqual(['a.m.', 'p.m.']);
+    expect(detectPeriodStyle('no time here')).toBeNull();
   });
 
   test('returns default for empty string', () => {
-    expect(detectPeriodStyle('')).toEqual(['a.m.', 'p.m.']);
+    expect(detectPeriodStyle('')).toBeNull();
   });
 });
 
