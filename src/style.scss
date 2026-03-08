@@ -217,7 +217,7 @@ a.external.disabled:active::after {
 .footnotes {
   margin-top: calc(var(--thematic-break-margin) / 2);
   padding-top: 32px;
-  border-top: 1px solid var(--bg2-color);
+  border-top: 3px solid var(--bg2-color);
   font-size: 0.9em;
 }
 
@@ -510,6 +510,10 @@ tbody tr:last-child td {
   dfn {
     color: inherit;
   }
+}
+
+.alert .content > *:first-child {
+  margin-top: 0;
 }
 
 .alert .content > *:last-child {

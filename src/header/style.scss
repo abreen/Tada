@@ -118,7 +118,7 @@ header summary::after {
 }
 
 @media (hover: hover) {
-  header details summary:hover {
+  header details summary:hover:not(:has(.results-container:hover)) {
     background: var(--bg2-color);
   }
 

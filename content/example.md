@@ -215,8 +215,6 @@ The `note` variation is blue and is styled with an information icon.
 The `warning` variation is yellow and styled with a warning triangle.
 
 !!! note
-Keep this information in mind. Here's a bulleted list inside the note:
-
 - Here's a bullet point
 - Here's another point
 - Here's the final bullet point.
