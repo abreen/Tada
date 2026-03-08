@@ -53,38 +53,33 @@
   </style></noscript>
   </head>
 
-  <body class="<%= page.template %><% if (isHomePage) { %> header-is-frozen<% } %><% if (page.tocHtml) { %> toc-is-active<% } %>">
-    <header data-pagefind-ignore<% if (isHomePage) { %> class="is-open is-frozen"<% } %>>
-      <details<% if (isHomePage) { %> open<% } %>>
-        <summary aria-label="Toggle site navigation"<% if (isHomePage) { %> tabindex="-1"<% } %>>
+  <body class="<%= page.template %><% if (page.tocHtml) { %> toc-is-active<% } %>">
+    <header data-pagefind-ignore>
+      <details>
+        <summary aria-label="Toggle site navigation">
+          <span class="logo" aria-hidden="true"><%= courseCode %></span>
+          <span class="site-title" aria-hidden="true"><%= courseTitle %></span>
+          <div id="to-top-container" class="to-top-container"></div>
+          <% if (site.features.search) { %>
+          <div class="search-controls">
+            <input type="search" class="search quick-search" tabindex="0"
+                   autocomplete="off" name="quick-search"
+                   placeholder="Search"
+                   aria-autocomplete="list" aria-expanded="false"
+                   disabled />
+            <script>document.currentScript.previousElementSibling.disabled=false;</script>
+            <% if (site.features.search) { %>
+            <div class="results-container" role="region"
+                 aria-live="polite" aria-hidden="true">
+              <div class="results" style="display:none"></div>
+            </div>
+            <% } %>
+          </div>
+          <% } %>
         </summary>
         <div class="content">
           <%= render('_nav.html') %>
         </div>
       </details>
     </header>
-    <div id="header-overlay" data-pagefind-ignore>
-      <div class="header-overlay-container">
-        <div class="site-title-and-logo" aria-hidden="true">
-          <span class="title">
-            <span class="logo"><%= courseCode %></span><span class="site-title">&nbsp;<%= courseTitle %></span>
-          </span>
-        </div>
-        <div id="to-top-container" class="to-top-container"></div>
-        <% if (site.features.search) { %>
-        <div class="search-controls">
-          <input type="search" class="search quick-search" tabindex="0"
-                 autocomplete="off" name="quick-search"
-                 placeholder="Search"
-                 aria-autocomplete="list" aria-expanded="false"
-                 disabled />
-          <script>document.currentScript.previousElementSibling.disabled=false;</script>
-        </div>
-        <div class="results-container" role="region"
-             aria-live="polite" aria-hidden="true">
-          <div class="results" style="display:none"></div>
-        </div>
-        <% } %>
-      </div>
-    </div>
     <div class="container">

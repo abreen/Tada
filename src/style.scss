@@ -260,7 +260,6 @@ details .content > div:last-child {
 }
 
 details summary {
-  font-weight: 600;
   cursor: pointer;
   @include user-select(none);
   padding: var(--details-padding);

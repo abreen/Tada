@@ -25,7 +25,7 @@ body.default .title-and-info {
 }
 
 body.code > .container {
-  padding-top: calc(var(--header-collapsed-height) + var(--gap));
+  padding-top: var(--gap);
 }
 
 .body {
@@ -41,20 +41,6 @@ body.default .body {
 body.default .title-and-info,
 body.default nav.toc {
   margin-bottom: 2rem;
-}
-
-body.header-is-frozen {
-  header {
-    position: inherit;
-    background: var(--bg2-color);
-    &:hover {
-      background: var(--bg2-color);
-    }
-  }
-
-  .container {
-    margin-top: 0;
-  }
 }
 
 body.default main table {

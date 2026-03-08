@@ -28,10 +28,6 @@ export default (window: Window) => {
     return link;
   }
 
-  if (window.document.body.classList.contains('header-is-frozen')) {
-    return () => {};
-  }
-
   const link = createLink(mountParent);
 
   let isShowing = false;

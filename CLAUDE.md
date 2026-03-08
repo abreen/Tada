@@ -46,7 +46,6 @@ called after page load.
 |-----------|-----------|---------|
 | Anchor headings | `src/anchor/` | Turns headings into links |
 | Code pages | `src/code/` | Styles for code pages, copy event handling |
-| Global event bus | `src/global/` | `trigger()` / `subscribe()` utilities |
 | Header | `src/header/` | Styles and animation for page header |
 | Printing | `src/print/` | Printing-specific CSS and JavaScript logic |
 | Q&A | `src/question` | Styles and logic for clicking hidden answers to reveal them |

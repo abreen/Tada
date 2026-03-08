@@ -1,5 +1,4 @@
 import { getElement, applyBasePath } from '../util';
-import { on, remove } from '../global';
 
 const MAX_RESULTS = 24;
 
@@ -261,8 +260,8 @@ export default (window: Window) => {
   ) as HTMLInputElement | null;
   if (!input) return;
 
-  const container = input.closest('.header-overlay-container') as HTMLElement;
-  const resultsContainer = getElement(container, '.results-container');
+  const header = input.closest('header') as HTMLElement;
+  const resultsContainer = getElement(header, '.results-container');
   const resultsDiv = getElement(resultsContainer, '.results');
 
   // Unhide (hidden via inline style in template to prevent FOUC)
@@ -401,20 +400,14 @@ export default (window: Window) => {
     }
   }
 
-  function handleHeaderExpand() {
-    if (state.showResults) hide();
-  }
-
   input.addEventListener('input', handleInput);
   input.addEventListener('keydown', handleKeyDown);
   input.addEventListener('focus', handleFocus);
   input.addEventListener('blur', handleBlur);
   resultsContainer.addEventListener('click', handleResultClick);
   window.addEventListener('keydown', handleWindowKeyDown);
-  on('headerWillExpand', handleHeaderExpand);
 
   return () => {
-    remove('headerWillExpand', handleHeaderExpand);
     window.removeEventListener('keydown', handleWindowKeyDown);
     resultsContainer.removeEventListener('click', handleResultClick);
     input!.removeEventListener('focus', handleFocus);
