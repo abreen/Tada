@@ -141,11 +141,28 @@ async function doSearch(state: State) {
   state.results = grouped;
 }
 
+function applyHighlight(
+  resultsContainer: HTMLElement,
+  focusedEl: HTMLElement | null,
+) {
+  const options = Array.from(
+    resultsContainer.querySelectorAll('[role="option"]'),
+  ) as HTMLElement[];
+  options.forEach(opt => {
+    const selected = focusedEl !== null && opt.contains(focusedEl);
+    opt.setAttribute('aria-selected', selected ? 'true' : 'false');
+  });
+}
+
 function render(
   input: HTMLInputElement,
   resultsContainer: HTMLElement,
   state: State,
 ) {
+  if (state.showResults) {
+    resultsContainer.removeAttribute('inert');
+  }
+
   let resultsDiv = resultsContainer.querySelector(
     '.results',
   ) as HTMLElement | null;
@@ -158,12 +175,13 @@ function render(
   const ol = document.createElement('ol');
   ol.id = `${input.name}-results`;
   ol.role = 'listbox';
+  ol.setAttribute('aria-label', 'Search results');
+
+  const totalVisible = Math.min(state.results.length, MAX_RESULTS);
 
   state.results.slice(0, MAX_RESULTS).forEach((result, i) => {
     const a = document.createElement('a');
     a.id = `result-${i}`;
-    a.role = 'option';
-    a.setAttribute('aria-labelledby', `title-${i}`);
     a.className = 'result';
     a.href = result.url;
     a.tabIndex = 0;
@@ -185,6 +203,12 @@ function render(
     a.appendChild(excerpt);
 
     const li = document.createElement('li');
+    li.id = `option-${i}`;
+    li.setAttribute('role', 'option');
+    li.setAttribute('aria-selected', 'false');
+    li.setAttribute('aria-setsize', String(totalVisible));
+    li.setAttribute('aria-posinset', String(i + 1));
+    li.setAttribute('aria-labelledby', `title-${i}`);
     li.appendChild(a);
 
     const subsToShow = result.subResults.slice(0, 5);
@@ -240,6 +264,7 @@ function render(
   } else {
     resultsContainer.classList.remove('is-showing');
     resultsContainer.setAttribute('aria-hidden', 'true');
+    resultsContainer.setAttribute('inert', '');
   }
 
   input.setAttribute('aria-expanded', String(state.showResults));
@@ -334,10 +359,17 @@ export default (window: Window) => {
     const value = (e.target as HTMLInputElement).value;
     if (value === state.value) return;
     state.value = value;
+    state.showResults = true;
     update().catch(() => {});
   }
 
-  function handleFocus() {
+  let previousFocus: HTMLElement | null = null;
+
+  function handleFocus(e: FocusEvent) {
+    const previous = e.relatedTarget as HTMLElement | null;
+    if (previous && !resultsContainer.contains(previous)) {
+      previousFocus = previous;
+    }
     checkForIndexUpdate().catch(() => {});
     if (!state.showResults) {
       state.showResults = true;
@@ -372,11 +404,73 @@ export default (window: Window) => {
     hide();
   }
 
-  function handleWindowKeyDown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && state.showResults) {
-      state.value = '';
-      input!.value = '';
-      input!.blur();
+  function handleInputKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (state.showResults) {
+        hide();
+      } else {
+        previousFocus?.focus();
+      }
+      return;
+    }
+
+    if (!state.showResults) return;
+
+    const links = Array.from(
+      resultsContainer.querySelectorAll('a.result, a.sub-result'),
+    ) as HTMLElement[];
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      links[0]?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      // no-op: already at the top of the widget
+    }
+  }
+
+  function handleResultsKeyDown(e: KeyboardEvent) {
+    const links = Array.from(
+      resultsContainer.querySelectorAll('a.result, a.sub-result'),
+    ) as HTMLElement[];
+    const focused = document.activeElement as HTMLElement;
+    const idx = links.indexOf(focused);
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (idx < 0) return;
+      links[(idx + 1) % links.length].focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (idx < 0) return;
+      if (idx === 0) {
+        input!.focus();
+      } else {
+        links[idx - 1].focus();
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      hide();
+      input!.focus();
+    }
+  }
+
+  function handleResultsFocusIn(e: FocusEvent) {
+    applyHighlight(resultsContainer, e.target as HTMLElement);
+  }
+
+  function handleResultsFocusOut(e: FocusEvent) {
+    const related = e.relatedTarget as HTMLElement | null;
+    if (related && (resultsContainer.contains(related) || related === input)) {
+      return;
+    }
+    applyHighlight(resultsContainer, null);
+  }
+
+  function handleWindowPointerDown(e: PointerEvent) {
+    const target = e.target as Node;
+    if (!input!.contains(target) && !resultsContainer.contains(target)) {
       hide();
     }
   }
@@ -384,18 +478,26 @@ export default (window: Window) => {
   input.addEventListener('input', handleInput);
   input.addEventListener('focus', handleFocus);
   input.addEventListener('blur', handleBlur);
+  input.addEventListener('keydown', handleInputKeyDown);
   resultsContainer.addEventListener('pointerdown', handlePointerDown);
   resultsContainer.addEventListener('click', handleResultClick);
+  resultsContainer.addEventListener('keydown', handleResultsKeyDown);
+  resultsContainer.addEventListener('focusin', handleResultsFocusIn);
+  resultsContainer.addEventListener('focusout', handleResultsFocusOut);
   window.addEventListener('pointerup', handleWindowPointerUp);
-  window.addEventListener('keydown', handleWindowKeyDown);
+  window.addEventListener('pointerdown', handleWindowPointerDown);
 
   return () => {
-    window.removeEventListener('keydown', handleWindowKeyDown);
+    window.removeEventListener('pointerdown', handleWindowPointerDown);
     window.removeEventListener('pointerup', handleWindowPointerUp);
+    resultsContainer.removeEventListener('focusout', handleResultsFocusOut);
+    resultsContainer.removeEventListener('focusin', handleResultsFocusIn);
+    resultsContainer.removeEventListener('keydown', handleResultsKeyDown);
     resultsContainer.removeEventListener('click', handleResultClick);
     resultsContainer.removeEventListener('pointerdown', handlePointerDown);
-    input!.removeEventListener('focus', handleFocus);
+    input!.removeEventListener('keydown', handleInputKeyDown);
     input!.removeEventListener('blur', handleBlur);
+    input!.removeEventListener('focus', handleFocus);
     input!.removeEventListener('input', handleInput);
   };
 };

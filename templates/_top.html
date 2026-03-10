@@ -62,15 +62,20 @@
           <div id="to-top-container" class="to-top-container"></div>
           <% if (site.features.search) { %>
           <div class="search-controls">
-            <input type="search" class="search quick-search" tabindex="0"
+            <input type="search" class="search quick-search"
                    autocomplete="off" name="quick-search"
                    placeholder="Search"
-                   aria-autocomplete="list" aria-expanded="false"
+                   role="combobox"
+                   aria-haspopup="listbox"
+                   aria-autocomplete="list"
+                   aria-expanded="false"
+                   aria-controls="quick-search-results"
                    disabled />
             <script>document.currentScript.previousElementSibling.disabled=false;</script>
             <% if (site.features.search) { %>
             <div class="results-container" role="region"
-                 aria-live="polite" aria-hidden="true">
+                 aria-label="Search results"
+                 aria-live="polite" aria-hidden="true" inert>
               <div class="results" style="display:none"></div>
             </div>
             <% } %>
