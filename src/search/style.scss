@@ -43,7 +43,7 @@ header {
     pointer-events: none;
 
     @media (prefers-reduced-motion: no-preference) {
-      transform: translateY(-16px);
+      transform: translateY(-8px);
       transition:
         opacity 0.25s ease,
         transform 0.25s ease;
@@ -62,11 +62,27 @@ header {
     @include user-select(none);
 
     .results-info {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       color: var(--fg2-color);
       @include user-select(none);
-      padding: 8px 0 8px 8px;
-      font-weight: 700;
+      padding: 8px 8px 8px 8px;
+
+      .search-hint {
+        font-size: var(--font-size-small);
+        color: var(--fg2-color);
+
+        kbd {
+          display: inline-block;
+          padding: 1px 5px;
+          border: 1px solid var(--fg2-color);
+          border-radius: 4px;
+          font-family: var(--font);
+          font-size: var(--font-size-small);
+          line-height: 1.4;
+        }
+      }
     }
 
     ol {

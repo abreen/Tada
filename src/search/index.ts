@@ -250,13 +250,32 @@ function render(
   if (!infoSpan) {
     infoSpan = document.createElement('span');
     infoSpan.className = 'results-info';
+
+    const hint = document.createElement('span');
+    hint.className = 'search-hint';
+    const kbd1 = document.createElement('kbd');
+    kbd1.textContent = 'Ctrl';
+    const kbd2 = document.createElement('kbd');
+    kbd2.textContent = 'Space';
+    hint.append(kbd1, '+', kbd2, '\u00a0to search');
+    infoSpan.appendChild(hint);
+
     resultsDiv.insertBefore(infoSpan, resultsDiv.firstChild);
   }
+
+  let countSpan = infoSpan.querySelector(
+    '.results-count',
+  ) as HTMLSpanElement | null;
+  if (!countSpan) {
+    countSpan = document.createElement('span');
+    countSpan.className = 'results-count';
+    infoSpan.insertBefore(countSpan, infoSpan.firstChild);
+  }
   const n = state.totalResults;
-  if (n === 0) infoSpan.innerText = 'No results';
-  else if (n === 1) infoSpan.innerText = 'One result';
-  else if (n <= MAX_RESULTS) infoSpan.innerText = `${n} results`;
-  else infoSpan.innerText = `Showing first ${MAX_RESULTS} results`;
+  if (n === 0) countSpan.textContent = 'No results';
+  else if (n === 1) countSpan.textContent = 'One result';
+  else if (n <= MAX_RESULTS) countSpan.textContent = `${n} results`;
+  else countSpan.textContent = `Showing first ${MAX_RESULTS} results`;
 
   if (state.showResults) {
     resultsContainer.classList.add('is-showing');
@@ -475,6 +494,13 @@ export default (window: Window) => {
     }
   }
 
+  function handleWindowKeyDown(e: KeyboardEvent) {
+    if (e.key === ' ' && e.ctrlKey && !e.altKey && !e.metaKey) {
+      e.preventDefault();
+      input!.focus();
+    }
+  }
+
   input.addEventListener('input', handleInput);
   input.addEventListener('focus', handleFocus);
   input.addEventListener('blur', handleBlur);
@@ -486,8 +512,10 @@ export default (window: Window) => {
   resultsContainer.addEventListener('focusout', handleResultsFocusOut);
   window.addEventListener('pointerup', handleWindowPointerUp);
   window.addEventListener('pointerdown', handleWindowPointerDown);
+  window.addEventListener('keydown', handleWindowKeyDown);
 
   return () => {
+    window.removeEventListener('keydown', handleWindowKeyDown);
     window.removeEventListener('pointerdown', handleWindowPointerDown);
     window.removeEventListener('pointerup', handleWindowPointerUp);
     resultsContainer.removeEventListener('focusout', handleResultsFocusOut);
