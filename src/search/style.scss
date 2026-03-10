@@ -39,7 +39,8 @@ header {
   }
 
   @media (hover: hover) {
-    .results-container.is-typing a.result:hover {
+    .results-container.is-typing a.result:hover:not(:focus-visible),
+    .results-container.is-typing a.sub-result:hover:not(:focus-visible) {
       background: transparent;
     }
   }
@@ -117,10 +118,6 @@ header {
         outline: 2px solid var(--theme-color);
         outline-offset: -2px;
       }
-
-      &:focus {
-        outline-offset: -2px;
-      }
     }
 
     ol a {
@@ -187,6 +184,12 @@ header {
 
         &:hover {
           background: var(--bg2-color);
+        }
+
+        &:focus-visible {
+          background: var(--bg2-color);
+          outline: 2px solid var(--theme-color);
+          outline-offset: -2px;
         }
 
         .title {

@@ -175,6 +175,7 @@ function render(
   const ol = document.createElement('ol');
   ol.id = `${input.name}-results`;
   ol.role = 'listbox';
+  ol.tabIndex = -1;
   ol.setAttribute('aria-label', 'Search results');
 
   const totalVisible = Math.min(state.results.length, MAX_RESULTS);
@@ -375,7 +376,6 @@ export default (window: Window) => {
   }
 
   function handleInput(e: Event) {
-    resultsContainer.classList.add('is-typing');
     const value = (e.target as HTMLInputElement).value;
     if (value === state.value) return;
     state.value = value;
@@ -500,6 +500,7 @@ export default (window: Window) => {
   }
 
   function handleWindowKeyDown(e: KeyboardEvent) {
+    resultsContainer.classList.add('is-typing');
     if (e.key === ' ' && e.ctrlKey && !e.altKey && !e.metaKey) {
       e.preventDefault();
       input!.focus();
