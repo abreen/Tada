@@ -38,6 +38,12 @@ header {
     pointer-events: all;
   }
 
+  @media (hover: hover) {
+    .results-container.is-typing a.result:hover {
+      background: transparent;
+    }
+  }
+
   .results {
     opacity: 0;
     pointer-events: none;

@@ -375,11 +375,16 @@ export default (window: Window) => {
   }
 
   function handleInput(e: Event) {
+    resultsContainer.classList.add('is-typing');
     const value = (e.target as HTMLInputElement).value;
     if (value === state.value) return;
     state.value = value;
     state.showResults = true;
     update().catch(() => {});
+  }
+
+  function handleWindowPointerMove() {
+    resultsContainer.classList.remove('is-typing');
   }
 
   let previousFocus: HTMLElement | null = null;
@@ -512,10 +517,12 @@ export default (window: Window) => {
   resultsContainer.addEventListener('focusout', handleResultsFocusOut);
   window.addEventListener('pointerup', handleWindowPointerUp);
   window.addEventListener('pointerdown', handleWindowPointerDown);
+  window.addEventListener('pointermove', handleWindowPointerMove);
   window.addEventListener('keydown', handleWindowKeyDown);
 
   return () => {
     window.removeEventListener('keydown', handleWindowKeyDown);
+    window.removeEventListener('pointermove', handleWindowPointerMove);
     window.removeEventListener('pointerdown', handleWindowPointerDown);
     window.removeEventListener('pointerup', handleWindowPointerUp);
     resultsContainer.removeEventListener('focusout', handleResultsFocusOut);
