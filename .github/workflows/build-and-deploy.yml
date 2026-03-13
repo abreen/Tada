@@ -22,8 +22,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: sudo apt install -y mupdf-tools fonts-inter openjdk-25-jdk-headless
+    - name: Install MuPDF and Inter font
+      run: sudo apt install -y mupdf-tools fonts-inter
 
     - name: Use Bun
       uses: oven-sh/setup-bun@v2
