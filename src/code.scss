@@ -1,0 +1,54 @@
+@import './_mixins.scss';
+
+body.code,
+body.literate {
+  --code-gutter-width: 4rem;
+}
+
+.file-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap);
+  border: 1px solid var(--fg2-color);
+  border-radius: var(--border-radius);
+  padding: var(--gap);
+  margin-bottom: var(--gap);
+
+  tt,
+  code {
+    background: none;
+    padding: 0;
+  }
+}
+
+.code-row {
+  display: grid;
+  grid-template-columns: var(--code-gutter-width) 1fr;
+}
+
+.line-number {
+  cursor: pointer;
+  display: block;
+  padding: 0 0.75em 0 0.75em;
+  text-align: right;
+  @include user-select(none);
+  color: var(--fg2-color);
+  font-family: var(--mono-font);
+  text-decoration: none;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg2-color);
+  border-right: 1px solid var(--fg2-color);
+  margin-right: var(--gap);
+
+  &:hover {
+    color: var(--fg-color);
+  }
+
+  &:target {
+    background: var(--fg2-color);
+    color: var(--bg-color);
+  }
+}

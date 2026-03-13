@@ -2,6 +2,7 @@ import './style.scss';
 import './layout.scss';
 
 import './anchor/style.scss';
+import './code.scss';
 import './code/style.scss';
 import './literate/style.scss';
 import './header/style.scss';
