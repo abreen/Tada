@@ -66,6 +66,10 @@ body.code pre .code-row {
   grid-template-columns: var(--code-gutter-width) 1fr;
 }
 
+body.code pre code {
+  padding-right: var(--gap);
+}
+
 body.code pre .line-number {
   cursor: pointer;
   display: block;

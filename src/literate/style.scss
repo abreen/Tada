@@ -5,9 +5,14 @@ body.literate .body pre:has(.code-row) {
   background: var(--bg2-color);
   border-radius: var(--mono-border-radius);
   overflow-x: auto;
+  overscroll-behavior-x: none;
   padding: 0;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+
+  code {
+    padding-right: var(--gap);
+  }
 
   .code-row {
     display: grid;
