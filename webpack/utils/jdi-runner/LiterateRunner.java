@@ -32,9 +32,9 @@ public class LiterateRunner {
                 int close = json.indexOf(']', i);
                 String pair = json.substring(i + 1, close);
                 String[] parts = pair.split(",");
-                ranges.add(new int[]{
-                    Integer.parseInt(parts[0].trim()),
-                    Integer.parseInt(parts[1].trim())
+                ranges.add(new int[] {
+                        Integer.parseInt(parts[0].trim()),
+                        Integer.parseInt(parts[1].trim())
                 });
                 i = close + 1;
             } else {
@@ -86,18 +86,20 @@ public class LiterateRunner {
         InputStream targetStderr = process.getErrorStream();
 
         // Drain stderr in a background thread
-        Thread stderrThread = Thread.ofVirtual().start(() -> {
+        Thread stderrThread = new Thread(() -> {
             try {
                 targetStderr.transferTo(System.err);
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
         });
+        stderrThread.setDaemon(true);
+        stderrThread.start();
 
         int activeBlock = -1;
 
         try {
             // Set up class prepare request
-            ClassPrepareRequest classPrepareReq =
-                vm.eventRequestManager().createClassPrepareRequest();
+            ClassPrepareRequest classPrepareReq = vm.eventRequestManager().createClassPrepareRequest();
             classPrepareReq.addClassFilter(className);
             classPrepareReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
             classPrepareReq.enable();
@@ -122,7 +124,7 @@ public class LiterateRunner {
                             if (m.name().equals("main") && m.returnTypeName().equals("void")) {
                                 var argTypes = m.argumentTypeNames();
                                 if (argTypes.isEmpty() ||
-                                    (argTypes.size() == 1 && argTypes.get(0).equals("java.lang.String[]"))) {
+                                        (argTypes.size() == 1 && argTypes.get(0).equals("java.lang.String[]"))) {
                                     mainMethod = m;
                                     break;
                                 }
@@ -132,8 +134,8 @@ public class LiterateRunner {
                         if (mainMethod != null) {
                             List<Location> locations = mainMethod.allLineLocations();
                             if (!locations.isEmpty()) {
-                                BreakpointRequest bp =
-                                    vm.eventRequestManager().createBreakpointRequest(locations.get(0));
+                                BreakpointRequest bp = vm.eventRequestManager()
+                                        .createBreakpointRequest(locations.get(0));
                                 bp.setSuspendPolicy(EventRequest.SUSPEND_ALL);
                                 bp.enable();
                             }
@@ -147,7 +149,7 @@ public class LiterateRunner {
                         activeBlock = findBlock(blockRanges, line);
 
                         StepRequest stepReq = vm.eventRequestManager().createStepRequest(
-                            thread, StepRequest.STEP_LINE, StepRequest.STEP_OVER);
+                                thread, StepRequest.STEP_LINE, StepRequest.STEP_OVER);
                         stepReq.addClassFilter(className);
                         stepReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
                         stepReq.enable();
@@ -159,7 +161,7 @@ public class LiterateRunner {
                         String output = drainStream(targetStdout);
                         if (!output.isEmpty() && activeBlock >= 0) {
                             blockOutput.computeIfAbsent(activeBlock, k -> new StringBuilder())
-                                .append(output);
+                                    .append(output);
                         }
 
                         int line = se.location().lineNumber();
@@ -173,7 +175,7 @@ public class LiterateRunner {
                         String output = drainStream(targetStdout);
                         if (!output.isEmpty() && activeBlock >= 0) {
                             blockOutput.computeIfAbsent(activeBlock, k -> new StringBuilder())
-                                .append(output);
+                                    .append(output);
                         }
                         running = false;
                     }
@@ -189,10 +191,13 @@ public class LiterateRunner {
             String output = drainStream(targetStdout);
             if (!output.isEmpty() && activeBlock >= 0) {
                 blockOutput.computeIfAbsent(activeBlock, k -> new StringBuilder())
-                    .append(output);
+                        .append(output);
             }
         } finally {
-            try { vm.dispose(); } catch (VMDisconnectedException ignored) {}
+            try {
+                vm.dispose();
+            } catch (VMDisconnectedException ignored) {
+            }
             stderrThread.join(1000);
         }
 
@@ -201,7 +206,8 @@ public class LiterateRunner {
         sb.append('[');
         boolean first = true;
         for (var entry : blockOutput.entrySet()) {
-            if (!first) sb.append(',');
+            if (!first)
+                sb.append(',');
             first = false;
             sb.append('[');
             sb.append(entry.getKey());
