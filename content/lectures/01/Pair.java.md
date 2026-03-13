@@ -180,7 +180,7 @@ sections, etc. are included in the final .java file.
 <!---
 When Tada renders a literate code block, it trims leading whitespace common to
 all lines in the block. For this reason, and because we don't need to explain
-the main() method in this document, we hide the line of code introducting it
+the main() method in this document, we hide the line of code introducing it
 from the final HTML page.
 
 ```
