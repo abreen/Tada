@@ -17,6 +17,7 @@ const {
   injectWebpackAssets,
   renderCodePageAsset,
   renderCopiedContentAsset,
+  renderLiterateJavaPageAsset,
   renderPlainTextPageAsset,
 } = require('./utils/render');
 const { parseFrontMatter } = require('./utils/front-matter');
@@ -37,5 +38,6 @@ module.exports = {
   normalizeOutputPath,
   renderCodePageAsset,
   renderCopiedContentAsset,
+  renderLiterateJavaPageAsset,
   renderPlainTextPageAsset,
 };

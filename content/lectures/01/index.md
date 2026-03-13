@@ -16,6 +16,7 @@ Here is a sample description of the topics covered at the first lecture.
 
 * [`App.java`](./App.java)
 * [`Rectangle.java`](./Rectangle.java)
+* [`Pair.java`](./Pair.java) (an example of the "literate" programming feature)
 * [`demo.py`](./demo.py)
 
 

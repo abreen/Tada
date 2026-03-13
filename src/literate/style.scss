@@ -1,0 +1,68 @@
+@import '../_mixins.scss';
+
+body.literate .body pre {
+  --code-gutter-width: 3.5rem;
+  background: var(--bg2-color);
+  border-radius: var(--mono-border-radius);
+  overflow-x: auto;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+
+  .code-row {
+    display: grid;
+    grid-template-columns: var(--code-gutter-width) 1fr;
+  }
+
+  .line-number {
+    cursor: pointer;
+    display: block;
+    padding: 0 0.75em 0 0.75em;
+    text-align: right;
+    @include user-select(none);
+    color: var(--fg2-color);
+    font-family: var(--mono-font);
+    text-decoration: none;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg2-color);
+    border-right: 1px solid var(--fg2-color);
+    margin-right: var(--gap);
+
+    &:hover {
+      color: var(--fg-color);
+    }
+
+    &:target {
+      background: var(--fg2-color);
+      color: var(--bg-color);
+    }
+  }
+}
+
+body.literate .literate-code-output {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+
+  > pre:last-child {
+    white-space: pre-wrap;
+    min-width: 150px;
+  }
+}
+
+body.literate .file-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: var(--gap);
+
+  code {
+    background: 0;
+    padding: 0;
+  }
+
+  a.button {
+    margin-left: var(--gap);
+  }
+}

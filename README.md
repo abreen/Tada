@@ -270,6 +270,29 @@ searchable text and added to the Pagefind index. If text is found on a given
 page of a PDF, Pagefind results use `#page=` to link to a specific page
 (for example, `/lecture1/intro.pdf#page=2`).
 
+### Literate Java programming
+
+Inspired by [literate Haskell](https://wiki.haskell.org/Literate_programming)
+and [Jupyter notebooks](https://jupyter.org/), Tada allows you to write a
+Markdown file which is also a complete Java file.
+
+As with normal `.java` files (and other kinds of source code), Tada will
+generate an HTML page with syntax-highlighted code and a "Download" button.
+If you write a "literate" Java file ending with `.java.md`, Tada will
+assume each Markdown code block contains only Java code, and will execute
+`main()` methods as part of rendering the file.
+
+As Tada executes the `main()` method, it uses the Java Debug Interface (JDI)
+to step through each line of the program and associate printed output with
+specific lines of the Java class, and by association, the Markdown code block
+which contains them. After execution, Tada renders two columns of HTML:
+one for the code block, and another for the printed output.
+
+To hide Java code from the reader but still include it in the final `.java`
+file, use Tada's three-hyphen HTML comment syntax.
+
+Note that leading whitespace common to all lines in a given code block is
+trimmed, to make reading a code block easier.
 
 
 [inter]: https://fonts.google.com/specimen/Inter

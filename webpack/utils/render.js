@@ -6,12 +6,23 @@ const { makeLogger } = require('../log');
 const { B } = require('../colors');
 const createGlobals = require('../globals');
 const { render } = require('../templates');
-const { extractJavaMethodToc, renderCodeWithComments } = require('./code');
+const {
+  extractJavaMethodToc,
+  renderCodeSegment,
+  renderCodeWithComments,
+} = require('./code');
 const { extensionIsMarkdown } = require('./file-types');
 const { createApplyBasePath, normalizeOutputPath } = require('./paths');
 const { parseFrontMatterAndContent } = require('./front-matter');
 const { createMarkdown } = require('./markdown');
 const { generateTocHtml, generateCodeTocHtml } = require('../toc-plugin');
+const {
+  parseLiterateJava,
+  hasMainMethod,
+  deriveClassName,
+  compileJavaSource,
+  executeLiterateJava,
+} = require('./literate-java');
 
 const log = makeLogger(__filename, 'debug');
 
@@ -158,6 +169,7 @@ function renderCodePageAsset({
     title: `${name}${ext}`,
     titleHtml,
     codeFilePath,
+    downloadName: `${name}${ext}`,
     tocItems,
     tocHtml,
   };
@@ -285,9 +297,151 @@ function stripHtmlComments(str) {
   return str.replace(/<!---[\s\S]*?-->/g, '');
 }
 
+function renderLiterateJavaPageAsset({
+  filePath,
+  contentDir,
+  siteVariables,
+  compilation,
+}) {
+  const { dir, name } = path.parse(filePath);
+  const className = deriveClassName(filePath);
+  const subPath = path.relative(contentDir, path.join(dir, className));
+  const applyBasePath = createApplyBasePath(siteVariables);
+
+  log.note`Rendering literate Java page ${B`${name}`}`;
+
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  const {
+    pageVariables,
+    content,
+    javaSource,
+    codeBlocks,
+    visibleBlockIndices,
+  } = parseLiterateJava(raw, siteVariables);
+
+  if (!validateFrontMatter(pageVariables, filePath)) {
+    return [];
+  }
+
+  // Compile the concatenated Java source
+  let tempDir;
+  let blockOutputMap = null;
+  try {
+    tempDir = compileJavaSource(javaSource, className);
+
+    // Execute if there is a main() method
+    if (hasMainMethod(javaSource)) {
+      const outputEntries = executeLiterateJava(className, tempDir, codeBlocks);
+      blockOutputMap = new Map(outputEntries);
+    }
+  } finally {
+    if (tempDir) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  }
+
+  // Render full markdown with a custom fence rule that replaces fences
+  // with Shiki-highlighted code blocks and optional JDI output columns
+  const md = createMarkdown(siteVariables, {
+    validatorOptions: { enabled: false },
+  });
+  let fenceIndex = 0;
+  let javaLineCounter = 1;
+
+  md.renderer.rules.fence = (tokens, idx) => {
+    const token = tokens[idx];
+    const code = token.content;
+    const lines = code.endsWith('\n')
+      ? code.slice(0, -1).split('\n')
+      : code.split('\n');
+
+    // Dedent: strip common leading whitespace for display
+    const minIndent = lines.reduce((min, line) => {
+      if (line.trim().length === 0) return min;
+      const indent = line.match(/^(\s*)/)[1].length;
+      return Math.min(min, indent);
+    }, Infinity);
+    const dedented =
+      minIndent > 0 && minIndent < Infinity
+        ? lines.map(l => l.slice(minIndent))
+        : lines;
+
+    const startLine = javaLineCounter;
+    javaLineCounter += lines.length;
+
+    const codeHtml = renderCodeSegment(dedented, startLine, 'java');
+    const blockIdx = visibleBlockIndices[fenceIndex++];
+    const output =
+      blockOutputMap && blockOutputMap.has(blockIdx)
+        ? blockOutputMap.get(blockIdx)
+        : null;
+
+    if (output) {
+      const escapedOutput = output
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<div class="literate-code-output">${codeHtml}<pre>${escapedOutput}</pre></div>`;
+    }
+
+    return codeHtml;
+  };
+
+  const env = {};
+  const contentHtml = md.render(content, env);
+
+  // Build page variables
+  const javaFileName = `${className}.java`;
+  const codeFilePath = applyBasePath(
+    normalizeOutputPath(
+      `/${toContentAssetPath(contentDir, path.join(dir, javaFileName))}`,
+    ),
+  );
+
+  const titleHtml = md.renderInline(pageVariables.title);
+  pageVariables.titleHtml = titleHtml;
+  pageVariables.title = stripHtml(titleHtml).result;
+  pageVariables.template = 'literate';
+  pageVariables.codeFilePath = codeFilePath;
+  pageVariables.downloadName = javaFileName;
+
+  if (pageVariables.toc && env.tocItems) {
+    pageVariables.tocHtml = generateTocHtml(env.tocItems);
+  }
+
+  const templateParameters = createTemplateParameters({
+    pageVariables,
+    siteVariables,
+    content: contentHtml,
+    applyBasePath,
+    subPath,
+  });
+
+  const html = injectWebpackAssets(
+    render('literate.html', templateParameters),
+    compilation,
+    applyBasePath,
+  );
+
+  return [
+    {
+      assetPath: toContentAssetPath(
+        contentDir,
+        path.join(dir, `${className}.html`),
+      ),
+      content: html,
+    },
+    {
+      assetPath: toContentAssetPath(contentDir, path.join(dir, javaFileName)),
+      content: javaSource,
+    },
+  ];
+}
+
 module.exports = {
   injectWebpackAssets,
   renderCodePageAsset,
   renderCopiedContentAsset,
+  renderLiterateJavaPageAsset,
   renderPlainTextPageAsset,
 };

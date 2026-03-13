@@ -25,18 +25,22 @@ body > .container {
   padding-bottom: 2rem;
 }
 
-body.default .body {
+body.default .body,
+body.literate .body {
   > *:first-child {
     margin-top: 0;
   }
 }
 
 body.default .title-and-info,
-body.default nav.toc {
+body.default nav.toc,
+body.literate .title-and-info,
+body.literate nav.toc {
   margin-bottom: 2rem;
 }
 
-body.default main table {
+body.default main table,
+body.literate main table {
   width: 100%;
 }
 
@@ -58,7 +62,8 @@ body.default main table {
     order: 2;
   }
 
-  body.default.toc-is-active nav.toc {
+  body.default.toc-is-active nav.toc,
+  body.literate.toc-is-active nav.toc {
     background: var(--bg2-color);
     padding: var(--gap);
   }
@@ -69,7 +74,8 @@ body.default main table {
 }
 
 @media (min-width: 900px) {
-  body.default main table {
+  body.default main table,
+  body.literate main table {
     width: auto;
     min-width: 400px;
     margin: 1rem auto;

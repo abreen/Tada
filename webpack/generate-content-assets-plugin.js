@@ -9,8 +9,10 @@ const {
   getValidInternalTargets,
   renderCodePageAsset,
   renderCopiedContentAsset,
+  renderLiterateJavaPageAsset,
   renderPlainTextPageAsset,
 } = require('./util');
+const { isLiterateJava } = require('./utils/file-types');
 const { getWatchState, setBuildDelta } = require('./build-state');
 
 const log = makeLogger(__filename);
@@ -96,6 +98,20 @@ class GenerateContentAssetsPlugin {
   renderSourceAssets(filePath, contentDir, validInternalTargets, compilation) {
     const ext = path.extname(filePath).toLowerCase();
     const assets = [];
+
+    if (isLiterateJava(filePath)) {
+      if (isFeatureEnabled(this.siteVariables, 'literateJava')) {
+        assets.push(
+          ...renderLiterateJavaPageAsset({
+            filePath,
+            contentDir,
+            siteVariables: this.siteVariables,
+            compilation,
+          }),
+        );
+      }
+      return assets;
+    }
 
     if (ext === '.html' || ext === '.md' || ext === '.markdown') {
       assets.push(

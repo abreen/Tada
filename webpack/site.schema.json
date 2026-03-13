@@ -8,7 +8,8 @@
       "properties": {
         "search": { "type": "boolean", "default": true },
         "code": { "type": "boolean", "default": true },
-        "favicon": { "type": "boolean", "default": false }
+        "favicon": { "type": "boolean", "default": false },
+        "literateJava": { "type": "boolean", "default": false }
       },
       "required": ["search", "code", "favicon"],
       "additionalProperties": false

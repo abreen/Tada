@@ -1,0 +1,16 @@
+<%= render('_top.html') %>
+
+<div class="main-content">
+  <%= render('_heading.html') %>
+  <main class="body" data-pagefind-body>
+    <div class="file-header">
+      <code><%= page.downloadName %></code><%= render('_download.html') %>
+    </div>
+    <%= content %>
+  </main>
+  <% if (page.toc && page.tocHtml) { %>
+  <nav class="toc"><%= page.tocHtml %></nav>
+  <% } %>
+</div>
+
+<%= render('_bottom.html') %>

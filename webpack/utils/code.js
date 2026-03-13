@@ -419,4 +419,9 @@ function renderCodeWithComments(sourceCode, lang, siteVariables) {
     .join('');
 }
 
-module.exports = { extractJavaMethodToc, renderCodeWithComments };
+module.exports = {
+  createCodeMarkdown,
+  extractJavaMethodToc,
+  renderCodeSegment,
+  renderCodeWithComments,
+};

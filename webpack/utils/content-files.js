@@ -4,6 +4,7 @@ const { parseFrontMatterAndContent } = require('./front-matter');
 const {
   PUBLIC_ASSET_EXTENSIONS,
   extensionIsMarkdown,
+  isLiterateJava,
 } = require('./file-types');
 const { normalizeOutputPath } = require('./paths');
 
@@ -95,7 +96,19 @@ function getValidInternalTargets(contentDir, contentFiles, codeExtensions) {
       .split(path.sep)
       .join(path.posix.sep);
 
-    if (extensionIsMarkdown(ext) || ext === '.html') {
+    if (isLiterateJava(filePath)) {
+      const baseName = path.parse(parsed.name).name;
+      const literateSubPath = path
+        .join(parsed.dir, baseName)
+        .split(path.sep)
+        .join(path.posix.sep);
+      addGeneratedRouteAliases(targets, `/${literateSubPath}.html`);
+      targets.add(
+        normalizeOutputPath(
+          `/${path.join(parsed.dir, parsed.name).split(path.sep).join(path.posix.sep)}`,
+        ),
+      );
+    } else if (extensionIsMarkdown(ext) || ext === '.html') {
       addGeneratedRouteAliases(targets, `/${subPath}.html`);
     } else if (ext === '.pdf') {
       targets.add(normalizeOutputPath(`/${relPath}`));

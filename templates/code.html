@@ -4,7 +4,7 @@
   <main class="body" data-pagefind-body>
     <div class="file-header">
       <h1 data-pagefind-weight="10"><%= page.titleHtml %></h1>
-      <a class="button" href="<%= page.codeFilePath %>" download="<%= page.title %>" data-pagefind-ignore>Download</a>
+      <%= render('_download.html') %>
     </div>
     <div class="code-body">
       <%= content %>
