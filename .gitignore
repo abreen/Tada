@@ -1,6 +1,16 @@
 dist
 .DS_Store
 
+# Java
+.mtj.tmp/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
 # Playwright
 /test-results/
 /playwright-report/
