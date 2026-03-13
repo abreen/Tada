@@ -166,11 +166,11 @@ sections, etc. are included in the final .java file.
     private static void test(boolean condition, String fmt, Object... rest) {
         String description = String.format(fmt, rest);
 
-        IO.print(description);
+        System.out.print(description);
         if (condition) {
-            IO.println(": passed");
+            System.out.println(": passed");
         } else {
-            IO.println(": FAILED");
+            System.out.println(": FAILED");
         }
     }
 ```
