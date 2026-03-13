@@ -147,8 +147,8 @@ Please note:
     generic.
 -   The `@Override` annotation informs the compiler we intend to override the
     inherited version of `equals()` from the `Object` class.
--   The question marks the type `Pair<?, ?>` are known as <dfn>wildcards</dfn>
-    and are used to represent any type.
+-   The question marks in the type `Pair<?, ?>` are known as
+    <dfn>wildcards</dfn> and are used to represent any type.
 
 
 ## Unit tests
