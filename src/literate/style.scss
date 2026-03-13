@@ -24,12 +24,37 @@ body.literate .body pre:has(.code-row) {
 
 body.literate .literate-code-output {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--gap);
   font-size: var(--mono-font-size);
 
   > pre:last-child {
     white-space: pre-wrap;
-    min-width: 150px;
+  }
+
+  @media (max-width: 899px) {
+    > pre:first-child {
+      margin-bottom: 0;
+    }
+
+    > pre:last-child {
+      margin-top: 0;
+
+      &::before {
+        content: 'Output';
+        display: block;
+        font-size: var(--font-size-small);
+        font-style: italic;
+        color: var(--fg2-color);
+      }
+    }
+  }
+
+  @media (min-width: 900px) {
+    grid-template-columns: 1fr 1fr;
+
+    > pre:last-child {
+      min-width: 150px;
+    }
   }
 }
