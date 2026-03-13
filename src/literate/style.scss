@@ -28,6 +28,10 @@ body.literate .literate-code-output {
   gap: var(--gap);
   font-size: var(--mono-font-size);
 
+  > pre {
+    margin-top: 0;
+  }
+
   > pre:last-child {
     white-space: pre-wrap;
   }
@@ -37,16 +41,12 @@ body.literate .literate-code-output {
       margin-bottom: 0;
     }
 
-    > pre:last-child {
-      margin-top: 0;
-
-      &::before {
-        content: 'Output';
-        display: block;
-        font-size: var(--font-size-small);
-        font-style: italic;
-        color: var(--fg2-color);
-      }
+    > pre:last-child::before {
+      content: 'Output';
+      display: block;
+      font-size: var(--font-size-small);
+      font-style: italic;
+      color: var(--fg2-color);
     }
   }
 
