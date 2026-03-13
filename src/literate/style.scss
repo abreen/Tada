@@ -69,14 +69,14 @@ body.literate .file-header {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: var(--gap);
+  border: 1px solid var(--fg2-color);
+  border-radius: var(--border-radius);
+  padding: var(--gap);
   margin-bottom: var(--gap);
 
   code {
     background: 0;
     padding: 0;
-  }
-
-  a.button {
-    margin-left: var(--gap);
   }
 }
