@@ -346,7 +346,6 @@ function renderLiterateJavaPageAsset({
     validatorOptions: { enabled: false },
   });
   let fenceIndex = 0;
-  let javaLineCounter = 1;
 
   md.renderer.rules.fence = (tokens, idx) => {
     const token = tokens[idx];
@@ -366,11 +365,10 @@ function renderLiterateJavaPageAsset({
         ? lines.map(l => l.slice(minIndent))
         : lines;
 
-    const startLine = javaLineCounter;
-    javaLineCounter += lines.length;
+    const blockIdx = visibleBlockIndices[fenceIndex++];
+    const startLine = codeBlocks[blockIdx].javaStartLine;
 
     const codeHtml = renderCodeSegment(dedented, startLine, 'java');
-    const blockIdx = visibleBlockIndices[fenceIndex++];
     const output =
       blockOutputMap && blockOutputMap.has(blockIdx)
         ? blockOutputMap.get(blockIdx)

@@ -163,14 +163,15 @@ sections, etc. are included in the final .java file.
 <<< details The `test()` helper method
 
 ```
-    private static void test(boolean condition, String fmt, Object... rest) {
-        String description = String.format(fmt, rest);
+    private static void test(boolean condition) {
+        // Get the line number from where this invocation of test() was made
+        StackTraceElement[] frames = Thread.currentThread().getStackTrace();
+        int lineNumber = frames[2].getLineNumber();
 
-        System.out.print(description);
         if (condition) {
-            System.out.println(": passed");
+            System.out.printf("%d: passed%n", lineNumber);
         } else {
-            System.out.println(": FAILED");
+            System.out.printf("%d: FAILED%n", lineNumber);
         }
     }
 ```
@@ -192,56 +193,79 @@ Let's test the `equals()` and `compareTo()` implementations. We'll create
 two objects representing (1, 1) and test if they are considered equal:
 
 ```
-        var a = new Pair(1, 1);
-        var a2 = new Pair(1, 1);
-        test(a.equals(a2), "%s equals %s", a, a2);
+        {
+            var a = new Pair(1, 1);
+            var b = new Pair(1, 1);
+            test(a.equals(b));
+        }
 ```
 
 Let's make sure `equals()` correctly returns `false` when the components of
 two pairs are _not_ the same:
 
 ```
-        var b = new Pair(2, 3);
-        test(!a.equals(b), "%s doesn't equal %s", a, b);
+        {
+            var a = new Pair("foo", "bar");
+            var b = new Pair("zap", "pop");
+            test(!a.equals(b));
+        }
 ```
 
 Then we'll test the inequalities relating (1, 1) and (2, 2):
 
 ```
-        var twos = new Pair(2, 2);
-        test(a.compareTo(twos) < 0, "%s < %s", a, twos);
-        test(twos.compareTo(a) > 0, "%s > %s", twos, a);
-        test(a.compareTo(a) == 0, "%s = %s", a, a);
+        {
+            var a = new Pair(1, 1);
+            var b = new Pair(2, 2);
+            test(a.compareTo(a) == 0);
+            test(a.compareTo(b) < 0);
+            test(b.compareTo(a) > 0);
+        }
 ```
 
 Now we'll test that the second component is used for comparison when the first
 component matches:
 
 ```
-        test(a.compareTo(b) < 0, "%s < %s", a, b);
-        test(b.compareTo(a) > 0, "%s > %s", b, a);
+        {
+            var a = new Pair(1, 7);
+            var b = new Pair(1, 3);
+            test(a.compareTo(b) > 0);
+            test(b.compareTo(a) < 0);
+        }
 ```
 
 Now let's test `first()` and `second()`, which return a new pair with one
 component replaced:
 
 ```
-        var c = new Pair('x', 'y');
+        {
+            var apple = new Pair(1, "apple");
+            var orange = apple.second("orange");
 
-        test(c.first('a').first.equals('a'), "first('a') replaces first");
-        test(c.first('a').second.equals('y'), "first('a') doesn't change second");
+            test(orange.second.equals("orange"));
 
-        test(c.second('a').second.equals('a'), "second('a') replaces second");
-        test(c.second('a').first.equals('x'), "second('a') doesn't change first");
+            // Test that original pair wasn't modified
+            test(apple.second.equals("apple"));
+
+            var orange2 = orange.first(2);
+            test(orange2.first.equals(2));
+
+            // Test that original pairs weren't modified
+            test(orange.first.equals(1));
+            test(apple.first.equals(1));
+        }
 ```
 
 Finally, let's test `reversed()`:
 
 ```
-        var d = new Pair("hello", 42);
-        var r = d.reversed();
-        test(r.first.equals(42), "reversed() swaps first and second");
-        test(r.second.equals("hello"), "reversed() swaps first and second");
+        {
+            var d = new Pair("hello", 42);
+            var r = d.reversed();
+            test(r.first.equals(42));
+            test(r.second.equals("hello"));
+        }
 ```
 
 <!---
