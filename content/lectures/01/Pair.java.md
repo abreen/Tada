@@ -189,6 +189,21 @@ from the final HTML page.
 ```
 -->
 
+First, let's test that the constructor checks for `null` and throws the correct
+exception:
+
+```
+        try {
+            new Pair(null, 1);
+            test(false);
+        } catch (IllegalArgumentException e) {
+            test(true);
+        } catch (Exception e) {
+            // Any other type of exception would be incorrect
+            test(false);
+        }
+```
+
 Let's test the `equals()` and `compareTo()` implementations. We'll create
 two objects representing (1, 1) and test if they are considered equal:
 
