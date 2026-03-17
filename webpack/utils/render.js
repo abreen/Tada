@@ -99,7 +99,7 @@ function renderPlainTextPageAsset({
   const subPath = path.relative(contentDir, path.join(dir, name));
   const applyBasePath = createApplyBasePath(siteVariables);
 
-  log.note`Rendering page ${B`${subPath + ext}`}`;
+  log.info`Rendering page ${B`${subPath + ext}`}`;
   const { content, pageVariables, tocItems } = renderPlainTextContent(
     filePath,
     subPath,
@@ -155,7 +155,7 @@ function renderCodePageAsset({
   const lang = siteVariables.codeLanguages[ext.slice(1).toLowerCase()];
   const sourceCode = fs.readFileSync(filePath, 'utf-8');
 
-  log.note`Rendering code page ${B`${subPath + ext}`}`;
+  log.info`Rendering code page ${B`${subPath + ext}`}`;
   const content = renderCodeWithComments(sourceCode, lang, siteVariables);
   const codeFilePath = applyBasePath(
     normalizeOutputPath(`/${toContentAssetPath(contentDir, filePath)}`),
@@ -201,7 +201,7 @@ function renderCopiedContentAsset({ filePath, contentDir }) {
   const label = ext === '.pdf' ? 'Copying' : 'Copying source file';
   const relPath = toContentAssetPath(contentDir, filePath);
 
-  log.note`${label} ${B`${relPath}`}`;
+  log.info`${label} ${B`${relPath}`}`;
   return [{ assetPath: relPath, content: fs.readFileSync(filePath) }];
 }
 
@@ -308,7 +308,7 @@ function renderLiterateJavaPageAsset({
   const subPath = path.relative(contentDir, path.join(dir, className));
   const applyBasePath = createApplyBasePath(siteVariables);
 
-  log.note`Rendering literate Java page ${B`${name}`}`;
+  log.info`Rendering literate Java page ${B`${name}`}`;
 
   const raw = fs.readFileSync(filePath, 'utf-8');
   const {

@@ -142,7 +142,7 @@ class GenerateContentAssetsPlugin {
           }),
         );
       } else if (!this.loggedCodeDisabled) {
-        log.note`Not generating source code pages due to site.features.code = false`;
+        log.info`Not generating source code pages due to site.features.code = false`;
         this.loggedCodeDisabled = true;
       }
     }

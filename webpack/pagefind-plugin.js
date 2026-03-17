@@ -223,7 +223,7 @@ class PagefindPlugin {
   runWatchIndex() {
     if (this.watchRunInProgress) {
       this.watchRunQueued = true;
-      log.note`Pagefind is still running in the background; queueing a rerun`;
+      log.info`Pagefind is still running in the background; queueing a rerun`;
       return;
     }
 
@@ -266,7 +266,7 @@ class PagefindPlugin {
     })
       .then(() => {
         const finishedAt = Date.now();
-        log.note`Pagefind background index ready in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
+        log.info`Pagefind background index ready in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
       })
       .catch(err => {
         const failedAt = Date.now();
@@ -275,7 +275,7 @@ class PagefindPlugin {
       .finally(() => {
         this.watchRunInProgress = false;
         if (this.watchRunQueued) {
-          log.note`Starting queued Pagefind background rerun`;
+          log.info`Starting queued Pagefind background rerun`;
           this.runWatchIndex();
         }
       });
@@ -328,7 +328,7 @@ class PagefindPlugin {
         let reachableHtmlPaths;
         let reachablePdfPaths;
 
-        log.note`Preparing Pagefind snapshot...`;
+        log.info`Preparing Pagefind snapshot...`;
         try {
           ({ reachableHtmlPaths, reachablePdfPaths } = collectIndexTargets(
             htmlAssetsByPath,
@@ -342,7 +342,7 @@ class PagefindPlugin {
         }
 
         const snapshotReadyAt = Date.now();
-        log.note`Building Pagefind index for ${reachableHtmlPaths.length} page(s) and ${reachablePdfPaths.length} PDF(s) after ${snapshotReadyAt - start}ms of snapshot prep...`;
+        log.info`Building Pagefind index for ${reachableHtmlPaths.length} page(s) and ${reachablePdfPaths.length} PDF(s) after ${snapshotReadyAt - start}ms of snapshot prep...`;
         buildIndex({
           distPath,
           htmlAssetsByPath,
@@ -359,7 +359,7 @@ class PagefindPlugin {
               // Best-effort cleanup for non-watch builds.
             }
             const finishedAt = Date.now();
-            log.note`Pagefind index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
+            log.info`Pagefind index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
             callback();
           })
           .catch(err => {

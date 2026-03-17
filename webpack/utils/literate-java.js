@@ -115,7 +115,7 @@ function executeLiterateJava(className, classPath, codeBlocks) {
   const blockRanges = codeBlocks.map(b => [b.javaStartLine, b.javaEndLine]);
   const rangesJson = JSON.stringify(blockRanges);
 
-  log.note`Executing literate Java: ${className}`;
+  log.info`Executing literate Java: ${className}`;
 
   try {
     const result = execSync(

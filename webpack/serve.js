@@ -74,7 +74,7 @@ function tryListen(port, fallbackPort) {
         },
       });
 
-      log.note`Dev server: ${B`http://localhost:${server.port}/index.html`}`;
+      log.info`Dev server: ${B`http://localhost:${server.port}/index.html`}`;
       messageReady(server.port);
       resolve(server);
     } catch (err) {

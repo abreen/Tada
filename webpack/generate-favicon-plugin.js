@@ -138,7 +138,7 @@ class GenerateFaviconPlugin {
           this._cachedAssets = new Map();
 
           try {
-            log.note`Using font file: ${FONT_PATH}`;
+            log.info`Using font file: ${FONT_PATH}`;
             const font = fontkit.openSync(FONT_PATH);
 
             const svgMarkup = createFaviconSvg(

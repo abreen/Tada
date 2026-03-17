@@ -3,8 +3,15 @@ const path = require('path');
 const { G, R, P, Y, L } = require('./colors');
 const FLAIR_STRINGS = require('./flair.json');
 
-const LEVELS = ['debug', 'note', 'warn', 'error'];
-const LEVELS_PRETTY = ['ᴅᴇʙᴜɢ', ' ɴᴏᴛᴇ', ' ᴡᴀʀɴ', 'ᴇʀʀᴏʀ'];
+const LEVELS = ['debug', 'info', 'warn', 'error'];
+
+const ENV_LOG_LEVEL = process.env.TADA_LOG_LEVEL;
+
+if (ENV_LOG_LEVEL && !LEVELS.includes(ENV_LOG_LEVEL)) {
+  throw new Error(
+    `Invalid TADA_LOG_LEVEL "${ENV_LOG_LEVEL}", must be one of: ${LEVELS.join(', ')}`,
+  );
+}
 
 function shouldLog(loggerLevel, level) {
   return LEVELS.indexOf(level) >= LEVELS.indexOf(loggerLevel);
@@ -18,14 +25,6 @@ function validateLevel(level) {
   }
 }
 
-function prettyLevel(level) {
-  if (level === 'event') {
-    return 'ᴇᴠᴇɴᴛ';
-  }
-  const i = LEVELS.indexOf(level);
-  return LEVELS_PRETTY[i] || level;
-}
-
 function print(strings, stream = 'stdout', end = '\n') {
   for (const s of strings) {
     process[stream].write(s);
@@ -33,8 +32,12 @@ function print(strings, stream = 'stdout', end = '\n') {
   process[stream].write(end);
 }
 
-function makeLogger(name, logLevel = 'note') {
+function makeLogger(name, logLevel = 'info') {
   validateLevel(logLevel);
+
+  if (ENV_LOG_LEVEL) {
+    logLevel = ENV_LOG_LEVEL;
+  }
 
   if (!name) {
     name = '';
@@ -50,7 +53,7 @@ function makeLogger(name, logLevel = 'note') {
     },
     getArgs(level, strings, args, colorFn) {
       const params = [];
-      params.push(colorFn`${prettyLevel(level)}` + '\t');
+      params.push(colorFn`${level}` + '\t');
       params.push(format(strings, ...args));
       return params;
     },
@@ -59,9 +62,9 @@ function makeLogger(name, logLevel = 'note') {
         print(this.getArgs('debug', strings, args, L), 'stderr');
       }
     },
-    note(strings, ...args) {
-      if (shouldLog(this.minLogLevel, 'note')) {
-        print(this.getArgs('note', strings, args, L));
+    info(strings, ...args) {
+      if (shouldLog(this.minLogLevel, 'info')) {
+        print(this.getArgs('info', strings, args, L));
       }
     },
     warn(strings, ...args) {

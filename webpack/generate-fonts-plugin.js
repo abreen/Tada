@@ -49,7 +49,7 @@ class GenerateFontsPlugin {
                 source = new RawSource(woff2Buf);
                 compilation.emitAsset(assetName, source);
                 this._cachedAssets.set(assetName, source);
-                log.note`Converted ${family}/${file} to ${outName}`;
+                log.info`Converted ${family}/${file} to ${outName}`;
               } else {
                 const assetName = `${family}/${file}`;
                 source = new RawSource(fs.readFileSync(filePath));
