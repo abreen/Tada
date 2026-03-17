@@ -6,7 +6,12 @@ const {
   getBuildContentFiles,
 } = require('./util');
 const { setWatchState } = require('./build-state');
-const { compileTemplates, getTemplatesDir } = require('./templates');
+const {
+  compileTemplates,
+  getHtmlTemplatesDir,
+  getJsonDataDir,
+  JSON_DATA_FILES,
+} = require('./templates');
 
 let _needsRestart = false;
 
@@ -19,27 +24,36 @@ class ContentWatchPlugin {
     let lastSig = null;
 
     compiler.hooks.make.tap('ContentWatchPlugin', compilation => {
+      const htmlTemplatesDir = getHtmlTemplatesDir();
+      const jsonDataDir = getJsonDataDir();
+
       // Refresh templates cache from disk
       try {
         compileTemplates(this.siteVariables);
       } catch (err) {
         compilation.errors.push(err);
-        const templatesDir = getTemplatesDir();
-        for (const fileName of fs.readdirSync(templatesDir)) {
-          compilation.fileDependencies.add(path.join(templatesDir, fileName));
+        for (const fileName of fs.readdirSync(htmlTemplatesDir)) {
+          compilation.fileDependencies.add(
+            path.join(htmlTemplatesDir, fileName),
+          );
+        }
+        for (const dataFile of JSON_DATA_FILES) {
+          const dataPath = path.join(jsonDataDir, dataFile);
+          if (fs.existsSync(dataPath)) {
+            compilation.fileDependencies.add(dataPath);
+          }
         }
         return;
       }
 
       const contentDir = getContentDir();
-      const templatesDir = getTemplatesDir();
       const modifiedFiles = new Set(
         [...(compiler.modifiedFiles || [])].map(filePath =>
           path.resolve(filePath),
         ),
       );
       const normalizedContentDir = path.resolve(contentDir) + path.sep;
-      const normalizedTemplatesDir = path.resolve(templatesDir) + path.sep;
+      const normalizedHtmlDir = path.resolve(htmlTemplatesDir) + path.sep;
       const contentFiles = getContentFiles(
         contentDir,
         Object.keys(this.siteVariables.codeLanguages),
@@ -64,10 +78,16 @@ class ContentWatchPlugin {
           filePath.startsWith(normalizedContentDir),
         ),
       );
+
+      // Check if any HTML template or JSON data file changed
+      const jsonDataPaths = JSON_DATA_FILES.map(f =>
+        path.resolve(jsonDataDir, f),
+      );
       const templatesChanged = [...modifiedFiles].some(
         filePath =>
-          filePath === path.resolve(templatesDir) ||
-          filePath.startsWith(normalizedTemplatesDir),
+          filePath === path.resolve(htmlTemplatesDir) ||
+          filePath.startsWith(normalizedHtmlDir) ||
+          jsonDataPaths.includes(filePath),
       );
 
       setWatchState(compiler, {
@@ -94,9 +114,17 @@ class ContentWatchPlugin {
       }
       addDirs(contentDir);
 
-      // Tell webpack to watch all template files
-      for (const fileName of fs.readdirSync(templatesDir)) {
-        compilation.fileDependencies.add(path.join(templatesDir, fileName));
+      // Watch HTML template files from the package
+      for (const fileName of fs.readdirSync(htmlTemplatesDir)) {
+        compilation.fileDependencies.add(path.join(htmlTemplatesDir, fileName));
+      }
+
+      // Watch JSON data files from the project config
+      for (const dataFile of JSON_DATA_FILES) {
+        const dataPath = path.join(jsonDataDir, dataFile);
+        if (fs.existsSync(dataPath)) {
+          compilation.fileDependencies.add(dataPath);
+        }
       }
     });
   }

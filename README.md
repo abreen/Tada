@@ -207,14 +207,15 @@ templates][lodash].
 
 ## Templates
 
-HTML page layouts live in the `templates/` directory. During `tada init`, default
-templates are copied into your project. You can customize them.
+HTML page layouts are internal to the Tada package. You don't need to modify
+them; they are designed to work with the client-side components and styles
+bundled in the package.
 
-- `templates/default.html` --- default page layout
-- `templates/code.html` --- source code page layout
-- Partials: `_nav.html`, `_top.html`, `_bottom.html`, `_heading.html`, `_author.html`
-- `templates/nav.json` --- navigation structure (validated against `nav.schema.json`)
-- `templates/authors.json` --- author/staff data (validated against `authors.schema.json`)
+During `tada init`, two data files are copied into your project's `config/`
+directory:
+
+- `config/nav.json` --- navigation structure (validated against a JSON schema)
+- `config/authors.json` --- author/staff data (validated against a JSON schema)
 
 
 

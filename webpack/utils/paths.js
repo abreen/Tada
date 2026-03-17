@@ -20,6 +20,10 @@ function getPublicDir() {
   return path.resolve(getProjectDir(), 'public');
 }
 
+function getConfigDir() {
+  return path.resolve(getProjectDir(), 'config');
+}
+
 function createApplyBasePath(siteVariables) {
   return function applyBasePath(subPath) {
     if (!subPath.startsWith('/')) {
@@ -44,6 +48,7 @@ function normalizeOutputPath(outputPath) {
 
 module.exports = {
   createApplyBasePath,
+  getConfigDir,
   getContentDir,
   getDistDir,
   getPackageDir,

@@ -266,11 +266,17 @@ async function initCommand(args) {
   const renderedTheme = _.template(themeTemplate)({ themeHue: hue });
   fs.writeFileSync(path.join(projectDir, 'config/_theme.scss'), renderedTheme);
 
-  // Copy templates/, content/, and public/ from the package
-  copyDirRecursive(
-    path.join(packageDir, 'templates'),
-    path.join(projectDir, 'templates'),
+  // Copy nav and authors data files to the project's config directory
+  fs.copyFileSync(
+    path.join(packageDir, 'config/nav.json'),
+    path.join(projectDir, 'config/nav.json'),
   );
+  fs.copyFileSync(
+    path.join(packageDir, 'config/authors.json'),
+    path.join(projectDir, 'config/authors.json'),
+  );
+
+  // Copy content/ and public/ from the package
   copyDirRecursive(
     path.join(packageDir, 'content'),
     path.join(projectDir, 'content'),

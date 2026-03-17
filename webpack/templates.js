@@ -1,5 +1,4 @@
 const fs = require('fs');
-const { inspect } = require('node:util');
 const path = require('path');
 const _ = require('lodash');
 const { compile: compileJsonSchema, doValidation } = require('./json-schema');
@@ -20,9 +19,17 @@ const validators = {};
 const renderStack = [];
 let errorStack = null;
 
-function getTemplatesDir() {
-  const { getProjectDir } = require('./utils/paths');
-  return path.resolve(getProjectDir(), 'templates');
+// JSON data files that live in the user's config directory
+const JSON_DATA_FILES = ['nav.json', 'authors.json'];
+
+function getHtmlTemplatesDir() {
+  const { getPackageDir } = require('./utils/paths');
+  return path.resolve(getPackageDir(), 'templates');
+}
+
+function getJsonDataDir() {
+  const { getConfigDir } = require('./utils/paths');
+  return getConfigDir();
 }
 
 function json(fileName) {
@@ -62,42 +69,48 @@ function compileTemplates(siteVariables) {
   Object.keys(templates).forEach(k => delete templates[k]);
   Object.keys(jsonData).forEach(k => delete jsonData[k]);
 
-  const templatesDir = getTemplatesDir();
-
-  fs.readdirSync(templatesDir).forEach(fileName => {
+  // Load HTML templates from the package
+  const htmlDir = getHtmlTemplatesDir();
+  fs.readdirSync(htmlDir).forEach(fileName => {
     const ext = path.extname(fileName).toLowerCase();
-    const isSchema = fileName.toLowerCase().endsWith('.schema.json');
-    if (isSchema) {
-      return;
-    }
-
-    const filePath = path.join(templatesDir, fileName);
-
     if (ext === '.html') {
-      templates[fileName] = fs.readFileSync(filePath, 'utf-8');
-    } else if (ext === '.json') {
-      const schemaFile = `${path.parse(fileName).name}.schema.json`;
-      const schemaPath = path.join(templatesDir, schemaFile);
-      if (fs.existsSync(schemaPath)) {
-        compileAndSetValidator(schemaPath, fileName);
-      }
-
-      jsonData[fileName] = JSON.parse(
-        _.template(fs.readFileSync(filePath, 'utf-8'))({
-          ...(siteVariables.vars || {}),
-          site: siteVariables,
-          base: siteVariables.base,
-          basePath: siteVariables.basePath,
-        }),
+      templates[fileName] = fs.readFileSync(
+        path.join(htmlDir, fileName),
+        'utf-8',
       );
-
-      if (validators[fileName]) {
-        doValidation(validators[fileName], jsonData[fileName], fileName);
-      } else {
-        log.warn`Missing JSON Schema for ${fileName}`;
-      }
     }
   });
+
+  // Load JSON data files from the project's config directory
+  const jsonDir = getJsonDataDir();
+  for (const fileName of JSON_DATA_FILES) {
+    const filePath = path.join(jsonDir, fileName);
+    if (!fs.existsSync(filePath)) {
+      continue;
+    }
+
+    // Schema validation (schemas live in the package templates dir)
+    const schemaFile = `${path.parse(fileName).name}.schema.json`;
+    const schemaPath = path.join(htmlDir, schemaFile);
+    if (fs.existsSync(schemaPath)) {
+      compileAndSetValidator(schemaPath, fileName);
+    }
+
+    jsonData[fileName] = JSON.parse(
+      _.template(fs.readFileSync(filePath, 'utf-8'))({
+        ...(siteVariables.vars || {}),
+        site: siteVariables,
+        base: siteVariables.base,
+        basePath: siteVariables.basePath,
+      }),
+    );
+
+    if (validators[fileName]) {
+      doValidation(validators[fileName], jsonData[fileName], fileName);
+    } else {
+      log.warn`Missing JSON Schema for ${fileName}`;
+    }
+  }
 }
 
 function compileAndSetValidator(schemaPath, fileName) {
@@ -105,4 +118,11 @@ function compileAndSetValidator(schemaPath, fileName) {
   validators[fileName] = compileJsonSchema(schema);
 }
 
-module.exports = { compileTemplates, render, getTemplatesDir, json };
+module.exports = {
+  compileTemplates,
+  render,
+  getHtmlTemplatesDir,
+  getJsonDataDir,
+  json,
+  JSON_DATA_FILES,
+};

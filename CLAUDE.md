@@ -5,7 +5,7 @@ The runtime is Bun. Build logic is implemented as Webpack plugins in `webpack/`.
 
 - Site content lives in `content/`
 - Markdown & HTML content is processed; other file types are copied into `dist/`
-- Lodash templates in `templates/` assemble pages
+- Lodash HTML templates in `templates/` are internal to the package
 - Client-side TypeScript is in `src/`
 - Static assets are in `public/`
 
@@ -29,11 +29,17 @@ When installed as a package, they differ.
 
 ## Templates
 
+HTML templates are internal to the Tada package and live in `templates/`:
+
 - `templates/default.html` --- default page layout
 - `templates/code.html` --- source code page layout
 - Partials: `_nav.html`, `_top.html`, `_bottom.html`, `_heading.html`, `_author.html`
-- `templates/nav.json` --- navigation structure (validated against `nav.schema.json`)
-- `templates/authors.json` --- author/staff data (validated against `authors.schema.json`)
+- Schemas: `nav.schema.json`, `authors.schema.json`
+
+User-facing data files live in the project's `config/` directory:
+
+- `config/nav.json` --- navigation structure (validated against `templates/nav.schema.json`)
+- `config/authors.json` --- author/staff data (validated against `templates/authors.schema.json`)
 
 Use `<%= page.* %>` to access a page's front matter and `<%= site.* %>` for
 values from the active site config.
