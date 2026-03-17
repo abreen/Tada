@@ -1,3 +1,4 @@
+const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const GenerateContentAssetsPlugin = require('./generate-content-assets-plugin');
@@ -6,16 +7,35 @@ const GenerateFaviconPlugin = require('./generate-favicon-plugin');
 const GenerateManifestPlugin = require('./generate-manifest-plugin');
 const { getDistDir, createDefinePlugin } = require('./util');
 const { isFeatureEnabled } = require('./features');
+const {
+  getContentDir,
+  getPackageDir,
+  getProjectDir,
+  getPublicDir,
+} = require('./utils/paths');
 
 const distDir = getDistDir();
 
 function createModuleRules() {
+  const packageDir = getPackageDir();
   return [
     { test: /\.js$/, exclude: /node_modules/, use: { loader: 'babel-loader' } },
-    { test: /\.tsx?$/, exclude: /node_modules/, loader: 'ts-loader' },
+    {
+      test: /\.tsx?$/,
+      exclude: /node_modules/,
+      loader: 'ts-loader',
+      options: { configFile: path.resolve(packageDir, 'tsconfig.json') },
+    },
     {
       test: /\.(sa|sc|c)ss$/,
-      use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
+      use: [
+        MiniCssExtractPlugin.loader,
+        'css-loader',
+        {
+          loader: 'sass-loader',
+          options: { sassOptions: { loadPaths: [getProjectDir()] } },
+        },
+      ],
     },
   ];
 }
@@ -33,10 +53,10 @@ async function createPlugins(
     }),
     new CopyPlugin({
       patterns: [
-        { from: 'public', to: '.' },
+        { from: getPublicDir(), to: '.', noErrorOnMissing: true },
         {
           from: '**/*.{png,jpg,jpeg,gif,svg,txt,zip}',
-          context: 'content',
+          context: getContentDir(),
           to: '[path][name][ext]',
           noErrorOnMissing: true,
         },
@@ -65,6 +85,7 @@ async function createBaseConfig({
   optimization,
   plugins,
 }) {
+  const packageDir = getPackageDir();
   return {
     mode,
     entry,
@@ -74,6 +95,9 @@ async function createBaseConfig({
       filename: '[name].bundle.js',
     },
     resolve: { extensions: ['.ts', '.js', '.json'] },
+    resolveLoader: {
+      modules: [path.resolve(packageDir, 'node_modules'), 'node_modules'],
+    },
     devtool,
     module: { rules: createModuleRules() },
     ...(optimization && { optimization }),

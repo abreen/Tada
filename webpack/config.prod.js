@@ -1,7 +1,9 @@
+const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const { createBaseConfig } = require('./config.base');
 const { compileTemplates } = require('./templates');
 const { getProdSiteVariables } = require('./site-variables');
+const { getPackageDir } = require('./utils/paths');
 
 const siteVariables = getProdSiteVariables();
 
@@ -11,7 +13,7 @@ module.exports = async () => {
   return createBaseConfig({
     mode: 'production',
     siteVariables,
-    entry: { index: './src/index.ts' },
+    entry: { index: path.resolve(getPackageDir(), 'src/index.ts') },
     devtool: false,
     optimization: {
       minimizer: [

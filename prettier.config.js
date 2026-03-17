@@ -6,4 +6,5 @@ export default {
   bracketSameLine: true,
   objectWrap: 'collapse',
   singleQuote: true,
+  plugins: ['prettier-plugin-curly'],
 };

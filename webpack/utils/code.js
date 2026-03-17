@@ -102,7 +102,9 @@ function formatCallableName(baseName, parameterNames) {
 function collectTokensInOrder(node) {
   const tokens = [];
   function collect(n) {
-    if (!n) return;
+    if (!n) {
+      return;
+    }
     if (n.image !== undefined) {
       tokens.push(n);
       return;
@@ -110,7 +112,9 @@ function collectTokensInOrder(node) {
     const children = n.children || {};
     for (const childArray of Object.values(children)) {
       for (const child of childArray) {
-        if (child) collect(child);
+        if (child) {
+          collect(child);
+        }
       }
     }
   }
@@ -127,19 +131,25 @@ function buildTypeString(unannTypeNode) {
 
 function extractJavaFieldMetas(fieldNode) {
   const unannType = fieldNode.children?.unannType?.[0];
-  if (!unannType) return [];
+  if (!unannType) {
+    return [];
+  }
   const typeStr = buildTypeString(unannType);
 
   const variableDeclaratorList =
     fieldNode.children?.variableDeclaratorList?.[0];
-  if (!variableDeclaratorList) return [];
+  if (!variableDeclaratorList) {
+    return [];
+  }
 
   const results = [];
   for (const declarator of variableDeclaratorList.children
     ?.variableDeclarator || []) {
     const declaratorId = declarator.children?.variableDeclaratorId?.[0];
     const identifier = declaratorId?.children?.Identifier?.[0];
-    if (!identifier?.image || !identifier.startLine) continue;
+    if (!identifier?.image || !identifier.startLine) {
+      continue;
+    }
 
     const dimsNode = declaratorId.children?.dims?.[0];
     const dimsStr = dimsNode
@@ -214,7 +224,9 @@ function extractJavaMethodToc(sourceCode) {
 
   return callables.map(callable => {
     const label = KIND_LABELS[callable.kind] ?? 'Member';
-    if (callable.name !== undefined) return { ...callable, label };
+    if (callable.name !== undefined) {
+      return { ...callable, label };
+    }
     return {
       kind: callable.kind,
       label,

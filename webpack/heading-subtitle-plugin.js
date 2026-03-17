@@ -2,7 +2,9 @@ module.exports = function specialHeadingsPlugin(md) {
   md.core.ruler.push('special_headings', state => {
     const tokens = state.tokens;
     for (let i = 0; i < tokens.length; i++) {
-      if (tokens[i].type !== 'heading_open') continue;
+      if (tokens[i].type !== 'heading_open') {
+        continue;
+      }
 
       // Expected structure: heading_open -> inline -> heading_close
       const inline = tokens[i + 1];
@@ -19,19 +21,27 @@ module.exports = function specialHeadingsPlugin(md) {
       const original = inline.content;
       // Match: <main> # <subtitle>
       const parts = original.split(/ # /);
-      if (parts.length < 2) continue;
+      if (parts.length < 2) {
+        continue;
+      }
 
       const main = parts.shift();
       const subtitle = parts.join(' # ').trim();
-      if (!main || !subtitle) continue;
+      if (!main || !subtitle) {
+        continue;
+      }
 
       // Find the delimiter " # " inside child text tokens to wrap the remainder
       if (Array.isArray(inline.children)) {
         for (let ci = 0; ci < inline.children.length; ci++) {
           const child = inline.children[ci];
-          if (child.type !== 'text') continue;
+          if (child.type !== 'text') {
+            continue;
+          }
           const sepIndex = child.content.indexOf(' # ');
-          if (sepIndex === -1) continue;
+          if (sepIndex === -1) {
+            continue;
+          }
 
           // Split the text token around the first " # "
           const before = child.content.slice(0, sepIndex).trimEnd();

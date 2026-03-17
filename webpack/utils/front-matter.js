@@ -18,7 +18,9 @@ function parseFrontMatterPlainText(rawContent) {
   while (i < lines.length) {
     const line = lines[i];
 
-    if (!line.trim()) break; // stop at first completely blank line
+    if (!line.trim()) {
+      break;
+    } // stop at first completely blank line
 
     fmLines.push(line);
 
@@ -34,7 +36,9 @@ function parseFrontMatterPlainText(rawContent) {
     i++;
   }
 
-  if (fmLines.length === 0) return { frontMatter: null, content: rawContent };
+  if (fmLines.length === 0) {
+    return { frontMatter: null, content: rawContent };
+  }
   return {
     frontMatter: fmLines.join('\n'),
     content: lines.slice(i).join('\n'),

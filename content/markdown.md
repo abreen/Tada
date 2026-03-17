@@ -3,11 +3,6 @@ description: Examples of Markdown syntax supported by Tada.
 toc: true
 author: alex
 
-!!! note
-This page does not appear in the search results because no links exist to it
-from any other pages on the site.
-!!!
-
 Markdown and HTML files in the `content/` directory
 must contain ["front matter"][front-matter] (YAML-formatted metadata).
 For example, this file's first five lines look like this:
@@ -236,7 +231,7 @@ below):
 
 A `<time>` element for testing styles: <time datetime="15:00">3 pm</time>
 
-Testing [internal link style](./example.html)  
+Testing [internal link style](./markdown.html)  
 Testing [external link style](https://www.google.com)
 
 Testing <dfn>definition</dfn> style
@@ -316,7 +311,7 @@ this problem set.
 3. Step three
 4. Step four
 
-Email the files you changed to `<%= staffEmail %>`.
+Email the files you changed to the course staff.
 
 :::
 

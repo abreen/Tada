@@ -1,6 +1,6 @@
 [
   {
-    "title": "Information",
+    "title": "Navigation",
     "links": [{ "text": "Home", "internal": "/index.html" }]
   },
   {
@@ -19,8 +19,8 @@
     "links": [
       { "text": "Zoom", "external": "https://zoom.com" },
       {
-        "text": "Discord",
-        "external": "<%= discordServerUrl %>",
+        "text": "Canvas",
+        "external": "https://www.instructure.com/",
         "disabled": true
       }
     ]

@@ -2,7 +2,9 @@ const { convertMarkdown: curlyQuote } = require('quote-quote');
 
 function tocPlugin(md) {
   md.core.ruler.push('toc_collector', state => {
-    if (!state.env) return;
+    if (!state.env) {
+      return;
+    }
 
     const tokens = state.tokens;
     const items = [];
@@ -14,7 +16,9 @@ function tocPlugin(md) {
       // Headings (included at any nesting level)
       if (token.type === 'heading_open') {
         const inline = tokens[i + 1];
-        if (!inline || inline.type !== 'inline') continue;
+        if (!inline || inline.type !== 'inline') {
+          continue;
+        }
 
         const level = token.tag[1]; // 'h2' -> '2'
         const id = token.attrGet('id') || '';
@@ -79,7 +83,9 @@ function tocPlugin(md) {
 }
 
 function generateTocHtml(tocItems) {
-  if (!tocItems || tocItems.length === 0) return '';
+  if (!tocItems || tocItems.length === 0) {
+    return '';
+  }
 
   let lastHeadingLevel = 1;
   const parts = ['<ol>'];
@@ -127,7 +133,9 @@ const GROUP_LABELS = {
 };
 
 function generateCodeTocHtml(codeTocItems) {
-  if (!codeTocItems || codeTocItems.length === 0) return '';
+  if (!codeTocItems || codeTocItems.length === 0) {
+    return '';
+  }
 
   const groups = Object.create(null);
   const kindOrder = [];
@@ -142,7 +150,9 @@ function generateCodeTocHtml(codeTocItems) {
   const parts = ['<ol>'];
   for (const kind of kindOrder) {
     const label = GROUP_LABELS[kind];
-    if (label) parts.push(`<li class="label">${label}</li>`);
+    if (label) {
+      parts.push(`<li class="label">${label}</li>`);
+    }
     for (const item of groups[kind]) {
       parts.push(
         `<li class="heading-item level2">` +

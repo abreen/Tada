@@ -356,7 +356,9 @@ function renderLiterateJavaPageAsset({
 
     // Dedent: strip common leading whitespace for display
     const minIndent = lines.reduce((min, line) => {
-      if (line.trim().length === 0) return min;
+      if (line.trim().length === 0) {
+        return min;
+      }
       const indent = line.match(/^(\s*)/)[1].length;
       return Math.min(min, indent);
     }, Infinity);

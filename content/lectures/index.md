@@ -1,6 +1,6 @@
 title: Lectures
 author: alex
-description: The lectures page for <%= fullCourseName %>.
+description: An example page for <%= site.title %>.
 
 <%= timezoneChooser %>
 

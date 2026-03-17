@@ -17,7 +17,7 @@
     <link rel="apple-touch-icon" sizes="512x512" href="<%= applyBasePath('/favicon-512.png') %>" />
     <link rel="apple-touch-icon" sizes="256x256" href="<%= applyBasePath('/favicon-256.png') %>" />
     <link rel="manifest" href="<%= applyBasePath('/manifest.json') %>" />
-    <meta name="apple-mobile-web-app-title" content="<%= courseCode %>">
+    <meta name="apple-mobile-web-app-title" content="<%= site.symbol %>">
     <meta name="mobile-web-app-capable" content="yes">
     <% } %>
     <meta charset="UTF-8" />
@@ -57,8 +57,8 @@
     <header data-pagefind-ignore>
       <details>
         <summary aria-label="Toggle site navigation">
-          <span class="logo" aria-hidden="true"><%= courseCode %></span>
-          <span class="site-title" aria-hidden="true"><%= courseTitle %></span>
+          <span class="logo" aria-hidden="true"><%= site.symbol %></span>
+          <span class="site-title" aria-hidden="true"><%= site.title %></span>
           <div id="to-top-container" class="to-top-container"></div>
           <% if (site.features.search) { %>
           <div class="search-controls">

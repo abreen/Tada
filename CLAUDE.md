@@ -9,15 +9,23 @@ The runtime is Bun. Build logic is implemented as Webpack plugins in `webpack/`.
 - Client-side TypeScript is in `src/`
 - Static assets are in `public/`
 
-## Bun commands
+## CLI commands
 
-- Build development: `bun run dev` (uses `config/site.dev.json`)
-- Build production: `bun run prod` (uses `config/site.prod.json`)
-- Start dev web server: `bun run serve`
-- Watch files: `bun run watch`
-- Format code: `bun run format`
+- Create a new site: `tada init <dirname>`
+- Build development: `tada dev` (uses `config/site.dev.json`)
+- Build production: `tada prod` (uses `config/site.prod.json`)
+- Start dev web server: `tada serve`
+- Watch files: `tada watch`
+- Clean build artifacts: `tada clean`
+- Format code: `bun run format` (for Tada development only)
 - Run tests: `bun test`
-- Clean build artifacts: `bun run clean`
+
+## Path resolution
+
+`webpack/utils/paths.js` provides `getPackageDir()` (the Tada package root,
+resolved via `__dirname`) and `getProjectDir()` (the user's project, resolved
+via `process.cwd()`). When developing Tada itself, both point to the repo root.
+When installed as a package, they differ.
 
 ## Templates
 
@@ -34,7 +42,9 @@ values from the active site config.
 
 - `config/site.dev.json` --- development config (`base: http://localhost:8080`, `basePath: /`)
 - `config/site.prod.json` --- production config (real domain and base path)
-- `config/_theme.scss` --- shared SCSS theme variables
+- `config/_theme.scss` --- shared SCSS theme variables (imported via sass-loader `loadPaths`)
+- `site.title` --- site title, used in the header and to derive `titlePostfix`
+- `site.symbol` --- short text (1-5 chars) for the logo and favicon (derives `faviconSymbol`)
 - Arbitrary template variables live under the `vars` key in the site config JSON
 
 ## Client-side components (plus styles)

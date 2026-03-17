@@ -11,6 +11,9 @@ const {
   createApplyBasePath,
   getContentDir,
   getDistDir,
+  getPackageDir,
+  getProjectDir,
+  getPublicDir,
   normalizeOutputPath,
 } = require('./utils/paths');
 const {
@@ -26,6 +29,9 @@ module.exports = {
   createMarkdown,
   getContentDir,
   getDistDir,
+  getPackageDir,
+  getProjectDir,
+  getPublicDir,
   getContentFiles,
   getBuildContentFiles,
   getValidInternalTargets,

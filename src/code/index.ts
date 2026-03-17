@@ -1,14 +1,20 @@
 export default async function mount(window: Window): Promise<void> {
   const { document } = window;
-  if (!document.body.classList.contains('code')) return;
+  if (!document.body.classList.contains('code')) {
+    return;
+  }
 
   document.addEventListener('copy', (e: ClipboardEvent) => {
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
 
     const fragment = selection.getRangeAt(0).cloneContents();
     const proseEls = fragment.querySelectorAll('[data-prose-source]');
-    if (proseEls.length === 0) return;
+    if (proseEls.length === 0) {
+      return;
+    }
 
     proseEls.forEach(el => {
       const pre = document.createElement('pre');
@@ -24,7 +30,9 @@ export default async function mount(window: Window): Promise<void> {
     topNodes.forEach(node => {
       if (node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent ?? '';
-        if (text.trim()) lines.push(text);
+        if (text.trim()) {
+          lines.push(text);
+        }
       } else if (node instanceof Element) {
         const codeRows = node.querySelectorAll('.code-row');
         if (codeRows.length > 0) {
@@ -60,14 +68,18 @@ export default async function mount(window: Window): Promise<void> {
         await writable.write(await response.blob());
         await writable.close();
       } catch (err: any) {
-        if (err.name !== 'AbortError') throw err;
+        if (err.name !== 'AbortError') {
+          throw err;
+        }
       }
     });
   }
 
   const codeBody = document.querySelector<HTMLElement>('.code-body');
   const scrollbar = document.querySelector<HTMLElement>('.code-scrollbar');
-  if (!codeBody || !scrollbar) return;
+  if (!codeBody || !scrollbar) {
+    return;
+  }
 
   const inner = scrollbar.firstElementChild as HTMLElement;
   let syncing = false;
@@ -79,14 +91,18 @@ export default async function mount(window: Window): Promise<void> {
   }
 
   codeBody.addEventListener('scroll', () => {
-    if (syncing) return;
+    if (syncing) {
+      return;
+    }
     syncing = true;
     scrollbar!.scrollLeft = codeBody!.scrollLeft;
     syncing = false;
   });
 
   scrollbar.addEventListener('scroll', () => {
-    if (syncing) return;
+    if (syncing) {
+      return;
+    }
     syncing = true;
     codeBody!.scrollLeft = scrollbar!.scrollLeft;
     syncing = false;

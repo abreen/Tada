@@ -11,14 +11,24 @@ Here is a sample description of the topics covered at the first lecture.
 
 * [`lecture1.pdf`](./lecture1.pdf)
 
+!!! note
+When `feature.search` is `true` in the site config and MuPDF is installed
+(when the `mutool` command is available), the search results can contain
+references directly to specific PDF pages. Try searching "hello world" and
+you should see a result for page 2 of `lecture1.pdf`.
+!!!
+
 
 ## Code
 
-* [`App.java`](./App.java)
-* [`Rectangle.java`](./Rectangle.java)
-* [`Pair.java`](./Pair.java) (an example of the "literate" programming feature)
-* [`demo.py`](./demo.py)
+* [`Rectangle.java`](./Rectangle.java) (an example of a code page)
+* [`demo.py`](./demo.py) (another example of a code page)
+* [`Pair.java`](./Pair.java) (an example literate Java page)
 
+!!! note
+Syntax highlighting is controlled by the `codeLanguages` configuration object
+and is generated at build time by [Shiki](https://shiki.style).
+!!!
 
 ## Review questions
 

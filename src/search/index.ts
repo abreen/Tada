@@ -31,7 +31,9 @@ function getPdfPageNumber(
     return fromMeta;
   }
   const match = url.match(/#(?:.*&)?page=(\d+)\b/i);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   const fromUrl = Number.parseInt(match[1], 10);
   return Number.isInteger(fromUrl) && fromUrl >= 1 ? fromUrl : null;
 }
@@ -91,7 +93,9 @@ function groupPdfResults(results: Result[]): Result[] {
 }
 
 async function doSearch(state: State) {
-  if (pagefind == null) return;
+  if (pagefind == null) {
+    return;
+  }
 
   if (!state.value) {
     state.results = [];
@@ -273,10 +277,15 @@ function render(
     infoSpan.insertBefore(countSpan, infoSpan.firstChild);
   }
   const n = state.totalResults;
-  if (n === 0) countSpan.textContent = 'No results';
-  else if (n === 1) countSpan.textContent = 'One result';
-  else if (n <= MAX_RESULTS) countSpan.textContent = `${n} results`;
-  else countSpan.textContent = `Showing first ${MAX_RESULTS} results`;
+  if (n === 0) {
+    countSpan.textContent = 'No results';
+  } else if (n === 1) {
+    countSpan.textContent = 'One result';
+  } else if (n <= MAX_RESULTS) {
+    countSpan.textContent = `${n} results`;
+  } else {
+    countSpan.textContent = `Showing first ${MAX_RESULTS} results`;
+  }
 
   if (state.showResults) {
     resultsContainer.classList.add('is-showing');
@@ -295,7 +304,9 @@ export default (window: Window) => {
   const input = document.querySelector(
     'input.quick-search',
   ) as HTMLInputElement | null;
-  if (!input) return;
+  if (!input) {
+    return;
+  }
 
   const header = input.closest('header') as HTMLElement;
   const resultsContainer = getElement(header, '.results-container');
@@ -310,7 +321,9 @@ export default (window: Window) => {
   let indexCheckInFlight = false;
 
   async function loadPagefind() {
-    if (pagefind) return;
+    if (pagefind) {
+      return;
+    }
     // @ts-ignore pagefind.js is generated post-build, not resolvable at compile time
     pagefind = await import(
       /* webpackIgnore: true */ applyBasePath('/pagefind/pagefind.js')
@@ -326,7 +339,9 @@ export default (window: Window) => {
   }
 
   async function checkForIndexUpdate() {
-    if (indexCheckInFlight || Date.now() - lastIndexCheck < 3000) return;
+    if (indexCheckInFlight || Date.now() - lastIndexCheck < 3000) {
+      return;
+    }
     lastIndexCheck = Date.now();
     indexCheckInFlight = true;
     try {
@@ -334,7 +349,9 @@ export default (window: Window) => {
         method: 'HEAD',
         cache: 'no-cache',
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        return;
+      }
       const newETag = res.headers.get('ETag');
       const newLastModified = res.headers.get('Last-Modified');
       const changed =
@@ -377,7 +394,9 @@ export default (window: Window) => {
 
   function handleInput(e: Event) {
     const value = (e.target as HTMLInputElement).value;
-    if (value === state.value) return;
+    if (value === state.value) {
+      return;
+    }
     state.value = value;
     state.showResults = true;
     update().catch(() => {});
@@ -404,10 +423,16 @@ export default (window: Window) => {
   let pointerDownInResults = false;
 
   function handleBlur(e: FocusEvent) {
-    if (!state.showResults) return;
+    if (!state.showResults) {
+      return;
+    }
     const related = e.relatedTarget as HTMLElement | null;
-    if (related && resultsContainer.contains(related)) return;
-    if (pointerDownInResults) return;
+    if (related && resultsContainer.contains(related)) {
+      return;
+    }
+    if (pointerDownInResults) {
+      return;
+    }
     hide();
   }
 
@@ -416,9 +441,13 @@ export default (window: Window) => {
   }
 
   function handleWindowPointerUp(e: PointerEvent) {
-    if (!pointerDownInResults) return;
+    if (!pointerDownInResults) {
+      return;
+    }
     // If released inside results, let the click handler hide instead
-    if (resultsContainer.contains(e.target as Node)) return;
+    if (resultsContainer.contains(e.target as Node)) {
+      return;
+    }
     pointerDownInResults = false;
     hide();
   }
@@ -439,7 +468,9 @@ export default (window: Window) => {
       return;
     }
 
-    if (!state.showResults) return;
+    if (!state.showResults) {
+      return;
+    }
 
     const links = Array.from(
       resultsContainer.querySelectorAll('a.result, a.sub-result'),
@@ -463,11 +494,15 @@ export default (window: Window) => {
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      if (idx < 0) return;
+      if (idx < 0) {
+        return;
+      }
       links[(idx + 1) % links.length].focus();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      if (idx < 0) return;
+      if (idx < 0) {
+        return;
+      }
       if (idx === 0) {
         input!.focus();
       } else {

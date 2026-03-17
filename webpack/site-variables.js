@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const { compile: compileJsonSchema, doValidation } = require('./json-schema');
-const configDir = path.resolve(__dirname, '..', 'config');
+const { getProjectDir } = require('./utils/paths');
+const configDir = path.resolve(getProjectDir(), 'config');
 
 const DEFAULT = { basePath: '/', features: { search: true, code: true } };
 
@@ -21,6 +22,17 @@ function getSiteVariables(env) {
     ...fromFile,
     features: { ...DEFAULT.features, ...(fromFile.features || {}) },
   };
+
+  // Derive faviconSymbol from symbol if not explicitly set
+  if (variables.symbol && !variables.faviconSymbol) {
+    variables.faviconSymbol = variables.symbol;
+  }
+
+  // Derive titlePostfix from title if not explicitly set
+  if (variables.title && !variables.titlePostfix) {
+    variables.titlePostfix = ` - ${variables.title}`;
+  }
+
   doValidation(isValid, variables, fileName);
   return variables;
 }

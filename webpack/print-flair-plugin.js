@@ -16,7 +16,7 @@ module.exports = {
 
       console.log(getFlair());
       console.log(`The build output is available at ${distDir}`);
-      console.log('Now use `bun serve` to start a local web server');
+      console.log('Now use `tada serve` to start a local web server');
     });
   },
 };

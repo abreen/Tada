@@ -13,7 +13,9 @@ const PERIOD_PATTERNS: { pattern: RegExp; style: PeriodStyle }[] = [
 
 export function detectPeriodStyle(text: string): PeriodStyle | null {
   for (const { pattern, style } of PERIOD_PATTERNS) {
-    if (pattern.test(text)) return style;
+    if (pattern.test(text)) {
+      return style;
+    }
   }
   return null;
 }
@@ -28,7 +30,9 @@ export function to12Hour(
   style: PeriodStyle | null = DEFAULT_PERIOD_STYLE,
 ) {
   const hour12 = ((h + 11) % 12) + 1;
-  if (!style) return `${hour12}:${pad(m)}`;
+  if (!style) {
+    return `${hour12}:${pad(m)}`;
+  }
   const period = h >= 12 ? style[1] : style[0];
   return `${hour12}:${pad(m)} ${period}`;
 }
@@ -42,7 +46,9 @@ export function normalizeHM(totalMinutes: number) {
 
 function parseHHMM(hhmm: string) {
   const [h, m] = hhmm.split(':');
-  if (h == null || m == null) return NaN;
+  if (h == null || m == null) {
+    return NaN;
+  }
   return Number(h) * 60 + Number(m);
 }
 
@@ -61,7 +67,9 @@ function getOffsetMinutes(tz: string, date: Date): number {
   const parts = dtf
     .formatToParts(date)
     .reduce<Record<string, string>>((acc, p) => {
-      if (p.type !== 'literal') acc[p.type] = p.value;
+      if (p.type !== 'literal') {
+        acc[p.type] = p.value;
+      }
       return acc;
     }, {});
   const utcTs = Date.UTC(
@@ -119,7 +127,9 @@ function dominantPeriodStyle(
 ): PeriodStyle {
   const counts = new Map<PeriodStyle, number>();
   for (const style of styles.values()) {
-    if (style !== null) counts.set(style, (counts.get(style) ?? 0) + 1);
+    if (style !== null) {
+      counts.set(style, (counts.get(style) ?? 0) + 1);
+    }
   }
   let best: PeriodStyle = DEFAULT_PERIOD_STYLE;
   let bestCount = 0;
@@ -189,10 +199,11 @@ export default (window: Window) => {
 
         let suffix = '';
         if (!isDefault) {
-          if (dayShift === 1)
+          if (dayShift === 1) {
             suffix = ' <span class="next-prev-day">(next day)</span>';
-          else if (dayShift === -1)
+          } else if (dayShift === -1) {
             suffix = ' <span class="next-prev-day">(prev. day)</span>';
+          }
         }
 
         const originalStyle = periodStyles.get(el) ?? null;

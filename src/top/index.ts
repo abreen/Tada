@@ -36,7 +36,9 @@ export default (window: Window) => {
     }
     window.scrollTo({ top: 0 });
     const toc = window.document.querySelector('nav.toc') as HTMLElement | null;
-    if (toc) toc.scrollTop = 0;
+    if (toc) {
+      toc.scrollTop = 0;
+    }
   };
 
   function show(link: HTMLAnchorElement) {

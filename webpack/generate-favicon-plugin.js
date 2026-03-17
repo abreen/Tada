@@ -8,14 +8,30 @@ const log = makeLogger(__filename);
 
 // Map CSS font-weight (100–900) to fontconfig FC_WEIGHT values
 function cssWeightToFc(cssWeight) {
-  if (cssWeight <= 100) return 0; // thin
-  if (cssWeight <= 200) return 40; // extralight
-  if (cssWeight <= 300) return 50; // light
-  if (cssWeight <= 400) return 80; // regular
-  if (cssWeight <= 500) return 100; // medium
-  if (cssWeight <= 600) return 180; // demibold
-  if (cssWeight <= 700) return 200; // bold
-  if (cssWeight <= 800) return 205; // extrabold
+  if (cssWeight <= 100) {
+    return 0;
+  } // thin
+  if (cssWeight <= 200) {
+    return 40;
+  } // extralight
+  if (cssWeight <= 300) {
+    return 50;
+  } // light
+  if (cssWeight <= 400) {
+    return 80;
+  } // regular
+  if (cssWeight <= 500) {
+    return 100;
+  } // medium
+  if (cssWeight <= 600) {
+    return 180;
+  } // demibold
+  if (cssWeight <= 700) {
+    return 200;
+  } // bold
+  if (cssWeight <= 800) {
+    return 205;
+  } // extrabold
   return 210; // black
 }
 

@@ -6,7 +6,7 @@ const {
   extensionIsMarkdown,
   isLiterateJava,
 } = require('./file-types');
-const { normalizeOutputPath } = require('./paths');
+const { getPublicDir, normalizeOutputPath } = require('./paths');
 
 function walkFiles(dir) {
   return fs.readdirSync(dir).flatMap(file => {
@@ -129,7 +129,7 @@ function getValidInternalTargets(contentDir, contentFiles, codeExtensions) {
     targets.add(normalizeOutputPath(`/${relPath}`));
   }
 
-  const publicDir = path.resolve(__dirname, '..', '..', 'public');
+  const publicDir = getPublicDir();
   for (const filePath of getPublicFiles(publicDir)) {
     const relPath = path.relative(publicDir, filePath);
     targets.add(normalizeOutputPath(`/${relPath}`));

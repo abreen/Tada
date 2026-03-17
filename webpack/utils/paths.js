@@ -1,11 +1,23 @@
 const path = require('path');
 
+function getPackageDir() {
+  return path.resolve(__dirname, '..', '..');
+}
+
+function getProjectDir() {
+  return process.cwd();
+}
+
 function getContentDir() {
-  return path.resolve(__dirname, '..', '..', 'content');
+  return path.resolve(getProjectDir(), 'content');
 }
 
 function getDistDir() {
-  return path.resolve(__dirname, '..', '..', 'dist');
+  return path.resolve(getProjectDir(), 'dist');
+}
+
+function getPublicDir() {
+  return path.resolve(getProjectDir(), 'public');
 }
 
 function createApplyBasePath(siteVariables) {
@@ -34,5 +46,8 @@ module.exports = {
   createApplyBasePath,
   getContentDir,
   getDistDir,
+  getPackageDir,
+  getProjectDir,
+  getPublicDir,
   normalizeOutputPath,
 };

@@ -215,9 +215,13 @@ export default (window: Window) => {
 
     const parseHash = (hash: string): number | null => {
       const single = hash.match(/^#L(\d+)$/);
-      if (single) return parseInt(single[1], 10);
+      if (single) {
+        return parseInt(single[1], 10);
+      }
       const range = hash.match(/^#L(\d+)-L(\d+)$/);
-      if (range) return parseInt(range[1], 10);
+      if (range) {
+        return parseInt(range[1], 10);
+      }
       return null;
     };
 
@@ -226,14 +230,19 @@ export default (window: Window) => {
       const existingItem = getCurrentListItem(document.body);
 
       if (line == null) {
-        if (existingItem) existingItem.classList.remove('current');
+        if (existingItem) {
+          existingItem.classList.remove('current');
+        }
         return;
       }
 
       let best = 0;
       for (let i = 0; i < codeLines.length; i++) {
-        if (codeLines[i] <= line) best = i;
-        else break;
+        if (codeLines[i] <= line) {
+          best = i;
+        } else {
+          break;
+        }
       }
 
       const nextItem = elements[best]?.parentElement ?? null;

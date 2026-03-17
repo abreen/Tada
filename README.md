@@ -1,6 +1,6 @@
 # Tada :tada:
 
-A statically generated site. The successor to Presto.
+A static site generator. The successor to Presto.
 
 ## Features
 
@@ -33,106 +33,120 @@ A statically generated site. The successor to Presto.
   * Text, color, font and font weight taken from config file
 
 
-## Setup
+## Installation
 
-1. Install [Bun](https://bun.sh/).
-2. Install [MuPDF](https://mupdf.com/) (for PDF text extraction).
-   - On macOS, use Homebrew to install [mupdf-tools](https://formulae.brew.sh/formula/mupdf-tools)
-   - On Fedora, use `dnf` to install [mupdf](https://packages.fedoraproject.org/pkgs/mupdf/mupdf/)
-   - On Windows, download a ZIP [from the official releases page](https://mupdf.com/releases?product=MuPDF)
-3. Install the [Inter][inter] font (for favicon generation).
-4. Run `bun install`.
-5. Examine `config/site.dev.json`.
-6. Run your first build using `bun dev`.
-7. Start a local web server using `bun serve`.
-8. Visit [http://localhost:8080/index.html](http://localhost:8080/index.html).
+Install [Bun](https://bun.sh/), then install Tada globally:
 
-> [!NOTE]
-> You may skip step 2 (installing MuPDF) if you don't need search results
-> to include links to PDF pages. You can also turn off `features.search` in the
-> config file to disable search entirely.
+```
+bun add -g @abreen/tada
+```
 
-> [!NOTE]
-> You may skip step 3 (installing the font) if you turn off `features.favicon`
-> in the config file. You can also change the config to use a different font.
 
-Here are the available scripts:
+## Quick start
 
-### `bun dev`
+Create a new site:
+
+```
+tada init mysite
+```
+
+This will ask you a few questions (site title, logo symbol, theme color, etc.)
+and create a new directory with everything you need.
+
+Then build and preview your site:
+
+```
+cd mysite
+tada dev
+tada serve
+```
+
+Visit [http://localhost:8080/index.html](http://localhost:8080/index.html).
+
+
+## CLI commands
+
+### `tada init <dirname>`
+
+Create a new Tada site in a new directory. Prompts for:
+- **Site title** --- displayed in the header and `<title>` tag
+- **Symbol** --- short text (1-5 uppercase characters) shown in the logo and favicon
+- **Theme color** --- HSL color, e.g. `hsl(195 70% 40%)`
+- **Default time zone** --- for `<datetime>` elements (defaults to your system zone)
+- **Production base URL** --- e.g. `https://example.edu`
+- **Production base path** --- e.g. `/cs101` (defaults to `/`)
+
+Pass `--default` to use the default values for all options without being
+prompted.
+
+
+### `tada dev`
 
 Build the site for local development (using `config/site.dev.json`)
 into the `dist/` directory.
 
-### `bun serve`
+
+### `tada serve`
 
 Start a development web server at `http://localhost:8080` which serves the
 files in the `dist/` directory.
 
-The web server does not automatically redirect requests for directories
-to `/index.html` (simulates how a storage provider like Amazon S3 works).
 
-### `bun watch`
+### `tada watch`
 
 Start a development web server, watch for changes and rebuild automatically.
 
-### `bun clean`
+
+### `tada clean`
 
 Remove the `dist/` directory.
 
-### `bun prod`
 
-When you are happy with your changes, use `bun prod` to build the site
-for production (uses `config/site.prod.json`).
+### `tada prod`
 
-> [!NOTE]
-> Change `site.basePath` and `site.internalDomains` as needed.
-> For example, if your site is hosted at `https://institution.edu/cs101/`,
-> set `site.basePath` to `"/cs101"` and `site.internalDomains` to
-> `["institution.edu"]`.
-
-###  `bun format`
-
-Invoke Prettier to fix code formatting across all files. This doesn't change
-the `content/` directory, only the Tada source code.
+Build the site for production (uses `config/site.prod.json`).
 
 
-## Building
+## Prerequisites
 
-The static site is saved to `dist/`. Markdown is converted to HTML.
-HTML files should contain front matter and are also built, but not processed
-like Markdown files are.
+- [Bun](https://bun.sh/)
+- [MuPDF](https://mupdf.com/) (optional, for PDF text extraction in search)
+  - On macOS: `brew install mupdf-tools`
+  - On Fedora: `dnf install mupdf`
+- [Inter](https://fonts.google.com/specimen/Inter) font (optional, for favicon generation)
 
-PDF, `.txt`, ZIP, images, and other kinds of files are copied into `dist/`
-in the same locations.
+> You may skip MuPDF if you don't need search results to include links to PDF
+> pages. You can also turn off `features.search` in the config to disable
+> search entirely.
 
-All files in `public/` are copied directly into `dist/` with no processing.
+> You may skip the Inter font if you turn off `features.favicon` in the config
+> or use a different font.
 
 
-### Configuration
+## Configuration
 
 Build-time site config lives in:
 
-- `config/site.dev.json` (used by `bun dev` / `bun watch`)
-- `config/site.prod.json` (used by `bun prod`)
-- `config/_theme.scss` (contains variable definitions used in styles)
+- `config/site.dev.json` (used by `tada dev` / `tada watch`)
+- `config/site.prod.json` (used by `tada prod`)
+- `config/_theme.scss` (contains CSS custom property definitions used in styles)
 
 Example site configuration JSON file:
 
 ```json
 {
+  "title": "Intro to CS",
+  "symbol": "101",
   "features": { "search": true, "code": true, "favicon": true },
   "base": "https://example.edu",
   "basePath": "/cs101",
   "internalDomains": ["example.edu"],
+  "defaultTimeZone": "America/New_York",
   "codeLanguages": { "java": "java" },
-  "titlePostfix": " - CS 101",
   "faviconColor": "hsl(351 70% 40%)",
-  "faviconSymbol": "101",
   "faviconFont": "Inter",
   "faviconFontWeight": 700,
   "vars": {
-    "courseCode": "CS 101",
-    "courseTitle": "Intro to CS",
     "staffEmail": "staff@example.edu"
   }
 }
@@ -140,19 +154,32 @@ Example site configuration JSON file:
 
 | Field | Description |
 |-------|-------------|
+| `title` | Site title displayed in the header and used to derive `<title>` postfix |
+| `symbol` | Short text (1-5 chars) displayed in the logo and used as the favicon symbol |
 | `features.search` | Enable search UI and Pagefind index generation |
 | `features.code` | Enable generated source-code HTML pages for configured code extensions |
 | `features.favicon` | Enable automatically generated favicons |
 | `base` | Full base URL of the deployed site, used for metadata and URL generation |
-| `basePath` | URL prefix for deployment under a subpath (e.g., `"/2026"`), use `"/"` at root |
+| `basePath` | URL prefix for deployment under a subpath (e.g., `"/cs101"`), use `"/"` at root |
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |
 | `codeLanguages` | Map file extension to Shiki language (e.g., `"java": "java"`) |
-| `titlePostfix` | Suffix appended to each page `<title>` |
-| `faviconColor` | SVG-compatible color used by favicon generation (hex, HSL, RGB, etc.) |
-| `faviconSymbol` | Short string rendered in generated favicon (e.g., "101") |
+| `faviconColor` | HSL color used by favicon generation, e.g. `"hsl(195 70% 40%)"` |
 | `faviconFont` | Font family used for favicon text (e.g., `"Inter"`) |
 | `faviconFontWeight` | Font weight used for favicon text (e.g., `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content (e.g., `<%= staffEmail %>`) |
+
+You can also set `titlePostfix` and `faviconSymbol` explicitly to override the
+values derived from `title` and `symbol`.
+
+
+## Content
+
+Site content lives in the `content/` directory. Markdown is converted to HTML.
+HTML files should contain front matter and are also built, but not processed
+like Markdown files are.
+
+PDF, `.txt`, ZIP, images, and other kinds of files are copied into `dist/`
+in the same locations. All files in `public/` are copied directly into `dist/`.
 
 
 ### Front matter fields
@@ -171,135 +198,33 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
 
 
-### HTML
-
-HTML content is inserted into the `<main>` element.
-
-* HTML comments starting with two hyphens (`<!--`) appear in the final page
-* But comments with three hyphens (`<!---`) **are removed**
-
-Example front matter:
-
-```html
-title: Title of Page
-author: jsmith
-
-<p>Foo <b>bar</b> <i>baz</i> <a href="google.com">Google</a></p>
-```
-
-
-### Markdown
-
-Markdown is converted to HTML using the [MarkdownIt][markdownit] library
-and inserted into the `<main>` element.
-
-Example:
-
-```markdown
-title: Title of Page
-
-Foo *bar* [external](http://google.com) [internal](/other)
-```
-
-Results in this HTML:
-
-```markdown
-<head>...<title>Title of Page</title>...</head>
-...
-<p>Foo <em>bar</em>
-<a class="external" href="http://google.com">external</a>
-<a href="/basePath/other">internal</a>
-```
-
-Note that internal links (starting with `/`) are automatically prefixed with the
-`site.basePath` value.
-
-Full URLs are compared against `site.internalDomains`; links that point externally
-automatically get `target="_blank"` and the `.external` CSS class.
-
-
 ### Variable substitution
 
 Plain text content (e.g., HTML and Markdown) are processed using [Lodash
 templates][lodash].
 
-- Variables from `site.{dev,prod}.json` are available under `site` (e.g., `site.courseTitle`)
+- Site config values are available under `site` (e.g., `site.title`, `site.symbol`)
 - Page variables (from front matter) are available under `page` (e.g., `page.author`)
-- Custom variables from the `"vars"` property of `site.{dev,prod}.json` are
-  available without any prefix (e.g., `<%= staffEmail %>`)
-
-Lodash allows you to embed variables and JavaScript logic directly in HTML
-templates and plain text content.
-
-- `<%= variable %>`: Outputs and HTML-escapes the value of a variable.
-- `<%- variable %>`: Outputs the unescaped value of a variable (use with caution).
-- `<% code %>`: Runs JavaScript logic (e.g., loops, conditionals, assignments) without output.
-
-You can use any JavaScript expression inside these tags. For example, you can
-write a loop:
-
-```
-<ul>
-<% for (let i = 0; i < 5; i++) { %>
-  <li><%= Math.pow(2, i) %></li>
-<% } %>
-</ul>
-```
+- Custom variables from the `"vars"` property of the config are available
+  without any prefix (e.g., `<%= staffEmail %>`)
 
 
-### Search index
+## Templates
 
-When search is enabled, a search index is built using [Pagefind][pagefind] and
-saved to `dist/`.
+HTML page layouts live in the `templates/` directory. During `tada init`, default
+templates are copied into your project. You can customize them.
 
-After the entire site is built, the HTML output is crawled (starting from the
-root `index.html`) to produce a list of pages to be indexed. This means a
-page must have at least one incoming link to be included in search results.
+- `templates/default.html` --- default page layout
+- `templates/code.html` --- source code page layout
+- Partials: `_nav.html`, `_top.html`, `_bottom.html`, `_heading.html`, `_author.html`
+- `templates/nav.json` --- navigation structure (validated against `nav.schema.json`)
+- `templates/authors.json` --- author/staff data (validated against `authors.schema.json`)
 
-- See the build-time code in `webpack/pagefind-plugin.js`
-- See the client-side code in `src/search/`
-
-
-### PDFs
-
-PDFs in `content/` are copied to the same relative path in `dist/`. For example,
-`content/lecture1/intro.pdf` becomes `dist/lecture1/intro.pdf`.
-
-When search is enabled, any PDF that is reachable from the site is also read for
-searchable text and added to the Pagefind index. If text is found on a given
-page of a PDF, Pagefind results use `#page=` to link to a specific page
-(for example, `/lecture1/intro.pdf#page=2`).
-
-### Literate Java programming
-
-Inspired by [literate Haskell](https://wiki.haskell.org/Literate_programming)
-and [Jupyter notebooks](https://jupyter.org/), Tada allows you to write a
-Markdown file which is also a complete Java file.
-
-As with normal `.java` files (and other kinds of source code), Tada will
-generate an HTML page with syntax-highlighted code and a "Download" button.
-If you write a "literate" Java file ending with `.java.md`, Tada will
-assume each Markdown code block contains only Java code, and will execute
-`main()` methods as part of rendering the file.
-
-As Tada executes the `main()` method, it uses the Java Debug Interface (JDI)
-to step through each line of the program and associate printed output with
-specific lines of the Java class, and by association, the Markdown code block
-which contains them. After execution, Tada renders two columns of HTML:
-one for the code block, and another for the printed output.
-
-To hide Java code from the reader but still include it in the final `.java`
-file, use Tada's three-hyphen HTML comment syntax.
-
-Note that leading whitespace common to all lines in a given code block is
-trimmed, to make reading a code block easier.
 
 
 [inter]: https://fonts.google.com/specimen/Inter
 [lodash]: https://lodash.info/doc/template
 [front-matter]: https://www.npmjs.com/package/front-matter
-[markdownit]: https://www.npmjs.com/package/markdown-it
-[webpack]: https://webpack.js.org/
 [pagefind]: https://pagefind.app/
 [mutool]: https://mupdf.readthedocs.io/en/latest/tools/mutool.html
 [jep467]: https://openjdk.org/jeps/467

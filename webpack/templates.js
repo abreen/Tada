@@ -21,7 +21,8 @@ const renderStack = [];
 let errorStack = null;
 
 function getTemplatesDir() {
-  return path.resolve(__dirname, '../templates');
+  const { getProjectDir } = require('./utils/paths');
+  return path.resolve(getProjectDir(), 'templates');
 }
 
 function json(fileName) {

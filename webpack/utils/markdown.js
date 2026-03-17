@@ -200,14 +200,20 @@ function createMarkdown(siteVariables, options = {}) {
   markdown.core.ruler.push('hidden_fence', state => {
     for (let i = state.tokens.length - 1; i >= 0; i--) {
       const token = state.tokens[i];
-      if (token.type !== 'html_block') continue;
+      if (token.type !== 'html_block') {
+        continue;
+      }
 
       const src = token.content.trim();
-      if (!src.startsWith('<!---') || !src.endsWith('-->')) continue;
+      if (!src.startsWith('<!---') || !src.endsWith('-->')) {
+        continue;
+      }
 
       const inner = src.slice(5, -3).trim();
       const fenceMatch = inner.match(/^```\w*\n?([\s\S]*?)```$/m);
-      if (!fenceMatch) continue;
+      if (!fenceMatch) {
+        continue;
+      }
 
       token.type = 'hidden_fence';
       token.tag = 'code';

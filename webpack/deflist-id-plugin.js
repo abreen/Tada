@@ -24,7 +24,9 @@ module.exports = function deflistIdPlugin(md) {
     }
 
     for (let i = 0; i < tokens.length; i++) {
-      if (tokens[i].type !== 'dt_open') continue;
+      if (tokens[i].type !== 'dt_open') {
+        continue;
+      }
 
       let termText = '';
       for (let j = i + 1; j < tokens.length; j++) {
