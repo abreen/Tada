@@ -52,6 +52,7 @@
     "terser-webpack-plugin": "^5.3.14",
     "ts-loader": "^9.5.2",
     "typescript": "^5.4.5",
+    "wawoff2": "^2.0.1",
     "webpack": "^5.99.6",
     "webpack-cli": "^6.0.1",
     "ws": "^8.18.0"

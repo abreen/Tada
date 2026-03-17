@@ -170,7 +170,6 @@ function createSiteConfig({
     defaultTimeZone,
     codeLanguages: { java: 'java', py: 'python' },
     faviconColor,
-    faviconFont: 'Inter',
     faviconFontWeight: 700,
     vars: {},
   };

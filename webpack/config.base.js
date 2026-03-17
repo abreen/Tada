@@ -5,6 +5,7 @@ const GenerateContentAssetsPlugin = require('./generate-content-assets-plugin');
 const PagefindPlugin = require('./pagefind-plugin');
 const GenerateFaviconPlugin = require('./generate-favicon-plugin');
 const GenerateManifestPlugin = require('./generate-manifest-plugin');
+const GenerateFontsPlugin = require('./generate-fonts-plugin');
 const { getDistDir, createDefinePlugin } = require('./util');
 const { isFeatureEnabled } = require('./features');
 const {
@@ -30,7 +31,15 @@ function createModuleRules() {
       test: /\.(sa|sc|c)ss$/,
       use: [
         MiniCssExtractPlugin.loader,
-        'css-loader',
+        {
+          loader: 'css-loader',
+          options: {
+            url: {
+              // Don't bundle fonts (they are handled by GenerateFontsPlugin)
+              filter: url => !url.endsWith('.woff2'),
+            },
+          },
+        },
         {
           loader: 'sass-loader',
           options: { sassOptions: { loadPaths: [getProjectDir()] } },
@@ -71,6 +80,7 @@ async function createPlugins(
     isFeatureEnabled(siteVariables, 'favicon')
       ? new GenerateManifestPlugin(siteVariables)
       : null,
+    new GenerateFontsPlugin(),
     ...plugins,
     require('./print-flair-plugin'),
   ].filter(Boolean);

@@ -113,14 +113,10 @@ Build the site for production (uses `config/site.prod.json`).
 - [MuPDF](https://mupdf.com/) (optional, for PDF text extraction in search)
   - On macOS: `brew install mupdf-tools`
   - On Fedora: `dnf install mupdf`
-- [Inter](https://fonts.google.com/specimen/Inter) font (optional, for favicon generation)
 
 > You may skip MuPDF if you don't need search results to include links to PDF
 > pages. You can also turn off `features.search` in the config to disable
 > search entirely.
-
-> You may skip the Inter font if you turn off `features.favicon` in the config
-> or use a different font.
 
 
 ## Configuration

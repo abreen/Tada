@@ -34,7 +34,6 @@
       "pattern": "^hsl\\(\\d+(deg)? \\d+% \\d+%\\)$"
     },
     "faviconSymbol": { "type": "string", "pattern": "^[A-Z0-9\\- ]{1,5}$" },
-    "faviconFont": { "type": "string" },
     "faviconFontWeight": { "type": "integer", "minimum": 1, "maximum": 1000 },
     "defaultTimeZone": { "type": "string" },
     "vars": { "type": "object" },

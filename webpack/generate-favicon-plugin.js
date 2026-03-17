@@ -1,53 +1,18 @@
-const { execSync } = require('child_process');
+const path = require('path');
 const fontkit = require('fontkit');
 const sharp = require('sharp');
 const { default: pngToIco } = require('png-to-ico');
 const { makeLogger } = require('./log');
+const { getPackageDir } = require('./utils/paths');
 
 const log = makeLogger(__filename);
 
-// Map CSS font-weight (100–900) to fontconfig FC_WEIGHT values
-function cssWeightToFc(cssWeight) {
-  if (cssWeight <= 100) {
-    return 0;
-  } // thin
-  if (cssWeight <= 200) {
-    return 40;
-  } // extralight
-  if (cssWeight <= 300) {
-    return 50;
-  } // light
-  if (cssWeight <= 400) {
-    return 80;
-  } // regular
-  if (cssWeight <= 500) {
-    return 100;
-  } // medium
-  if (cssWeight <= 600) {
-    return 180;
-  } // demibold
-  if (cssWeight <= 700) {
-    return 200;
-  } // bold
-  if (cssWeight <= 800) {
-    return 205;
-  } // extrabold
-  return 210; // black
-}
-
-function findFontFile(familyName, cssWeight) {
-  const pattern =
-    cssWeight != null
-      ? `${familyName}:weight=${cssWeightToFc(cssWeight)}`
-      : familyName;
-  const result = execSync(`fc-match -f '%{file}' "${pattern}"`)
-    .toString()
-    .trim();
-  if (!result) {
-    throw new Error(`Could not find font: ${pattern}`);
-  }
-  return result;
-}
+const FONT_PATH = path.join(
+  getPackageDir(),
+  'fonts',
+  'inter',
+  'InterVariable.ttf',
+);
 
 function createFaviconSvg(size, color, symbol, font, cssWeight) {
   if (size < 10) {
@@ -131,6 +96,8 @@ function createFaviconSvg(size, color, symbol, font, cssWeight) {
 }
 
 class GenerateFaviconPlugin {
+  _cachedAssets = null;
+
   constructor(siteVariables, options = {}) {
     this.options = {
       sizes: options.sizes || [16, 32, 48, 64, 128, 192, 256, 512, 1024],
@@ -138,7 +105,6 @@ class GenerateFaviconPlugin {
       filenameBase: options.filenameBase || 'favicon',
       color: siteVariables.faviconColor,
       symbol: siteVariables.faviconSymbol,
-      fontFamily: siteVariables.faviconFont,
       fontWeight: siteVariables.faviconFontWeight,
     };
   }
@@ -155,26 +121,25 @@ class GenerateFaviconPlugin {
           stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
         },
         async assets => {
-          const {
-            color,
-            symbol,
-            sizes,
-            filenameBase,
-            svgSize,
-            fontFamily,
-            fontWeight,
-          } = this.options;
-
-          if (!color || !symbol || !fontFamily) {
-            throw new Error(
-              'Missing required "color", "symbol", and/or "fontFamily" options',
-            );
+          if (this._cachedAssets) {
+            for (const [name, source] of this._cachedAssets) {
+              compilation.emitAsset(name, source);
+            }
+            return;
           }
 
+          const { color, symbol, sizes, filenameBase, svgSize, fontWeight } =
+            this.options;
+
+          if (!color || !symbol) {
+            throw new Error('Missing required "color" and/or "symbol" options');
+          }
+
+          this._cachedAssets = new Map();
+
           try {
-            const fontPath = findFontFile(fontFamily, fontWeight);
-            log.note`Using font file: ${fontPath}`;
-            const font = fontkit.openSync(fontPath);
+            log.note`Using font file: ${FONT_PATH}`;
+            const font = fontkit.openSync(FONT_PATH);
 
             const svgMarkup = createFaviconSvg(
               svgSize,
@@ -183,10 +148,9 @@ class GenerateFaviconPlugin {
               font,
               fontWeight,
             );
-            compilation.emitAsset(
-              `${filenameBase}.svg`,
-              new RawSource(svgMarkup),
-            );
+            const svgSource = new RawSource(svgMarkup);
+            compilation.emitAsset(`${filenameBase}.svg`, svgSource);
+            this._cachedAssets.set(`${filenameBase}.svg`, svgSource);
 
             const pngBuffers = await Promise.all(
               sizes.map(async size => {
@@ -201,10 +165,10 @@ class GenerateFaviconPlugin {
                   .png()
                   .toBuffer();
 
-                compilation.emitAsset(
-                  `${filenameBase}-${size}.png`,
-                  new RawSource(buf),
-                );
+                const pngName = `${filenameBase}-${size}.png`;
+                const pngSource = new RawSource(buf);
+                compilation.emitAsset(pngName, pngSource);
+                this._cachedAssets.set(pngName, pngSource);
                 return { size, buf };
               }),
             );
@@ -215,11 +179,11 @@ class GenerateFaviconPlugin {
                 .sort((a, b) => a.size - b.size)
                 .map(x => x.buf),
             );
-            compilation.emitAsset(
-              `${filenameBase}.ico`,
-              new RawSource(icoBuffer),
-            );
+            const icoSource = new RawSource(icoBuffer);
+            compilation.emitAsset(`${filenameBase}.ico`, icoSource);
+            this._cachedAssets.set(`${filenameBase}.ico`, icoSource);
           } catch (err) {
+            this._cachedAssets = null;
             compilation.errors.push(
               new Error(`Error: ${err && err.message ? err.message : err}`),
             );
