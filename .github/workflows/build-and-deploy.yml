@@ -22,8 +22,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install MuPDF and Inter font
-      run: sudo apt install -y mupdf-tools fonts-inter
+    - name: Install dependencies
+      run: sudo apt install -y mupdf-tools fonts-inter jq
 
     - name: Use Bun
       uses: oven-sh/setup-bun@v2
@@ -31,10 +31,21 @@ jobs:
     - run: bun install
 
     - name: Initialize example site
-      run: bun run bin/tada.js init --default example
+      run: bun run bin/tada.js init example --default
+
+    - name: Modify config for GitHub Pages
+      run: >
+        jq '
+        .base |= "https://abreen.io" |
+        .basePath |= "/Tada" |
+        .internalDomains |= ["abreen.io"]'
+        config/site.prod.json > config/site.prod.json.new
+
+        mv config/site.prod.json.new config/site.prod.json
+      working-directory: example
 
     - name: Build example site
-      run: bun run ../bin/tada.js dev
+      run: bun run ../bin/tada.js prod
       working-directory: example
 
     - name: Upload static files as artifact
