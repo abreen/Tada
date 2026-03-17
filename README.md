@@ -160,7 +160,6 @@ Example site configuration JSON file:
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |
 | `codeLanguages` | Map file extension to Shiki language (e.g., `"java": "java"`) |
 | `faviconColor` | HSL color used by favicon generation, e.g. `"hsl(195 70% 40%)"` |
-| `faviconFont` | Font family used for favicon text (e.g., `"Inter"`) |
 | `faviconFontWeight` | Font weight used for favicon text (e.g., `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content (e.g., `<%= staffEmail %>`) |
 
