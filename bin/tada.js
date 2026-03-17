@@ -21,7 +21,7 @@ const COMMANDS = {
 const INIT_QUESTIONS = {
   title: {
     prompt: 'Site title',
-    defaultValue: 'CS 0',
+    defaultValue: 'Introduction to Computer Science',
     validate: v => (v ? null : 'Title is required'),
   },
   symbol: {
