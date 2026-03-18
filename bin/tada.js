@@ -85,7 +85,7 @@ function printUsage() {
   }
 }
 
-const webpackCli = path.join(packageDir, 'node_modules/webpack-cli/bin/cli.js');
+const webpackCli = require.resolve('webpack-cli/bin/cli.js');
 
 function run(cmd) {
   execSync(cmd, { cwd: process.cwd(), stdio: 'inherit' });
