@@ -18,7 +18,8 @@
     "tsconfig.json"
   ],
   "scripts": {
-    "format": "bunx prettier --write \"**/*.(t|j)s\" \"**/*.scss\" \"**/*.json\""
+    "format": "bunx prettier --write \"**/*.(t|j)s\" \"**/*.scss\" \"**/*.json\"",
+    "init-example": "bun run bin/tada.js init example --default"
   },
   "engines": {
     "bun": ">=1.0.0"

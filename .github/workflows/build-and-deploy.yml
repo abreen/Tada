@@ -31,7 +31,7 @@ jobs:
     - run: bun install
 
     - name: Initialize example site
-      run: bun run bin/tada.js init example --default
+      run: bun run init-example
 
     - name: Modify config for GitHub Pages
       run: >
