@@ -82,6 +82,11 @@ body.code .code-prose {
     dfn {
       color: inherit;
     }
+
+    code {
+      background: inherit;
+      padding: inherit;
+    }
   }
 }
 
