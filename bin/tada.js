@@ -3,6 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const { execSync } = require('child_process');
+const { version } = require('../package.json');
+const {
+  validateSymbol,
+  validateHslColor,
+  validateUrl,
+  validateBasePath,
+  createSiteConfig,
+} = require('./validators');
 
 const SYSTEM_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -73,6 +81,7 @@ const INIT_QUESTIONS = {
 };
 
 function printUsage() {
+  console.log(`tada v${version}\n`);
   console.log('Usage: tada <command>\n');
   console.log('Commands:');
   console.log('  init <dirname>     Initialize a new site');
@@ -127,76 +136,9 @@ function ask(rl, question, { defaultValue, validate } = {}) {
   });
 }
 
-function validateSymbol(value) {
-  if (!value) {
-    return 'Symbol is required';
-  }
-  if (value.length > 5) {
-    return 'Symbol must be 5 characters or fewer';
-  }
-  if (!/^[A-Z0-9\- ]{1,5}$/.test(value)) {
-    return 'Symbol must contain only uppercase letters, digits, hyphens, and spaces';
-  }
-  return null;
-}
-
-function validateHslColor(value) {
-  if (!value) {
-    return 'Color is required';
-  }
-  if (!/^hsl\(\d+(deg)? \d+% \d+%\)$/.test(value)) {
-    return 'Color must be in HSL format, e.g. hsl(195 70% 40%)';
-  }
-  return null;
-}
-
-function validateUrl(value) {
-  if (!value) {
-    return 'URL is required';
-  }
-  if (!/^https?:\/\/[-.:a-zA-Z0-9]+$/.test(value)) {
-    return 'Must be a valid URL like https://example.edu (no trailing slash or path)';
-  }
-  return null;
-}
-
-function validateBasePath(value) {
-  if (!/^\/[-a-zA-Z0-9]*$/.test(value)) {
-    return 'Must start with / and contain only letters, digits, and hyphens';
-  }
-  return null;
-}
-
-function createSiteConfig({
-  title,
-  symbol,
-  themeColor,
-  tintHue,
-  tintAmount,
-  defaultTimeZone,
-  base,
-  basePath,
-  internalDomains,
-}) {
-  return {
-    title,
-    symbol,
-    features: { search: true, code: true, favicon: true },
-    base,
-    basePath,
-    internalDomains,
-    defaultTimeZone,
-    codeLanguages: { java: 'java', py: 'python' },
-    themeColor,
-    tintHue: Number(tintHue),
-    tintAmount: Number(tintAmount),
-    vars: {},
-  };
-}
-
 async function initCommand(args) {
-  const dirname = args[0];
-  const useDefaults = args[1] === '--default';
+  const useDefaults = args.includes('--default');
+  const dirname = args.filter(a => !a.startsWith('--'))[0];
 
   if (!dirname) {
     console.error('Error: Provide a name for the new directory');
@@ -350,6 +292,11 @@ switch (command) {
       force: true,
     });
     console.log('Cleaned dist/');
+    break;
+
+  case '--version':
+  case '-v':
+    console.log(`tada v${version}`);
     break;
 
   default:
