@@ -1,21 +1,15 @@
-<%
-  const authorEntry = json('authors.json')[page.author];
-  if (!authorEntry) {
-    throw new Error(`Unknown author handle "${page.author}" on page "${page.title || 'untitled'}"`);
-  }
-%>
 <aside class="author">
   Written by
-  <% if (authorEntry.url) { %>
-  <a href="<%= applyBasePath(authorEntry.url) %>">
+  <% if (page.author.url) { %>
+  <a href="<%= applyBasePath(page.author.url) %>">
   <% } %>
-  <span class="text"><%= authorEntry.name %></span>
-  <% if (authorEntry.avatar) { %>
+  <span class="text"><%= page.author.name %></span>
+  <% if (page.author.avatar) { %>
   <img
     width="32"
     height="32"
-    src="<%= applyBasePath(authorEntry.avatar) %>"
-    alt="Picture of <%= authorEntry.name %>"
+    src="<%= applyBasePath(page.author.avatar) %>"
+    alt="Picture of <%= page.author.name %>"
     class="avatar"
   />
   <% } else { %>
@@ -27,7 +21,7 @@
     class="avatar"
   />
   <% } %>
-  <% if (authorEntry.url) { %>
+  <% if (page.author.url) { %>
   </a>
   <% } %>
 </aside>

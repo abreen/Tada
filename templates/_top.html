@@ -28,8 +28,8 @@
     <% } %>
     <meta property="og:title" content="<%= page.title %>" />
     <% if (page.author) { %>
-    <meta name="author" content="<%= page.author %>" />
-    <meta property="og:author" content="<%= page.author %>" />
+    <meta name="author" content="<%= page.author.name %>" />
+    <meta property="og:author" content="<%= page.author.name %>" />
     <% } %>
     <title><%= page.title %><%= site.titlePostfix %></title>
     <script type="speculationrules">

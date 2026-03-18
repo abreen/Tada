@@ -5,7 +5,7 @@ const { stripHtml } = require('string-strip-html');
 const { makeLogger } = require('../log');
 const { B } = require('../colors');
 const createGlobals = require('../globals');
-const { render } = require('../templates');
+const { render, json } = require('../templates');
 const {
   extractJavaMethodToc,
   renderCodeSegment,
@@ -27,6 +27,21 @@ const {
 const log = makeLogger(__filename);
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
+
+function resolveAuthor(pageVariables, filePath) {
+  if (!pageVariables.author) {
+    return;
+  }
+  const authors = json('authors.json');
+  const authorKey = pageVariables.author;
+  const authorEntry = authors[authorKey];
+  if (!authorEntry) {
+    throw new Error(
+      `${filePath}: unknown author "${authorKey}" (not found in authors.json)`,
+    );
+  }
+  pageVariables.author = authorEntry;
+}
 
 function validateFrontMatter(pageVariables, filePath) {
   let valid = true;
@@ -264,6 +279,8 @@ function renderPlainTextContent(
     pageVariablesProcessed.description = stripHtml(descriptionHtml).result;
   }
 
+  resolveAuthor(pageVariablesProcessed, filePath);
+
   const strippedContent = stripHtmlComments(content);
 
   const params = createTemplateParameters({
@@ -408,6 +425,8 @@ function renderLiterateJavaPageAsset({
   if (pageVariables.toc && env.tocItems) {
     pageVariables.tocHtml = generateTocHtml(env.tocItems);
   }
+
+  resolveAuthor(pageVariables, filePath);
 
   const templateParameters = createTemplateParameters({
     pageVariables,
