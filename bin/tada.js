@@ -16,6 +16,14 @@ const SYSTEM_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const packageDir = path.resolve(__dirname, '..');
 
+function requireSiteConfig(env) {
+  const configPath = path.resolve(process.cwd(), `config/site.${env}.json`);
+  if (!fs.existsSync(configPath)) {
+    console.error(`Error: Missing config file: config/site.${env}.json`);
+    process.exit(1);
+  }
+}
+
 const COMMANDS = {
   init: 'Create a new Tada site',
   dev: 'Build the site for development',
@@ -267,18 +275,21 @@ switch (command) {
     break;
 
   case 'dev':
+    requireSiteConfig('dev');
     run(
       `bun ${webpackCli} --config ${path.join(packageDir, 'webpack/config.dev.js')}`,
     );
     break;
 
   case 'prod':
+    requireSiteConfig('prod');
     run(
       `bun ${webpackCli} --config ${path.join(packageDir, 'webpack/config.prod.js')}`,
     );
     break;
 
   case 'watch':
+    requireSiteConfig('dev');
     run(`bun ${path.join(packageDir, 'webpack/watch.js')}`);
     break;
 
