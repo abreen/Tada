@@ -1,6 +1,6 @@
 {
   "name": "@abreen/tada",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A static site generator",
   "bin": {
     "tada": "bin/tada.js"
