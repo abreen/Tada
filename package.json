@@ -10,6 +10,7 @@
     "webpack/",
     "src/",
     "templates/",
+    "fonts/",
     "config/",
     "content/",
     "public/",
