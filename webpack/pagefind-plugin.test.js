@@ -67,7 +67,6 @@ describe('PagefindPlugin', () => {
       pdfSourceByOutputPath: new Map([
         ['/docs/guide.pdf', '/tmp/docs/guide.pdf'],
       ]),
-      applyBasePath: subPath => `/course${subPath}`,
       loadPagefind: createFakePagefind(calls),
       checkMutool: async () => {},
       extractPages: async filePath => ({
@@ -88,13 +87,13 @@ describe('PagefindPlugin', () => {
     ]);
     expect(calls.customRecords).toEqual([
       {
-        url: '/course/docs/guide.pdf#page=2',
+        url: '/docs/guide.pdf#page=2',
         content: 'EXTRACTED:guide.pdf:2',
         language: 'en',
         meta: { title: 'guide.pdf', page: '2' },
       },
       {
-        url: '/course/docs/guide.pdf#page=5',
+        url: '/docs/guide.pdf#page=5',
         content: 'EXTRACTED:guide.pdf:5',
         language: 'en',
         meta: { title: 'guide.pdf', page: '5' },
@@ -115,7 +114,6 @@ describe('PagefindPlugin', () => {
       pdfSourceByOutputPath: new Map([
         ['/docs/guide.pdf', '/tmp/docs/guide.pdf'],
       ]),
-      applyBasePath: subPath => `/course${subPath}`,
       loadPagefind: createFakePagefind(calls),
       checkMutool: async () => {},
       extractPages: async () => ({ pages: [], hasExtractedText: false }),
@@ -123,7 +121,7 @@ describe('PagefindPlugin', () => {
 
     expect(calls.customRecords).toEqual([
       {
-        url: '/course/docs/guide.pdf',
+        url: '/docs/guide.pdf',
         content: 'guide.pdf',
         language: 'en',
         meta: { title: 'guide.pdf' },

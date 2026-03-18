@@ -4,7 +4,6 @@ const { makeLogger } = require('./log');
 const { collectReachableSiteAssets } = require('./reachability');
 const ContentWatchPlugin = require('./content-watch-plugin');
 const {
-  createApplyBasePath,
   getBuildContentFiles,
   getContentDir,
   normalizeOutputPath,
@@ -99,7 +98,6 @@ async function buildIndex({
   reachableHtmlPaths,
   reachablePdfPaths,
   pdfSourceByOutputPath,
-  applyBasePath,
   loadPagefind = getPagefind,
   checkMutool = assertMutoolAvailable,
   extractPages = extractPdfPages,
@@ -150,12 +148,7 @@ async function buildIndex({
       if (!hasExtractedText) {
         await addPdfRecord(
           index,
-          {
-            url: applyBasePath(pdfPath),
-            content: title,
-            language: 'en',
-            meta: { title },
-          },
+          { url: pdfPath, content: title, language: 'en', meta: { title } },
           pdfPath,
         );
         continue;
@@ -165,7 +158,7 @@ async function buildIndex({
         await addPdfRecord(
           index,
           {
-            url: `${applyBasePath(pdfPath)}#page=${page.pageNumber}`,
+            url: `${pdfPath}#page=${page.pageNumber}`,
             content: page.content,
             language: 'en',
             meta: { title, page: String(page.pageNumber) },
@@ -232,7 +225,6 @@ class PagefindPlugin {
     const distPath = this.lastDistPath;
     const htmlAssetsByPath = new Map(this.htmlCacheByAssetPath);
     const pdfSourceByOutputPath = getPdfSourceByOutputPath(this.siteVariables);
-    const applyBasePath = createApplyBasePath(this.siteVariables);
     const start = Date.now();
 
     log.debug`Preparing search index background snapshot`;
@@ -262,7 +254,6 @@ class PagefindPlugin {
       reachableHtmlPaths,
       reachablePdfPaths,
       pdfSourceByOutputPath,
-      applyBasePath,
     })
       .then(() => {
         const finishedAt = Date.now();
@@ -323,7 +314,6 @@ class PagefindPlugin {
         const pdfSourceByOutputPath = getPdfSourceByOutputPath(
           this.siteVariables,
         );
-        const applyBasePath = createApplyBasePath(this.siteVariables);
         const start = Date.now();
         let reachableHtmlPaths;
         let reachablePdfPaths;
@@ -349,7 +339,6 @@ class PagefindPlugin {
           reachableHtmlPaths,
           reachablePdfPaths,
           pdfSourceByOutputPath,
-          applyBasePath,
         })
           .then(async () => {
             try {
