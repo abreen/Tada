@@ -154,7 +154,7 @@ async function startWatching() {
       log.event`${getFlair()}  Webpack build completed ${G`successfully`}`;
       broadcast('reload');
     }
-    if (!serveStarted) {
+    if (!serveStarted && !err && !stats.hasErrors()) {
       serveStarted = true;
       serve();
     }
