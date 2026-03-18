@@ -4,7 +4,7 @@ const { JSDOM } = require('jsdom');
 const { makeLogger } = require('../log');
 const { getHighlighter } = require('./shiki-highlighter');
 
-const log = makeLogger(__filename, 'debug');
+const log = makeLogger(__filename);
 
 const PROSE_LINE = /^\s*\/\/\/(\s|$)/;
 

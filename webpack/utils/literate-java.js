@@ -6,7 +6,7 @@ const { createMarkdown } = require('./markdown');
 const { makeLogger } = require('../log');
 const { parseFrontMatterAndContent } = require('./front-matter');
 
-const log = makeLogger(__filename, 'debug');
+const log = makeLogger(__filename);
 
 const MAIN_PATTERN = /\bvoid\s+main\s*\(/m;
 

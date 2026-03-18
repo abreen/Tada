@@ -5,7 +5,6 @@ const path = require('path');
 const WebSocket = require('ws');
 const { B, G } = require('./colors');
 const { makeLogger, getFlair } = require('./log');
-const { getDevSiteVariables } = require('./site-variables');
 const getConfig = require('./config.dev');
 const ContentWatchPlugin = require('./content-watch-plugin');
 const { getContentDir } = require('./util');
@@ -15,13 +14,6 @@ const WEBSOCKET_PORT = 35729;
 const log = makeLogger(__filename);
 const wslog = makeLogger('WebSocket');
 const contentDir = getContentDir();
-
-function printSiteVariables() {
-  try {
-    const variables = getDevSiteVariables();
-    console.dir(variables);
-  } catch (ignored) {}
-}
 
 function broadcast(msg) {
   if (wss == null || !webSocketsReady) {
@@ -126,8 +118,6 @@ try {
 } catch (err) {
   wslog.error`Failed to start WebSocket server on port ${WEBSOCKET_PORT}: ${err.message}`;
 }
-
-printSiteVariables();
 
 async function startWatching() {
   const config = await getConfig({ watchMode: true });

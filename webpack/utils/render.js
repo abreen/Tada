@@ -24,7 +24,7 @@ const {
   executeLiterateJava,
 } = require('./literate-java');
 
-const log = makeLogger(__filename, 'debug');
+const log = makeLogger(__filename);
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 

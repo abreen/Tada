@@ -4,7 +4,7 @@ const { getDistDir } = require('./util');
 const { makeLogger } = require('./log');
 const { B } = require('./colors');
 
-const log = makeLogger(__filename, 'debug');
+const log = makeLogger(__filename);
 
 function messageReady(port) {
   if (process.send) {
