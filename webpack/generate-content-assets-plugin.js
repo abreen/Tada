@@ -243,6 +243,7 @@ class GenerateContentAssetsPlugin {
         () => {
           const contentDir = getContentDir();
           const buildContentFiles = this.getBuildContentFiles(compiler);
+          log.info`Processing ${buildContentFiles.length} content file(s)`;
           const buildFileSet = new Set(buildContentFiles);
           const dirtySourceFiles = this.getDirtySourceFiles(
             compiler,

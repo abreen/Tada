@@ -36,7 +36,7 @@ module.exports = function externalLinks(md, siteVariables, options = {}) {
       if (href.startsWith('/')) {
         const modifiedHref = rewriteInternalHref(href);
         const afterApply = applyBasePath(modifiedHref);
-        log.debug`${href} -> ${afterApply}`;
+        log.debug`Applying base path: ${href} -> ${afterApply}`;
         token.attrSet('href', afterApply);
       } else if (
         !href.startsWith('#') &&
@@ -46,7 +46,7 @@ module.exports = function externalLinks(md, siteVariables, options = {}) {
         // Relative link: only rewrite code extensions, don't apply base path
         const modifiedHref = rewriteInternalHref(href);
         if (modifiedHref !== href) {
-          log.debug`${href} -> ${modifiedHref}`;
+          log.debug`Rewriting internal link: ${href} -> ${modifiedHref}`;
           token.attrSet('href', modifiedHref);
         }
       }
@@ -54,7 +54,7 @@ module.exports = function externalLinks(md, siteVariables, options = {}) {
       const src = token.attrGet('src');
       if (src && src.startsWith('/')) {
         const afterApply = applyBasePath(src);
-        log.debug`${src} -> ${afterApply}`;
+        log.debug`Applying base path to image: ${src} -> ${afterApply}`;
         token.attrSet('src', afterApply);
       }
     } else if (token.type === 'html_block' || token.type === 'html_inline') {
@@ -63,7 +63,7 @@ module.exports = function externalLinks(md, siteVariables, options = {}) {
         (match, prefix, slash, rest) => {
           const src = slash + rest.slice(0, -1);
           const afterApply = applyBasePath(src);
-          log.debug`${src} -> ${afterApply}`;
+          log.debug`Applying base path to img tag src: ${src} -> ${afterApply}`;
           return prefix + afterApply + '"';
         },
       );

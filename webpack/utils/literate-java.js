@@ -47,6 +47,9 @@ function parseLiterateJava(rawContent, siteVariables) {
     .map((b, i) => (b.hidden ? null : i))
     .filter(i => i !== null);
 
+  const hiddenCount = codeBlocks.length - visibleBlockIndices.length;
+  log.debug`Parsed ${codeBlocks.length} code block(s) (${hiddenCount} hidden), ${javaSource.split('\n').length} Java line(s)`;
+
   return {
     pageVariables,
     content,
@@ -69,6 +72,8 @@ function compileJavaSource(javaSource, className) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-literate-'));
   const javaFile = path.join(tempDir, `${className}.java`);
   fs.writeFileSync(javaFile, javaSource);
+
+  log.debug`Compiling ${className}.java (${javaSource.split('\n').length} lines) in ${tempDir}`;
 
   try {
     execSync(`javac "${className}.java"`, {
@@ -93,8 +98,11 @@ function ensureRunnerCompiled(runnerDir) {
     fs.existsSync(classFile) &&
     fs.statSync(classFile).mtimeMs >= fs.statSync(sourceFile).mtimeMs
   ) {
+    log.debug`LiterateRunner.class is up to date`;
     return;
   }
+
+  log.debug`Compiling LiterateRunner.java`;
 
   try {
     execSync('javac LiterateRunner.java', {
@@ -117,12 +125,16 @@ function executeLiterateJava(className, classPath, codeBlocks) {
 
   log.info`Executing literate Java: ${className}`;
 
+  log.debug`Running LiterateRunner with ${blockRanges.length} block range(s)`;
+
   try {
     const result = execSync(
       `java -cp "${runnerDir}" LiterateRunner "${className}" "${classPath}" '${rangesJson}'`,
       { timeout: 30000, encoding: 'utf-8' },
     );
-    return JSON.parse(result);
+    const entries = JSON.parse(result);
+    log.debug`LiterateRunner returned ${entries.length} output entries`;
+    return entries;
   } catch (err) {
     const stderr = err.stderr ? err.stderr.toString() : '';
     const stdout = err.stdout ? err.stdout.toString() : '';

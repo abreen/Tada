@@ -37,7 +37,6 @@ function json(fileName) {
 }
 
 function render(fileName, params) {
-  log.debug`Rendering ${fileName} with params ${params}`;
   if (params != null) {
     // Allow the template to call render(), it will use our params
     params.render = otherFileName => render(otherFileName, params);
@@ -66,6 +65,8 @@ function render(fileName, params) {
 }
 
 function compileTemplates(siteVariables) {
+  log.info`Compiling templates`;
+
   Object.keys(templates).forEach(k => delete templates[k]);
   Object.keys(jsonData).forEach(k => delete jsonData[k]);
 
@@ -74,6 +75,7 @@ function compileTemplates(siteVariables) {
   fs.readdirSync(htmlDir).forEach(fileName => {
     const ext = path.extname(fileName).toLowerCase();
     if (ext === '.html') {
+      log.debug`Reading ${fileName}`;
       templates[fileName] = fs.readFileSync(
         path.join(htmlDir, fileName),
         'utf-8',
@@ -86,16 +88,18 @@ function compileTemplates(siteVariables) {
   for (const fileName of JSON_DATA_FILES) {
     const filePath = path.join(jsonDir, fileName);
     if (!fs.existsSync(filePath)) {
-      continue;
+      throw new Error(`Missing required data file: ${filePath}`);
     }
 
     // Schema validation (schemas live in the package templates dir)
     const schemaFile = `${path.parse(fileName).name}.schema.json`;
     const schemaPath = path.join(htmlDir, schemaFile);
-    if (fs.existsSync(schemaPath)) {
-      compileAndSetValidator(schemaPath, fileName);
+    if (!fs.existsSync(schemaPath)) {
+      throw new Error(`Missing JSON Schema for ${fileName}: ${schemaPath}`);
     }
+    compileAndSetValidator(schemaPath, fileName);
 
+    log.debug`Reading ${fileName}`;
     jsonData[fileName] = JSON.parse(
       _.template(fs.readFileSync(filePath, 'utf-8'))({
         ...(siteVariables.vars || {}),
@@ -105,11 +109,7 @@ function compileTemplates(siteVariables) {
       }),
     );
 
-    if (validators[fileName]) {
-      doValidation(validators[fileName], jsonData[fileName], fileName);
-    } else {
-      log.warn`Missing JSON Schema for ${fileName}`;
-    }
+    doValidation(validators[fileName], jsonData[fileName], fileName);
   }
 }
 

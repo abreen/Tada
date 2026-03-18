@@ -12,7 +12,7 @@ const {
 const { assertMutoolAvailable, extractPdfPages } = require('./pdf-text');
 
 const log = makeLogger(__filename);
-const PAGEFIND_VERBOSE = process.env.PAGEFIND_VERBOSE === '1';
+const PAGEFIND_VERBOSE = process.env.TADA_LOG_LEVEL === 'debug';
 const PAGEFIND_OUTPUT_SUBDIR = 'pagefind';
 
 let pagefindModulePromise = null;
@@ -223,7 +223,7 @@ class PagefindPlugin {
   runWatchIndex() {
     if (this.watchRunInProgress) {
       this.watchRunQueued = true;
-      log.info`Pagefind is still running in the background; queueing a rerun`;
+      log.info`Indexing is still running in the background; queueing a rerun`;
       return;
     }
 
@@ -235,7 +235,7 @@ class PagefindPlugin {
     const applyBasePath = createApplyBasePath(this.siteVariables);
     const start = Date.now();
 
-    log.debug`Preparing Pagefind background snapshot...`;
+    log.debug`Preparing search index background snapshot`;
 
     let reachableHtmlPaths;
     let reachablePdfPaths;
@@ -255,7 +255,7 @@ class PagefindPlugin {
     }
 
     const snapshotReadyAt = Date.now();
-    log.debug`Building Pagefind index in background...`;
+    log.debug`Building search index in background`;
     buildIndex({
       distPath,
       htmlAssetsByPath,
@@ -266,11 +266,11 @@ class PagefindPlugin {
     })
       .then(() => {
         const finishedAt = Date.now();
-        log.info`Pagefind background index ready in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
+        log.info`Background search index ready in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
       })
       .catch(err => {
         const failedAt = Date.now();
-        log.warn`Pagefind failed after ${failedAt - snapshotReadyAt}ms of indexing (${failedAt - start}ms total): ${err.message}`;
+        log.warn`Search index failed after ${failedAt - snapshotReadyAt}ms of indexing (${failedAt - start}ms total): ${err.message}`;
       })
       .finally(() => {
         this.watchRunInProgress = false;
@@ -328,7 +328,7 @@ class PagefindPlugin {
         let reachableHtmlPaths;
         let reachablePdfPaths;
 
-        log.info`Preparing Pagefind snapshot...`;
+        log.info`Finding reachable pages for search index`;
         try {
           ({ reachableHtmlPaths, reachablePdfPaths } = collectIndexTargets(
             htmlAssetsByPath,
@@ -342,7 +342,7 @@ class PagefindPlugin {
         }
 
         const snapshotReadyAt = Date.now();
-        log.info`Building Pagefind index for ${reachableHtmlPaths.length} page(s) and ${reachablePdfPaths.length} PDF(s) after ${snapshotReadyAt - start}ms of snapshot prep...`;
+        log.info`Building search index for ${reachableHtmlPaths.length} page(s) and ${reachablePdfPaths.length} PDF(s) after ${snapshotReadyAt - start}ms of snapshot prep...`;
         buildIndex({
           distPath,
           htmlAssetsByPath,
@@ -359,12 +359,12 @@ class PagefindPlugin {
               // Best-effort cleanup for non-watch builds.
             }
             const finishedAt = Date.now();
-            log.info`Pagefind index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
+            log.info`Search index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
             callback();
           })
           .catch(err => {
             const failedAt = Date.now();
-            log.error`Pagefind failed after ${failedAt - snapshotReadyAt}ms of indexing (${failedAt - start}ms total): ${err.message}`;
+            log.error`Search indexing failed after ${failedAt - snapshotReadyAt}ms of indexing (${failedAt - start}ms total): ${err.message}`;
             compilation.errors.push(err);
             callback(err);
           });

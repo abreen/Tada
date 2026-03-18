@@ -30,6 +30,8 @@ class GenerateFontsPlugin {
 
           this._cachedAssets = new Map();
 
+          log.info`Bundling fonts from ${FONTS_DIR}`;
+
           for (const family of fs.readdirSync(FONTS_DIR)) {
             const familyDir = path.join(FONTS_DIR, family);
             if (!fs.statSync(familyDir).isDirectory()) {
@@ -49,7 +51,7 @@ class GenerateFontsPlugin {
                 source = new RawSource(woff2Buf);
                 compilation.emitAsset(assetName, source);
                 this._cachedAssets.set(assetName, source);
-                log.info`Converted ${family}/${file} to ${outName}`;
+                log.debug`Converted ${family}/${file} to ${outName}`;
               } else {
                 const assetName = `${family}/${file}`;
                 source = new RawSource(fs.readFileSync(filePath));
