@@ -126,19 +126,21 @@ Build-time site config lives in:
 - `config/site.dev.json` (used by `tada dev` / `tada watch`)
 - `config/site.prod.json` (used by `tada prod`)
 - `config/_theme.scss` (contains CSS custom property definitions used in styles)
+- `config/nav.json` (navigation structure)
+- `config/authors.json` (author data)
 
 Example site configuration JSON file:
 
 ```json
 {
-  "title": "Intro to CS",
-  "symbol": "101",
+  "title": "Intro to Computer Science",
+  "symbol": "CS 0",
   "features": { "search": true, "code": true, "favicon": true },
   "base": "https://example.edu",
-  "basePath": "/cs101",
+  "basePath": "/cs0",
   "internalDomains": ["example.edu"],
   "defaultTimeZone": "America/New_York",
-  "codeLanguages": { "java": "java" },
+  "codeLanguages": { "java": "java", "py": "python" },
   "faviconColor": "hsl(351 70% 40%)",
   "faviconFont": "Inter",
   "faviconFontWeight": 700,
@@ -165,6 +167,58 @@ Example site configuration JSON file:
 
 You can also set `titlePostfix` and `faviconSymbol` explicitly to override the
 values derived from `title` and `symbol`.
+
+
+#### `nav.json`
+
+Defines the site navigation structure. The file contains an array of section
+objects. Each section contains an array of link objects (internal or external,
+and whether the link is disabled). You should specify at least two sections,
+but three or more sections are supported.
+
+```json
+[
+  {
+    "title": "Navigation",
+    "links": [{ "text": "Home", "internal": "/index.html" }]
+  },
+  {
+    "title": "Topics",
+    "links": [
+      { "text": "Lectures", "internal": "/lectures/index.html" },
+      {
+        "text": "Problem Sets",
+        "internal": "/problem_sets/index.html",
+        "disabled": true
+      }
+    ]
+  },
+  {
+    "title": "Links",
+    "links": [
+      { "text": "Zoom", "external": "https://zoom.com" }
+    ]
+  }
+]
+```
+
+
+#### `authors.json`
+
+Maps author handles (used in front matter `author` fields) to display names
+and avatars. Each key is a handle (e.g., `jsmith`) and each value is an object
+with `name`, `avatar`, and optionally `url`.
+
+```json
+{
+  "jsmith": { "name": "Jane Smith", "avatar": "/avatars/jsmith.jpg" },
+  "ajones": {
+    "name": "Alex Jones",
+    "avatar": "/avatars/ajones.jpg",
+    "url": "/staff/ajones.html"
+  }
+}
+```
 
 
 ### Log level
@@ -199,7 +253,7 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 |-------|-------------|
 | `title` (required) | Page title (`<title>` tag and page heading) |
 | `skip` | Set to `true` to skip building this page completely |
-| `author` | Author handle (e.g. `jsmith`) resolved via `templates/authors.json` |
+| `author` | Author handle (e.g. `jsmith`) resolved to a full object via `config/authors.json` |
 | `description` | Meta description for the page |
 | `toc` | Set to `true` to show a table of contents |
 | `parent` & `parentLabel` | URL and label for a breadcrumb link displayed above the title |
@@ -222,12 +276,6 @@ templates][lodash].
 HTML page layouts are internal to the Tada package. You don't need to modify
 them; they are designed to work with the client-side components and styles
 bundled in the package.
-
-During `tada init`, two data files are copied into your project's `config/`
-directory:
-
-- `config/nav.json` --- navigation structure (validated against a JSON schema)
-- `config/authors.json` --- author/staff data (validated against a JSON schema)
 
 
 
