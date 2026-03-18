@@ -5,7 +5,10 @@
   --theme-color: hsl(
     var(--theme-hue) var(--theme-saturation) var(--theme-lightness)
   );
-  --theme-color-text: var(--theme-color);
+  --theme-color-text: hsl(
+    var(--theme-hue) clamp(30%, var(--theme-saturation), 70%)
+      clamp(25%, var(--theme-lightness), 42%)
+  );
 
   // Background & foreground color tint
   --tint-hue: <%= tintHue %>deg;
@@ -65,7 +68,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --theme-color-text: hsl(
-      var(--theme-hue) var(--theme-saturation)
+      var(--theme-hue) clamp(30%, var(--theme-saturation), 70%)
         clamp(50%, calc(var(--theme-lightness) + 15%), 80%)
     );
 
