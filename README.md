@@ -134,6 +134,7 @@ Example site configuration JSON file:
 ```json
 {
   "title": "Intro to Computer Science",
+  "titlePostfix": " - CS 0",
   "symbol": "CS 0",
   "features": { "search": true, "code": true, "favicon": true },
   "base": "https://example.edu",
@@ -142,7 +143,6 @@ Example site configuration JSON file:
   "defaultTimeZone": "America/New_York",
   "codeLanguages": { "java": "java", "py": "python" },
   "faviconColor": "hsl(351 70% 40%)",
-  "faviconFont": "Inter",
   "faviconFontWeight": 700,
   "vars": {
     "staffEmail": "staff@example.edu"
@@ -152,8 +152,10 @@ Example site configuration JSON file:
 
 | Field | Description |
 |-------|-------------|
-| `title` | Site title displayed in the header and used to derive `<title>` postfix |
-| `symbol` | Short text (1-5 chars) displayed in the logo and used as the favicon symbol |
+| `title` | Title for the whole site (also used to derive `titlePostfix`) |
+| `titlePostfix` | *Optional*, the string to append to each page's `title` |
+| `symbol` | Text (1-5 chars) displayed in header (also used as the favicon symbol) |
+| `faviconSymbol` | *Optional*, the string to use instead of `symbol` in the favicon |
 | `features.search` | Enable search UI and Pagefind index generation |
 | `features.code` | Enable generated source-code HTML pages for configured code extensions |
 | `features.favicon` | Enable automatically generated favicons |
@@ -164,9 +166,6 @@ Example site configuration JSON file:
 | `faviconColor` | HSL color used by favicon generation, e.g. `"hsl(195 70% 40%)"` |
 | `faviconFontWeight` | Font weight used for favicon text (e.g., `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content (e.g., `<%= staffEmail %>`) |
-
-You can also set `titlePostfix` and `faviconSymbol` explicitly to override the
-values derived from `title` and `symbol`.
 
 
 #### `nav.json`
