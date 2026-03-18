@@ -12,12 +12,18 @@ const {
   getJsonDataDir,
   JSON_DATA_FILES,
 } = require('./templates');
+const { getProjectDir } = require('./utils/paths');
 
 let _needsRestart = false;
 
 class ContentWatchPlugin {
   constructor(siteVariables) {
     this.siteVariables = siteVariables;
+    this.siteConfigPath = path.resolve(
+      getProjectDir(),
+      'config',
+      'site.dev.json',
+    );
   }
 
   apply(compiler) {
@@ -125,6 +131,15 @@ class ContentWatchPlugin {
         if (fs.existsSync(dataPath)) {
           compilation.fileDependencies.add(dataPath);
         }
+      }
+
+      // Watch the site config file and restart when it changes
+      compilation.fileDependencies.add(this.siteConfigPath);
+      const siteConfigChanged = modifiedFiles.has(
+        path.resolve(this.siteConfigPath),
+      );
+      if (siteConfigChanged) {
+        _needsRestart = true;
       }
     });
   }
