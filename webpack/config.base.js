@@ -51,7 +51,7 @@ function createModuleRules(siteVariables) {
     { test: /\.js$/, exclude: /node_modules/, use: { loader: 'babel-loader' } },
     {
       test: /\.tsx?$/,
-      exclude: /node_modules/,
+      include: path.resolve(packageDir, 'src'),
       loader: 'ts-loader',
       options: { configFile: path.resolve(packageDir, 'tsconfig.json') },
     },
@@ -134,7 +134,11 @@ async function createBaseConfig({
     },
     resolve: { extensions: ['.ts', '.js', '.json'] },
     resolveLoader: {
-      modules: [path.resolve(packageDir, 'node_modules'), 'node_modules'],
+      modules: [
+        path.resolve(packageDir, 'node_modules'),
+        path.resolve(packageDir, '..', '..'),
+        'node_modules',
+      ],
     },
     devtool,
     module: { rules: createModuleRules(siteVariables) },
