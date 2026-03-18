@@ -190,7 +190,6 @@ function createSiteConfig({
     themeColor,
     tintHue: Number(tintHue),
     tintAmount: Number(tintAmount),
-    faviconFontWeight: 700,
     vars: {},
   };
 }

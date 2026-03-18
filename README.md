@@ -145,7 +145,6 @@ Example site configuration JSON file:
   "internalDomains": ["example.edu"],
   "defaultTimeZone": "America/New_York",
   "codeLanguages": { "java": "java", "py": "python" },
-  "faviconFontWeight": 700,
   "vars": {
     "staffEmail": "staff@example.edu"
   }
@@ -169,7 +168,7 @@ Example site configuration JSON file:
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |
 | `codeLanguages` | Map file extension to Shiki language (e.g., `"java": "java"`) |
 | `faviconColor` | *Optional*, HSL color override for favicon (defaults to `themeColor`) |
-| `faviconFontWeight` | Font weight used for favicon text (e.g., `700`) |
+| `faviconFontWeight` | *Optional*, font weight used for favicon text (default `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content (e.g., `<%= staffEmail %>`) |
 
 

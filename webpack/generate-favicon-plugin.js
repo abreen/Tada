@@ -105,7 +105,7 @@ class GenerateFaviconPlugin {
       filenameBase: options.filenameBase || 'favicon',
       color: siteVariables.faviconColor,
       symbol: siteVariables.faviconSymbol,
-      fontWeight: siteVariables.faviconFontWeight,
+      fontWeight: siteVariables.faviconFontWeight || 700,
     };
   }
 
