@@ -16,12 +16,10 @@ const PAGEFIND_VERBOSE = process.env.TADA_LOG_LEVEL === 'debug';
 const PAGEFIND_OUTPUT_SUBDIR = 'pagefind';
 
 let pagefindModulePromise = null;
-let loadPagefindModule = () => import('pagefind');
-let extractPdfPagesImpl = extractPdfPages;
 
 function getPagefind() {
   if (!pagefindModulePromise) {
-    pagefindModulePromise = loadPagefindModule();
+    pagefindModulePromise = import('pagefind');
   }
   return pagefindModulePromise;
 }
@@ -102,8 +100,11 @@ async function buildIndex({
   reachablePdfPaths,
   pdfSourceByOutputPath,
   applyBasePath,
+  loadPagefind = getPagefind,
+  checkMutool = assertMutoolAvailable,
+  extractPages = extractPdfPages,
 }) {
-  const pagefind = await getPagefind();
+  const pagefind = await loadPagefind();
   const { index, errors: createErrors } = await pagefind.createIndex({
     keepIndexUrl: true,
     verbose: PAGEFIND_VERBOSE,
@@ -130,7 +131,7 @@ async function buildIndex({
     let mutoolAvailable = true;
     if (reachablePdfPaths.length > 0) {
       try {
-        await assertMutoolAvailable();
+        await checkMutool();
       } catch {
         mutoolAvailable = false;
         log.warn`mutool was not found; search results will not include PDFs`;
@@ -143,8 +144,7 @@ async function buildIndex({
         continue;
       }
 
-      const { pages, hasExtractedText } =
-        await extractPdfPagesImpl(sourceFilePath);
+      const { pages, hasExtractedText } = await extractPages(sourceFilePath);
       const title = path.posix.basename(pdfPath);
 
       if (!hasExtractedText) {
@@ -385,28 +385,6 @@ class PagefindPlugin {
   }
 }
 
-function setPagefindModuleLoaderForTest(loader) {
-  pagefindModulePromise = null;
-  loadPagefindModule = loader;
-}
-
-function setExtractPdfPagesForTest(fn) {
-  extractPdfPagesImpl = fn;
-}
-
-function resetTestHooks() {
-  pagefindModulePromise = null;
-  loadPagefindModule = () => import('pagefind');
-  extractPdfPagesImpl = extractPdfPages;
-}
-
-PagefindPlugin.__test = {
-  buildIndex,
-  collectIndexTargets,
-  getPdfSourceByOutputPath,
-  setExtractPdfPagesForTest,
-  setPagefindModuleLoaderForTest,
-  resetTestHooks,
-};
-
 module.exports = PagefindPlugin;
+module.exports.buildIndex = buildIndex;
+module.exports.collectIndexTargets = collectIndexTargets;

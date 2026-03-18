@@ -113,20 +113,6 @@ function buildPdfPageRecords(pageTexts) {
   return { pages, hasExtractedText: pages.length > 0 };
 }
 
-function buildPdfRecordContent(pdfPath, pageTexts) {
-  const fileName = path.basename(pdfPath);
-  const normalizedPages = pageTexts.map(normalizeExtractedText).filter(Boolean);
-
-  if (normalizedPages.length === 0) {
-    return { content: fileName, hasExtractedText: false };
-  }
-
-  return {
-    content: `${fileName}\n\n${normalizedPages.join('\n\n')}`,
-    hasExtractedText: true,
-  };
-}
-
 async function extractPdfPages(pdfPath) {
   await assertMutoolAvailable();
 
@@ -170,25 +156,8 @@ async function extractPdfPages(pdfPath) {
   }
 }
 
-async function extractPdfText(pdfPath) {
-  const { pages } = await extractPdfPages(pdfPath);
-  const pageTexts = pages.map(p => p.content);
-  return buildPdfRecordContent(pdfPath, pageTexts).content;
-}
-
-function resetMutoolAvailability() {
-  mutoolAvailabilityPromise = null;
-}
-
 module.exports = {
   assertMutoolAvailable,
+  buildPdfPageRecords,
   extractPdfPages,
-  extractPdfText,
-  __test: {
-    buildPdfPageRecords,
-    buildPdfRecordContent,
-    listNumberedPageFiles,
-    normalizeExtractedText,
-    resetMutoolAvailability,
-  },
 };

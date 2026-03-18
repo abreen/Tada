@@ -1,10 +1,30 @@
 const path = require('path');
-const { afterEach, describe, expect, test } = require('bun:test');
-const PagefindPlugin = require('./pagefind-plugin');
+const { describe, expect, test } = require('bun:test');
+const { buildIndex, collectIndexTargets } = require('./pagefind-plugin');
 
-afterEach(() => {
-  PagefindPlugin.__test.resetTestHooks();
-});
+function createFakePagefind(calls) {
+  const fakeIndex = {
+    addHTMLFile: async file => {
+      calls.htmlFiles?.push(file);
+      return { errors: [], file: { url: file.sourcePath, meta: {} } };
+    },
+    addCustomRecord: async record => {
+      calls.customRecords?.push(record);
+      return { errors: [], file: { url: record.url, meta: record.meta } };
+    },
+    writeFiles: async ({ outputPath }) => {
+      calls.outputPath = outputPath;
+      return { errors: [], outputPath };
+    },
+    deleteIndex: async () => {
+      calls.deleted = (calls.deleted || 0) + 1;
+    },
+  };
+
+  return async () => ({
+    createIndex: async () => ({ index: fakeIndex, errors: [] }),
+  });
+}
 
 describe('PagefindPlugin', () => {
   test('collectIndexTargets only includes linked PDFs from reachable HTML pages', () => {
@@ -21,7 +41,7 @@ describe('PagefindPlugin', () => {
       ['/docs/orphan.pdf', '/tmp/docs/orphan.pdf'],
     ]);
 
-    const result = PagefindPlugin.__test.collectIndexTargets(
+    const result = collectIndexTargets(
       htmlAssetsByPath,
       { basePath: '/' },
       pdfSourceByOutputPath,
@@ -34,44 +54,9 @@ describe('PagefindPlugin', () => {
   });
 
   test('buildIndex adds HTML files and per-page PDF custom records', async () => {
-    const calls = {
-      htmlFiles: [],
-      customRecords: [],
-      outputPath: null,
-      deleted: 0,
-    };
-    const fakeIndex = {
-      addHTMLFile: async file => {
-        calls.htmlFiles.push(file);
-        return { errors: [], file: { url: file.sourcePath, meta: {} } };
-      },
-      addCustomRecord: async record => {
-        calls.customRecords.push(record);
-        return { errors: [], file: { url: record.url, meta: record.meta } };
-      },
-      writeFiles: async ({ outputPath }) => {
-        calls.outputPath = outputPath;
-        return { errors: [], outputPath };
-      },
-      deleteIndex: async () => {
-        calls.deleted += 1;
-      },
-    };
+    const calls = { htmlFiles: [], customRecords: [], outputPath: null };
 
-    PagefindPlugin.__test.setPagefindModuleLoaderForTest(async () => ({
-      createIndex: async () => ({ index: fakeIndex, errors: [] }),
-    }));
-    PagefindPlugin.__test.setExtractPdfPagesForTest(async filePath => {
-      return {
-        pages: [
-          { pageNumber: 2, content: `EXTRACTED:${path.basename(filePath)}:2` },
-          { pageNumber: 5, content: `EXTRACTED:${path.basename(filePath)}:5` },
-        ],
-        hasExtractedText: true,
-      };
-    });
-
-    await PagefindPlugin.__test.buildIndex({
+    await buildIndex({
       distPath: '/tmp/dist',
       htmlAssetsByPath: new Map([
         ['index.html', '<html><body>Home</body></html>'],
@@ -83,6 +68,15 @@ describe('PagefindPlugin', () => {
         ['/docs/guide.pdf', '/tmp/docs/guide.pdf'],
       ]),
       applyBasePath: subPath => `/course${subPath}`,
+      loadPagefind: createFakePagefind(calls),
+      checkMutool: async () => {},
+      extractPages: async filePath => ({
+        pages: [
+          { pageNumber: 2, content: `EXTRACTED:${path.basename(filePath)}:2` },
+          { pageNumber: 5, content: `EXTRACTED:${path.basename(filePath)}:5` },
+        ],
+        hasExtractedText: true,
+      }),
     });
 
     expect(calls.htmlFiles).toEqual([
@@ -112,28 +106,8 @@ describe('PagefindPlugin', () => {
 
   test('buildIndex falls back to a single PDF record when text extraction is empty', async () => {
     const calls = { customRecords: [] };
-    const fakeIndex = {
-      addHTMLFile: async () => {
-        return { errors: [], file: { url: 'index.html', meta: {} } };
-      },
-      addCustomRecord: async record => {
-        calls.customRecords.push(record);
-        return { errors: [], file: { url: record.url, meta: record.meta } };
-      },
-      writeFiles: async ({ outputPath }) => {
-        return { errors: [], outputPath };
-      },
-      deleteIndex: async () => {},
-    };
 
-    PagefindPlugin.__test.setPagefindModuleLoaderForTest(async () => ({
-      createIndex: async () => ({ index: fakeIndex, errors: [] }),
-    }));
-    PagefindPlugin.__test.setExtractPdfPagesForTest(async () => {
-      return { pages: [], hasExtractedText: false };
-    });
-
-    await PagefindPlugin.__test.buildIndex({
+    await buildIndex({
       distPath: '/tmp/dist',
       htmlAssetsByPath: new Map(),
       reachableHtmlPaths: [],
@@ -142,6 +116,9 @@ describe('PagefindPlugin', () => {
         ['/docs/guide.pdf', '/tmp/docs/guide.pdf'],
       ]),
       applyBasePath: subPath => `/course${subPath}`,
+      loadPagefind: createFakePagefind(calls),
+      checkMutool: async () => {},
+      extractPages: async () => ({ pages: [], hasExtractedText: false }),
     });
 
     expect(calls.customRecords).toEqual([
