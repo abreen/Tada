@@ -28,6 +28,11 @@ function getSiteVariables(env) {
     variables.faviconSymbol = variables.symbol;
   }
 
+  // Derive faviconColor from themeColor if not explicitly set
+  if (variables.themeColor && !variables.faviconColor) {
+    variables.faviconColor = variables.themeColor;
+  }
+
   // Derive titlePostfix from title if not explicitly set
   if (variables.title && !variables.titlePostfix) {
     variables.titlePostfix = ` - ${variables.title}`;

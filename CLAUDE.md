@@ -33,6 +33,7 @@ HTML templates are internal to the Tada package and live in `templates/`:
 
 - `templates/default.html` --- default page layout
 - `templates/code.html` --- source code page layout
+- `templates/_theme.scss` --- Lodash SCSS template rendered at build time with `themeColor`
 - Partials: `_nav.html`, `_top.html`, `_bottom.html`, `_heading.html`, `_author.html`
 - Schemas: `nav.schema.json`, `authors.schema.json`
 
@@ -48,9 +49,9 @@ values from the active site config.
 
 - `config/site.dev.json` --- development config (`base: http://localhost:8080`, `basePath: /`)
 - `config/site.prod.json` --- production config (real domain and base path)
-- `config/_theme.scss` --- shared SCSS theme variables (imported via sass-loader `loadPaths`)
 - `site.title` --- site title, used in the header and to derive `titlePostfix`
 - `site.symbol` --- short text (1-5 chars) for the logo and favicon (derives `faviconSymbol`)
+- `site.themeColor` --- HSL theme color (derives `faviconColor` if not set)
 - Arbitrary template variables live under the `vars` key in the site config JSON
 
 ## Client-side components (plus styles)

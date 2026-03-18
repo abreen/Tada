@@ -1,0 +1,94 @@
+:root {
+  --theme-hue: <%= themeHue %>deg;
+  --theme-saturation: <%= themeSaturation %>%;
+  --theme-lightness: <%= themeLightness %>%;
+  --theme-color: hsl(
+    var(--theme-hue) var(--theme-saturation) var(--theme-lightness)
+  );
+  --theme-color-text: var(--theme-color);
+
+  // Background & foreground color tint
+  --tint-hue: <%= tintHue %>deg;
+  --tint-amount: <%= tintAmount / 100 %>;
+
+  --link-active-color: #000;
+
+  --warning-bg-color: hsl(36 95% 70%);
+  --note-bg-color: hsl(209 95% 75%);
+
+  // Main foreground color (the color of most text)
+  --fg-color: hsl(var(--tint-hue) calc(8% * var(--tint-amount)) 8%);
+  --fg-color-translucent: hsl(
+    var(--tint-hue) calc(70% * var(--tint-amount)) 8% / 33%
+  );
+
+  // Secondary foreground color (lighter)
+  --fg2-color: hsl(var(--tint-hue) calc(6% * var(--tint-amount)) 45%);
+
+  // Main background color (the color of the page background)
+  --bg-color: hsl(var(--tint-hue) calc(5% * var(--tint-amount)) 97%);
+  --bg-color-translucent: hsl(
+    var(--tint-hue) calc(30% * var(--tint-amount)) 95% / 66%
+  );
+
+  // Secondary background color (lighter)
+  --bg2-color: hsl(var(--tint-hue) calc(12% * var(--tint-amount)) 92%);
+  --bg2-color-translucent: hsl(
+    var(--tint-hue) calc(12% * var(--tint-amount)) 92% / 66%
+  );
+
+  --box-shadow: 0 2px 9px
+    hsl(var(--tint-hue) calc(85% * var(--tint-amount)) 10% / 25%);
+  --backdrop-filter: blur(10px);
+
+  --font:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --heading-font: var(--font);
+  --mono-font: 'Google Sans Code', Consolas, Courier, monospace;
+
+  --font-size: 16px;
+  --font-size-smaller: 15px;
+  --font-size-small: 13px;
+
+  --font-weight: 400;
+  --line-height: 1.7;
+
+  // Use em units to specify a size relative to normal body text
+  --mono-font-size: 0.94em;
+  --mono-line-height: 1.5;
+  --mono-border-radius: 0.375em;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --theme-color-text: hsl(
+      var(--theme-hue) var(--theme-saturation)
+        clamp(50%, calc(var(--theme-lightness) + 15%), 80%)
+    );
+
+    --fg-color: hsl(var(--tint-hue) calc(10% * var(--tint-amount)) 92%);
+    --fg-color-translucent: hsl(
+      var(--tint-hue) calc(85% * var(--tint-amount)) 90% / 33%
+    );
+    --fg2-color: hsl(var(--tint-hue) calc(6% * var(--tint-amount)) 60%);
+    --bg-color: hsl(var(--tint-hue) calc(3% * var(--tint-amount)) 5%);
+    --bg-color-translucent: hsl(
+      var(--tint-hue) calc(15% * var(--tint-amount)) 10% / 66%
+    );
+    --bg2-color: hsl(var(--tint-hue) calc(12% * var(--tint-amount)) 12%);
+    --bg2-color-translucent: hsl(
+      var(--tint-hue) calc(12% * var(--tint-amount)) 12% / 66%
+    );
+
+    --box-shadow: 0 3px 8px
+      hsl(var(--tint-hue) calc(33% * var(--tint-amount)) 8% / 70%);
+
+    --link-active-color: #fff;
+
+    --warning-bg-color: hsl(36 77% 27%);
+    --note-bg-color: hsl(209 90% 25%);
+  }
+}

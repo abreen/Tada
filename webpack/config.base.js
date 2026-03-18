@@ -1,4 +1,7 @@
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const _ = require('lodash');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const GenerateContentAssetsPlugin = require('./generate-content-assets-plugin');
@@ -14,11 +17,36 @@ const {
   getProjectDir,
   getPublicDir,
 } = require('./utils/paths');
+const { parseHsl } = require('./utils/parse-hsl');
 
 const distDir = getDistDir();
 
-function createModuleRules() {
+function renderThemeScss(siteVariables) {
+  const templatePath = path.join(getPackageDir(), 'templates/_theme.scss');
+  const template = fs.readFileSync(templatePath, 'utf-8');
+  const { hue, saturation, lightness } = parseHsl(siteVariables.themeColor);
+  const tintHue = siteVariables.tintHue ?? 20;
+  const tintAmount = siteVariables.tintAmount ?? 100;
+  const rendered = _.template(template)({
+    themeHue: hue,
+    themeSaturation: saturation,
+    themeLightness: lightness,
+    tintHue,
+    tintAmount,
+  });
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-'));
+  const configDir = path.join(tmpDir, 'config');
+  fs.mkdirSync(configDir);
+  fs.writeFileSync(path.join(configDir, '_theme.scss'), rendered);
+
+  return tmpDir;
+}
+
+function createModuleRules(siteVariables) {
   const packageDir = getPackageDir();
+  const themeDir = renderThemeScss(siteVariables);
+
   return [
     { test: /\.js$/, exclude: /node_modules/, use: { loader: 'babel-loader' } },
     {
@@ -42,7 +70,7 @@ function createModuleRules() {
         },
         {
           loader: 'sass-loader',
-          options: { sassOptions: { loadPaths: [getProjectDir()] } },
+          options: { sassOptions: { loadPaths: [themeDir, getProjectDir()] } },
         },
       ],
     },
@@ -109,7 +137,7 @@ async function createBaseConfig({
       modules: [path.resolve(packageDir, 'node_modules'), 'node_modules'],
     },
     devtool,
-    module: { rules: createModuleRules() },
+    module: { rules: createModuleRules(siteVariables) },
     ...(optimization && { optimization }),
     plugins: await createPlugins(siteVariables, { defineIsDev, plugins }),
     stats: 'errors-only',

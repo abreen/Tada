@@ -72,6 +72,8 @@ Create a new Tada site in a new directory. Prompts for:
 - **Site title** --- displayed in the header and `<title>` tag
 - **Symbol** --- short text (1-5 uppercase characters) shown in the logo and favicon
 - **Theme color** --- HSL color, e.g. `hsl(195 70% 40%)`
+- **Background tint hue** --- hue (0-360) for background/foreground tinting (defaults to `20`)
+- **Background tint amount** --- percentage (0-100) of tint to apply (defaults to `100`)
 - **Default time zone** --- for `<datetime>` elements (defaults to your system zone)
 - **Production base URL** --- e.g. `https://example.edu`
 - **Production base path** --- e.g. `/cs101` (defaults to `/`)
@@ -125,7 +127,6 @@ Build-time site config lives in:
 
 - `config/site.dev.json` (used by `tada dev` / `tada watch`)
 - `config/site.prod.json` (used by `tada prod`)
-- `config/_theme.scss` (contains CSS custom property definitions used in styles)
 - `config/nav.json` (navigation structure)
 - `config/authors.json` (author data)
 
@@ -136,13 +137,14 @@ Example site configuration JSON file:
   "title": "Intro to Computer Science",
   "titlePostfix": " - CS 0",
   "symbol": "CS 0",
+  "themeColor": "hsl(351 70% 40%)",
+  "tintAmount": 0,
   "features": { "search": true, "code": true, "favicon": true },
   "base": "https://example.edu",
   "basePath": "/cs0",
   "internalDomains": ["example.edu"],
   "defaultTimeZone": "America/New_York",
   "codeLanguages": { "java": "java", "py": "python" },
-  "faviconColor": "hsl(351 70% 40%)",
   "faviconFontWeight": 700,
   "vars": {
     "staffEmail": "staff@example.edu"
@@ -155,7 +157,10 @@ Example site configuration JSON file:
 | `title` | Title for the whole site (also used to derive `titlePostfix`) |
 | `titlePostfix` | *Optional*, the string to append to each page's `title` |
 | `symbol` | Text (1-5 chars) displayed in header (also used as the favicon symbol) |
-| `faviconSymbol` | *Optional*, the string to use instead of `symbol` in the favicon |
+| `themeColor` | HSL theme color for the site, e.g. `"hsl(195 70% 40%)"` |
+| `tintHue` | *Optional*, hue (0-360) for background and foreground tinting (default `20`) |
+| `tintAmount` | *Optional*, percentage (0-100) of tint to apply (default `100`) |
+| `faviconSymbol` | *Optional*, the text to use instead of `symbol` in the favicon |
 | `features.search` | Enable search UI and Pagefind index generation |
 | `features.code` | Enable generated source-code HTML pages for configured code extensions |
 | `features.favicon` | Enable automatically generated favicons |
@@ -163,7 +168,7 @@ Example site configuration JSON file:
 | `basePath` | URL prefix for deployment under a subpath (e.g., `"/cs101"`), use `"/"` at root |
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |
 | `codeLanguages` | Map file extension to Shiki language (e.g., `"java": "java"`) |
-| `faviconColor` | HSL color used by favicon generation, e.g. `"hsl(195 70% 40%)"` |
+| `faviconColor` | *Optional*, HSL color override for favicon (defaults to `themeColor`) |
 | `faviconFontWeight` | Font weight used for favicon text (e.g., `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content (e.g., `<%= staffEmail %>`) |
 

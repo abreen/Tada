@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const { execSync } = require('child_process');
-const _ = require('lodash');
 
 const SYSTEM_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -33,6 +32,28 @@ const INIT_QUESTIONS = {
     prompt: 'Theme color',
     defaultValue: 'hsl(195 70% 40%)',
     validate: validateHslColor,
+  },
+  tintHue: {
+    prompt: 'Background tint hue (0-360)',
+    defaultValue: '20',
+    validate: v => {
+      const n = Number(v);
+      if (!Number.isInteger(n) || n < 0 || n > 360) {
+        return 'Must be an integer from 0 to 360';
+      }
+      return null;
+    },
+  },
+  tintAmount: {
+    prompt: 'Background tint amount (0-100)',
+    defaultValue: '100',
+    validate: v => {
+      const n = Number(v);
+      if (!Number.isInteger(n) || n < 0 || n > 100) {
+        return 'Must be an integer from 0 to 100';
+      }
+      return null;
+    },
   },
   defaultTimeZone: {
     prompt: 'Default time zone',
@@ -146,15 +167,12 @@ function validateBasePath(value) {
   return null;
 }
 
-function parseHue(hslColor) {
-  const match = hslColor.match(/^hsl\((\d+)/);
-  return match ? match[1] : '195';
-}
-
 function createSiteConfig({
   title,
   symbol,
-  faviconColor,
+  themeColor,
+  tintHue,
+  tintAmount,
   defaultTimeZone,
   base,
   basePath,
@@ -169,7 +187,9 @@ function createSiteConfig({
     internalDomains,
     defaultTimeZone,
     codeLanguages: { java: 'java', py: 'python' },
-    faviconColor,
+    themeColor,
+    tintHue: Number(tintHue),
+    tintAmount: Number(tintAmount),
     faviconFontWeight: 700,
     vars: {},
   };
@@ -215,8 +235,16 @@ async function initCommand(args) {
     }
   }
 
-  const { title, symbol, themeColor, defaultTimeZone, prodBase, prodBasePath } =
-    config;
+  const {
+    title,
+    symbol,
+    themeColor,
+    tintHue,
+    tintAmount,
+    defaultTimeZone,
+    prodBase,
+    prodBasePath,
+  } = config;
 
   rl.close();
 
@@ -230,7 +258,9 @@ async function initCommand(args) {
   const devConfig = createSiteConfig({
     title,
     symbol,
-    faviconColor: themeColor,
+    themeColor,
+    tintHue,
+    tintAmount,
     defaultTimeZone,
     base: 'http://localhost:8080',
     basePath: '/',
@@ -240,7 +270,9 @@ async function initCommand(args) {
   const prodConfig = createSiteConfig({
     title,
     symbol,
-    faviconColor: themeColor,
+    themeColor,
+    tintHue,
+    tintAmount,
     defaultTimeZone,
     base: prodBase,
     basePath: prodBasePath,
@@ -256,15 +288,6 @@ async function initCommand(args) {
     path.join(projectDir, 'config/site.prod.json'),
     JSON.stringify(prodConfig, null, 2) + '\n',
   );
-
-  // Render _theme.scss Lodash template with the user's theme hue
-  const themeTemplate = fs.readFileSync(
-    path.join(packageDir, 'config/_theme.scss'),
-    'utf-8',
-  );
-  const hue = parseHue(themeColor);
-  const renderedTheme = _.template(themeTemplate)({ themeHue: hue });
-  fs.writeFileSync(path.join(projectDir, 'config/_theme.scss'), renderedTheme);
 
   // Copy nav and authors data files to the project's config directory
   fs.copyFileSync(
