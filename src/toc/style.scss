@@ -195,3 +195,9 @@ body.code .toc ol a {
   font-size: var(--font-size-smaller);
   color: var(--fg2-color);
 }
+
+@media print {
+  .toc {
+    display: none;
+  }
+}

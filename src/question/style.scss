@@ -92,3 +92,25 @@
   cursor: unset;
   @include user-select(text);
 }
+
+@media print {
+  .question-a-body {
+    cursor: default;
+    @include user-select(text);
+
+    &:not([data-revealed]) > * {
+      color: inherit;
+      background-color: transparent;
+      pointer-events: auto;
+    }
+
+    &:not([data-revealed]) > * * {
+      color: inherit;
+      background-color: transparent;
+    }
+
+    &::after {
+      display: none;
+    }
+  }
+}
