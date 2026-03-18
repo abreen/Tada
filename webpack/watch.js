@@ -125,6 +125,8 @@ async function startWatching() {
   const loggedInvalidationFiles = new Set();
 
   compiler.hooks.invalid.tap('WatchChangedFileLog', fileName => {
+    broadcast('rebuilding');
+
     const markdownPath = toContentMarkdownPath(fileName);
     if (markdownPath) {
       loggedInvalidationFiles.add(markdownPath);
