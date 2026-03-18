@@ -17,9 +17,9 @@ const SYSTEM_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const packageDir = path.resolve(__dirname, '..');
 
 function requireSiteConfig(env) {
-  const configPath = path.resolve(process.cwd(), `config/site.${env}.json`);
+  const configPath = path.resolve(process.cwd(), `site.${env}.json`);
   if (!fs.existsSync(configPath)) {
-    console.error(`Error: Missing config file: config/site.${env}.json`);
+    console.error(`Error: Missing config file: site.${env}.json`);
     process.exit(1);
   }
 }
@@ -201,7 +201,7 @@ async function initCommand(args) {
   const prodDomain = new URL(prodBase).hostname;
 
   // Create project directory
-  fs.mkdirSync(path.join(projectDir, 'config'), { recursive: true });
+  fs.mkdirSync(projectDir);
 
   // Generate site configs
   const devConfig = createSiteConfig({
@@ -229,23 +229,23 @@ async function initCommand(args) {
   });
 
   fs.writeFileSync(
-    path.join(projectDir, 'config/site.dev.json'),
+    path.join(projectDir, 'site.dev.json'),
     JSON.stringify(devConfig, null, 2) + '\n',
   );
 
   fs.writeFileSync(
-    path.join(projectDir, 'config/site.prod.json'),
+    path.join(projectDir, 'site.prod.json'),
     JSON.stringify(prodConfig, null, 2) + '\n',
   );
 
-  // Copy nav and authors data files to the project's config directory
+  // Copy nav and authors data files to the project root
   fs.copyFileSync(
     path.join(packageDir, 'config/nav.json'),
-    path.join(projectDir, 'config/nav.json'),
+    path.join(projectDir, 'nav.json'),
   );
   fs.copyFileSync(
     path.join(packageDir, 'config/authors.json'),
-    path.join(projectDir, 'config/authors.json'),
+    path.join(projectDir, 'authors.json'),
   );
 
   // Copy content/ and public/ from the package

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { compile: compileJsonSchema, doValidation } = require('./json-schema');
 const { getProjectDir } = require('./utils/paths');
-const configDir = path.resolve(getProjectDir(), 'config');
+const configDir = getProjectDir();
 
 const DEFAULT = { basePath: '/', features: { search: true, code: true } };
 

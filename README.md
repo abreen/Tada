@@ -69,14 +69,14 @@ Visit [http://localhost:8080/index.html](http://localhost:8080/index.html).
 ### `tada init <dirname>`
 
 Create a new Tada site in a new directory. Prompts for:
-- **Site title** --- displayed in the header and `<title>` tag
-- **Symbol** --- short text (1-5 uppercase characters) shown in the logo and favicon
-- **Theme color** --- HSL color, e.g. `hsl(195 70% 40%)`
-- **Background tint hue** --- hue (0-360) for background/foreground tinting (defaults to `20`)
-- **Background tint amount** --- percentage (0-100) of tint to apply (defaults to `100`)
-- **Default time zone** --- for `<datetime>` elements (defaults to your system zone)
-- **Production base URL** --- e.g. `https://example.edu`
-- **Production base path** --- e.g. `/cs101` (defaults to `/`)
+- **Site title**: displayed in the header and `<title>` tag
+- **Symbol**: short text (1-5 uppercase characters) shown in the logo and favicon
+- **Theme color**: HSL color, e.g. `hsl(195 70% 40%)`
+- **Background tint hue**: hue (0-360) for background/foreground tinting (defaults to `20`)
+- **Background tint amount**: percentage (0-100) of tint to apply (defaults to `100`)
+- **Default time zone**: for `<time>` elements (defaults to your system zone)
+- **Production base URL**: e.g. `https://example.edu`
+- **Production base path**: e.g. `/cs101` (defaults to `/`)
 
 Pass `--default` to use the default values for all options without being
 prompted.
@@ -84,7 +84,7 @@ prompted.
 
 ### `tada dev`
 
-Build the site for local development (using `config/site.dev.json`)
+Build the site for local development (using `site.dev.json`)
 into the `dist/` directory.
 
 
@@ -106,7 +106,7 @@ Remove the `dist/` directory.
 
 ### `tada prod`
 
-Build the site for production (uses `config/site.prod.json`).
+Build the site for production (uses `site.prod.json`).
 
 
 ## Prerequisites
@@ -125,10 +125,10 @@ Build the site for production (uses `config/site.prod.json`).
 
 Build-time site config lives in:
 
-- `config/site.dev.json` (used by `tada dev` / `tada watch`)
-- `config/site.prod.json` (used by `tada prod`)
-- `config/nav.json` (navigation structure)
-- `config/authors.json` (author data)
+- `site.dev.json` (used by `tada dev` / `tada watch`)
+- `site.prod.json` (used by `tada prod`)
+- `nav.json` (navigation structure)
+- `authors.json` (author data)
 
 Example site configuration JSON file:
 
@@ -256,7 +256,7 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 |-------|-------------|
 | `title` (required) | Page title (`<title>` tag and page heading) |
 | `skip` | Set to `true` to skip building this page completely |
-| `author` | Author handle (e.g. `jsmith`) resolved to a full object via `config/authors.json` |
+| `author` | Author handle (e.g. `jsmith`) resolved to a full object via `authors.json` |
 | `description` | Meta description for the page |
 | `toc` | Set to `true` to show a table of contents |
 | `parent` & `parentLabel` | URL and label for a breadcrumb link displayed above the title |

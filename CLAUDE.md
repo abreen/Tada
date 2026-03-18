@@ -12,8 +12,8 @@ The runtime is Bun. Build logic is implemented as Webpack plugins in `webpack/`.
 ## CLI commands
 
 - Create a new site: `tada init <dirname>`
-- Build development: `tada dev` (uses `config/site.dev.json`)
-- Build production: `tada prod` (uses `config/site.prod.json`)
+- Build development: `tada dev` (uses `site.dev.json`)
+- Build production: `tada prod` (uses `site.prod.json`)
 - Start dev web server: `tada serve`
 - Watch files: `tada watch`
 - Clean build artifacts: `tada clean`
@@ -37,18 +37,18 @@ HTML templates are internal to the Tada package and live in `templates/`:
 - Partials: `_nav.html`, `_top.html`, `_bottom.html`, `_heading.html`, `_author.html`
 - Schemas: `nav.schema.json`, `authors.schema.json`
 
-User-facing data files live in the project's `config/` directory:
+User-facing data files live at the project root:
 
-- `config/nav.json` --- navigation structure (validated against `templates/nav.schema.json`)
-- `config/authors.json` --- author/staff data (validated against `templates/authors.schema.json`)
+- `nav.json` --- navigation structure (validated against `templates/nav.schema.json`)
+- `authors.json` --- author/staff data (validated against `templates/authors.schema.json`)
 
 Use `<%= page.* %>` to access a page's front matter and `<%= site.* %>` for
 values from the active site config.
 
 ## Config files
 
-- `config/site.dev.json` --- development config (`base: http://localhost:8080`, `basePath: /`)
-- `config/site.prod.json` --- production config (real domain and base path)
+- `site.dev.json` --- development config (`base: http://localhost:8080`, `basePath: /`)
+- `site.prod.json` --- production config (real domain and base path)
 - `site.title` --- site title, used in the header and to derive `titlePostfix`
 - `site.symbol` --- short text (1-5 chars) for the logo and favicon (derives `faviconSymbol`)
 - `site.themeColor` --- HSL theme color (derives `faviconColor` if not set)

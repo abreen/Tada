@@ -21,7 +21,7 @@ function getPublicDir() {
 }
 
 function getConfigDir() {
-  return path.resolve(getProjectDir(), 'config');
+  return getProjectDir();
 }
 
 function createApplyBasePath(siteVariables) {
