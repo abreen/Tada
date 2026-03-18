@@ -332,7 +332,7 @@ class PagefindPlugin {
         }
 
         const snapshotReadyAt = Date.now();
-        log.info`Building search index for ${reachableHtmlPaths.length} page(s) and ${reachablePdfPaths.length} PDF(s) after ${snapshotReadyAt - start}ms of snapshot prep...`;
+        log.info`Building search index for ${reachableHtmlPaths.length} page(s) and ${reachablePdfPaths.length} PDF(s) after ${snapshotReadyAt - start}ms of snapshot prep`;
         buildIndex({
           distPath,
           htmlAssetsByPath,
