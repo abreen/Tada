@@ -243,7 +243,6 @@ class GenerateContentAssetsPlugin {
         () => {
           const contentDir = getContentDir();
           const buildContentFiles = this.getBuildContentFiles(compiler);
-          log.info`Processing ${buildContentFiles.length} content file(s)`;
           const buildFileSet = new Set(buildContentFiles);
           const dirtySourceFiles = this.getDirtySourceFiles(
             compiler,
@@ -263,6 +262,11 @@ class GenerateContentAssetsPlugin {
           const watchState = getWatchState(compiler);
 
           this.pruneRemovedSources(buildFileSet, removedHtmlAssetPaths);
+
+          if (dirtySourceFiles.size > 0) {
+            const noun = dirtySourceFiles.size === 1 ? 'file' : 'files';
+            log.info`Processing ${dirtySourceFiles.size} content ${noun}`;
+          }
 
           for (const filePath of dirtySourceFiles) {
             let assets;

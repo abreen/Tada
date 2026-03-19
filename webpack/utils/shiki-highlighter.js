@@ -8,7 +8,7 @@ async function initHighlighter(langs) {
   if (highlighter) {
     return;
   }
-  log.info`Initializing syntax highlighter`;
+  log.debug`Initializing syntax highlighter`;
   const { createHighlighter } = await import('shiki');
   highlighter = await createHighlighter({
     themes: ['github-light', 'github-dark'],

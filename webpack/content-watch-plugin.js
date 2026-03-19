@@ -13,42 +13,81 @@ const {
   JSON_DATA_FILES,
 } = require('./templates');
 const { getProjectDir } = require('./utils/paths');
+const { B } = require('./colors');
+const { makeLogger } = require('./log');
 
+const log = makeLogger(__filename);
 let _needsRestart = false;
 
 class ContentWatchPlugin {
   constructor(siteVariables) {
     this.siteVariables = siteVariables;
-    this.siteConfigPath = path.resolve(
-      getProjectDir(),
-      'config',
-      'site.dev.json',
-    );
+    this.siteConfigPath = path.resolve(getProjectDir(), 'site.dev.json');
   }
 
   apply(compiler) {
     let lastSig = null;
+
+    // Abort all asset generation if templates failed to compile.
+    // This intercept wraps every processAssets handler registered after it,
+    // so ContentWatchPlugin must be first in the plugins array.
+    compiler.hooks.thisCompilation.tap('ContentWatchPlugin', compilation => {
+      compilation.hooks.processAssets.intercept({
+        register: tapInfo => {
+          const originalFn = tapInfo.fn;
+          if (tapInfo.type === 'promise') {
+            tapInfo.fn = (...args) => {
+              if (compilation._templateError) {
+                return Promise.resolve();
+              }
+              return originalFn(...args);
+            };
+          } else if (tapInfo.type === 'async') {
+            tapInfo.fn = (...args) => {
+              const callback = args[args.length - 1];
+              if (compilation._templateError) {
+                return callback();
+              }
+              return originalFn(...args);
+            };
+          } else {
+            tapInfo.fn = (...args) => {
+              if (compilation._templateError) {
+                return;
+              }
+              return originalFn(...args);
+            };
+          }
+          return tapInfo;
+        },
+      });
+    });
 
     compiler.hooks.make.tap('ContentWatchPlugin', compilation => {
       const htmlTemplatesDir = getHtmlTemplatesDir();
       const jsonDataDir = getJsonDataDir();
 
       // Refresh templates cache from disk
+      let templateError = null;
       try {
         compileTemplates(this.siteVariables);
       } catch (err) {
-        compilation.errors.push(err);
-        for (const fileName of fs.readdirSync(htmlTemplatesDir)) {
-          compilation.fileDependencies.add(
-            path.join(htmlTemplatesDir, fileName),
-          );
+        templateError = err;
+      }
+
+      for (const fileName of fs.readdirSync(htmlTemplatesDir)) {
+        compilation.fileDependencies.add(path.join(htmlTemplatesDir, fileName));
+      }
+      for (const dataFile of JSON_DATA_FILES) {
+        const dataPath = path.join(jsonDataDir, dataFile);
+        if (fs.existsSync(dataPath)) {
+          compilation.fileDependencies.add(dataPath);
         }
-        for (const dataFile of JSON_DATA_FILES) {
-          const dataPath = path.join(jsonDataDir, dataFile);
-          if (fs.existsSync(dataPath)) {
-            compilation.fileDependencies.add(dataPath);
-          }
-        }
+      }
+
+      if (templateError) {
+        compilation._templateError = templateError;
+        compilation.errors.push(templateError);
         return;
       }
 
@@ -89,12 +128,17 @@ class ContentWatchPlugin {
       const jsonDataPaths = JSON_DATA_FILES.map(f =>
         path.resolve(jsonDataDir, f),
       );
-      const templatesChanged = [...modifiedFiles].some(
+      const changedTemplatePaths = [...modifiedFiles].filter(
         filePath =>
           filePath === path.resolve(htmlTemplatesDir) ||
           filePath.startsWith(normalizedHtmlDir) ||
           jsonDataPaths.includes(filePath),
       );
+      const templatesChanged = changedTemplatePaths.length > 0;
+
+      for (const filePath of changedTemplatePaths) {
+        log.event`${B`${path.basename(filePath)}`} changed, rebuilding all content...`;
+      }
 
       setWatchState(compiler, {
         contentFiles,

@@ -138,7 +138,7 @@ class GenerateFaviconPlugin {
           this._cachedAssets = new Map();
 
           try {
-            log.info`Generating favicons for "${symbol}"`;
+            log.info`Generating favicons`;
             log.debug`Using font file: ${FONT_PATH}`;
             const font = fontkit.openSync(FONT_PATH);
 

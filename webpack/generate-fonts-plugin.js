@@ -30,7 +30,7 @@ class GenerateFontsPlugin {
 
           this._cachedAssets = new Map();
 
-          log.info`Bundling fonts from ${FONTS_DIR}`;
+          log.info`Bundling fonts`;
 
           for (const family of fs.readdirSync(FONTS_DIR)) {
             const familyDir = path.join(FONTS_DIR, family);

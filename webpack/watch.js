@@ -7,7 +7,7 @@ const { B, G } = require('./colors');
 const { makeLogger, getFlair } = require('./log');
 const getConfig = require('./config.dev');
 const ContentWatchPlugin = require('./content-watch-plugin');
-const { getContentDir } = require('./util');
+const { getContentDir, getPublicDir } = require('./util');
 
 const WEBSOCKET_PORT = 35729;
 
@@ -54,6 +54,8 @@ function serve() {
   }, 10000);
 }
 
+const publicDir = getPublicDir();
+
 function toContentMarkdownPath(filePath) {
   if (!filePath) {
     return null;
@@ -71,6 +73,21 @@ function toContentMarkdownPath(filePath) {
 
   return path
     .relative(contentDir, normalizedFilePath)
+    .split(path.sep)
+    .join(path.posix.sep);
+}
+
+function toPublicRelativePath(filePath) {
+  if (!filePath) {
+    return null;
+  }
+  const normalizedPublicDir = path.resolve(publicDir) + path.sep;
+  const normalizedFilePath = path.resolve(filePath);
+  if (!normalizedFilePath.startsWith(normalizedPublicDir)) {
+    return null;
+  }
+  return path
+    .relative(publicDir, normalizedFilePath)
     .split(path.sep)
     .join(path.posix.sep);
 }
@@ -131,6 +148,11 @@ async function startWatching() {
     if (markdownPath) {
       loggedInvalidationFiles.add(markdownPath);
       log.event`${B`${markdownPath}`} changed, rebuilding...`;
+    } else {
+      const publicPath = toPublicRelativePath(fileName);
+      if (publicPath) {
+        log.event`${B`public/${publicPath}`} changed, rebuilding...`;
+      }
     }
   });
 
@@ -142,7 +164,7 @@ async function startWatching() {
 
     if (ContentWatchPlugin.needsRestart()) {
       ContentWatchPlugin.clearRestart();
-      log.event`Content changed, restarting Webpack compiler...`;
+      log.event`Content changed, restarting compiler...`;
       currentWatcher.close(() => startWatching());
       return;
     }
@@ -153,7 +175,7 @@ async function startWatching() {
       process.stderr.write(stats.toString('errors-only') + '\n');
       log.error`Build failed`;
     } else {
-      log.event`${getFlair()}  Webpack build completed ${G`successfully`}`;
+      console.log(getFlair());
       broadcast('reload');
     }
     if (!serveStarted && !err && !stats.hasErrors()) {

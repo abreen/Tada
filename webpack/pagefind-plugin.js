@@ -216,7 +216,7 @@ class PagefindPlugin {
   runWatchIndex() {
     if (this.watchRunInProgress) {
       this.watchRunQueued = true;
-      log.info`Indexing is still running in the background; queueing a rerun`;
+      log.debug`Indexing is still running in the background; queueing a rerun`;
       return;
     }
 
@@ -257,7 +257,7 @@ class PagefindPlugin {
     })
       .then(() => {
         const finishedAt = Date.now();
-        log.info`Background search index ready in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
+        log.debug`Search index ready after ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
       })
       .catch(err => {
         const failedAt = Date.now();
@@ -266,7 +266,7 @@ class PagefindPlugin {
       .finally(() => {
         this.watchRunInProgress = false;
         if (this.watchRunQueued) {
-          log.info`Starting queued Pagefind background rerun`;
+          log.debug`Starting queued Pagefind background rerun`;
           this.runWatchIndex();
         }
       });
@@ -318,7 +318,7 @@ class PagefindPlugin {
         let reachableHtmlPaths;
         let reachablePdfPaths;
 
-        log.info`Finding reachable pages for search index`;
+        log.debug`Finding reachable pages for search index`;
         try {
           ({ reachableHtmlPaths, reachablePdfPaths } = collectIndexTargets(
             htmlAssetsByPath,
@@ -332,7 +332,15 @@ class PagefindPlugin {
         }
 
         const snapshotReadyAt = Date.now();
-        log.info`Building search index for ${reachableHtmlPaths.length} page(s) and ${reachablePdfPaths.length} PDF(s) after ${snapshotReadyAt - start}ms of snapshot prep`;
+
+        let noun = reachableHtmlPaths.length === 1 ? 'page' : 'pages';
+        let message = `Building search index for ${reachableHtmlPaths.length} ${noun}`;
+        if (reachablePdfPaths.length > 0) {
+          noun = reachablePdfPaths.length === 1 ? 'PDF' : 'PDFs';
+          message += ` and ${reachablePdfPaths.length} ${noun}`;
+        }
+        log.info(message);
+
         buildIndex({
           distPath,
           htmlAssetsByPath,
@@ -348,7 +356,7 @@ class PagefindPlugin {
               // Best-effort cleanup for non-watch builds.
             }
             const finishedAt = Date.now();
-            log.info`Search index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
+            log.debug`Search index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
             callback();
           })
           .catch(err => {

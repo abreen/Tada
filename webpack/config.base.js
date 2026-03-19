@@ -11,6 +11,8 @@ const GenerateManifestPlugin = require('./generate-manifest-plugin');
 const GenerateFontsPlugin = require('./generate-fonts-plugin');
 const { getDistDir, createDefinePlugin } = require('./util');
 const { isFeatureEnabled } = require('./features');
+const { B } = require('./colors');
+const { makeLogger } = require('./log');
 const {
   getContentDir,
   getPackageDir,
@@ -19,6 +21,7 @@ const {
 } = require('./utils/paths');
 const { parseHsl } = require('./utils/parse-hsl');
 
+const log = makeLogger('public');
 const distDir = getDistDir();
 
 function renderThemeScss(siteVariables) {
@@ -90,7 +93,17 @@ async function createPlugins(
     }),
     new CopyPlugin({
       patterns: [
-        { from: getPublicDir(), to: '.', noErrorOnMissing: true },
+        {
+          from: getPublicDir(),
+          to: '.',
+          noErrorOnMissing: true,
+          filter: filePath => {
+            const rel = path.relative(getPublicDir(), filePath);
+            const posixRel = rel.split(path.sep).join(path.posix.sep);
+            log.info`Copying public file ${B`${posixRel}`}`;
+            return true;
+          },
+        },
         {
           from: '**/*.{png,jpg,jpeg,gif,svg,txt,zip}',
           context: getContentDir(),
@@ -142,7 +155,7 @@ async function createBaseConfig({
     },
     devtool,
     module: { rules: createModuleRules(siteVariables) },
-    ...(optimization && { optimization }),
+    optimization: { emitOnErrors: false, ...(optimization || {}) },
     plugins: await createPlugins(siteVariables, { defineIsDev, plugins }),
     stats: 'errors-only',
   };

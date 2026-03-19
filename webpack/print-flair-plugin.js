@@ -1,5 +1,4 @@
 const { getFlair } = require('./log');
-const { getDistDir } = require('./util');
 
 module.exports = {
   apply: compiler => {
@@ -12,11 +11,7 @@ module.exports = {
         return;
       }
 
-      const distDir = getDistDir();
-
       console.log(getFlair());
-      console.log(`The build output is available at ${distDir}`);
-      console.log('Now use `tada serve` to start a local web server');
     });
   },
 };

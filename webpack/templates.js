@@ -64,8 +64,10 @@ function render(fileName, params) {
   }
 }
 
-function compileTemplates(siteVariables) {
-  log.info`Compiling templates`;
+function compileTemplates(siteVariables, quiet = false) {
+  if (!quiet) {
+    log.debug`Compiling templates`;
+  }
 
   Object.keys(templates).forEach(k => delete templates[k]);
   Object.keys(jsonData).forEach(k => delete jsonData[k]);
