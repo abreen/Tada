@@ -19,7 +19,7 @@ function broadcast(msg) {
   if (wss == null || !webSocketsReady) {
     return;
   }
-  wslog.debug(`Broadcasting "${msg}" to WebSocket clients...`);
+  wslog.debug(`Broadcasting "${msg}" to WebSocket clients`);
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(msg);
@@ -103,7 +103,7 @@ function logChangedMarkdownFiles(files, { skip = new Set() } = {}) {
     .sort();
 
   for (const markdownPath of markdownPaths) {
-    log.event`${B`${markdownPath}`} changed, rebuilding...`;
+    log.event`${B`${markdownPath}`} changed, rebuilding`;
   }
 }
 
@@ -147,11 +147,11 @@ async function startWatching() {
     const markdownPath = toContentMarkdownPath(fileName);
     if (markdownPath) {
       loggedInvalidationFiles.add(markdownPath);
-      log.event`${B`${markdownPath}`} changed, rebuilding...`;
+      log.event`${B`${markdownPath}`} changed`;
     } else {
       const publicPath = toPublicRelativePath(fileName);
       if (publicPath) {
-        log.event`${B`public/${publicPath}`} changed, rebuilding...`;
+        log.event`${B`public/${publicPath}`} changed`;
       }
     }
   });
@@ -164,7 +164,7 @@ async function startWatching() {
 
     if (ContentWatchPlugin.needsRestart()) {
       ContentWatchPlugin.clearRestart();
-      log.event`Content changed, restarting compiler...`;
+      log.event`Content changed, restarting compiler`;
       currentWatcher.close(() => startWatching());
       return;
     }

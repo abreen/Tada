@@ -44,14 +44,16 @@ function resolveAuthor(pageVariables, filePath) {
 }
 
 function validateFrontMatter(pageVariables, filePath) {
-  let valid = true;
-  for (const field of REQUIRED_FRONT_MATTER_FIELDS) {
-    if (!pageVariables[field]) {
-      log.error`${filePath}: missing required front matter field: "${field}"`;
-      valid = false;
-    }
+  const missing = REQUIRED_FRONT_MATTER_FIELDS.filter(
+    field => !pageVariables[field],
+  );
+  if (missing.length > 0) {
+    const noun = missing.length === 1 ? 'field' : 'fields';
+    const fields = missing.map(f => `"${f}"`).join(', ');
+    throw new Error(
+      `${filePath}: missing required front matter ${noun}: ${fields}`,
+    );
   }
-  return valid;
 }
 
 function createTemplateParameters({
@@ -124,9 +126,7 @@ function renderPlainTextPageAsset({
     { validateInternalLinks: extensionIsMarkdown(ext.toLowerCase()) },
   );
 
-  if (!validateFrontMatter(pageVariables, filePath)) {
-    return [];
-  }
+  validateFrontMatter(pageVariables, filePath);
 
   if (!pageVariables.template) {
     pageVariables.template = 'default';
@@ -336,9 +336,7 @@ function renderLiterateJavaPageAsset({
     visibleBlockIndices,
   } = parseLiterateJava(raw, siteVariables);
 
-  if (!validateFrontMatter(pageVariables, filePath)) {
-    return [];
-  }
+  validateFrontMatter(pageVariables, filePath);
 
   // Compile the concatenated Java source
   let tempDir;

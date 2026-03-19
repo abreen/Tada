@@ -137,7 +137,7 @@ class ContentWatchPlugin {
       const templatesChanged = changedTemplatePaths.length > 0;
 
       for (const filePath of changedTemplatePaths) {
-        log.event`${B`${path.basename(filePath)}`} changed, rebuilding all content...`;
+        log.event`${B`${path.basename(filePath)}`} changed, rebuilding`;
       }
 
       setWatchState(compiler, {

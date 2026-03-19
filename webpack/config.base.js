@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const _ = require('lodash');
+const { RawSource } = require('webpack').sources;
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const GenerateContentAssetsPlugin = require('./generate-content-assets-plugin');
@@ -23,6 +24,84 @@ const { parseHsl } = require('./utils/parse-hsl');
 
 const log = makeLogger('public');
 const distDir = getDistDir();
+
+function collectPublicFiles(dir) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true, recursive: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter(entry => entry.isFile())
+    .map(entry => {
+      const rel = path.relative(dir, path.join(entry.parentPath, entry.name));
+      return rel.split(path.sep).join(path.posix.sep);
+    });
+}
+
+class CopyPublicFilesPlugin {
+  apply(compiler) {
+    const publicDir = getPublicDir();
+    let lastCopiedFiles = new Set();
+
+    compiler.hooks.make.tap('CopyPublicFilesPlugin', compilation => {
+      // Watch all public files and directories
+      function addDirs(dir) {
+        compilation.contextDependencies.add(dir);
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          if (entry.isDirectory()) {
+            addDirs(path.join(dir, entry.name));
+          }
+        }
+      }
+      try {
+        addDirs(publicDir);
+      } catch {
+        // public/ doesn't exist, nothing to watch
+      }
+
+      for (const rel of collectPublicFiles(publicDir)) {
+        compilation.fileDependencies.add(path.join(publicDir, rel));
+      }
+    });
+
+    compiler.hooks.thisCompilation.tap('CopyPublicFilesPlugin', compilation => {
+      compilation.hooks.processAssets.tap(
+        {
+          name: 'CopyPublicFilesPlugin',
+          stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
+        },
+        () => {
+          const allFiles = collectPublicFiles(publicDir);
+          const isWatch = !!compiler.watching;
+          const modifiedFiles = compiler.modifiedFiles || new Set();
+          const filesToCopy =
+            isWatch && modifiedFiles.size > 0
+              ? allFiles.filter(rel => {
+                  const abs = path.resolve(publicDir, rel);
+                  return modifiedFiles.has(abs) || !lastCopiedFiles.has(rel);
+                })
+              : allFiles;
+
+          for (const rel of filesToCopy) {
+            const abs = path.join(publicDir, rel);
+            const content = fs.readFileSync(abs);
+            const source = new RawSource(content);
+            log.info`Copying public file ${B`${rel}`}`;
+            if (compilation.getAsset(rel)) {
+              compilation.updateAsset(rel, source);
+            } else {
+              compilation.emitAsset(rel, source);
+            }
+          }
+
+          lastCopiedFiles = new Set(allFiles);
+        },
+      );
+    });
+  }
+}
 
 function renderThemeScss(siteVariables) {
   const templatePath = path.join(getPackageDir(), 'templates/_theme.scss');
@@ -91,19 +170,9 @@ async function createPlugins(
       filename: '[name].css',
       chunkFilename: '[id].css',
     }),
+    new CopyPublicFilesPlugin(),
     new CopyPlugin({
       patterns: [
-        {
-          from: getPublicDir(),
-          to: '.',
-          noErrorOnMissing: true,
-          filter: filePath => {
-            const rel = path.relative(getPublicDir(), filePath);
-            const posixRel = rel.split(path.sep).join(path.posix.sep);
-            log.info`Copying public file ${B`${posixRel}`}`;
-            return true;
-          },
-        },
         {
           from: '**/*.{png,jpg,jpeg,gif,svg,txt,zip}',
           context: getContentDir(),
