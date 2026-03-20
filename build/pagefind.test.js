@@ -103,6 +103,44 @@ describe('PagefindPlugin', () => {
     expect(calls.deleted).toBe(1);
   });
 
+  test('buildIndex prepends filename to page 1 content for searchability', async () => {
+    const calls = { htmlFiles: [], customRecords: [] };
+
+    await buildIndex({
+      distPath: '/tmp/dist',
+      htmlAssetsByPath: new Map(),
+      reachableHtmlPaths: [],
+      reachablePdfPaths: ['/docs/lecture1.pdf'],
+      pdfSourceByOutputPath: new Map([
+        ['/docs/lecture1.pdf', '/tmp/docs/lecture1.pdf'],
+      ]),
+      loadPagefind: createFakePagefind(calls),
+      checkMutool: async () => {},
+      extractPages: async () => ({
+        pages: [
+          { pageNumber: 1, content: 'Welcome to the course' },
+          { pageNumber: 2, content: 'Chapter one' },
+        ],
+        hasExtractedText: true,
+      }),
+    });
+
+    expect(calls.customRecords).toEqual([
+      {
+        url: '/docs/lecture1.pdf#page=1',
+        content: 'lecture1.pdf Welcome to the course',
+        language: 'en',
+        meta: { title: 'lecture1.pdf', page: '1' },
+      },
+      {
+        url: '/docs/lecture1.pdf#page=2',
+        content: 'Chapter one',
+        language: 'en',
+        meta: { title: 'lecture1.pdf', page: '2' },
+      },
+    ]);
+  });
+
   test('buildIndex falls back to a single PDF record when text extraction is empty', async () => {
     const calls = { customRecords: [] };
 

@@ -142,11 +142,13 @@ async function buildIndex({
       }
 
       for (const page of pages) {
+        const content =
+          page.pageNumber === 1 ? `${title} ${page.content}` : page.content;
         await addPdfRecord(
           index,
           {
             url: `${pdfPath}#page=${page.pageNumber}`,
-            content: page.content,
+            content,
             language: 'en',
             meta: { title, page: String(page.pageNumber) },
           },
