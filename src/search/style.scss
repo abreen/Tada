@@ -1,4 +1,4 @@
-@import '../_mixins.scss';
+@use '../mixins' as *;
 
 header {
   .search-controls {
@@ -48,13 +48,6 @@ header {
   .results {
     opacity: 0;
     pointer-events: none;
-
-    @media (prefers-reduced-motion: no-preference) {
-      transform: translateY(-8px);
-      transition:
-        opacity 0.25s ease,
-        transform 0.25s ease;
-    }
     margin: 0 auto;
     background: var(--bg-color);
     color: var(--fg-color);
@@ -67,6 +60,13 @@ header {
     max-height: 66vh;
     min-height: 80px;
     @include user-select(none);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transform: translateY(-8px);
+      transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+    }
 
     .results-info {
       display: flex;

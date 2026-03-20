@@ -1,4 +1,4 @@
-@import './_mixins.scss';
+@use 'mixins' as *;
 
 body.code,
 body.literate {
