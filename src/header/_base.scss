@@ -1,0 +1,129 @@
+:root {
+  --header-collapsed-height: 45px;
+}
+
+header {
+  backdrop-filter: var(--backdrop-filter);
+  background: var(--bg-color-translucent);
+
+  width: 100%;
+  position: fixed;
+  top: 0;
+
+  z-index: 1000;
+
+  display: grid;
+  grid-template-columns: 1fr;
+
+  view-transition-name: site-header;
+}
+
+header details summary {
+  display: flex;
+  align-items: center;
+  height: var(--header-collapsed-height);
+  padding: 0;
+  list-style-type: none;
+  cursor: pointer;
+  position: relative;
+  container-type: inline-size;
+
+  @media (hover: hover) {
+    &:hover {
+      color: inherit;
+    }
+  }
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+header details summary::-webkit-details-marker {
+  display: none;
+}
+
+header details summary::marker {
+  content: '';
+}
+
+header summary::after {
+  order: -1;
+  height: 24px;
+  content: var(--icon-chevron);
+  margin-left: var(--gap);
+  margin-right: 8px;
+}
+
+header details[open] summary::after {
+  transform: rotate(90deg);
+}
+
+header .content {
+  position: relative;
+}
+
+header summary .logo {
+  flex: 0 0 auto;
+  color: var(--text-on-theme);
+  background: var(--theme-color);
+  padding: 1px 6px;
+  margin: 0 8px 0 0;
+  font-size: var(--font-size-smaller);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+header summary .site-title {
+  flex: 1 1 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-weight: 500;
+  pointer-events: none;
+  margin: 0 8px 0 0;
+}
+
+@container (max-width: 520px) {
+  header summary .site-title {
+    display: none;
+  }
+}
+
+header summary .to-top-container {
+  display: none;
+  align-items: center;
+  height: var(--header-collapsed-height);
+  pointer-events: none;
+  white-space: nowrap;
+
+  &:has(.is-visible) {
+    display: flex;
+    pointer-events: auto;
+  }
+}
+
+// Hide until the full stylesheet loads (prevents FOUC where the container
+// is visible as a block element before it gets position: absolute)
+header .results-container {
+  display: none;
+}
+
+header summary .search-controls {
+  margin-left: auto;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  height: var(--header-collapsed-height);
+  padding: 0 var(--gap);
+  min-width: 0;
+
+  input.search {
+    width: 180px;
+
+    @container (max-width: 280px) {
+      display: none;
+    }
+  }
+}

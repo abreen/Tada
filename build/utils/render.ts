@@ -12,7 +12,11 @@ import {
   renderCodeWithComments,
 } from './code.js';
 import { extensionIsMarkdown } from './file-types.js';
-import { createApplyBasePath, normalizeOutputPath } from './paths.js';
+import {
+  createApplyBasePath,
+  normalizeOutputPath,
+  getDistDir,
+} from './paths.js';
 import { parseFrontMatterAndContent } from './front-matter.js';
 import { createMarkdown } from './markdown.js';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin.js';
@@ -111,14 +115,26 @@ export function injectAssetTags(
   const scriptTags = jsAssets
     .map(asset => `<script defer src="${applyBasePath('/' + asset)}"></script>`)
     .join('');
-  const linkTags = cssAssets
+  const criticalAssets = cssAssets.filter(f => f.includes('critical.bundle.'));
+  const asyncAssets = cssAssets.filter(f => !f.includes('critical.bundle.'));
+
+  const distDir = getDistDir();
+  const criticalTags = criticalAssets
+    .map(asset => {
+      const css = fs.readFileSync(path.join(distDir, asset), 'utf-8');
+      return `<style>${css}</style>`;
+    })
+    .join('');
+  const asyncLinkTags = asyncAssets
     .map(
-      asset => `<link href="${applyBasePath('/' + asset)}" rel="stylesheet">`,
+      asset =>
+        `<link href="${applyBasePath('/' + asset)}" rel="stylesheet" media="print" onload="this.media='all'">` +
+        `<noscript><link href="${applyBasePath('/' + asset)}" rel="stylesheet"></noscript>`,
     )
     .join('');
 
   return html
-    .replace('<head>', `<head>${linkTags}`)
+    .replace('<head>', `<head>${criticalTags}${asyncLinkTags}`)
     .replace('</head>', `${scriptTags}</head>`);
 }
 

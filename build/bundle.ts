@@ -88,6 +88,7 @@ export async function bundle(
 
   const entrypoints = [
     path.resolve(packageDir, 'src/index.ts'),
+    path.resolve(packageDir, 'src/critical.scss'),
     ...extraEntrypoints,
   ];
 

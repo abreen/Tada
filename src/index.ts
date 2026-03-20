@@ -1,5 +1,4 @@
 import './style.scss';
-import './layout.scss';
 
 import './anchor/style.scss';
 import './code.scss';
