@@ -39,9 +39,9 @@ jobs:
         .base |= "https://abreen.io" |
         .basePath |= "/Tada" |
         .internalDomains |= ["abreen.io"]'
-        config/site.prod.json > config/site.prod.json.new
+        site.prod.json > site.prod.json.new
 
-        mv config/site.prod.json.new config/site.prod.json
+        mv site.prod.json.new site.prod.json
       working-directory: example
 
     - name: Build example site
