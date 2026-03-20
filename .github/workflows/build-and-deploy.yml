@@ -45,7 +45,7 @@ jobs:
       working-directory: example
 
     - name: Build example site
-      run: bun run ../bin/tada.js prod
+      run: ../bin/tada.ts prod
       working-directory: example
 
     - name: Upload static files as artifact
