@@ -10,7 +10,10 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
       'no-undef': 'off',
-      '@typescript-eslint/no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-expressions': [
+        'error',
+        { allowTaggedTemplates: true },
+      ],
     },
   },
   {
