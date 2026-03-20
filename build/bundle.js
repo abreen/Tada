@@ -12,7 +12,23 @@ function renderThemeScss(siteVariables) {
   const theme = deriveTheme(siteVariables.themeColor);
   const tintHue = siteVariables.tintHue ?? 20;
   const tintAmount = siteVariables.tintAmount ?? 100;
-  const rendered = _.template(template)({ ...theme, tintHue, tintAmount });
+
+  const iconColor = `hsl(${tintHue}deg ${(8 * tintAmount) / 100}% 8%)`;
+  const iconColorHover = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 60%)`;
+  const iconColorDark = `hsl(${tintHue}deg ${(20 * tintAmount) / 100}% 90%)`;
+  const iconColorHoverDark = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 55%)`;
+  const iconColorTranslucentDark = `hsl(${tintHue}deg ${(85 * tintAmount) / 100}% 90%)`;
+
+  const rendered = _.template(template)({
+    ...theme,
+    tintHue,
+    tintAmount,
+    iconColor,
+    iconColorHover,
+    iconColorDark,
+    iconColorHoverDark,
+    iconColorTranslucentDark,
+  });
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-'));
   const configDir = path.join(tmpDir, 'config');

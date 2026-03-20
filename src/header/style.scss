@@ -110,15 +110,9 @@ header details summary::marker {
 header summary::after {
   order: -1;
   height: 24px;
-  content: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><polyline points='9 18 15 12 9 6' stroke='hsl(20deg 8% 8%)' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  content: var(--icon-chevron);
   margin-left: var(--gap);
   margin-right: 8px;
-}
-
-@media (prefers-color-scheme: dark) {
-  header summary::after {
-    content: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><polyline points='9 18 15 12 9 6' stroke='hsl(20deg 20% 90%)' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  }
 }
 
 @media (hover: hover) {
