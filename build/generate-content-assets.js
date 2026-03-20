@@ -87,16 +87,14 @@ class ContentRenderer {
     const assets = [];
 
     if (isLiterateJava(filePath)) {
-      if (isFeatureEnabled(this.siteVariables, 'literateJava')) {
-        assets.push(
-          ...renderLiterateJavaPageAsset({
-            filePath,
-            contentDir,
-            siteVariables: this.siteVariables,
-            assetFiles,
-          }),
-        );
-      }
+      assets.push(
+        ...renderLiterateJavaPageAsset({
+          filePath,
+          contentDir,
+          siteVariables: this.siteVariables,
+          assetFiles,
+        }),
+      );
       return assets;
     }
 
