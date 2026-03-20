@@ -144,10 +144,20 @@ function executeLiterateJava(className, classPath, codeBlocks) {
   }
 }
 
+function checkJavac() {
+  try {
+    execSync('javac -version', { stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 module.exports = {
   parseLiterateJava,
   hasMainMethod,
   deriveClassName,
   compileJavaSource,
   executeLiterateJava,
+  checkJavac,
 };

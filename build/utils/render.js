@@ -313,6 +313,7 @@ function renderLiterateJavaPageAsset({
   contentDir,
   siteVariables,
   assetFiles,
+  skipExecution,
 }) {
   const { dir, name } = path.parse(filePath);
   const className = deriveClassName(filePath);
@@ -332,20 +333,26 @@ function renderLiterateJavaPageAsset({
 
   validateFrontMatter(pageVariables, filePath);
 
-  // Compile the concatenated Java source
+  // Compile and execute the concatenated Java source
   let tempDir;
   let blockOutputMap = null;
-  try {
-    tempDir = compileJavaSource(javaSource, className);
+  if (!skipExecution) {
+    try {
+      tempDir = compileJavaSource(javaSource, className);
 
-    // Execute if there is a main() method
-    if (hasMainMethod(javaSource)) {
-      const outputEntries = executeLiterateJava(className, tempDir, codeBlocks);
-      blockOutputMap = new Map(outputEntries);
-    }
-  } finally {
-    if (tempDir) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      // Execute if there is a main() method
+      if (hasMainMethod(javaSource)) {
+        const outputEntries = executeLiterateJava(
+          className,
+          tempDir,
+          codeBlocks,
+        );
+        blockOutputMap = new Map(outputEntries);
+      }
+    } finally {
+      if (tempDir) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
     }
   }
 

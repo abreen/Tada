@@ -13,6 +13,7 @@ const {
   renderPlainTextPageAsset,
 } = require('./util');
 const { isLiterateJava } = require('./utils/file-types');
+const { checkJavac } = require('./utils/literate-java');
 
 const log = makeLogger(__filename);
 
@@ -93,6 +94,7 @@ class ContentRenderer {
           contentDir,
           siteVariables: this.siteVariables,
           assetFiles,
+          skipExecution: !this.javacAvailable,
         }),
       );
       return assets;
@@ -224,6 +226,14 @@ class ContentRenderer {
     if (dirtySourceFiles.size > 0) {
       const noun = dirtySourceFiles.size === 1 ? 'file' : 'files';
       log.info`Processing ${dirtySourceFiles.size} content ${noun}`;
+    }
+
+    const hasLiterateJava = [...dirtySourceFiles].some(isLiterateJava);
+    if (hasLiterateJava && this.javacAvailable === undefined) {
+      this.javacAvailable = checkJavac();
+      if (!this.javacAvailable) {
+        log.warn`javac was not found; literate Java pages will not include execution output`;
+      }
     }
 
     for (const filePath of dirtySourceFiles) {
