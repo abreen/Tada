@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const entries = Object.entries(COMPONENTS);
 
-  const failed: Record<string, any> = {};
+  const failed: Record<string, string> = {};
 
   const mountPromises = entries.map(([name, mount]) => {
     return new Promise<void>((resolve, reject) => {

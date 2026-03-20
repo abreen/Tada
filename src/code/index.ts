@@ -60,15 +60,15 @@ export default async function mount(window: Window): Promise<void> {
     downloadLink.addEventListener('click', async (e: MouseEvent) => {
       e.preventDefault();
       try {
-        const handle = await (window as any).showSaveFilePicker({
+        const handle = await window.showSaveFilePicker!({
           suggestedName: downloadLink.download,
         });
         const response = await fetch(downloadLink.href);
         const writable = await handle.createWritable();
         await writable.write(await response.blob());
         await writable.close();
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== 'AbortError') {
           throw err;
         }
       }

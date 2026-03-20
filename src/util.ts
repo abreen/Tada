@@ -1,9 +1,12 @@
-export function debounce(fn: Function, time: number) {
+export function debounce<T extends (...args: unknown[]) => void>(
+  fn: T,
+  time: number,
+) {
   let timer: number;
-  return (...args: any[]) => {
+  return (...args: Parameters<T>) => {
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
-      fn.apply(null, args);
+      fn(...args);
     }, time);
   };
 }
@@ -106,8 +109,8 @@ export function formatDuration(ms: number): string {
 
   if (absMs < 1000) {
     // 0.0000ms - 999.99ms
-    let decimals = absMs < 10 ? 4 : absMs < 100 ? 3 : 2;
-    let val = roundTo(absMs, decimals);
+    const decimals = absMs < 10 ? 4 : absMs < 100 ? 3 : 2;
+    const val = roundTo(absMs, decimals);
     if (val >= 1000) {
       return sign + formatSecondsFromMs(absMs);
     }

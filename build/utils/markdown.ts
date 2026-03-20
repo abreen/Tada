@@ -1,0 +1,289 @@
+import MarkdownIt from 'markdown-it';
+import type { Options } from 'markdown-it/lib/index.mjs';
+import type Token from 'markdown-it/lib/token.mjs';
+import type Renderer from 'markdown-it/lib/renderer.mjs';
+import { convertMarkdown as curlyQuote } from 'quote-quote';
+import markdownItAnchor from 'markdown-it-anchor';
+import markdownItFootnote from 'markdown-it-footnote';
+import markdownItDeflist from 'markdown-it-deflist';
+import markdownItContainer from 'markdown-it-container';
+import textToId from '../text-to-id.js';
+import { getHighlighter } from './shiki-highlighter.js';
+import headingSubtitlePlugin from '../heading-subtitle-plugin.js';
+import deflistIdPlugin from '../deflist-id-plugin.js';
+import externalLinksPlugin from '../external-links-plugin.js';
+import validateInternalLinksPlugin from '../validate-internal-links-plugin.js';
+import applyBasePathPlugin from '../apply-base-path-plugin.js';
+import { tocPlugin } from '../toc-plugin.js';
+import type { SiteVariables } from '../types.js';
+
+interface CreateMarkdownOptions {
+  validatorOptions?: Record<string, unknown>;
+}
+
+function capitalize(str: string): string {
+  if (str.length < 2) {
+    return str;
+  }
+
+  return str[0].toUpperCase() + str.slice(1);
+}
+
+export function createMarkdown(
+  siteVariables: SiteVariables,
+  options: CreateMarkdownOptions = {},
+): MarkdownIt {
+  const { validatorOptions = {} } = options;
+  const markdown = new MarkdownIt({ html: true, typographer: true })
+    .use(headingSubtitlePlugin)
+    .use(markdownItAnchor, { tabIndex: false })
+    .use(markdownItFootnote)
+    .use(markdownItDeflist)
+    .use(deflistIdPlugin)
+    .use(externalLinksPlugin, siteVariables)
+    .use(validateInternalLinksPlugin, validatorOptions)
+    .use(applyBasePathPlugin, siteVariables)
+    .use(tocPlugin)
+    .use(markdownItContainer, 'details', {
+      marker: '<',
+      validate: function (params: string) {
+        return !!params.trim().match(/^details\s+(.*)$/);
+      },
+
+      render: function (tokens: Token[], idx: number) {
+        const m = tokens[idx].info.trim().match(/^details\s+(.*)$/);
+
+        if (tokens[idx].nesting === 1) {
+          return (
+            '<details><summary>' +
+            markdown.renderInline(m![1]) +
+            '</summary><div class="content">\n'
+          );
+        } else {
+          return '</div></details>\n';
+        }
+      },
+    })
+    .use(markdownItContainer, 'section', {
+      marker: ':',
+      validate: function (params: string) {
+        return !!params.trim().match(/^section$/);
+      },
+      render: function (tokens: Token[], idx: number) {
+        if (tokens[idx].nesting === 1) {
+          return '<section>\n';
+        } else {
+          return '</section>\n';
+        }
+      },
+    });
+
+  const usedIds = new Map<string, number>();
+  markdown.use(markdownItContainer, 'alert', {
+    marker: '!',
+    validate: function (params: string) {
+      return !!params.trim().match(/^(note|warning)\s*"?(.+)?"?$/);
+    },
+    render: function (tokens: Token[], idx: number) {
+      const matches = tokens[idx].info
+        .trim()
+        .match(/^(note|warning)\s*"?(.+)?"?$/);
+
+      if (tokens[idx].nesting === 1) {
+        const classNames = ['alert'];
+        const type = matches && matches[1]?.trim();
+        if (type) {
+          classNames.push(type);
+        }
+
+        const title = matches && matches[2]?.trim();
+
+        let html = `<div class="${classNames.join(' ')}">`;
+        if (title) {
+          const baseId = textToId(title);
+          const count = (usedIds.get(baseId) ?? 0) + 1;
+          usedIds.set(baseId, count);
+          const titleId = count === 1 ? baseId : `${baseId}-${count}`;
+          const renderedTitle = markdown.utils.escapeHtml(curlyQuote(title));
+          html += `<p class="title" id="${titleId}">${renderedTitle}</p>\n`;
+        } else {
+          const defaultTitle = capitalize(type || '');
+          html += `<p class="title">${defaultTitle}</p>\n`;
+        }
+        html += '<div class="content">\n';
+        return html;
+      } else {
+        return '</div></div>\n';
+      }
+    },
+  });
+
+  markdown.use(markdownItContainer, 'question', {
+    marker: '?',
+    validate: function (params: string) {
+      return !!params.trim().match(/^question\s+(.+)$/);
+    },
+    render: function (tokens: Token[], idx: number) {
+      const m = tokens[idx].info.trim().match(/^question\s+(.+)$/);
+      if (tokens[idx].nesting === 1) {
+        const question = markdown.renderInline(m![1]);
+        return (
+          '<div class="question">' +
+          '<p class="question-q"><span class="question-label">Q.</span><span>' +
+          question +
+          '</span></p>' +
+          '<div class="question-a">' +
+          '<p class="question-a-label">A.</p>' +
+          '<div class="question-a-body" data-pagefind-ignore>\n'
+        );
+      } else {
+        return '</div></div></div>\n';
+      }
+    },
+  });
+
+  /*
+   * Customize markdown-it-footnote renderer
+   */
+  markdown.renderer.rules.footnote_block_open = () =>
+    '<div class="footnotes"><p class="title">Footnotes</p><ol>';
+
+  markdown.renderer.rules.footnote_block_close = () => '</ol></div>';
+
+  // Change appearance of reference
+  const caption = markdown.renderer.rules.footnote_caption!;
+  markdown.renderer.rules.footnote_caption = (
+    tokens: Token[],
+    idx: number,
+    options: Options,
+    env: unknown,
+    self: Renderer,
+  ) => {
+    const str = caption(tokens, idx, options, env, self);
+    return str.slice(1, str.length - 1);
+  };
+
+  const footnoteRef = markdown.renderer.rules.footnote_ref!;
+  markdown.renderer.rules.footnote_ref = (
+    tokens: Token[],
+    idx: number,
+    options: Options,
+    env: unknown,
+    self: Renderer,
+  ) =>
+    footnoteRef(tokens, idx, options, env, self)
+      .replace('<sup class="footnote-ref">', '')
+      .replace('</sup>', '')
+      .replace('<a href="', '<a class="footnote-ref" href="');
+
+  const footnoteAnchor = markdown.renderer.rules.footnote_anchor!;
+  markdown.renderer.rules.footnote_anchor = (
+    tokens: Token[],
+    idx: number,
+    options: Options,
+    env: unknown,
+    self: Renderer,
+  ) =>
+    footnoteAnchor(tokens, idx, options, env, self).replace(
+      '\u21a9\uFE0E',
+      '\u2191',
+    );
+
+  /*
+   * Customize lists (add wrapper element)
+   */
+  const proxy = (
+    tokens: Token[],
+    idx: number,
+    options: Options,
+    _env: unknown,
+    self: Renderer,
+  ) => self.renderToken(tokens, idx, options);
+
+  const itemOpen = markdown.renderer.rules.list_item_open || proxy;
+  markdown.renderer.rules.list_item_open = (
+    tokens,
+    idx,
+    options,
+    env,
+    self,
+  ) => {
+    return (
+      itemOpen(tokens, idx, options, env, self) +
+      '<div class="styled-list-item">'
+    );
+  };
+
+  const itemClose = markdown.renderer.rules.list_item_close || proxy;
+  markdown.renderer.rules.list_item_close = (...args) => {
+    return '</div>' + itemClose(...args);
+  };
+
+  const bulletListOpen = markdown.renderer.rules.bullet_list_open || proxy;
+  markdown.renderer.rules.bullet_list_open = (
+    tokens,
+    idx,
+    options,
+    env,
+    self,
+  ) => {
+    tokens[idx].attrJoin('class', 'styled-list');
+    return bulletListOpen(tokens, idx, options, env, self);
+  };
+
+  const orderedListOpen = markdown.renderer.rules.ordered_list_open || proxy;
+  markdown.renderer.rules.ordered_list_open = (
+    tokens,
+    idx,
+    options,
+    env,
+    self,
+  ) => {
+    tokens[idx].attrJoin('class', 'styled-list');
+    return orderedListOpen(tokens, idx, options, env, self);
+  };
+
+  // Convert <!--- comments containing fences into hidden_fence tokens
+  markdown.core.ruler.push('hidden_fence', state => {
+    for (let i = state.tokens.length - 1; i >= 0; i--) {
+      const token = state.tokens[i];
+      if (token.type !== 'html_block') {
+        continue;
+      }
+
+      const src = token.content.trim();
+      if (!src.startsWith('<!---') || !src.endsWith('-->')) {
+        continue;
+      }
+
+      const inner = src.slice(5, -3).trim();
+      const fenceMatch = inner.match(/^```\w*\n?([\s\S]*?)```$/m);
+      if (!fenceMatch) {
+        continue;
+      }
+
+      token.type = 'hidden_fence';
+      token.tag = 'code';
+      token.content = fenceMatch[1];
+    }
+  });
+
+  markdown.renderer.rules.hidden_fence = () => '';
+
+  markdown.renderer.rules.fence = (tokens, idx) => {
+    const token = tokens[idx];
+    const lang = token.info.trim().split(/\s+/)[0] || 'text';
+    const code = token.content;
+    const highlighter = getHighlighter();
+    const useLang = highlighter.getLoadedLanguages().includes(lang)
+      ? lang
+      : 'text';
+    return highlighter.codeToHtml(code, {
+      lang: useLang,
+      themes: { light: 'github-light', dark: 'github-dark' },
+      defaultColor: false,
+    });
+  };
+
+  return markdown;
+}

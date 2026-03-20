@@ -2,8 +2,30 @@ import { getElement, applyBasePath } from '../util';
 
 const MAX_RESULTS = 24;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let pagefind: any = null;
+interface PagefindSubResult {
+  title?: string;
+  url: string;
+  excerpt?: string;
+}
+
+interface PagefindResult {
+  meta?: { title?: string; page?: string };
+  url: string;
+  excerpt?: string;
+  score: number;
+  sub_results?: PagefindSubResult[];
+}
+
+interface PagefindSearchResult {
+  data(): Promise<PagefindResult>;
+}
+
+interface Pagefind {
+  init(): Promise<void>;
+  search(query: string): Promise<{ results: PagefindSearchResult[] }>;
+}
+
+let pagefind: Pagefind | null = null;
 
 type SubResult = { title: string; url: string; excerpt: string };
 type Result = {
@@ -105,27 +127,23 @@ async function doSearch(state: State) {
 
   const search = await pagefind.search(state.value);
   const slice = search.results.slice(0, MAX_RESULTS);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = await Promise.all(slice.map((r: any) => r.data()));
+  const data = await Promise.all(slice.map(r => r.data()));
 
   const titlePostfix = window.siteVariables.titlePostfix ?? '';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const results: Result[] = data.map((d: any) => {
+  const results: Result[] = data.map((d: PagefindResult) => {
     let title: string = d.meta?.title ?? d.url;
     if (titlePostfix && title.endsWith(titlePostfix)) {
       title = title.slice(0, -titlePostfix.length);
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const subResults: SubResult[] = (d.sub_results ?? [])
-      .filter((s: any) => {
+      .filter((s: PagefindSubResult) => {
         try {
           return new URL(s.url, window.location.href).hash !== '';
         } catch {
           return s.url !== d.url;
         }
       })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((s: any) => ({
+      .map((s: PagefindSubResult) => ({
         title: s.title ?? '',
         url: s.url,
         excerpt: s.excerpt ?? '',
@@ -133,7 +151,7 @@ async function doSearch(state: State) {
     return {
       title,
       url: d.url,
-      excerpt: d.excerpt,
+      excerpt: d.excerpt ?? '',
       score: d.score ?? 0,
       subResults,
       pageNumber: getPdfPageNumber(d.url, d.meta?.page),
@@ -324,14 +342,17 @@ export default (window: Window) => {
     if (pagefind) {
       return;
     }
-    // @ts-ignore pagefind.js is generated post-build, not resolvable at compile time
-    pagefind = await import(
-      /* webpackIgnore: true */ applyBasePath('/pagefind/pagefind.js')
-    );
+
+    pagefind = (await import(
+      applyBasePath('/pagefind/pagefind.js')
+    )) as Pagefind;
+
     await pagefind.init();
+
     const res = await fetch(applyBasePath('/pagefind/pagefind-entry.json'), {
       cache: 'no-cache',
     });
+
     if (res.ok) {
       entryETag = res.headers.get('ETag');
       entryLastModified = res.headers.get('Last-Modified');

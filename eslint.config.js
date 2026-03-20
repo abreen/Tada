@@ -6,18 +6,11 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   { ignores: ['dist/', 'example/', '.font-cache/', 'node_modules/'] },
   {
-    files: ['build/**/*.js', 'bin/**/*.js'],
     rules: {
-      '@typescript-eslint/no-require-imports': 'off',
-      'no-undef': 'off',
       '@typescript-eslint/no-unused-expressions': [
         'error',
         { allowTaggedTemplates: true },
       ],
-    },
-  },
-  {
-    rules: {
       '@typescript-eslint/no-unused-vars': [
         'warn',
         { argsIgnorePattern: '^_' },
