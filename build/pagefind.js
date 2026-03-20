@@ -1,4 +1,3 @@
-const fs = require('fs');
 const path = require('path');
 const { makeLogger } = require('./log');
 const { collectReachableSiteAssets } = require('./reachability');

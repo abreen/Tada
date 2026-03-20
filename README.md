@@ -11,12 +11,12 @@ A static site generator. The successor to Presto.
   * Renders headings, alert boxes, and `<hr>` elements
   * Highlights the heading currently being viewed
 - Built-in search powered by [Pagefind][pagefind]
-  * Only pages reachable by links on the site appear in search results
+  * Only pages in `content/` reachable from `/index.html` are indexed
 - Generated HTML pages for source code
   * Automatic code highlighting, clickable line numbers
   * Dynamic table of contents for each method/function
   * Converts new Markdown comment syntax ([added in Java 23][jep467]) to HTML
-  * Indexed by Pagefind
+  * Indexed by Pagefind (classes, interfaces, methods, and fields)
 - PDF files are copied into `dist/`
   - Text of each PDF page is extracted using [mutool][mutool] and indexed
 - External link handling (special visual treatment for external links)
@@ -240,12 +240,12 @@ TADA_LOG_LEVEL=debug tada dev
 ## Content
 
 Site content lives in the `content/` directory. Markdown is converted to HTML.
-HTML files should contain front matter and are also built, but not processed
-like Markdown files are.
+HTML files should contain front matter and are also built.
 
-PDF, `.txt`, ZIP, images, and other kinds of files are copied into `dist/`
-in the same locations. All files in `public/` are copied directly into `dist/`
-with zero processing.
+Any other kinds of files are copied into `dist/` in the same locations.
+
+All files in `public/` are copied directly into `dist/` with zero processing.
+Files in `public/` are **not** included in the search index.
 
 
 ### Front matter fields
@@ -263,23 +263,19 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `parent` & `parentLabel` | URL and label for a breadcrumb link displayed above the title |
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
 
+You may also add arbitrary fields in a page's front matter, and access them
+using Lodash syntax (see below).
+
 
 ### Variable substitution
 
 Plain text content (e.g., HTML and Markdown) are processed using [Lodash
 templates][lodash].
 
-- Site config values are available under `site` (e.g., `site.title`, `site.symbol`)
-- Page variables (from front matter) are available under `page` (e.g., `page.author`)
+- Site config values are available under `site` (e.g., `site.title`)
+- Page variables (from front matter) are available under `page`
 - Custom variables from the `"vars"` property of the config are available
   without any prefix (e.g., `<%= staffEmail %>`)
-
-
-## Templates
-
-HTML page layouts are internal to the Tada package. You don't need to modify
-them; they are designed to work with the client-side components and styles
-bundled in the package.
 
 
 
