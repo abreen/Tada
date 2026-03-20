@@ -1,0 +1,92 @@
+@use 'mixins' as *;
+
+.alert {
+  border: 3px solid var(--bg2-color);
+  position: relative;
+  margin: 1rem 0;
+}
+
+.alert.warning {
+  background: var(--warning-bg-color);
+  border-color: var(--warning-bg-color);
+}
+
+.alert.note {
+  background: var(--note-bg-color);
+  border-color: var(--note-bg-color);
+}
+
+.alert .title {
+  padding: 10px 6px;
+}
+
+.alert .content {
+  padding: 12px;
+
+  .styled-list {
+    color: var(--fg-color);
+  }
+
+  tt,
+  code {
+    background: inherit;
+    padding: inherit;
+  }
+
+  time[datetime].is-modified {
+    // Reset the underline color
+    text-decoration: underline dotted;
+  }
+
+  a {
+    text-decoration-color: var(--fg-color);
+  }
+
+  dfn {
+    color: inherit;
+  }
+}
+
+.alert .content > *:first-child {
+  margin-top: 0;
+}
+
+.alert .content > *:last-child {
+  margin-bottom: 0;
+}
+
+.alert .title::before {
+  left: 8px;
+  top: 8px;
+  position: absolute;
+  width: 32px;
+  height: 32px;
+}
+
+.alert.warning .title::before {
+  content: var(--icon-warning);
+}
+
+i.warning {
+  background: var(--icon-warning);
+  background-size: contain;
+  display: inline-block;
+  height: 1em;
+  width: 1em;
+  vertical-align: sub;
+}
+
+.alert.note .title::before {
+  content: var(--icon-note);
+}
+
+.alert .title {
+  font-weight: 700;
+  @include user-select(none);
+  padding-left: 48px;
+  margin: 0;
+}
+
+.alert > p:last-child {
+  margin-bottom: 0;
+}
