@@ -117,25 +117,6 @@ function copyDirRecursive(src, dest) {
   }
 }
 
-async function ask(question, { defaultValue, validate } = {}) {
-  const suffix = defaultValue != null ? ` (default: ${defaultValue})` : '';
-
-  process.stdout.write(`${question}${suffix}? `);
-
-  for await (const line of console) {
-    const value = line.trim() || defaultValue || '';
-    if (validate) {
-      const error = validate(value);
-      if (error) {
-        console.error(`Error: ${error}`);
-        process.stdout.write(`${question}${suffix}? `);
-        continue;
-      }
-    }
-    return value;
-  }
-}
-
 async function initCommand(args) {
   const useDefaults = args.includes('--default');
   const dirname = args.filter(a => !a.startsWith('--'))[0];
@@ -161,13 +142,41 @@ async function initCommand(args) {
 
   const config = {};
 
-  for (const [key, { prompt, defaultValue, validate }] of Object.entries(
-    INIT_QUESTIONS,
-  )) {
-    if (useDefaults) {
+  if (useDefaults) {
+    for (const [key, { defaultValue }] of Object.entries(INIT_QUESTIONS)) {
       config[key] = defaultValue;
-    } else {
-      config[key] = await ask(prompt, { defaultValue, validate });
+    }
+  } else {
+    const questions = Object.entries(INIT_QUESTIONS);
+    let qi = 0;
+    let { prompt, defaultValue, validate } = questions[qi][1];
+    let suffix = defaultValue != null ? ` (default: ${defaultValue})` : '';
+    process.stdout.write(`${prompt}${suffix}? `);
+
+    for await (const line of console) {
+      const value = line.trim() || defaultValue || '';
+
+      if (validate) {
+        const error = validate(value);
+        if (error) {
+          console.error(`Error: ${error}`);
+          process.stdout.write(`${prompt}${suffix}? `);
+          continue;
+        }
+      }
+
+      config[questions[qi][0]] = value;
+      qi++;
+
+      if (qi >= questions.length) {
+        break;
+      }
+
+      ({ prompt, defaultValue, validate } = questions[qi][1]);
+
+      suffix = defaultValue != null ? ` (default: ${defaultValue})` : '';
+
+      process.stdout.write(`${prompt}${suffix}? `);
     }
   }
 
