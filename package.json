@@ -3,6 +3,7 @@
   "version": "1.0.2",
   "type": "module",
   "description": "A static site generator",
+  "license": "MIT",
   "bin": {
     "tada": "bin/tada.ts"
   },
