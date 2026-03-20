@@ -20,6 +20,10 @@ function getPublicDir() {
   return path.resolve(getProjectDir(), 'public');
 }
 
+function getFontCacheDir() {
+  return path.resolve(getProjectDir(), '.font-cache');
+}
+
 function getConfigDir() {
   return getProjectDir();
 }
@@ -51,6 +55,7 @@ module.exports = {
   getConfigDir,
   getContentDir,
   getDistDir,
+  getFontCacheDir,
   getPackageDir,
   getProjectDir,
   getPublicDir,

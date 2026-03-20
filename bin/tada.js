@@ -25,12 +25,12 @@ function requireSiteConfig(env) {
 }
 
 const COMMANDS = {
-  init: 'Create a new Tada site',
+  init: null,
   dev: 'Build the site for development',
   prod: 'Build the site for production',
   watch: 'Watch for changes and rebuild',
   serve: 'Start a local development server',
-  clean: 'Remove the dist/ directory',
+  clean: null,
 };
 
 const INIT_QUESTIONS = {
@@ -86,10 +86,14 @@ function printUsage() {
   console.log(`tada v${version}\n`);
   console.log('Usage: tada <command>\n');
   console.log('Commands:');
-  console.log('  init <dirname>     Initialize a new site');
   for (const [cmd, desc] of Object.entries(COMMANDS)) {
     if (cmd === 'init') {
-      console.log('       [--default]     Use defaults for all config options');
+      console.log('  init <dirname>     Initialize a new site');
+      console.log('       [--default]     (Use defaults for all options)');
+      continue;
+    } else if (cmd === 'clean') {
+      console.log('  clean              Remove the dist/ directory');
+      console.log('        [--all]        (Also remove font cache)');
       continue;
     }
     console.log(`  ${cmd.padEnd(18)} ${desc}`);
@@ -276,13 +280,25 @@ switch (command) {
     run(`bun ${path.join(packageDir, 'build/serve.js')}`);
     break;
 
-  case 'clean':
+  case 'clean': {
+    const cleanArgs = process.argv.slice(3);
+    const all = cleanArgs.includes('--all');
+
     fs.rmSync(path.resolve(process.cwd(), 'dist'), {
       recursive: true,
       force: true,
     });
     console.log('Cleaned dist/');
+
+    if (all) {
+      fs.rmSync(path.resolve(process.cwd(), '.font-cache'), {
+        recursive: true,
+        force: true,
+      });
+      console.log('Cleaned .font-cache/');
+    }
     break;
+  }
 
   case '--version':
   case '-v':

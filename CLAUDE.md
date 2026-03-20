@@ -16,9 +16,15 @@ The runtime is Bun. Build logic lives in `build/`.
 - Build production: `tada prod` (uses `site.prod.json`)
 - Start dev web server: `tada serve`
 - Watch files: `tada watch`
-- Clean build artifacts: `tada clean`
+- Clean build artifacts: `tada clean` (use `--all` to also remove font cache)
 - Format code: `bun run format` (for Tada development only)
 - Run tests: `bun test`
+
+## Caching
+
+- WOFF2 fonts are cached in `.font-cache/` in the project directory
+- Cache uses SHA-256 content hashing of source TTFs for invalidation
+- `tada clean` preserves the cache; `tada clean --all` removes it
 
 ## Path resolution
 
