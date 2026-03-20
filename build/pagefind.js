@@ -2,10 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { makeLogger } = require('./log');
 const { collectReachableSiteAssets } = require('./reachability');
-const ContentWatchPlugin = require('./content-watch-plugin');
 const {
-  getBuildContentFiles,
   getContentDir,
+  getFilesByExtensions,
   normalizeOutputPath,
 } = require('./util');
 const { assertMutoolAvailable, extractPdfPages } = require('./pdf-text');
@@ -30,11 +29,6 @@ function formatPagefindErrors(step, errors) {
   return `${step} failed: ${errors.join(' | ')}`;
 }
 
-function readAssetContent(outputFileSystem, distPath, sourcePath) {
-  const filePath = path.join(distPath, sourcePath);
-  return String(outputFileSystem.readFileSync(filePath, 'utf-8'));
-}
-
 async function addHtmlFile(index, htmlFile) {
   const { errors: addErrors } = await index.addHTMLFile(htmlFile);
   const addError = formatPagefindErrors(
@@ -57,15 +51,9 @@ async function addPdfRecord(index, record, sourcePath) {
   }
 }
 
-function getPdfSourceByOutputPath(siteVariables) {
+function getPdfSourceByOutputPath() {
   const contentDir = getContentDir();
-  const contentFiles = getBuildContentFiles(
-    contentDir,
-    Object.keys(siteVariables?.codeLanguages || {}),
-  );
-  const pdfFiles = contentFiles.filter(
-    filePath => path.extname(filePath).toLowerCase() === '.pdf',
-  );
+  const pdfFiles = getFilesByExtensions(contentDir, ['pdf']);
 
   return new Map(
     pdfFiles.map(filePath => {
@@ -180,40 +168,61 @@ async function buildIndex({
   }
 }
 
-class PagefindPlugin {
+async function runPagefind({ siteVariables, distPath, htmlAssetsByPath }) {
+  const pdfSourceByOutputPath = getPdfSourceByOutputPath();
+  const start = Date.now();
+
+  log.debug`Finding reachable pages for search index`;
+  const { reachableHtmlPaths, reachablePdfPaths } = collectIndexTargets(
+    htmlAssetsByPath,
+    siteVariables,
+    pdfSourceByOutputPath,
+  );
+
+  const snapshotReadyAt = Date.now();
+
+  let noun = reachableHtmlPaths.length === 1 ? 'page' : 'pages';
+  let message = `Building search index for ${reachableHtmlPaths.length} ${noun}`;
+  if (reachablePdfPaths.length > 0) {
+    noun = reachablePdfPaths.length === 1 ? 'PDF' : 'PDFs';
+    message += ` and ${reachablePdfPaths.length} ${noun}`;
+  }
+  log.info(message);
+
+  await buildIndex({
+    distPath,
+    htmlAssetsByPath,
+    reachableHtmlPaths,
+    reachablePdfPaths,
+    pdfSourceByOutputPath,
+  });
+
+  try {
+    const pagefind = await getPagefind();
+    await pagefind.close();
+  } catch (_err) {
+    // Best-effort cleanup
+  }
+
+  const finishedAt = Date.now();
+  log.debug`Search index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
+}
+
+class WatchPagefindRunner {
   constructor(siteVariables) {
     this.siteVariables = siteVariables || {};
     this.watchRunInProgress = false;
     this.watchRunQueued = false;
-    this.lastDistPath = null;
+    this.distPath = null;
     this.htmlCacheByAssetPath = new Map();
   }
 
-  getHtmlAssetsByPath(compilation, distPath, outputFileSystem) {
-    return new Map(
-      compilation
-        .getAssets()
-        .filter(asset => asset.name.endsWith('.html'))
-        .map(asset => [
-          asset.name.replace(/\\/g, '/'),
-          readAssetContent(
-            outputFileSystem,
-            distPath,
-            asset.name.replace(/\\/g, '/'),
-          ),
-        ]),
-    );
+  update(distPath, htmlAssetsByPath) {
+    this.distPath = distPath;
+    this.htmlCacheByAssetPath = htmlAssetsByPath;
   }
 
-  getIndexTargets(htmlAssetsByPath) {
-    return collectIndexTargets(
-      htmlAssetsByPath,
-      this.siteVariables,
-      getPdfSourceByOutputPath(this.siteVariables),
-    );
-  }
-
-  runWatchIndex() {
+  run() {
     if (this.watchRunInProgress) {
       this.watchRunQueued = true;
       log.debug`Indexing is still running in the background; queueing a rerun`;
@@ -222,9 +231,9 @@ class PagefindPlugin {
 
     this.watchRunInProgress = true;
     this.watchRunQueued = false;
-    const distPath = this.lastDistPath;
+    const distPath = this.distPath;
     const htmlAssetsByPath = new Map(this.htmlCacheByAssetPath);
-    const pdfSourceByOutputPath = getPdfSourceByOutputPath(this.siteVariables);
+    const pdfSourceByOutputPath = getPdfSourceByOutputPath();
     const start = Date.now();
 
     log.debug`Preparing search index background snapshot`;
@@ -241,7 +250,7 @@ class PagefindPlugin {
       this.watchRunInProgress = false;
       log.warn`Pagefind failed: ${err.message}`;
       if (this.watchRunQueued) {
-        this.runWatchIndex();
+        this.run();
       }
       return;
     }
@@ -267,121 +276,15 @@ class PagefindPlugin {
         this.watchRunInProgress = false;
         if (this.watchRunQueued) {
           log.debug`Starting queued Pagefind background rerun`;
-          this.runWatchIndex();
+          this.run();
         }
       });
   }
-
-  apply(compiler) {
-    compiler.hooks.afterEmit.tapAsync(
-      'PagefindPlugin',
-      (compilation, callback) => {
-        const distPath =
-          compiler.options?.output?.path ||
-          compiler.outputPath ||
-          compilation.compiler.outputPath;
-        const outputFileSystem =
-          compiler.outputFileSystem ||
-          compilation.compiler.outputFileSystem ||
-          fs;
-        const isWatch = !!compiler.watching;
-
-        if (compilation.errors.length > 0) {
-          callback();
-          return;
-        }
-
-        let htmlAssetsByPath;
-        try {
-          htmlAssetsByPath = this.getHtmlAssetsByPath(
-            compilation,
-            distPath,
-            outputFileSystem,
-          );
-        } catch (err) {
-          compilation.errors.push(err);
-          callback(err);
-          return;
-        }
-
-        if (isWatch) {
-          this.lastDistPath = distPath;
-          this.htmlCacheByAssetPath = htmlAssetsByPath;
-          callback();
-          return;
-        }
-
-        const pdfSourceByOutputPath = getPdfSourceByOutputPath(
-          this.siteVariables,
-        );
-        const start = Date.now();
-        let reachableHtmlPaths;
-        let reachablePdfPaths;
-
-        log.debug`Finding reachable pages for search index`;
-        try {
-          ({ reachableHtmlPaths, reachablePdfPaths } = collectIndexTargets(
-            htmlAssetsByPath,
-            this.siteVariables,
-            pdfSourceByOutputPath,
-          ));
-        } catch (err) {
-          compilation.errors.push(err);
-          callback(err);
-          return;
-        }
-
-        const snapshotReadyAt = Date.now();
-
-        let noun = reachableHtmlPaths.length === 1 ? 'page' : 'pages';
-        let message = `Building search index for ${reachableHtmlPaths.length} ${noun}`;
-        if (reachablePdfPaths.length > 0) {
-          noun = reachablePdfPaths.length === 1 ? 'PDF' : 'PDFs';
-          message += ` and ${reachablePdfPaths.length} ${noun}`;
-        }
-        log.info(message);
-
-        buildIndex({
-          distPath,
-          htmlAssetsByPath,
-          reachableHtmlPaths,
-          reachablePdfPaths,
-          pdfSourceByOutputPath,
-        })
-          .then(async () => {
-            try {
-              const pagefind = await getPagefind();
-              await pagefind.close();
-            } catch (_err) {
-              // Best-effort cleanup for non-watch builds.
-            }
-            const finishedAt = Date.now();
-            log.debug`Search index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
-            callback();
-          })
-          .catch(err => {
-            const failedAt = Date.now();
-            log.error`Search indexing failed after ${failedAt - snapshotReadyAt}ms of indexing (${failedAt - start}ms total): ${err.message}`;
-            compilation.errors.push(err);
-            callback(err);
-          });
-      },
-    );
-
-    compiler.hooks.done.tap('PagefindPluginWatchRun', stats => {
-      if (
-        !compiler.watching ||
-        stats.hasErrors() ||
-        ContentWatchPlugin.needsRestart()
-      ) {
-        return;
-      }
-
-      setImmediate(() => this.runWatchIndex());
-    });
-  }
 }
 
-module.exports = PagefindPlugin;
-module.exports.buildIndex = buildIndex;
-module.exports.collectIndexTargets = collectIndexTargets;
+module.exports = {
+  runPagefind,
+  WatchPagefindRunner,
+  buildIndex,
+  collectIndexTargets,
+};

@@ -140,4 +140,8 @@ function getFlair() {
   return P`${FLAIR_STRINGS[i]}!` + ' 🎉';
 }
 
-module.exports = { makeLogger, getFlair };
+function printFlair() {
+  console.log(getFlair());
+}
+
+module.exports = { makeLogger, getFlair, printFlair };

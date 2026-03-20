@@ -141,7 +141,7 @@ header .content {
 
 header summary .logo {
   flex: 0 0 auto;
-  color: #fff;
+  color: var(--text-on-theme);
   background: var(--theme-color);
   padding: 1px 6px;
   margin: 0 8px 0 0;

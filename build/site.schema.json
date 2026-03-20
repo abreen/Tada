@@ -29,10 +29,7 @@
     "symbol": { "type": "string", "pattern": "^[A-Z0-9\\- ]{1,5}$" },
     "titlePostfix": { "type": "string" },
     "courseId": { "type": "string" },
-    "themeColor": {
-      "type": "string",
-      "pattern": "^hsl\\(\\d+(deg)? \\d+% \\d+%\\)$"
-    },
+    "themeColor": { "type": "string" },
     "tintHue": {
       "type": "integer",
       "minimum": 0,
@@ -45,10 +42,7 @@
       "maximum": 100,
       "default": 100
     },
-    "faviconColor": {
-      "type": "string",
-      "pattern": "^hsl\\(\\d+(deg)? \\d+% \\d+%\\)$"
-    },
+    "faviconColor": { "type": "string" },
     "faviconSymbol": { "type": "string", "pattern": "^[A-Z0-9\\- ]{1,5}$" },
     "faviconFontWeight": {
       "type": "integer",

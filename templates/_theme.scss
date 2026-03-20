@@ -1,14 +1,7 @@
 :root {
-  --theme-hue: <%= themeHue %>deg;
-  --theme-saturation: <%= themeSaturation %>%;
-  --theme-lightness: <%= themeLightness %>%;
-  --theme-color: hsl(
-    var(--theme-hue) var(--theme-saturation) var(--theme-lightness)
-  );
-  --theme-color-text: hsl(
-    var(--theme-hue) clamp(30%, var(--theme-saturation), 70%)
-      clamp(25%, var(--theme-lightness), 42%)
-  );
+  --theme-color: <%= themeColorLight %>;
+  --theme-color-text: <%= themeColorTextLight %>;
+  --text-on-theme: <%= textOnThemeLight %>;
 
   // Background & foreground color tint
   --tint-hue: <%= tintHue %>deg;
@@ -67,10 +60,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --theme-color-text: hsl(
-      var(--theme-hue) clamp(30%, var(--theme-saturation), 70%)
-        clamp(50%, calc(var(--theme-lightness) + 15%), 80%)
-    );
+    --theme-color: <%= themeColorDark %>;
+    --theme-color-text: <%= themeColorTextDark %>;
+    --text-on-theme: <%= textOnThemeDark %>;
 
     --fg-color: hsl(var(--tint-hue) calc(10% * var(--tint-amount)) 92%);
     --fg-color-translucent: hsl(

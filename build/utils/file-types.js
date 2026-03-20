@@ -1,15 +1,8 @@
 const path = require('path');
 
-const PUBLIC_ASSET_EXTENSIONS = [
-  'png',
-  'jpg',
-  'jpeg',
-  'gif',
-  'svg',
-  'txt',
-  'zip',
-  'pdf',
-];
+function getProcessedExtensions(codeExtensions) {
+  return ['md', 'markdown', 'html', ...codeExtensions];
+}
 
 function extensionIsMarkdown(ext) {
   return ['.md', '.markdown'].includes(ext);
@@ -20,7 +13,7 @@ function isLiterateJava(filePath) {
 }
 
 module.exports = {
-  PUBLIC_ASSET_EXTENSIONS,
+  getProcessedExtensions,
   extensionIsMarkdown,
   isLiterateJava,
 };

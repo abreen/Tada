@@ -1,41 +1,6 @@
+const fs = require('fs');
+const path = require('path');
 const { createApplyBasePath } = require('./util');
-
-class GenerateManifestPlugin {
-  constructor(siteVariables) {
-    this.siteVariables = siteVariables || {};
-  }
-
-  apply(compiler) {
-    compiler.hooks.thisCompilation.tap(
-      'GenerateManifestPlugin',
-      compilation => {
-        const wp = compilation.compiler.webpack || {};
-        const { RawSource } =
-          (wp.sources && wp.sources) || require('webpack-sources');
-
-        compilation.hooks.processAssets.tapPromise(
-          {
-            name: 'GenerateManifestPlugin',
-            stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
-          },
-          async () => {
-            try {
-              const manifest = createManifest(this.siteVariables);
-              const output = JSON.stringify(manifest);
-              compilation.emitAsset('manifest.json', new RawSource(output));
-            } catch (err) {
-              compilation.errors.push(
-                new Error(`Error: ${err && err.message ? err.message : err}`),
-              );
-            }
-          },
-        );
-      },
-    );
-  }
-}
-
-module.exports = GenerateManifestPlugin;
 
 function createManifest(siteVariables) {
   const applyBasePath = createApplyBasePath(siteVariables);
@@ -114,3 +79,13 @@ function createManifest(siteVariables) {
     ],
   };
 }
+
+function generateManifest(siteVariables, distDir) {
+  const manifest = createManifest(siteVariables);
+  fs.writeFileSync(
+    path.join(distDir, 'manifest.json'),
+    JSON.stringify(manifest),
+  );
+}
+
+module.exports = { generateManifest, createManifest };

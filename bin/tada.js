@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 const fs = require('fs');
 const path = require('path');
-const readline = require('readline');
 const { execSync } = require('child_process');
 const { version } = require('../package.json');
 const {
   validateSymbol,
-  validateHslColor,
+  validateColor,
+  validateHue,
   validateUrl,
   validateBasePath,
   createSiteConfig,
@@ -47,18 +47,12 @@ const INIT_QUESTIONS = {
   themeColor: {
     prompt: 'Theme color',
     defaultValue: 'hsl(195 70% 40%)',
-    validate: validateHslColor,
+    validate: validateColor,
   },
   tintHue: {
     prompt: 'Background tint hue (0-360)',
     defaultValue: '20',
-    validate: v => {
-      const n = Number(v);
-      if (!Number.isInteger(n) || n < 0 || n > 360) {
-        return 'Must be an integer from 0 to 360';
-      }
-      return null;
-    },
+    validate: validateHue,
   },
   tintAmount: {
     prompt: 'Background tint amount (0-100)',
@@ -102,8 +96,6 @@ function printUsage() {
   }
 }
 
-const webpackCli = require.resolve('webpack-cli/bin/cli.js');
-
 function run(cmd) {
   execSync(cmd, { cwd: process.cwd(), stdio: 'inherit' });
 }
@@ -121,27 +113,23 @@ function copyDirRecursive(src, dest) {
   }
 }
 
-// --- init command ---
-
-function ask(rl, question, { defaultValue, validate } = {}) {
+async function ask(question, { defaultValue, validate } = {}) {
   const suffix = defaultValue != null ? ` (default: ${defaultValue})` : '';
-  return new Promise(resolve => {
-    function prompt() {
-      rl.question(`${question}${suffix}? `, answer => {
-        const value = answer.trim() || defaultValue || '';
-        if (validate) {
-          const error = validate(value);
-          if (error) {
-            console.error(`Error: ${error}`);
-            prompt();
-            return;
-          }
-        }
-        resolve(value);
-      });
+
+  process.stdout.write(`${question}${suffix}? `);
+
+  for await (const line of console) {
+    const value = line.trim() || defaultValue || '';
+    if (validate) {
+      const error = validate(value);
+      if (error) {
+        console.error(`Error: ${error}`);
+        process.stdout.write(`${question}${suffix}? `);
+        continue;
+      }
     }
-    prompt();
-  });
+    return value;
+  }
 }
 
 async function initCommand(args) {
@@ -160,11 +148,6 @@ async function initCommand(args) {
     process.exit(1);
   }
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
   let message = `Creating a new Tada site in ${projectDir}`;
   if (useDefaults) {
     console.log(message + ' using default config');
@@ -180,7 +163,7 @@ async function initCommand(args) {
     if (useDefaults) {
       config[key] = defaultValue;
     } else {
-      config[key] = await ask(rl, prompt, { defaultValue, validate });
+      config[key] = await ask(prompt, { defaultValue, validate });
     }
   }
 
@@ -194,8 +177,6 @@ async function initCommand(args) {
     prodBase,
     prodBasePath,
   } = config;
-
-  rl.close();
 
   // Derive internal domain from production base URL
   const prodDomain = new URL(prodBase).hostname;
@@ -265,7 +246,9 @@ async function initCommand(args) {
   console.log(`  tada serve`);
 }
 
-// --- main ---
+/*
+ * Start of script
+ */
 
 const command = process.argv[2];
 
@@ -276,25 +259,21 @@ switch (command) {
 
   case 'dev':
     requireSiteConfig('dev');
-    run(
-      `bun ${webpackCli} --config ${path.join(packageDir, 'webpack/config.dev.js')}`,
-    );
+    run(`bun ${path.join(packageDir, 'build/pipeline.js')} dev`);
     break;
 
   case 'prod':
     requireSiteConfig('prod');
-    run(
-      `bun ${webpackCli} --config ${path.join(packageDir, 'webpack/config.prod.js')}`,
-    );
+    run(`bun ${path.join(packageDir, 'build/pipeline.js')} prod`);
     break;
 
   case 'watch':
     requireSiteConfig('dev');
-    run(`bun ${path.join(packageDir, 'webpack/watch.js')}`);
+    run(`bun ${path.join(packageDir, 'build/watch.js')}`);
     break;
 
   case 'serve':
-    run(`bun ${path.join(packageDir, 'webpack/serve.js')}`);
+    run(`bun ${path.join(packageDir, 'build/serve.js')}`);
     break;
 
   case 'clean':

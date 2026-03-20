@@ -1,7 +1,8 @@
 const { describe, expect, test } = require('bun:test');
 const {
   validateSymbol,
-  validateHslColor,
+  validateColor,
+  validateHue,
   validateUrl,
   validateBasePath,
   createSiteConfig,
@@ -36,35 +37,64 @@ describe('validateSymbol', () => {
   });
 });
 
-describe('validateHslColor', () => {
-  test('accepts standard HSL format', () => {
-    expect(validateHslColor('hsl(195 70% 40%)')).toBeNull();
-    expect(validateHslColor('hsl(0 0% 0%)')).toBeNull();
-    expect(validateHslColor('hsl(360 100% 100%)')).toBeNull();
+describe('validateColor', () => {
+  test('accepts CSS color names', () => {
+    expect(validateColor('red')).toBeNull();
+    expect(validateColor('tomato')).toBeNull();
+    expect(validateColor('blue')).toBeNull();
   });
 
-  test('accepts HSL with deg suffix', () => {
-    expect(validateHslColor('hsl(195deg 70% 40%)')).toBeNull();
+  test('accepts hex colors', () => {
+    expect(validateColor('#f00')).toBeNull();
+    expect(validateColor('#ff0000')).toBeNull();
+    expect(validateColor('#c04040')).toBeNull();
+  });
+
+  test('accepts HSL colors', () => {
+    expect(validateColor('hsl(195 70% 40%)')).toBeNull();
+    expect(validateColor('hsl(195, 70%, 40%)')).toBeNull();
+    expect(validateColor('hsl(195deg 70% 40%)')).toBeNull();
+  });
+
+  test('accepts RGB colors', () => {
+    expect(validateColor('rgb(0 0 0)')).toBeNull();
+    expect(validateColor('rgb(255, 99, 71)')).toBeNull();
   });
 
   test('rejects empty string', () => {
-    expect(validateHslColor('')).not.toBeNull();
+    expect(validateColor('')).not.toBeNull();
   });
 
-  test('rejects comma-separated HSL', () => {
-    expect(validateHslColor('hsl(195, 70%, 40%)')).not.toBeNull();
+  test('rejects invalid color strings', () => {
+    expect(validateColor('notacolor')).not.toBeNull();
+    expect(validateColor('hsl 195 70% 40%')).not.toBeNull();
+  });
+});
+
+describe('validateHue', () => {
+  test('accepts integer', () => {
+    expect(validateHue('0')).toBeNull();
+    expect(validateHue('180')).toBeNull();
+    expect(validateHue('360')).toBeNull();
   });
 
-  test('rejects rgb format', () => {
-    expect(validateHslColor('rgb(0 0 0)')).not.toBeNull();
+  test('accepts integer with deg suffix', () => {
+    expect(validateHue('90deg')).toBeNull();
+    expect(validateHue('360deg')).toBeNull();
   });
 
-  test('rejects bare color name', () => {
-    expect(validateHslColor('blue')).not.toBeNull();
+  test('rejects empty string', () => {
+    expect(validateHue('')).not.toBeNull();
   });
 
-  test('rejects missing parentheses', () => {
-    expect(validateHslColor('hsl 195 70% 40%')).not.toBeNull();
+  test('rejects out of range', () => {
+    expect(validateHue('-1')).not.toBeNull();
+    expect(validateHue('361')).not.toBeNull();
+  });
+
+  test('rejects non-integer', () => {
+    expect(validateHue('1.5')).not.toBeNull();
+    expect(validateHue('abc')).not.toBeNull();
   });
 });
 

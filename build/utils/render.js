@@ -75,14 +75,9 @@ function createTemplateParameters({
   };
 }
 
-function injectWebpackAssets(html, compilation, applyBasePath) {
-  const assets = compilation.getAssets();
-  const jsAssets = assets
-    .filter(asset => asset.name.endsWith('.js'))
-    .map(asset => asset.name);
-  const cssAssets = assets
-    .filter(asset => asset.name.endsWith('.css'))
-    .map(asset => asset.name);
+function injectAssetTags(html, assetFiles, applyBasePath) {
+  const jsAssets = assetFiles.filter(f => f.endsWith('.js'));
+  const cssAssets = assetFiles.filter(f => f.endsWith('.css'));
 
   const scriptTags = jsAssets
     .map(asset => `<script defer src="${applyBasePath('/' + asset)}"></script>`)
@@ -110,7 +105,7 @@ function renderPlainTextPageAsset({
   contentDir,
   siteVariables,
   validInternalTargets,
-  compilation,
+  assetFiles,
 }) {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = path.relative(contentDir, path.join(dir, name));
@@ -144,9 +139,9 @@ function renderPlainTextPageAsset({
     subPath,
   });
 
-  const html = injectWebpackAssets(
+  const html = injectAssetTags(
     render(`${pageVariables.template}.html`, templateParameters),
-    compilation,
+    assetFiles,
     applyBasePath,
   );
 
@@ -162,7 +157,7 @@ function renderCodePageAsset({
   filePath,
   contentDir,
   siteVariables,
-  compilation,
+  assetFiles,
 }) {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = path.relative(contentDir, path.join(dir, name));
@@ -197,9 +192,9 @@ function renderCodePageAsset({
     subPath,
   });
 
-  const html = injectWebpackAssets(
+  const html = injectAssetTags(
     render('code.html', templateParameters),
-    compilation,
+    assetFiles,
     applyBasePath,
   );
 
@@ -212,8 +207,7 @@ function renderCodePageAsset({
 }
 
 function renderCopiedContentAsset({ filePath, contentDir }) {
-  const ext = path.extname(filePath).toLowerCase();
-  const label = ext === '.pdf' ? 'Copying' : 'Copying source file';
+  const label = 'Copying source file';
   const relPath = toContentAssetPath(contentDir, filePath);
 
   log.info`${label} ${B`${relPath}`}`;
@@ -318,7 +312,7 @@ function renderLiterateJavaPageAsset({
   filePath,
   contentDir,
   siteVariables,
-  compilation,
+  assetFiles,
 }) {
   const { dir, name } = path.parse(filePath);
   const className = deriveClassName(filePath);
@@ -434,9 +428,9 @@ function renderLiterateJavaPageAsset({
     subPath,
   });
 
-  const html = injectWebpackAssets(
+  const html = injectAssetTags(
     render('literate.html', templateParameters),
-    compilation,
+    assetFiles,
     applyBasePath,
   );
 
@@ -456,7 +450,7 @@ function renderLiterateJavaPageAsset({
 }
 
 module.exports = {
-  injectWebpackAssets,
+  injectAssetTags,
   renderCodePageAsset,
   renderCopiedContentAsset,
   renderLiterateJavaPageAsset,

@@ -156,7 +156,7 @@ Example site configuration JSON file:
 | `title` | Title for the whole site (also used to derive `titlePostfix`) |
 | `titlePostfix` | *Optional*, the string to append to each page's `title` |
 | `symbol` | Text (1-5 chars) displayed in header (also used as the favicon symbol) |
-| `themeColor` | HSL theme color for the site, e.g. `"hsl(195 70% 40%)"` |
+| `themeColor` | Theme color for the site (e.g., `"tomato"`, `"#c04040"`, `"hsl(195 70% 40%)"`) |
 | `tintHue` | *Optional*, hue (0-360) for background and foreground tinting (default `20`) |
 | `tintAmount` | *Optional*, percentage (0-100) of tint to apply (default `100`) |
 | `faviconSymbol` | *Optional*, the text to use instead of `symbol` in the favicon |
@@ -167,7 +167,7 @@ Example site configuration JSON file:
 | `basePath` | URL prefix for deployment under a subpath (e.g., `"/cs101"`), use `"/"` at root |
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |
 | `codeLanguages` | Map file extension to Shiki language (e.g., `"java": "java"`) |
-| `faviconColor` | *Optional*, HSL color override for favicon (defaults to `themeColor`) |
+| `faviconColor` | *Optional*, background color for favicon (defaults to `themeColor`) |
 | `faviconFontWeight` | *Optional*, font weight used for favicon text (default `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content (e.g., `<%= staffEmail %>`) |
 

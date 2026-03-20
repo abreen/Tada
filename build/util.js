@@ -2,10 +2,10 @@ const {
   extensionIsMarkdown,
   getBuildContentFiles,
   getContentFiles,
+  getFilesByExtensions,
   getValidInternalTargets,
   shouldSkipContentFile,
 } = require('./utils/content-files');
-const { createDefinePlugin } = require('./utils/define-plugin');
 const { createMarkdown } = require('./utils/markdown');
 const {
   createApplyBasePath,
@@ -17,7 +17,7 @@ const {
   normalizeOutputPath,
 } = require('./utils/paths');
 const {
-  injectWebpackAssets,
+  injectAssetTags,
   renderCodePageAsset,
   renderCopiedContentAsset,
   renderLiterateJavaPageAsset,
@@ -33,14 +33,14 @@ module.exports = {
   getProjectDir,
   getPublicDir,
   getContentFiles,
+  getFilesByExtensions,
   getBuildContentFiles,
   getValidInternalTargets,
   shouldSkipContentFile,
   extensionIsMarkdown,
   parseFrontMatter,
-  createDefinePlugin,
   createApplyBasePath,
-  injectWebpackAssets,
+  injectAssetTags,
   normalizeOutputPath,
   renderCodePageAsset,
   renderCopiedContentAsset,

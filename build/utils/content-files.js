@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { parseFrontMatterAndContent } = require('./front-matter');
 const {
-  PUBLIC_ASSET_EXTENSIONS,
+  getProcessedExtensions,
   extensionIsMarkdown,
   isLiterateJava,
 } = require('./file-types');
@@ -19,7 +19,7 @@ function walkFiles(dir) {
 }
 
 function getContentFiles(contentDir, codeExtensions) {
-  const extensions = ['md', 'html', 'pdf', ...codeExtensions];
+  const extensions = ['md', 'html', ...codeExtensions];
   const pattern = new RegExp(`\\.(${extensions.join('|')})$`);
 
   return walkFiles(contentDir).filter(filePath => {
@@ -85,7 +85,6 @@ function getValidInternalTargets(contentDir, contentFiles, codeExtensions) {
   const codeExtensionSet = new Set(
     codeExtensions.map(ext => ext.toLowerCase()),
   );
-  const contentAssetExtensionSet = new Set(PUBLIC_ASSET_EXTENSIONS);
 
   for (const filePath of contentFiles) {
     const relPath = path.relative(contentDir, filePath);
@@ -110,21 +109,19 @@ function getValidInternalTargets(contentDir, contentFiles, codeExtensions) {
       );
     } else if (extensionIsMarkdown(ext) || ext === '.html') {
       addGeneratedRouteAliases(targets, `/${subPath}.html`);
-    } else if (ext === '.pdf') {
-      targets.add(normalizeOutputPath(`/${relPath}`));
     } else if (codeExtensionSet.has(ext.slice(1))) {
       addGeneratedRouteAliases(targets, `/${subPath}.html`);
-      targets.add(normalizeOutputPath(`/${relPath}`));
-    } else if (contentAssetExtensionSet.has(ext.slice(1))) {
       targets.add(normalizeOutputPath(`/${relPath}`));
     }
   }
 
-  // Include non-page assets in content/ that are copied directly to dist/.
-  for (const filePath of getFilesByExtensions(
-    contentDir,
-    PUBLIC_ASSET_EXTENSIONS,
-  )) {
+  // Include non-processed assets in content/ that are copied directly to dist/.
+  const processedExtSet = new Set(getProcessedExtensions(codeExtensions));
+  for (const filePath of walkFiles(contentDir)) {
+    const ext = path.extname(filePath).slice(1).toLowerCase();
+    if (processedExtSet.has(ext)) {
+      continue;
+    }
     const relPath = path.relative(contentDir, filePath);
     targets.add(normalizeOutputPath(`/${relPath}`));
   }
@@ -142,6 +139,7 @@ module.exports = {
   extensionIsMarkdown,
   getBuildContentFiles,
   getContentFiles,
+  getFilesByExtensions,
   getValidInternalTargets,
   shouldSkipContentFile,
 };

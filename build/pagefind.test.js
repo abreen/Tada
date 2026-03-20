@@ -1,6 +1,6 @@
 const path = require('path');
 const { describe, expect, test } = require('bun:test');
-const { buildIndex, collectIndexTargets } = require('./pagefind-plugin');
+const { buildIndex, collectIndexTargets } = require('./pagefind');
 
 function createFakePagefind(calls) {
   const fakeIndex = {

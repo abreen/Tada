@@ -11,12 +11,27 @@ function validateSymbol(value) {
   return null;
 }
 
-function validateHslColor(value) {
+function validateColor(value) {
   if (!value) {
     return 'Color is required';
   }
-  if (!/^hsl\(\d+(deg)? \d+% \d+%\)$/.test(value)) {
-    return 'Color must be in HSL format, e.g. hsl(195 70% 40%)';
+  try {
+    if (!Bun.color(value)) {
+      throw new Error();
+    }
+  } catch {
+    return 'Must be a valid CSS color, e.g. "tomato", "#c04040", or "hsl(195 70% 40%)"';
+  }
+  return null;
+}
+
+function validateHue(value) {
+  if (!value) {
+    return 'Hue is required';
+  }
+  const n = Number(String(value).replace(/deg$/, ''));
+  if (!Number.isInteger(n) || n < 0 || n > 360) {
+    return 'Must be an integer from 0 to 360, with or without "deg"';
   }
   return null;
 }
@@ -67,7 +82,8 @@ function createSiteConfig({
 
 module.exports = {
   validateSymbol,
-  validateHslColor,
+  validateColor,
+  validateHue,
   validateUrl,
   validateBasePath,
   createSiteConfig,

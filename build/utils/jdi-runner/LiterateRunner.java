@@ -186,7 +186,7 @@ public class LiterateRunner {
                 }
             }
         } catch (VMDisconnectedException e) {
-            // VM died unexpectedly — drain any remaining output
+            // VM died unexpectedly, drain any remaining output
             Thread.sleep(10);
             String output = drainStream(targetStdout);
             if (!output.isEmpty() && activeBlock >= 0) {

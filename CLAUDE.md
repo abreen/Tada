@@ -1,7 +1,7 @@
 # Claude guidelines
 
 This codebase is a static site generator written in JavaScript/TypeScript.
-The runtime is Bun. Build logic is implemented as Webpack plugins in `webpack/`.
+The runtime is Bun. Build logic lives in `build/`.
 
 - Site content lives in `content/`
 - Markdown & HTML content is processed; other file types are copied into `dist/`
@@ -22,7 +22,7 @@ The runtime is Bun. Build logic is implemented as Webpack plugins in `webpack/`.
 
 ## Path resolution
 
-`webpack/utils/paths.js` provides `getPackageDir()` (the Tada package root,
+`build/utils/paths.js` provides `getPackageDir()` (the Tada package root,
 resolved via `__dirname`) and `getProjectDir()` (the user's project, resolved
 via `process.cwd()`). When developing Tada itself, both point to the repo root.
 When installed as a package, they differ.
@@ -80,8 +80,8 @@ Import Sass styles in `src/index.ts` to include them in the bundle.
 
 ## Markdown processing
 
-- `webpack/external-links-plugin.js` --- rewrites external links (uses `site.internalDomains`)
-- `webpack/apply-base-path-plugin.js` --- prefixes internal links and image URLs with `site.basePath`
+- `build/external-links-plugin.js` --- rewrites external links (uses `site.internalDomains`)
+- `build/apply-base-path-plugin.js` --- prefixes internal links and image URLs with `site.basePath`
 - Markdown is processed with markdown-it and plugins: anchor, container, deflist, footnote
 - Code fences are highlighted at build time using Shiki
 
@@ -100,4 +100,4 @@ Import Sass styles in `src/index.ts` to include them in the bundle.
 - When enabled via site config, a special HTML page is generated for Java source files
 - A syntax tree is built from the Java source to generate a table of contents
 - Method line numbers are embedded in HTML for Pagefind to index
-- Syntax highlighting is done at build time using Shiki (`webpack/utils/shiki-highlighter.js`)
+- Syntax highlighting is done at build time using Shiki (`build/utils/shiki-highlighter.js`)
