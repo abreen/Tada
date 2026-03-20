@@ -1,7 +1,8 @@
 title: Markdown Examples
 description: Examples of Markdown syntax supported by Tada.
-toc: true
 author: alex
+published: 2026-03-20
+toc: true
 
 Markdown and HTML files in the `content/` directory
 must contain ["front matter"][front-matter] (YAML-formatted metadata).
