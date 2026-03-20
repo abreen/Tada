@@ -21,7 +21,11 @@ The runtime is Bun. Build logic lives in `build/`.
 - Clean build artifacts: `tada clean` (use `--all` to also remove font cache)
 - Format code: `bun run format` (for Tada development only)
 - Lint: `bun run lint`
-- Run tests: `bun test`
+- Typecheck: `bun run typecheck` (runs `tsc --noEmit`)
+- Run tests: `CLAUDECODE=1 bun test`
+- Run a single test: `CLAUDECODE=1 bun test build/code.test.ts`
+
+You should use the `CLAUDECODE` env var with `bun test` to reduce output tokens.
 
 ## Testing locally
 
@@ -38,8 +42,13 @@ projects by `tada init` — it is not a buildable site on its own.
 ## Formatting
 
 - Prettier: trailing commas, single quotes, no parens on single arrow params
-- Pre-commit hook (`bunx lint-staged`) auto-formats staged TS/JS/SCSS/JSON files
+- Pre-commit hook runs `bunx lint-staged && bun run lint && bun run typecheck`
 - Run `bun run format` to format the entire codebase manually
+
+## Logging
+
+Set `TADA_LOG_LEVEL` to control build log verbosity. Valid levels (most to least
+verbose): `debug`, `info`, `warn`, `error`. Default is `info`.
 
 ## Caching
 
@@ -72,6 +81,20 @@ values from the active site config.
 - `site.themeColor` --- HSL theme color (derives `faviconColor` if not set)
 - Arbitrary template variables live under the `vars` key in the site config JSON
 
+## Build pipeline
+
+The build (`build/pipeline.ts`) runs in phases:
+
+1. **Setup**: compile templates, initialize Shiki highlighter
+2. **Bundle + assets** (parallel): Bun-bundled CSS/JS, font generation, favicons, manifest
+3. **Copy**: public/ files and non-processed content assets into `dist/`
+4. **Render**: process Markdown, HTML, and code pages into `dist/`
+5. **Post-build**: Pagefind search indexing (if enabled)
+
+Watch mode (`build/watch.ts`) uses Chokidar with 300 ms debounce and a WebSocket
+server on port 35729 for live reload. Incremental rebuilds are scoped by change
+category: `content | public | src | templates | config`.
+
 ## Critical CSS
 
 To avoid render-blocking CSS, the build produces two CSS bundles:
@@ -100,6 +123,20 @@ directly). Otherwise, add them to `style.scss` or a component stylesheet.
 Each component lives in `src/<name>/` with an `index.ts` (exporting async
 `mount()`) and `style.scss`. Import Sass styles in `src/index.ts` to include
 them in the bundle. Shared utilities are in `src/util.ts`.
+
+## Content front matter
+
+Each file in `content/` starts with YAML front matter. Key fields:
+
+- `title` (required) --- page title for `<title>` and page heading
+- `skip` --- set to `true` to skip building the page
+- `author` --- author handle resolved via `authors.json`
+- `description` --- meta description
+- `toc` --- set to `true` to show a table of contents
+- `parent` / `parentLabel` --- URL and label for a breadcrumb link above the title
+- `published` --- date of publishing (e.g., `2025-09-09`)
+
+Arbitrary fields are also accessible in templates via `<%= page.fieldName %>`.
 
 ## Markdown processing
 
