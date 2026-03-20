@@ -1,10 +1,10 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default [
+  { ignores: ['dist/', 'example/', '.font-cache/', 'node_modules/'] },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
-  { ignores: ['dist/', 'example/', '.font-cache/', 'node_modules/'] },
   {
     rules: {
       '@typescript-eslint/no-unused-expressions': [
@@ -18,4 +18,4 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
-);
+];
