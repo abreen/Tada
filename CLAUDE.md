@@ -72,6 +72,29 @@ values from the active site config.
 - `site.themeColor` --- HSL theme color (derives `faviconColor` if not set)
 - Arbitrary template variables live under the `vars` key in the site config JSON
 
+## Critical CSS
+
+To avoid render-blocking CSS, the build produces two CSS bundles:
+
+- `critical.bundle.css` --- inlined into every HTML page as a `<style>` tag
+- `index.bundle.css` --- loaded asynchronously via `media="print" onload`
+
+Critical CSS (`src/critical.scss`) imports shared Sass partials rather than
+duplicating rules:
+
+- `src/_base.scss` --- core element styles (body, headings, links, code, `:root` vars)
+- `src/_layout.scss` --- page layout and responsive media queries
+- `src/header/_base.scss` --- header bar positioning, logo, site title
+
+These partials are also `@use`d by `src/style.scss` and `src/header/style.scss`,
+so the rules are defined once and shared between both bundles. The full
+stylesheet intentionally re-includes the critical rules so it is self-contained
+and cacheable across page navigations.
+
+When adding new styles, decide whether they affect first-paint layout or
+appearance. If so, put them in the appropriate partial (not in `critical.scss`
+directly). Otherwise, add them to `style.scss` or a component stylesheet.
+
 ## Client-side components
 
 Each component lives in `src/<name>/` with an `index.ts` (exporting async
