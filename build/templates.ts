@@ -97,7 +97,7 @@ export function compileTemplates(
   for (const fileName of JSON_DATA_FILES) {
     const filePath = path.join(jsonDir, fileName);
     if (!fs.existsSync(filePath)) {
-      throw new Error(`Missing required data file: ${filePath}`);
+      continue;
     }
 
     // Schema validation (schemas live in the package templates dir)

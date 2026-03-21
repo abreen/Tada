@@ -98,6 +98,9 @@ function printUsage() {
     if (cmd === 'init') {
       console.log('  init <dirname>     Initialize a new site');
       console.log('       [--default]     (Use defaults for all options)');
+      console.log(
+        '       [--bare]        (Create a minimal site with one page)',
+      );
       continue;
     } else if (cmd === 'clean') {
       console.log('  clean              Remove the dist/ directory');
@@ -126,11 +129,12 @@ function copyDirRecursive(src: string, dest: string): void {
 
 async function initCommand(args: string[]): Promise<void> {
   const useDefaults = args.includes('--default');
+  const bare = args.includes('--bare');
   const dirname = args.filter(a => !a.startsWith('--'))[0];
 
   if (!dirname) {
     console.error('Error: Provide a name for the new directory');
-    console.log('Usage: tada init <dirname> [--default]');
+    console.log('Usage: tada init <dirname> [--default] [--bare]');
     process.exit(1);
   }
 
@@ -141,8 +145,12 @@ async function initCommand(args: string[]): Promise<void> {
   }
 
   const message = `Creating a new Tada site in ${projectDir}`;
-  if (useDefaults) {
+  if (useDefaults && bare) {
+    console.log(message + ' using default config (bare)');
+  } else if (useDefaults) {
     console.log(message + ' using default config');
+  } else if (bare) {
+    console.log(message + ' (bare)');
   } else {
     console.log(message);
   }
@@ -239,25 +247,47 @@ async function initCommand(args: string[]): Promise<void> {
     JSON.stringify(prodConfig, null, 2) + '\n',
   );
 
-  // Copy nav and authors data files to the project root
-  fs.copyFileSync(
-    path.join(packageDir, 'config/nav.json'),
-    path.join(projectDir, 'nav.json'),
-  );
-  fs.copyFileSync(
-    path.join(packageDir, 'config/authors.json'),
-    path.join(projectDir, 'authors.json'),
-  );
+  if (bare) {
+    fs.mkdirSync(path.join(projectDir, 'content'), { recursive: true });
+    fs.writeFileSync(
+      path.join(projectDir, 'content', 'index.md'),
+      'title: Home\n\nWelcome to your new site.\n',
+    );
+    fs.mkdirSync(path.join(projectDir, 'public'), { recursive: true });
+    fs.writeFileSync(
+      path.join(projectDir, 'nav.json'),
+      JSON.stringify(
+        [
+          {
+            title: 'Navigation',
+            links: [{ text: 'Home', internal: '/index.html' }],
+          },
+        ],
+        null,
+        2,
+      ) + '\n',
+    );
+  } else {
+    // Copy nav and authors data files to the project root
+    fs.copyFileSync(
+      path.join(packageDir, 'config/nav.json'),
+      path.join(projectDir, 'nav.json'),
+    );
+    fs.copyFileSync(
+      path.join(packageDir, 'config/authors.json'),
+      path.join(projectDir, 'authors.json'),
+    );
 
-  // Copy content/ and public/ from the package
-  copyDirRecursive(
-    path.join(packageDir, 'content'),
-    path.join(projectDir, 'content'),
-  );
-  copyDirRecursive(
-    path.join(packageDir, 'public'),
-    path.join(projectDir, 'public'),
-  );
+    // Copy content/ and public/ from the package
+    copyDirRecursive(
+      path.join(packageDir, 'content'),
+      path.join(projectDir, 'content'),
+    );
+    copyDirRecursive(
+      path.join(packageDir, 'public'),
+      path.join(projectDir, 'public'),
+    );
+  }
 
   console.log(`\nGenerated a new site in ${projectDir}`);
   console.log(`\nNext steps:`);

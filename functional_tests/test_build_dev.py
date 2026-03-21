@@ -1,3 +1,5 @@
+import pytest
+
 from conftest import run_tada
 
 
@@ -45,6 +47,27 @@ class TestDevBuild:
         dist = built_dev_site / "dist"
         assert (dist / "manifest.json").exists()
 
+    def test_exit_code_zero(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0
+
+    def test_html_contains_title(self, built_dev_site):
+        index = built_dev_site / "dist" / "index.html"
+        html = index.read_text()
+        assert "<title>" in html
+
+
+class TestDevBuildDefaultContent:
+    """Tests that require the full default content tree."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--default", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+        assert site.is_dir()
+        yield site
+
     def test_copies_public_files(self, built_dev_site):
         dist = built_dev_site / "dist"
         assert (dist / "test.txt").exists()
@@ -62,15 +85,6 @@ class TestDevBuild:
         dist = built_dev_site / "dist"
         # problem_sets/index.html has skip: true in front matter
         assert not (dist / "problem_sets" / "index.html").exists()
-
-    def test_exit_code_zero(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
-        assert result.returncode == 0
-
-    def test_html_contains_title(self, built_dev_site):
-        index = built_dev_site / "dist" / "index.html"
-        html = index.read_text()
-        assert "<title>" in html
 
 
 class TestDevBuildErrors:

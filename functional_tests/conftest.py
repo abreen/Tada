@@ -45,11 +45,11 @@ def tada():
 
 @pytest.fixture
 def site_dir(tmp_path):
-    """Create a fresh Tada site using init --default in a temp directory.
+    """Create a bare Tada site using init --bare --default in a temp directory.
 
     Yields the Path to the site directory (tmp_path / 'testsite').
     """
-    result = run_tada("init", "testsite", "--default", cwd=str(tmp_path))
+    result = run_tada("init", "testsite", "--bare", "--default", cwd=str(tmp_path))
     assert result.returncode == 0, f"init failed: {result.stderr}"
     site = tmp_path / "testsite"
     assert site.is_dir()

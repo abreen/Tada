@@ -11,7 +11,7 @@ import websocket
 
 from conftest import TADA_BIN, get_free_ports
 
-SETTLE_DELAY_SEC = 2
+SETTLE_DELAY_SEC = 1
 REBUILD_POLL_INTERVAL_SEC = 1
 REBUILD_TIMEOUT_SEC = 30
 INITIAL_BUILD_TIMEOUT_SEC = 60
@@ -170,12 +170,12 @@ class TestWatchAddContent:
 class TestWatchRemoveContent:
     def test_removing_markdown_triggers_rebuild(self, watch, site_dir):
         md_file = site_dir / "content" / "markdown.md"
-        index_html = site_dir / "dist" / "index.html"
-        assert md_file.exists()
+        md_file.write_text("title: Markdown\n\nSome content.\n")
 
-        # Tada does not currently delete stale HTML from dist/ when a
-        # content file is removed. Instead, verify that a rebuild occurs
-        # by checking that index.html is re-rendered (mtime changes).
+        dist_md = site_dir / "dist" / "markdown.html"
+        watch.wait_for_rebuild(dist_md, "exists")
+
+        index_html = site_dir / "dist" / "index.html"
         before_mtime = index_html.stat().st_mtime
         md_file.unlink()
         watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
@@ -185,6 +185,9 @@ class TestWatchPublicFiles:
     def test_editing_public_file(self, watch, site_dir):
         public_file = site_dir / "public" / "test.txt"
         dist_file = site_dir / "dist" / "test.txt"
+
+        public_file.write_text("initial public content")
+        watch.wait_for_rebuild(dist_file, "exists")
 
         before_mtime = dist_file.stat().st_mtime
         public_file.write_text("updated public content")

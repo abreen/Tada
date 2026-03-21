@@ -55,10 +55,14 @@ function resolveAuthor(
   if (!pageVariables.author) {
     return;
   }
-  const authors = json('authors.json') as Record<
-    string,
-    Record<string, unknown>
-  >;
+  const authors = json('authors.json') as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  if (!authors) {
+    throw new Error(
+      `${filePath}: author "${pageVariables.author}" specified but no authors.json found`,
+    );
+  }
   const authorKey = pageVariables.author as string;
   const authorEntry = authors[authorKey];
   if (!authorEntry) {

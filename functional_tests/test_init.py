@@ -1,9 +1,19 @@
 import json
 
+import pytest
+
 from conftest import run_tada
 
 
 class TestInitDefault:
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--default", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+        assert site.is_dir()
+        yield site
+
     def test_creates_site_directory(self, site_dir):
         assert site_dir.is_dir()
 
@@ -53,6 +63,38 @@ class TestInitDefault:
         assert result.returncode == 0
         assert "Generated a new site" in result.stdout
         assert "Next steps" in result.stdout
+
+
+class TestInitBare:
+    def test_creates_site_directory(self, site_dir):
+        assert site_dir.is_dir()
+
+    def test_creates_configs(self, site_dir):
+        assert (site_dir / "site.dev.json").exists()
+        assert (site_dir / "site.prod.json").exists()
+
+    def test_creates_minimal_content(self, site_dir):
+        content_dir = site_dir / "content"
+        assert content_dir.is_dir()
+        assert (content_dir / "index.md").exists()
+        all_files = [f for f in content_dir.rglob("*") if f.is_file()]
+        assert len(all_files) == 1
+
+    def test_creates_empty_public(self, site_dir):
+        public_dir = site_dir / "public"
+        assert public_dir.is_dir()
+        assert len(list(public_dir.rglob("*"))) == 0
+
+    def test_creates_minimal_nav(self, site_dir):
+        import json
+
+        nav = json.loads((site_dir / "nav.json").read_text())
+        assert len(nav) == 1
+        assert len(nav[0]["links"]) == 1
+        assert nav[0]["links"][0]["text"] == "Home"
+
+    def test_no_authors_json(self, site_dir):
+        assert not (site_dir / "authors.json").exists()
 
 
 class TestInitErrors:
