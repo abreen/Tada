@@ -287,14 +287,22 @@ switch (command) {
     run(`bun ${path.join(packageDir, 'build/pipeline.ts')} prod`);
     break;
 
-  case 'watch':
+  case 'watch': {
     requireSiteConfig('dev');
-    run(`bun ${path.join(packageDir, 'build/watch.ts')}`);
+    const watchArgs = process.argv.slice(3).join(' ');
+    run(
+      `bun ${path.join(packageDir, 'build/watch.ts')}${watchArgs ? ' ' + watchArgs : ''}`,
+    );
     break;
+  }
 
-  case 'serve':
-    run(`bun ${path.join(packageDir, 'build/serve.ts')}`);
+  case 'serve': {
+    const serveArgs = process.argv.slice(3).join(' ');
+    run(
+      `bun ${path.join(packageDir, 'build/serve.ts')}${serveArgs ? ' ' + serveArgs : ''}`,
+    );
     break;
+  }
 
   case 'clean':
     fs.rmSync(path.resolve(process.cwd(), 'dist'), {

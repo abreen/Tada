@@ -1,4 +1,5 @@
 import os
+import socket
 import subprocess
 from pathlib import Path
 
@@ -7,6 +8,20 @@ import pytest
 # Resolve the Tada package root (parent of functional_tests/)
 PACKAGE_DIR = Path(__file__).resolve().parent.parent
 TADA_BIN = PACKAGE_DIR / "bin" / "tada.ts"
+
+
+def get_free_ports(n=2):
+    """Allocate n free TCP ports by binding to port 0."""
+    sockets = []
+    ports = []
+    for _ in range(n):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('', 0))
+        ports.append(s.getsockname()[1])
+        sockets.append(s)
+    for s in sockets:
+        s.close()
+    return ports
 
 
 def run_tada(*args, cwd=None, timeout=120, check=False, input=None):

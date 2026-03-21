@@ -36,7 +36,19 @@ import { ContentRenderer } from './generate-content-assets.js';
 import { WatchPagefindRunner } from './pagefind.js';
 import { ContentChangeDetector } from './content-watch.js';
 
-const WEBSOCKET_PORT = 35729;
+function getArg(name: string): number | null {
+  const idx = process.argv.indexOf(name);
+  if (idx !== -1 && process.argv[idx + 1]) {
+    const val = parseInt(process.argv[idx + 1], 10);
+    if (val > 0 && val < 65536) {
+      return val;
+    }
+  }
+  return null;
+}
+
+const httpPort = getArg('--port');
+const WEBSOCKET_PORT = getArg('--ws-port') ?? 35729;
 const DEBOUNCE_MS = 300;
 const RELOAD_CLIENT_PATH = path.resolve(
   getPackageDir(),
@@ -52,6 +64,7 @@ async function bundleReloadClient(): Promise<string[]> {
     outdir: getDistDir(),
     naming: '[name].bundle.[ext]',
     sourcemap: 'inline',
+    define: { __WEBSOCKET_PORT__: String(WEBSOCKET_PORT) },
   });
   return result.outputs.map(output =>
     path
@@ -108,10 +121,13 @@ function broadcast(msg: string): void {
   });
 }
 
-// --- Dev server (unchanged) ---
+// --- Dev server ---
 
 function serve(): void {
-  const child = fork(path.join(__dirname, 'serve.js'), { stdio: 'inherit' });
+  const serveArgs = httpPort != null ? ['--port', String(httpPort)] : [];
+  const child = fork(path.join(__dirname, 'serve.js'), serveArgs, {
+    stdio: 'inherit',
+  });
   child.on('close', (code: number | null) => {
     webServerReady = false;
     log.error`Web server exited with code ${code}`;

@@ -9,11 +9,12 @@ from pathlib import Path
 import pytest
 import websocket
 
-from conftest import TADA_BIN
+from conftest import TADA_BIN, get_free_ports
 
-REBUILD_POLL_INTERVAL = 0.5  # seconds
-REBUILD_TIMEOUT = 30  # seconds
-INITIAL_BUILD_TIMEOUT = 60  # seconds
+REBUILD_POLL_INTERVAL = 0.5     # seconds
+REBUILD_TIMEOUT = 30            # seconds
+INITIAL_BUILD_TIMEOUT = 60      # seconds
+WEBSOCKET_TIMEOUT = 15          # seconds
 
 
 class WatchProcess:
@@ -22,10 +23,19 @@ class WatchProcess:
     def __init__(self, site_dir: Path):
         self.site_dir = site_dir
         self.dist_dir = site_dir / "dist"
+        http_port, self.ws_port = get_free_ports(2)
         self._stdout_file = open(site_dir / "watch_stdout.log", "w")
         self._stderr_file = open(site_dir / "watch_stderr.log", "w")
         self.proc = subprocess.Popen(
-            ["bun", str(TADA_BIN), "watch"],
+            [
+                "bun",
+                str(TADA_BIN),
+                "watch",
+                "--port",
+                str(http_port),
+                "--ws-port",
+                str(self.ws_port),
+            ],
             cwd=str(site_dir),
             stdout=self._stdout_file,
             stderr=self._stderr_file,
@@ -205,10 +215,6 @@ class TestWatchConfig:
         assert "Updated Title For Test" in html
 
 
-WEBSOCKET_URL = "ws://localhost:35729"
-WEBSOCKET_TIMEOUT = 15  # seconds
-
-
 class TestWatchWebSocket:
     def test_receives_reload_message_on_content_change(self, watch, site_dir):
         """Connect to the watch WebSocket and verify a 'reload' message is
@@ -226,7 +232,7 @@ class TestWatchWebSocket:
             connected.set()
 
         ws = websocket.WebSocketApp(
-            WEBSOCKET_URL,
+            f"ws://localhost:{watch.ws_port}",
             on_message=on_message,
             on_open=on_open,
         )
@@ -234,7 +240,7 @@ class TestWatchWebSocket:
         ws_thread.start()
 
         assert connected.wait(timeout=WEBSOCKET_TIMEOUT), (
-            "WebSocket did not connect — server may not be listening on port 35729"
+            f"WebSocket did not connect on port {watch.ws_port}"
         )
 
         # Trigger a content change
@@ -255,6 +261,5 @@ class TestWatchWebSocket:
         assert client_bundle.exists(), "watch-reload-client.bundle.js not in dist/"
         content = client_bundle.read_text()
         assert "WebSocket" in content, (
-            "watch-reload-client.bundle.js is empty or missing WebSocket code "
-            "(possibly tree-shaken by bundler)"
+            "watch-reload-client.bundle.js is empty or missing WebSocket code"
         )

@@ -62,43 +62,44 @@ function createResponse(req: Request): Response {
   return new Response(Bun.file(filePath));
 }
 
-function tryListen(
-  port: number,
-  fallbackPort: number | null,
-): Promise<ReturnType<typeof Bun.serve>> {
-  return new Promise((resolve, reject) => {
-    try {
-      const server = Bun.serve({
-        port,
-        fetch: createResponse,
-        error(error: Error) {
-          log.error`Request failed: ${error}`;
-          return new Response('Internal Server Error', { status: 500 });
-        },
-      });
-
-      log.info`Dev server: ${B`http://localhost:${server.port}/index.html`}`;
-      messageReady(server.port as number);
-      resolve(server);
-    } catch (err: unknown) {
-      if (
-        err instanceof Error &&
-        (err as NodeJS.ErrnoException).code === 'EADDRINUSE' &&
-        fallbackPort
-      ) {
-        log.warn`Port ${port} in use, trying fallback ${fallbackPort}...`;
-        return tryListen(fallbackPort, null).then(resolve).catch(reject);
-      }
-
-      reject(err);
-    }
-  });
+function getPortArg(): number {
+  const idx = process.argv.indexOf('--port');
+  if (idx === -1) {
+    return 8080;
+  }
+  const raw = process.argv[idx + 1];
+  if (!raw) {
+    log.error`--port requires a value`;
+    process.exit(1);
+  }
+  const port = parseInt(raw, 10);
+  if (isNaN(port) || port <= 0 || port >= 65536) {
+    log.error`Invalid port value: ${raw}`;
+    process.exit(1);
+  }
+  return port;
 }
 
-tryListen(8080, 8081).catch(err => {
-  log.error`Failed to start server: ${err}`;
-  process.exit(1);
-});
+function listen(port: number): void {
+  try {
+    const server = Bun.serve({
+      port,
+      fetch: createResponse,
+      error(error: Error) {
+        log.error`Request failed: ${error}`;
+        return new Response('Internal Server Error', { status: 500 });
+      },
+    });
+
+    log.info`Dev server: ${B`http://localhost:${server.port}/index.html`}`;
+    messageReady(server.port as number);
+  } catch (err) {
+    log.error`Failed to start server on port ${port}: ${err}`;
+    process.exit(1);
+  }
+}
+
+listen(getPortArg());
 
 process.on('uncaughtException', err => {
   log.error`Uncaught exception: ${err}`;

@@ -1,3 +1,5 @@
+declare const __WEBSOCKET_PORT__: number;
+
 (function () {
   const style = document.createElement('style');
   style.textContent = [
@@ -24,7 +26,7 @@
   ].join('\n');
   document.head.appendChild(style);
 
-  const ws = new WebSocket('ws://localhost:35729');
+  const ws = new WebSocket(`ws://localhost:${__WEBSOCKET_PORT__}`);
 
   ws.onopen = () => {
     console.log('[watch-reload] connected to watcher');
