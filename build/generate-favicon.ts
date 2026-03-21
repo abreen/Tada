@@ -14,6 +14,7 @@ const FONT_PATH = path.join(
   getPackageDir(),
   'fonts',
   'inter',
+  'ttf',
   'InterVariable.ttf',
 );
 

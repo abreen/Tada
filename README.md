@@ -101,8 +101,7 @@ Start a development web server, watch for changes and rebuild automatically.
 
 ### `tada clean`
 
-Remove the `dist/` directory. Pass `--all` to also remove the font cache
-(`.font-cache/`), forcing fonts to be recompressed on the next build.
+Remove the `dist/` directory.
 
 
 ### `tada prod`

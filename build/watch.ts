@@ -22,7 +22,7 @@ import {
 } from './utils/paths.js';
 import { isFeatureEnabled } from './features.js';
 import { bundle } from './bundle.js';
-import { generateFonts } from './generate-fonts.js';
+import { copyFonts } from './generate-fonts.js';
 import { generateFavicons } from './generate-favicon.js';
 import { generateManifest } from './generate-manifest.js';
 import {
@@ -197,7 +197,7 @@ async function initialBuild(): Promise<void> {
     extraEntrypoints: [reloadClientPath],
   });
 
-  await generateFonts(distDir);
+  copyFonts(distDir);
 
   if (isFeatureEnabled(siteVariables, 'favicon')) {
     await generateFavicons(siteVariables, distDir);

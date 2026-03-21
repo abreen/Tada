@@ -21,10 +21,6 @@ export function getPublicDir(): string {
   return path.resolve(getProjectDir(), 'public');
 }
 
-export function getFontCacheDir(): string {
-  return path.resolve(getProjectDir(), '.font-cache');
-}
-
 export function getConfigDir(): string {
   return getProjectDir();
 }

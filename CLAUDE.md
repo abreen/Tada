@@ -18,7 +18,7 @@ The runtime is Bun. Build logic lives in `build/`.
 - Build production: `tada prod` (uses `site.prod.json`)
 - Start dev web server: `tada serve`
 - Watch files: `tada watch`
-- Clean build artifacts: `tada clean` (use `--all` to also remove font cache)
+- Clean build artifacts: `tada clean`
 - Format code: `bun run format` (for Tada development only)
 - Lint: `bun run lint`
 - Typecheck: `bun run typecheck` (runs `tsc --noEmit`)
@@ -56,11 +56,10 @@ projects by `tada init` — it is not a buildable site on its own.
 Set `TADA_LOG_LEVEL` to control build log verbosity. Valid levels (most to least
 verbose): `debug`, `info`, `warn`, `error`. Default is `info`.
 
-## Caching
+## Fonts
 
-- WOFF2 fonts are cached in `.font-cache/` in the project directory
-- Cache uses SHA-256 content hashing of source TTFs for invalidation
-- `tada clean` preserves the cache; `tada clean --all` removes it
+- TTF fonts in `fonts/{family}/ttf/` are used only for favicon generation
+- WOFF2 fonts in `fonts/{family}/woff2/` are copied into site builds
 
 ## Path resolution
 
@@ -92,7 +91,7 @@ values from the active site config.
 The build (`build/pipeline.ts`) runs in phases:
 
 1. **Setup**: compile templates, initialize Shiki highlighter
-2. **Bundle + assets** (parallel): Bun-bundled CSS/JS, font generation, favicons, manifest
+2. **Bundle + assets** (parallel): Bun-bundled CSS/JS, font copying, favicons, manifest
 3. **Copy**: public/ files and non-processed content assets into `dist/`
 4. **Render**: process Markdown, HTML, and code pages into `dist/`
 5. **Post-build**: Pagefind search indexing (if enabled)

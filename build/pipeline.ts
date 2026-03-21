@@ -5,7 +5,7 @@ import { compileTemplates } from './templates.js';
 import { getDistDir, getContentDir, getPublicDir } from './utils/paths.js';
 import { isFeatureEnabled } from './features.js';
 import { bundle } from './bundle.js';
-import { generateFonts } from './generate-fonts.js';
+import { copyFonts } from './generate-fonts.js';
 import { generateFavicons } from './generate-favicon.js';
 import { generateManifest } from './generate-manifest.js';
 import { copyPublicFiles, copyContentAssets } from './copy.js';
@@ -32,9 +32,9 @@ async function runPipeline(mode: 'development' | 'production'): Promise<void> {
   await contentRenderer.initHighlighter();
 
   // Phase 2: Bundle + assets (parallel)
-  const parallelTasks: Promise<unknown>[] = [
+  const parallelTasks: (Promise<unknown> | void)[] = [
     bundle(siteVariables, { mode }),
-    generateFonts(distDir),
+    copyFonts(distDir),
   ];
 
   if (isFeatureEnabled(siteVariables, 'favicon')) {

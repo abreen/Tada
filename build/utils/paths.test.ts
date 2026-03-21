@@ -6,7 +6,6 @@ import {
   getContentDir,
   getDistDir,
   getPublicDir,
-  getFontCacheDir,
   getConfigDir,
   createApplyBasePath,
   normalizeOutputPath,
@@ -42,10 +41,6 @@ describe('directory getters', () => {
 
   test('getPublicDir ends with /public', () => {
     expect(getPublicDir()).toEndWith('/public');
-  });
-
-  test('getFontCacheDir ends with /.font-cache', () => {
-    expect(getFontCacheDir()).toEndWith('/.font-cache');
   });
 
   test('getConfigDir equals getProjectDir', () => {

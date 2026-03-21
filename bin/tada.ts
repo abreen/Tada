@@ -101,7 +101,6 @@ function printUsage() {
       continue;
     } else if (cmd === 'clean') {
       console.log('  clean              Remove the dist/ directory');
-      console.log('        [--all]        (Also remove font cache)');
       continue;
     }
     console.log(`  ${cmd.padEnd(18)} ${desc}`);
@@ -297,25 +296,13 @@ switch (command) {
     run(`bun ${path.join(packageDir, 'build/serve.ts')}`);
     break;
 
-  case 'clean': {
-    const cleanArgs = process.argv.slice(3);
-    const all = cleanArgs.includes('--all');
-
+  case 'clean':
     fs.rmSync(path.resolve(process.cwd(), 'dist'), {
       recursive: true,
       force: true,
     });
     console.log('Cleaned dist/');
-
-    if (all) {
-      fs.rmSync(path.resolve(process.cwd(), '.font-cache'), {
-        recursive: true,
-        force: true,
-      });
-      console.log('Cleaned .font-cache/');
-    }
     break;
-  }
 
   case '--version':
   case '-v':
