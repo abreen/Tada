@@ -38,6 +38,28 @@ import { ContentChangeDetector } from './content-watch.js';
 
 const WEBSOCKET_PORT = 35729;
 const DEBOUNCE_MS = 300;
+const RELOAD_CLIENT_PATH = path.resolve(
+  getPackageDir(),
+  'build/watch-reload-client.ts',
+);
+
+// Bundle the reload client separately to work around a Bun bundler bug where
+// side-effect-only JS entrypoints are tree-shaken when bundled alongside SCSS
+// entrypoints processed by a plugin.
+async function bundleReloadClient(): Promise<string[]> {
+  const result = await Bun.build({
+    entrypoints: [RELOAD_CLIENT_PATH],
+    outdir: getDistDir(),
+    naming: '[name].bundle.[ext]',
+    sourcemap: 'inline',
+  });
+  return result.outputs.map(output =>
+    path
+      .relative(getDistDir(), output.path)
+      .split(path.sep)
+      .join(path.posix.sep),
+  );
+}
 
 type ChangeCategory = 'content' | 'public' | 'src' | 'templates' | 'config';
 
@@ -187,15 +209,10 @@ async function initialBuild(): Promise<void> {
 
   await contentRenderer.initHighlighter();
 
-  // Bundle with watch-reload-client as extra entry
-  const reloadClientPath = path.resolve(
-    packageDir,
-    'build/watch-reload-client.js',
-  );
-  assetFiles = await bundle(siteVariables, {
-    mode: 'development',
-    extraEntrypoints: [reloadClientPath],
-  });
+  assetFiles = [
+    ...(await bundle(siteVariables, { mode: 'development' })),
+    ...(await bundleReloadClient()),
+  ];
 
   copyFonts(distDir);
 
@@ -299,14 +316,10 @@ async function rebuild(): Promise<void> {
       compileTemplates(siteVariables);
       await contentRenderer.initHighlighter();
 
-      const reloadClientPath = path.resolve(
-        packageDir,
-        'build/watch-reload-client.js',
-      );
-      assetFiles = await bundle(siteVariables, {
-        mode: 'development',
-        extraEntrypoints: [reloadClientPath],
-      });
+      assetFiles = [
+        ...(await bundle(siteVariables, { mode: 'development' })),
+        ...(await bundleReloadClient()),
+      ];
 
       const result = contentRenderer.processContent({ distDir, assetFiles });
       for (const err of result.errors) {
@@ -326,14 +339,10 @@ async function rebuild(): Promise<void> {
 
     // Source changed, re-bundle, then re-render all content
     if (categories.has('src')) {
-      const reloadClientPath = path.resolve(
-        packageDir,
-        'build/watch-reload-client.js',
-      );
-      assetFiles = await bundle(siteVariables, {
-        mode: 'development',
-        extraEntrypoints: [reloadClientPath],
-      });
+      assetFiles = [
+        ...(await bundle(siteVariables, { mode: 'development' })),
+        ...(await bundleReloadClient()),
+      ];
       // Force full content re-render since asset filenames may have changed
       const result = contentRenderer.processContent({ distDir, assetFiles });
       for (const err of result.errors) {

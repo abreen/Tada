@@ -77,10 +77,7 @@ function createScssPlugin(siteVariables: SiteVariables) {
 
 export async function bundle(
   siteVariables: SiteVariables,
-  {
-    mode = 'development',
-    extraEntrypoints = [],
-  }: { mode?: string; extraEntrypoints?: string[] } = {},
+  { mode = 'development' }: { mode?: string } = {},
 ): Promise<string[]> {
   const packageDir = getPackageDir();
   const distDir = getDistDir();
@@ -89,7 +86,6 @@ export async function bundle(
   const entrypoints = [
     path.resolve(packageDir, 'src/index.ts'),
     path.resolve(packageDir, 'src/critical.scss'),
-    ...extraEntrypoints,
   ];
 
   const result = await Bun.build({
