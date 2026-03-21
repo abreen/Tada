@@ -11,10 +11,11 @@ import websocket
 
 from conftest import TADA_BIN, get_free_ports
 
-REBUILD_POLL_INTERVAL = 0.5     # seconds
-REBUILD_TIMEOUT = 30            # seconds
-INITIAL_BUILD_TIMEOUT = 60      # seconds
-WEBSOCKET_TIMEOUT = 15          # seconds
+SETTLE_DELAY_SEC = 2
+REBUILD_POLL_INTERVAL_SEC = 1
+REBUILD_TIMEOUT_SEC = 30
+INITIAL_BUILD_TIMEOUT_SEC = 60
+WEBSOCKET_TIMEOUT_SEC = 15
 
 
 class WatchProcess:
@@ -44,7 +45,7 @@ class WatchProcess:
 
     def wait_for_initial_build(self):
         """Block until initial build is complete (dist/index.html exists)."""
-        deadline = time.monotonic() + INITIAL_BUILD_TIMEOUT
+        deadline = time.monotonic() + INITIAL_BUILD_TIMEOUT_SEC
         while time.monotonic() < deadline:
             if self.proc.poll() is not None:
                 raise RuntimeError(
@@ -52,9 +53,9 @@ class WatchProcess:
                 )
             if (self.dist_dir / "index.html").exists():
                 # Give a moment for the watcher to fully set up
-                time.sleep(1)
+                time.sleep(SETTLE_DELAY_SEC)
                 return
-            time.sleep(REBUILD_POLL_INTERVAL)
+            time.sleep(REBUILD_POLL_INTERVAL_SEC)
         raise TimeoutError("Initial watch build did not complete in time")
 
     def wait_for_rebuild(self, path: Path, condition="modified", before_mtime=None):
@@ -67,18 +68,18 @@ class WatchProcess:
         For 'modified', before_mtime MUST be captured by the caller BEFORE
         making the file change, to avoid a race condition.
         """
-        deadline = time.monotonic() + REBUILD_TIMEOUT
+        deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
         if condition == "exists":
             while time.monotonic() < deadline:
                 if path.exists():
                     return
-                time.sleep(REBUILD_POLL_INTERVAL)
+                time.sleep(REBUILD_POLL_INTERVAL_SEC)
             raise TimeoutError(f"File {path} was not created within timeout")
         elif condition == "removed":
             while time.monotonic() < deadline:
                 if not path.exists():
                     return
-                time.sleep(REBUILD_POLL_INTERVAL)
+                time.sleep(REBUILD_POLL_INTERVAL_SEC)
             raise TimeoutError(f"File {path} was not removed within timeout")
         elif condition == "modified":
             if before_mtime is None:
@@ -88,7 +89,7 @@ class WatchProcess:
             while time.monotonic() < deadline:
                 if path.exists() and path.stat().st_mtime > before_mtime:
                     return
-                time.sleep(REBUILD_POLL_INTERVAL)
+                time.sleep(REBUILD_POLL_INTERVAL_SEC)
             raise TimeoutError(f"File {path} was not modified within timeout")
 
     def stop(self):
@@ -239,7 +240,7 @@ class TestWatchWebSocket:
         ws_thread = threading.Thread(target=ws.run_forever, daemon=True)
         ws_thread.start()
 
-        assert connected.wait(timeout=WEBSOCKET_TIMEOUT), (
+        assert connected.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
             f"WebSocket did not connect on port {watch.ws_port}"
         )
 
@@ -248,7 +249,7 @@ class TestWatchWebSocket:
         original = index_md.read_text()
         index_md.write_text(original + "\n\nWebSocket test paragraph.\n")
 
-        assert done.wait(timeout=WEBSOCKET_TIMEOUT), (
+        assert done.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
             f"Did not receive 'reload' message; got: {messages}"
         )
         assert "reload" in messages
