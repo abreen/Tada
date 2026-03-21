@@ -2,10 +2,12 @@ import json
 import os
 import signal
 import subprocess
+import threading
 import time
 from pathlib import Path
 
 import pytest
+import websocket
 
 from conftest import TADA_BIN
 
@@ -201,3 +203,58 @@ class TestWatchConfig:
         watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
         html = index_html.read_text()
         assert "Updated Title For Test" in html
+
+
+WEBSOCKET_URL = "ws://localhost:35729"
+WEBSOCKET_TIMEOUT = 15  # seconds
+
+
+class TestWatchWebSocket:
+    def test_receives_reload_message_on_content_change(self, watch, site_dir):
+        """Connect to the watch WebSocket and verify a 'reload' message is
+        broadcast when a content file changes."""
+        messages = []
+        connected = threading.Event()
+        done = threading.Event()
+
+        def on_message(ws, message):
+            messages.append(message)
+            if message == "reload":
+                done.set()
+
+        def on_open(ws):
+            connected.set()
+
+        ws = websocket.WebSocketApp(
+            WEBSOCKET_URL,
+            on_message=on_message,
+            on_open=on_open,
+        )
+        ws_thread = threading.Thread(target=ws.run_forever, daemon=True)
+        ws_thread.start()
+
+        assert connected.wait(timeout=WEBSOCKET_TIMEOUT), (
+            "WebSocket did not connect — server may not be listening on port 35729"
+        )
+
+        # Trigger a content change
+        index_md = site_dir / "content" / "index.md"
+        original = index_md.read_text()
+        index_md.write_text(original + "\n\nWebSocket test paragraph.\n")
+
+        assert done.wait(timeout=WEBSOCKET_TIMEOUT), (
+            f"Did not receive 'reload' message; got: {messages}"
+        )
+        assert "reload" in messages
+        ws.close()
+
+    def test_watch_build_includes_reload_client(self, watch, site_dir):
+        """Watch mode must produce a non-empty watch-reload-client bundle
+        that contains the WebSocket client code."""
+        client_bundle = site_dir / "dist" / "watch-reload-client.bundle.js"
+        assert client_bundle.exists(), "watch-reload-client.bundle.js not in dist/"
+        content = client_bundle.read_text()
+        assert "WebSocket" in content, (
+            "watch-reload-client.bundle.js is empty or missing WebSocket code "
+            "(possibly tree-shaken by bundler)"
+        )
