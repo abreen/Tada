@@ -22,10 +22,16 @@ The runtime is Bun. Build logic lives in `build/`.
 - Format code: `bun run format` (for Tada development only)
 - Lint: `bun run lint`
 - Typecheck: `bun run typecheck` (runs `tsc --noEmit`)
-- Run tests: `CLAUDECODE=1 bun test`
-- Run a single test: `CLAUDECODE=1 bun test build/code.test.ts`
+- Run unit tests: `CLAUDECODE=1 bun test`
+- Run a single unit test: `CLAUDECODE=1 bun test build/code.test.ts`
+- Run functional tests: `bun run test:functional`
 
 You should use the `CLAUDECODE` env var with `bun test` to reduce output tokens.
+
+Functional tests are black-box Python/pytest tests in `functional_tests/` that
+exercise the CLI end-to-end (init, dev, prod, watch, clean). They use
+`subprocess` to run Tada and assert on exit codes, stdout, and file system state.
+Watch mode tests are slow (~10s each) due to polling for rebuilds.
 
 ## Testing locally
 
@@ -126,7 +132,19 @@ them in the bundle. Shared utilities are in `src/util.ts`.
 
 ## Content front matter
 
-Each file in `content/` starts with YAML front matter. Key fields:
+Each file in `content/` starts with front matter as plain `key: value` lines
+terminated by a blank line. **Do not use `---` delimiters** — Tada's front matter
+format is not standard YAML front matter. Example:
+
+```
+title: My Page
+author: alex
+description: A page about something.
+
+Content starts here after the blank line.
+```
+
+Key fields:
 
 - `title` (required) --- page title for `<title>` and page heading
 - `skip` --- set to `true` to skip building the page

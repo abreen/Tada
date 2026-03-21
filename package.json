@@ -23,7 +23,8 @@
     "prepare": "husky",
     "init-example": "bun run bin/tada.ts init example --default",
     "lint": "eslint src/ build/ bin/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:functional": "python3 -m pip install -q -r functional_tests/requirements.txt && python3 -m pytest functional_tests/ -v"
   },
   "engines": {
     "bun": ">=1.0.0"
