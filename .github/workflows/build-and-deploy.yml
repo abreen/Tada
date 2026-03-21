@@ -30,6 +30,24 @@ jobs:
 
     - run: bun install
 
+    - name: Unit tests
+      run: bun test
+
+    # If unit tests didn't fail, run the functional tests
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+
+    - name: Install pytest
+      run: pip install pytest
+
+    - name: Run functional tests
+      run: bun run test:functional
+
+    # Build the example site and configure for GitHub Pages
+
     - name: Initialize example site
       run: bun run init-example
 
