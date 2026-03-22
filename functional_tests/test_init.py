@@ -198,7 +198,7 @@ class TestInitInteractive:
         assert dev["defaultTimeZone"] == "America/New_York"
         assert prod["base"] == "https://school.edu"
         assert prod["basePath"] == "/my-course"
-        assert "school.edu" in prod["internalDomains"]
+        assert prod["internalDomains"] == ["school.edu"]
 
     def test_validation_reprompts(self, tmp_path):
         """An invalid answer causes a re-prompt; the next valid answer is accepted."""
