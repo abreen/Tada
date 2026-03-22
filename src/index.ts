@@ -18,7 +18,7 @@ import mountPrint from './print';
 import mountTop from './top';
 import mountAnchor from './anchor';
 import mountQuestion from './question';
-import mountTimezone from './timezone';
+import mountTimeZone from './timezone';
 import mountCode from './code';
 
 import { scheduleTask, formatDuration } from './util';
@@ -31,7 +31,7 @@ const COMPONENTS = {
   top: mountTop,
   anchor: mountAnchor,
   question: mountQuestion,
-  timezone: mountTimezone,
+  timeZone: mountTimeZone,
   code: mountCode,
 };
 

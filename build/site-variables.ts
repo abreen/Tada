@@ -4,6 +4,7 @@ import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { getProjectDir } from './utils/paths';
 import type { SiteVariables } from './types';
 import siteSchema from './site.schema.json' with { type: 'json' };
+import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 
 const configDir = getProjectDir();
 
@@ -48,6 +49,13 @@ function getSiteVariables(env: string): SiteVariables {
   }
 
   doValidation(isValid, variables, fileName);
+
+  if (!timezones.some(t => t.value === variables.defaultTimeZone)) {
+    throw new Error(
+      `${fileName}: defaultTimeZone "${variables.defaultTimeZone}" is not a valid time zone`,
+    );
+  }
+
   return variables;
 }
 

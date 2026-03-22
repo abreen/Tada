@@ -86,7 +86,7 @@ function getOffsetMinutes(tz: string, date: Date): number {
 
 // typeof guard prevents ReferenceError when tests import this module
 // without going through the bundler (which substitutes __SITE_TIMEZONES__).
-const TIMEZONES: TimezoneDef[] =
+const TIMEZONES: TimeZone[] =
   typeof __SITE_TIMEZONES__ !== 'undefined' ? __SITE_TIMEZONES__ : [];
 
 function getDefaultTimezone() {

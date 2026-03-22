@@ -7,7 +7,7 @@ interface Globals {
   readableDate: (date: string | Date | null | undefined) => string;
   classNames: (obj: Record<string, unknown>) => string;
   cx: (obj: Record<string, unknown>) => string;
-  timezoneChooser: string;
+  renderTimeZoneChooser: () => string;
 }
 
 export default function createGlobals(
@@ -17,10 +17,9 @@ export default function createGlobals(
 ): Globals {
   const defaultTz = timezones.find(
     t => t.value === siteVariables.defaultTimeZone,
-  );
-  const timezoneChooser = defaultTz
-    ? `<select class="time-zone" hidden></select><noscript>Times shown in ${defaultTz.abbreviation}.</noscript>`
-    : '<select class="time-zone" hidden></select>';
+  )!;
+  const renderTimeZoneChooser = () =>
+    `<select class="time-zone" hidden></select><noscript>Times shown in ${defaultTz.abbreviation}.</noscript>`;
 
   return {
     isHomePage: subPath === 'index',
@@ -28,7 +27,7 @@ export default function createGlobals(
     readableDate,
     classNames,
     cx: classNames,
-    timezoneChooser,
+    renderTimeZoneChooser,
   };
 }
 

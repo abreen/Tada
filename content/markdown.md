@@ -228,7 +228,7 @@ Beware of this rule.
 A time zone chooser for testing styles (see the "time zone chooser" section
 below):
 
-<%= timezoneChooser %>
+<%= renderTimeZoneChooser() %>
 
 A `<time>` element for testing styles: <time datetime="15:00">3 pm</time>
 
@@ -326,14 +326,19 @@ These features aren't Markdown-specific, but are included here for reference.
 
 Allows the user to see times in their local time zone.
 
-!!! note
-Look at the source code for this file to see how to insert it.
-!!!
+Insert the time zone chooser using Lodash templates, calling the
+`renderTimeZoneChooser()` function (made available on any page as a global):
 
-<%= timezoneChooser %>
+```
+<%= '\x3C%= renderTimeZoneChooser() %\x3E' %>
+```
 
-Wrap your times in `<time datetime="...">` elements and they will be updated
-when the user makes a time zone selection.
+To produce:
+
+<%= renderTimeZoneChooser() %>
+
+Then, wrap your times in `<time datetime="...">` elements and they will be
+updated when the user makes a time zone selection.
 
 Use
 

@@ -29,16 +29,10 @@ describe('createGlobals', () => {
     expect(g.cx).toBe(g.classNames);
   });
 
-  test('timezoneChooser includes noscript when defaultTimeZone is set', () => {
+  test('renderTimeZoneChooser includes noscript when defaultTimeZone is set', () => {
     const g = makeGlobals('index', { defaultTimeZone: 'America/New_York' });
-    expect(g.timezoneChooser).toContain('noscript');
-    expect(g.timezoneChooser).toContain('select');
-  });
-
-  test('timezoneChooser has no noscript when defaultTimeZone is not in list', () => {
-    const g = makeGlobals('index', { defaultTimeZone: 'Nonexistent/Zone' });
-    expect(g.timezoneChooser).toContain('select');
-    expect(g.timezoneChooser).not.toContain('noscript');
+    expect(g.renderTimeZoneChooser()).toContain('noscript');
+    expect(g.renderTimeZoneChooser()).toContain('select');
   });
 });
 

@@ -2,7 +2,7 @@ title: Lectures
 author: alex
 description: An example page for <%= site.title %>.
 
-<%= timezoneChooser %>
+<%= renderTimeZoneChooser() %>
 
 One-hour lectures are held weekly at <time datetime="17:40">5:40 PM</time>.
 Each lecture is recorded and made available by password-protected link.
