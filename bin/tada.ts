@@ -541,7 +541,7 @@ switch (command) {
         copyChangedFiles(diff, newDistDir, resolvedOutDir);
 
         const copiedCount = diff.added.length + diff.changed.length;
-        console.log(`\nCopied ${copiedCount} file(s) to ${outDirArg}/`);
+        console.log(`\nCopied ${copiedCount} file(s) to ${outDirArg}`);
 
         if (diff.removed.length > 0) {
           console.log(
