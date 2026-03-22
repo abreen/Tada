@@ -117,7 +117,7 @@ class TestInitNoInteractiveFlags:
         assert result.returncode == 0
         config = json.loads((tmp_path / "testsite" / "site.prod.json").read_text())
         assert config["base"] == "https://myschool.edu"
-        assert "myschool.edu" in config["internalDomains"]
+        assert config["internalDomains"] == ["myschool.edu"]
 
     def test_title_flag(self, tmp_path):
         result = run_tada(
