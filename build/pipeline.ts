@@ -1,18 +1,18 @@
 #!/usr/bin/env bun
 import fs from 'fs';
-import { getDevSiteVariables, getProdSiteVariables } from './site-variables.js';
-import { compileTemplates } from './templates.js';
-import { getDistDir, getContentDir, getPublicDir } from './utils/paths.js';
-import { isFeatureEnabled } from './features.js';
-import { bundle } from './bundle.js';
-import { copyFonts } from './generate-fonts.js';
-import { generateFavicons } from './generate-favicon.js';
-import { generateManifest } from './generate-manifest.js';
-import { copyPublicFiles, copyContentAssets } from './copy.js';
-import { getProcessedExtensions } from './utils/file-types.js';
-import { ContentRenderer } from './generate-content-assets.js';
-import { runPagefind } from './pagefind.js';
-import { makeLogger, printFlair } from './log.js';
+import { getDevSiteVariables, getProdSiteVariables } from './site-variables';
+import { compileTemplates } from './templates';
+import { getDistDir, getContentDir, getPublicDir } from './utils/paths';
+import { isFeatureEnabled } from './features';
+import { bundle } from './bundle';
+import { copyFonts } from './generate-fonts';
+import { generateFavicons } from './generate-favicon';
+import { generateManifest } from './generate-manifest';
+import { copyPublicFiles, copyContentAssets } from './copy';
+import { getProcessedExtensions } from './utils/file-types';
+import { ContentRenderer } from './generate-content-assets';
+import { runPagefind } from './pagefind';
+import { makeLogger, printFlair } from './log';
 
 const log = makeLogger(__filename);
 

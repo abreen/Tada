@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { getPackageDir } from './utils/paths.js';
-import { makeLogger } from './log.js';
+import { getPackageDir } from './utils/paths';
+import { makeLogger } from './log';
 
 const log = makeLogger(__filename);
 const FONTS_DIR = path.join(getPackageDir(), 'fonts');

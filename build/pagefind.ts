@@ -1,13 +1,13 @@
 import path from 'path';
-import { makeLogger } from './log.js';
-import { collectReachableSiteAssets } from './reachability.js';
+import { makeLogger } from './log';
+import { collectReachableSiteAssets } from './reachability';
 import {
   getContentDir,
   getFilesByExtensions,
   normalizeOutputPath,
-} from './util.js';
-import { assertMutoolAvailable, extractPdfPages } from './pdf-text.js';
-import type { SiteVariables } from './types.js';
+} from './util';
+import { assertMutoolAvailable, extractPdfPages } from './pdf-text';
+import type { SiteVariables } from './types';
 
 const log = makeLogger(__filename);
 const PAGEFIND_VERBOSE = process.env.TADA_LOG_LEVEL === 'debug';

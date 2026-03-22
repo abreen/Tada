@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { compile, doValidation } from './json-schema.js';
+import { compile, doValidation } from './json-schema';
 
 const schema = {
   type: 'object',

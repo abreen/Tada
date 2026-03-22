@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import MarkdownIt from 'markdown-it';
 import deflist from 'markdown-it-deflist';
-import applyBasePathPlugin from './apply-base-path-plugin.js';
-import deflistIdPlugin from './deflist-id-plugin.js';
-import externalLinksPlugin from './external-links-plugin.js';
-import headingSubtitlePlugin from './heading-subtitle-plugin.js';
-import { createMarkdown } from './utils/markdown.js';
-import { stripHtmlComments } from './utils/render.js';
-import type { SiteVariables } from './types.js';
+import applyBasePathPlugin from './apply-base-path-plugin';
+import deflistIdPlugin from './deflist-id-plugin';
+import externalLinksPlugin from './external-links-plugin';
+import headingSubtitlePlugin from './heading-subtitle-plugin';
+import { createMarkdown } from './utils/markdown';
+import { stripHtmlComments } from './utils/render';
+import type { SiteVariables } from './types';
 
 describe('apply-base-path-plugin', () => {
   test('rewrites internal links, images, and raw html sources', () => {

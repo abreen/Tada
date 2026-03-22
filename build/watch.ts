@@ -4,37 +4,37 @@ import { fork } from 'child_process';
 import path from 'path';
 import chokidar from 'chokidar';
 import WebSocket, { WebSocketServer } from 'ws';
-import type { SiteVariables, WatchState } from './types.js';
-import { B } from './colors.js';
-import { makeLogger, printFlair } from './log.js';
-import { getDevSiteVariables } from './site-variables.js';
+import type { SiteVariables, WatchState } from './types';
+import { B } from './colors';
+import { makeLogger, printFlair } from './log';
+import { getDevSiteVariables } from './site-variables';
 import {
   compileTemplates,
   getHtmlTemplatesDir,
   getJsonDataDir,
   JSON_DATA_FILES,
-} from './templates.js';
+} from './templates';
 import {
   getContentDir,
   getPublicDir,
   getDistDir,
   getPackageDir,
-} from './utils/paths.js';
-import { isFeatureEnabled } from './features.js';
-import { bundle } from './bundle.js';
-import { copyFonts } from './generate-fonts.js';
-import { generateFavicons } from './generate-favicon.js';
-import { generateManifest } from './generate-manifest.js';
+} from './utils/paths';
+import { isFeatureEnabled } from './features';
+import { bundle } from './bundle';
+import { copyFonts } from './generate-fonts';
+import { generateFavicons } from './generate-favicon';
+import { generateManifest } from './generate-manifest';
 import {
   copyPublicFiles,
   copyContentAssets,
   copyContentFile,
   copyPublicFile,
-} from './copy.js';
-import { getProcessedExtensions } from './utils/file-types.js';
-import { ContentRenderer } from './generate-content-assets.js';
-import { WatchPagefindRunner } from './pagefind.js';
-import { ContentChangeDetector } from './content-watch.js';
+} from './copy';
+import { getProcessedExtensions } from './utils/file-types';
+import { ContentRenderer } from './generate-content-assets';
+import { WatchPagefindRunner } from './pagefind';
+import { ContentChangeDetector } from './content-watch';
 
 function getArg(name: string): number | null {
   const idx = process.argv.indexOf(name);

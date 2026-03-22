@@ -1,12 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import { parseFrontMatterAndContent } from './front-matter.js';
+import { parseFrontMatterAndContent } from './front-matter';
 import {
   getProcessedExtensions,
   extensionIsMarkdown,
   isLiterateJava,
-} from './file-types.js';
-import { getPublicDir, normalizeOutputPath } from './paths.js';
+} from './file-types';
+import { getPublicDir, normalizeOutputPath } from './paths';
 
 function walkFiles(dir: string): string[] {
   return fs.readdirSync(dir).flatMap(file => {

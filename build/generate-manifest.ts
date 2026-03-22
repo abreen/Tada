@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { createApplyBasePath } from './util.js';
-import type { SiteVariables } from './types.js';
+import { createApplyBasePath } from './util';
+import type { SiteVariables } from './types';
 
 interface ManifestIcon {
   src: string;

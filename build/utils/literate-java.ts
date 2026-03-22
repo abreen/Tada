@@ -2,15 +2,15 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { execSync } from 'child_process';
-import { createMarkdown } from './markdown.js';
-import { makeLogger } from '../log.js';
-import { parseFrontMatterAndContent } from './front-matter.js';
+import { createMarkdown } from './markdown';
+import { makeLogger } from '../log';
+import { parseFrontMatterAndContent } from './front-matter';
 import type {
   SiteVariables,
   LiterateJavaParseResult,
   LiterateCodeBlock,
   LiterateRunnerEntry,
-} from '../types.js';
+} from '../types';
 
 const log = makeLogger(__filename);
 

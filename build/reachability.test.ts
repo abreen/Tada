@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   collectDirectSiteAssetLinks,
   collectReachableSiteAssets,
-} from './reachability.js';
+} from './reachability';
 
 describe('reachability', () => {
   test('collectDirectSiteAssetLinks resolves relative links and ignores excluded links', () => {

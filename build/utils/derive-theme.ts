@@ -1,6 +1,6 @@
 import { parse, oklch, rgb, toGamut, formatHex } from 'culori';
 import type { Oklch, Rgb } from 'culori';
-import type { DerivedTheme } from '../types.js';
+import type { DerivedTheme } from '../types';
 
 // OKLCH lightness range for the theme color used as backgrounds/outlines
 const LIGHT_THEME_L_MIN = 0.35;

@@ -9,8 +9,8 @@ import {
   getConfigDir,
   createApplyBasePath,
   normalizeOutputPath,
-} from './paths.js';
-import type { SiteVariables } from '../types.js';
+} from './paths';
+import type { SiteVariables } from '../types';
 
 describe('getPackageDir', () => {
   test('returns an absolute path', () => {

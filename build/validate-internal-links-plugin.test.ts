@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import MarkdownIt from 'markdown-it';
-import validateInternalLinks from './validate-internal-links-plugin.js';
+import validateInternalLinks from './validate-internal-links-plugin';
 
 function createMd(
   validTargets: string[],

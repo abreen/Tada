@@ -3,7 +3,7 @@ import {
   getProcessedExtensions,
   extensionIsMarkdown,
   isLiterateJava,
-} from './file-types.js';
+} from './file-types';
 
 describe('getProcessedExtensions', () => {
   test('includes md, markdown, html, and custom extensions', () => {

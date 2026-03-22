@@ -2,32 +2,28 @@ import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
 import { stripHtml } from 'string-strip-html';
-import { isFeatureEnabled } from '../features.js';
-import { makeLogger } from '../log.js';
-import { B } from '../colors.js';
-import createGlobals from '../globals.js';
-import { render, json } from '../templates.js';
+import { isFeatureEnabled } from '../features';
+import { makeLogger } from '../log';
+import { B } from '../colors';
+import createGlobals from '../globals';
+import { render, json } from '../templates';
 import {
   extractJavaMethodToc,
   renderCodeSegment,
   renderCodeWithComments,
-} from './code.js';
-import { extensionIsMarkdown } from './file-types.js';
-import {
-  createApplyBasePath,
-  normalizeOutputPath,
-  getDistDir,
-} from './paths.js';
-import { parseFrontMatterAndContent } from './front-matter.js';
-import { createMarkdown } from './markdown.js';
-import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin.js';
+} from './code';
+import { extensionIsMarkdown } from './file-types';
+import { createApplyBasePath, normalizeOutputPath, getDistDir } from './paths';
+import { parseFrontMatterAndContent } from './front-matter';
+import { createMarkdown } from './markdown';
+import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
 import {
   parseLiterateJava,
   hasMainMethod,
   deriveClassName,
   compileJavaSource,
   executeLiterateJava,
-} from './literate-java.js';
+} from './literate-java';
 import type {
   Asset,
   SiteVariables,
@@ -35,7 +31,7 @@ import type {
   RenderCodePageOptions,
   RenderLiterateJavaOptions,
   RenderCopiedContentOptions,
-} from '../types.js';
+} from '../types';
 
 const log = makeLogger(__filename);
 

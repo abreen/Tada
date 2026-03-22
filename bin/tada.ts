@@ -11,7 +11,7 @@ import {
   validateUrl,
   validateBasePath,
   createSiteConfig,
-} from './validators.js';
+} from './validators';
 
 const { version } = packageJson;
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { generateTocHtml, generateCodeTocHtml } from './toc-plugin.js';
-import type { JavaTocEntry } from './types.js';
+import { generateTocHtml, generateCodeTocHtml } from './toc-plugin';
+import type { JavaTocEntry } from './types';
 
 describe('generateTocHtml', () => {
   test('returns empty string for empty array', () => {

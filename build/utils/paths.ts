@@ -1,5 +1,5 @@
 import path from 'path';
-import type { SiteVariables } from '../types.js';
+import type { SiteVariables } from '../types';
 
 export function getPackageDir(): string {
   return path.resolve(__dirname, '..', '..');

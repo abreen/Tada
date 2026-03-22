@@ -1,15 +1,15 @@
 import path from 'path';
-import type { SiteVariables } from './types.js';
-import { getContentDir, getBuildContentFiles } from './util.js';
+import type { SiteVariables } from './types';
+import { getContentDir, getBuildContentFiles } from './util';
 import {
   compileTemplates,
   getHtmlTemplatesDir,
   getJsonDataDir,
   JSON_DATA_FILES,
-} from './templates.js';
-import { getProjectDir } from './utils/paths.js';
-import { B } from './colors.js';
-import { makeLogger } from './log.js';
+} from './templates';
+import { getProjectDir } from './utils/paths';
+import { B } from './colors';
+import { makeLogger } from './log';
 
 const log = makeLogger(__filename);
 

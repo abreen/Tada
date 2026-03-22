@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { collectReachableSiteAssets } from './reachability.js';
-import WatchReachabilityState from './watch-reachability-state.js';
+import { collectReachableSiteAssets } from './reachability';
+import WatchReachabilityState from './watch-reachability-state';
 
 function createReader(htmlByPath: Map<string, string>) {
   const calls: string[] = [];

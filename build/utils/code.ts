@@ -1,11 +1,11 @@
 import MarkdownIt from 'markdown-it';
 import { parse as parseJava } from 'java-parser';
 import { JSDOM } from 'jsdom';
-import { makeLogger } from '../log.js';
-import { getHighlighter } from './shiki-highlighter.js';
-import externalLinksPlugin from '../external-links-plugin.js';
-import applyBasePathPlugin from '../apply-base-path-plugin.js';
-import type { JavaTocEntry, SiteVariables } from '../types.js';
+import { makeLogger } from '../log';
+import { getHighlighter } from './shiki-highlighter';
+import externalLinksPlugin from '../external-links-plugin';
+import applyBasePathPlugin from '../apply-base-path-plugin';
+import type { JavaTocEntry, SiteVariables } from '../types';
 
 interface CstNode {
   name?: string;

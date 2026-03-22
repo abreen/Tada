@@ -1,5 +1,5 @@
 import type MarkdownIt from 'markdown-it';
-import textToId from './text-to-id.js';
+import textToId from './text-to-id';
 
 export default function deflistIdPlugin(md: MarkdownIt): void {
   md.core.ruler.push('deflist_id_injector', function (state) {

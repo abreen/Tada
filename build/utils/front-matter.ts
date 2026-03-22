@@ -1,6 +1,6 @@
 import fm from 'front-matter';
-import { extensionIsMarkdown } from './file-types.js';
-import type { ParsedContent } from '../types.js';
+import { extensionIsMarkdown } from './file-types';
+import type { ParsedContent } from '../types';
 
 interface RawParsedFrontMatter {
   frontMatter: string | null;

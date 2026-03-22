@@ -1,11 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
-import { compile as compileJsonSchema, doValidation } from './json-schema.js';
-import { makeLogger } from './log.js';
-import { getPackageDir, getConfigDir } from './utils/paths.js';
+import { compile as compileJsonSchema, doValidation } from './json-schema';
+import { makeLogger } from './log';
+import { getPackageDir, getConfigDir } from './utils/paths';
 import type { ValidateFunction } from 'ajv';
-import type { Logger, SiteVariables } from './types.js';
+import type { Logger, SiteVariables } from './types';
 
 const log: Logger = makeLogger(__filename);
 

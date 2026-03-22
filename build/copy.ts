@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { makeLogger } from './log.js';
-import { B } from './colors.js';
+import { makeLogger } from './log';
+import { B } from './colors';
 
 const log = makeLogger(__filename);
 

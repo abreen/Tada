@@ -7,15 +7,15 @@ import markdownItAnchor from 'markdown-it-anchor';
 import markdownItFootnote from 'markdown-it-footnote';
 import markdownItDeflist from 'markdown-it-deflist';
 import markdownItContainer from 'markdown-it-container';
-import textToId from '../text-to-id.js';
-import { getHighlighter } from './shiki-highlighter.js';
-import headingSubtitlePlugin from '../heading-subtitle-plugin.js';
-import deflistIdPlugin from '../deflist-id-plugin.js';
-import externalLinksPlugin from '../external-links-plugin.js';
-import validateInternalLinksPlugin from '../validate-internal-links-plugin.js';
-import applyBasePathPlugin from '../apply-base-path-plugin.js';
-import { tocPlugin } from '../toc-plugin.js';
-import type { SiteVariables } from '../types.js';
+import textToId from '../text-to-id';
+import { getHighlighter } from './shiki-highlighter';
+import headingSubtitlePlugin from '../heading-subtitle-plugin';
+import deflistIdPlugin from '../deflist-id-plugin';
+import externalLinksPlugin from '../external-links-plugin';
+import validateInternalLinksPlugin from '../validate-internal-links-plugin';
+import applyBasePathPlugin from '../apply-base-path-plugin';
+import { tocPlugin } from '../toc-plugin';
+import type { SiteVariables } from '../types';
 
 interface CreateMarkdownOptions {
   validatorOptions?: Record<string, unknown>;

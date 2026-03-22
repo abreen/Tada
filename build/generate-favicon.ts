@@ -3,10 +3,10 @@ import path from 'path';
 import * as fontkit from 'fontkit';
 import sharp from 'sharp';
 import pngToIco from 'png-to-ico';
-import { makeLogger } from './log.js';
-import { getPackageDir } from './utils/paths.js';
-import { deriveTheme } from './utils/derive-theme.js';
-import type { SiteVariables } from './types.js';
+import { makeLogger } from './log';
+import { getPackageDir } from './utils/paths';
+import { deriveTheme } from './utils/derive-theme';
+import type { SiteVariables } from './types';
 
 const log = makeLogger(__filename);
 

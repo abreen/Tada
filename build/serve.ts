@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { getDistDir } from './util.js';
-import { makeLogger } from './log.js';
-import { B } from './colors.js';
+import { getDistDir } from './util';
+import { makeLogger } from './log';
+import { B } from './colors';
 
 const log = makeLogger(__filename);
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { SiteConfigInput } from '../build/types.js';
+import type { SiteConfigInput } from '../build/types';
 import {
   validateSymbol,
   validateColor,
@@ -7,7 +7,7 @@ import {
   validateUrl,
   validateBasePath,
   createSiteConfig,
-} from './validators.js';
+} from './validators';
 
 describe('validateSymbol', () => {
   test('accepts a single uppercase letter', () => {

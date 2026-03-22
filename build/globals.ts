@@ -1,5 +1,5 @@
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
-import type { SiteVariables } from './types.js';
+import type { SiteVariables } from './types';
 
 interface Globals {
   isHomePage: boolean;

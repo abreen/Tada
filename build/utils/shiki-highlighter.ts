@@ -1,5 +1,5 @@
 import type { HighlighterGeneric, BundledLanguage, BundledTheme } from 'shiki';
-import { makeLogger } from '../log.js';
+import { makeLogger } from '../log';
 
 const log = makeLogger(__filename);
 

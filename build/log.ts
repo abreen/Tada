@@ -1,7 +1,7 @@
 import { inspect } from 'node:util';
 import path from 'path';
-import { Gi, L, Ri, P, Yi, Li } from './colors.js';
-import type { Logger } from './types.js';
+import { Gi, L, Ri, P, Yi, Li } from './colors';
+import type { Logger } from './types';
 import FLAIR_STRINGS from './flair.json' with { type: 'json' };
 
 const LEVELS = ['debug', 'info', 'warn', 'error'] as const;

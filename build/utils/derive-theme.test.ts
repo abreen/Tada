@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { parse, oklch } from 'culori';
-import { deriveTheme, getTextOnColor } from './derive-theme.js';
+import { deriveTheme, getTextOnColor } from './derive-theme';
 
 function getL(hex: string): number {
   return oklch(parse(hex))!.l;

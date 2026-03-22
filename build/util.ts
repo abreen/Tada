@@ -4,9 +4,9 @@ export {
   getFilesByExtensions,
   getValidInternalTargets,
   shouldSkipContentFile,
-} from './utils/content-files.js';
-export { extensionIsMarkdown } from './utils/file-types.js';
-export { createMarkdown } from './utils/markdown.js';
+} from './utils/content-files';
+export { extensionIsMarkdown } from './utils/file-types';
+export { createMarkdown } from './utils/markdown';
 export {
   createApplyBasePath,
   getContentDir,
@@ -15,12 +15,12 @@ export {
   getProjectDir,
   getPublicDir,
   normalizeOutputPath,
-} from './utils/paths.js';
+} from './utils/paths';
 export {
   injectAssetTags,
   renderCodePageAsset,
   renderCopiedContentAsset,
   renderLiterateJavaPageAsset,
   renderPlainTextPageAsset,
-} from './utils/render.js';
-export { parseFrontMatter } from './utils/front-matter.js';
+} from './utils/render';
+export { parseFrontMatter } from './utils/front-matter';

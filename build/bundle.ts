@@ -3,10 +3,10 @@ import os from 'os';
 import path from 'path';
 import _ from 'lodash';
 import * as sass from 'sass';
-import { getPackageDir, getProjectDir, getDistDir } from './utils/paths.js';
-import { deriveTheme } from './utils/derive-theme.js';
+import { getPackageDir, getProjectDir, getDistDir } from './utils/paths';
+import { deriveTheme } from './utils/derive-theme';
 import type { PluginBuilder } from 'bun';
-import type { SiteVariables } from './types.js';
+import type { SiteVariables } from './types';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 
 function renderThemeScss(siteVariables: SiteVariables): string {

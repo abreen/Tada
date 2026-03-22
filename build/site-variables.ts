@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { compile as compileJsonSchema, doValidation } from './json-schema.js';
-import { getProjectDir } from './utils/paths.js';
-import type { SiteVariables } from './types.js';
+import { compile as compileJsonSchema, doValidation } from './json-schema';
+import { getProjectDir } from './utils/paths';
+import type { SiteVariables } from './types';
 import siteSchema from './site.schema.json' with { type: 'json' };
 
 const configDir = getProjectDir();

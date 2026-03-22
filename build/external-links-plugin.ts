@@ -1,7 +1,7 @@
 import type MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
-import { makeLogger } from './log.js';
-import type { SiteVariables } from './types.js';
+import { makeLogger } from './log';
+import type { SiteVariables } from './types';
 
 const log = makeLogger(__filename);
 

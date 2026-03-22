@@ -1,4 +1,4 @@
-import type { SiteConfigInput, SiteVariables } from '../build/types.js';
+import type { SiteConfigInput, SiteVariables } from '../build/types';
 
 export function validateSymbol(value: string): string | null {
   if (!value) {

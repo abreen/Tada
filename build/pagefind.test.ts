@@ -1,7 +1,7 @@
 import path from 'path';
 import { describe, expect, test } from 'bun:test';
-import { buildIndex, collectIndexTargets } from './pagefind.js';
-import type { SiteVariables } from './types.js';
+import { buildIndex, collectIndexTargets } from './pagefind';
+import type { SiteVariables } from './types';
 
 interface FakePagefindCalls {
   htmlFiles?: { sourcePath: string; content: string }[];

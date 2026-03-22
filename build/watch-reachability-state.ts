@@ -1,4 +1,4 @@
-import { collectDirectSiteAssetLinks } from './reachability.js';
+import { collectDirectSiteAssetLinks } from './reachability';
 
 type ReadHtmlForAsset = (assetPath: string) => string;
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { makeLogger, getFlair } from './log.js';
+import { makeLogger, getFlair } from './log';
 
 function captureOutput(fn: () => void): { stdout: string; stderr: string } {
   let stdout = '';

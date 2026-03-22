@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeAll } from 'bun:test';
-import { initHighlighter } from './utils/shiki-highlighter.js';
-import { renderCodeWithComments, extractJavaMethodToc } from './utils/code.js';
-import type { SiteVariables } from './types.js';
+import { initHighlighter } from './utils/shiki-highlighter';
+import { renderCodeWithComments, extractJavaMethodToc } from './utils/code';
+import type { SiteVariables } from './types';
 
 beforeAll(async () => {
   await initHighlighter(['java', 'text', 'plaintext']);

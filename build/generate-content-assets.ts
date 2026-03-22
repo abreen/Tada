@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { makeLogger } from './log.js';
-import { isFeatureEnabled } from './features.js';
-import { initHighlighter } from './utils/shiki-highlighter.js';
+import { makeLogger } from './log';
+import { isFeatureEnabled } from './features';
+import { initHighlighter } from './utils/shiki-highlighter';
 import {
   getBuildContentFiles,
   getContentDir,
@@ -11,16 +11,16 @@ import {
   renderCopiedContentAsset,
   renderLiterateJavaPageAsset,
   renderPlainTextPageAsset,
-} from './util.js';
-import { isLiterateJava } from './utils/file-types.js';
-import { checkJavac } from './utils/literate-java.js';
+} from './util';
+import { isLiterateJava } from './utils/file-types';
+import { checkJavac } from './utils/literate-java';
 import type {
   SiteVariables,
   Asset,
   ContentRenderOptions,
   ContentRenderResult,
   WatchState,
-} from './types.js';
+} from './types';
 
 const log = makeLogger(__filename);
 

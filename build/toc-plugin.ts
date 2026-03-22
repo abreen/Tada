@@ -1,6 +1,6 @@
 import type MarkdownIt from 'markdown-it';
 import { convertMarkdown as curlyQuote } from 'quote-quote';
-import type { JavaTocEntry } from './types.js';
+import type { JavaTocEntry } from './types';
 
 interface HeadingItem {
   kind: 'heading';

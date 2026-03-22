@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  parseFrontMatterAndContent,
-  parseFrontMatter,
-} from './front-matter.js';
+import { parseFrontMatterAndContent, parseFrontMatter } from './front-matter';
 
 describe('parseFrontMatter', () => {
   test('parses markdown front matter separated by blank line', () => {

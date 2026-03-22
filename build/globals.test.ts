@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import createGlobals from './globals.js';
-import type { SiteVariables } from './types.js';
+import createGlobals from './globals';
+import type { SiteVariables } from './types';
 
 const baseSite: SiteVariables = {
   base: 'http://localhost:8080',
