@@ -2,7 +2,12 @@
 import fs from 'fs';
 import { getDevSiteVariables, getProdSiteVariables } from './site-variables';
 import { compileTemplates } from './templates';
-import { getDistDir, getContentDir, getPublicDir } from './utils/paths';
+import {
+  getDistDir,
+  getProdDistDir,
+  getContentDir,
+  getPublicDir,
+} from './utils/paths';
 import { isFeatureEnabled } from './features';
 import { bundle } from './bundle';
 import { copyFonts } from './generate-fonts';
@@ -13,13 +18,25 @@ import { getProcessedExtensions } from './utils/file-types';
 import { ContentRenderer } from './generate-content-assets';
 import { runPagefind } from './pagefind';
 import { makeLogger, printFlair } from './log';
+import { generateBuildManifest, getNextVersion } from './build-manifest';
+import path from 'path';
 
 const log = makeLogger(__filename);
 
 async function runPipeline(mode: 'development' | 'production'): Promise<void> {
   const isDev = mode === 'development';
   const siteVariables = isDev ? getDevSiteVariables() : getProdSiteVariables();
-  const distDir = getDistDir();
+  let distDir: string;
+  let prodVersion: number | undefined;
+
+  if (isDev) {
+    distDir = getDistDir();
+  } else {
+    const prodBase = getProdDistDir();
+    prodVersion = getNextVersion(prodBase);
+    distDir = path.join(prodBase, `v${prodVersion}`);
+  }
+
   const contentDir = getContentDir();
   const publicDir = getPublicDir();
 
@@ -33,7 +50,7 @@ async function runPipeline(mode: 'development' | 'production'): Promise<void> {
 
   // Phase 2: Bundle + assets (parallel)
   const parallelTasks: (Promise<unknown> | void)[] = [
-    bundle(siteVariables, { mode }),
+    bundle(siteVariables, { mode, distDir }),
     copyFonts(distDir),
   ];
 
@@ -70,6 +87,14 @@ async function runPipeline(mode: 'development' | 'production'): Promise<void> {
   // Phase 4: Post-processing
   if (isFeatureEnabled(siteVariables, 'search')) {
     await runPagefind({ siteVariables, distPath: distDir, htmlAssetsByPath });
+  }
+
+  // Phase 5: Build manifest (production only)
+  if (!isDev && prodVersion !== undefined) {
+    const prodBase = getProdDistDir();
+    const manifestPath = path.join(prodBase, `v${prodVersion}.manifest.json`);
+    await generateBuildManifest(distDir, manifestPath);
+    log.info`Built v${prodVersion} → dist-prod/v${prodVersion}/`;
   }
 
   printFlair();
