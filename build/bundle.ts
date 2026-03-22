@@ -46,16 +46,12 @@ function createDefine(
   isDev = false,
 ): Record<string, string> {
   return {
-    'window.siteVariables.base': JSON.stringify(siteVariables.base),
-    'window.siteVariables.basePath': JSON.stringify(siteVariables.basePath),
-    'window.siteVariables.titlePostfix': JSON.stringify(
-      siteVariables.titlePostfix,
-    ),
-    'window.siteVariables.defaultTimeZone': JSON.stringify(
-      siteVariables.defaultTimeZone,
-    ),
-    'window.siteVariables.timezones': JSON.stringify(timezones),
-    'window.IS_DEV': JSON.stringify(isDev),
+    __SITE_BASE__: JSON.stringify(siteVariables.base),
+    __SITE_BASE_PATH__: JSON.stringify(siteVariables.basePath),
+    __SITE_TITLE_POSTFIX__: JSON.stringify(siteVariables.titlePostfix),
+    __SITE_DEFAULT_TIMEZONE__: JSON.stringify(siteVariables.defaultTimeZone),
+    __SITE_TIMEZONES__: JSON.stringify(timezones),
+    __IS_DEV__: JSON.stringify(isDev),
   };
 }
 

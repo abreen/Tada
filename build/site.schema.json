@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "required": ["defaultTimeZone"],
+  "required": ["base", "title", "defaultTimeZone"],
   "properties": {
     "features": {
       "type": "object",
@@ -27,7 +27,6 @@
     "title": { "type": "string" },
     "symbol": { "type": "string", "pattern": "^[A-Z0-9\\- ]{1,5}$" },
     "titlePostfix": { "type": "string" },
-    "courseId": { "type": "string" },
     "themeColor": { "type": "string" },
     "tintHue": {
       "type": "integer",

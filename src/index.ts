@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error(`Failed to mount ${name} component:`, reason);
   }
 
-  if (window.IS_DEV) {
+  if (__IS_DEV__) {
     const diff = window.performance.now() - startTime;
     console.info(`Components mounted in ${formatDuration(diff)}`);
   }

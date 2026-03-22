@@ -129,7 +129,7 @@ async function doSearch(state: State) {
   const slice = search.results.slice(0, MAX_RESULTS);
   const data = await Promise.all(slice.map(r => r.data()));
 
-  const titlePostfix = window.siteVariables.titlePostfix ?? '';
+  const titlePostfix = __SITE_TITLE_POSTFIX__;
   const results: Result[] = data.map((d: PagefindResult) => {
     let title: string = d.meta?.title ?? d.url;
     if (titlePostfix && title.endsWith(titlePostfix)) {

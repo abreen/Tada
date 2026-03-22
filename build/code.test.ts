@@ -149,6 +149,9 @@ describe('renderCodeWithComments', () => {
       base: '',
       basePath: '/',
       internalDomains: [],
+      title: 'Test',
+      titlePostfix: ' - Test',
+      defaultTimeZone: 'America/New_York',
     } as SiteVariables);
 
     expect(html).toContain('<span class="code-row">');

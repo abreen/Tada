@@ -34,7 +34,7 @@ export function applyBasePath(subPath: string): string {
     throw new Error('invalid internal path, must start with "/": ' + subPath);
   }
 
-  let path = window.siteVariables.basePath || '/';
+  let path = __SITE_BASE_PATH__;
   if (path.endsWith('/')) {
     path = path.slice(0, -1);
   }

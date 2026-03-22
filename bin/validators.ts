@@ -69,6 +69,7 @@ export function createSiteConfig({
 }: SiteConfigInput): SiteVariables {
   return {
     title,
+    titlePostfix: ` - ${title}`,
     symbol,
     features,
     base,

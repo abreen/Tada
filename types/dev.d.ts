@@ -1,3 +1,1 @@
-interface Window {
-  IS_DEV: boolean | undefined;
-}
+declare const __IS_DEV__: boolean;

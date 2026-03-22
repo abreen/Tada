@@ -2,16 +2,15 @@
 export interface SiteVariables {
   base: string;
   basePath: string;
-  title?: string;
-  titlePostfix?: string;
+  title: string;
+  titlePostfix: string;
   symbol?: string;
   faviconSymbol?: string;
-  courseId?: string;
   themeColor?: string;
   faviconColor?: string;
   faviconFontWeight?: number;
   internalDomains?: string[];
-  defaultTimeZone?: string;
+  defaultTimeZone: string;
   features?: FeatureConfig;
   codeLanguages?: Record<string, string>;
   tintHue?: number;

@@ -5,6 +5,9 @@ import type { SiteVariables } from './types';
 const baseSite: SiteVariables = {
   base: 'http://localhost:8080',
   basePath: '/',
+  title: 'Test',
+  titlePostfix: ' - Test',
+  defaultTimeZone: 'America/New_York',
 };
 
 function makeGlobals(subPath = 'index', site: Partial<SiteVariables> = {}) {
@@ -32,8 +35,8 @@ describe('createGlobals', () => {
     expect(g.timezoneChooser).toContain('select');
   });
 
-  test('timezoneChooser has no noscript when defaultTimeZone is not set', () => {
-    const g = makeGlobals('index');
+  test('timezoneChooser has no noscript when defaultTimeZone is not in list', () => {
+    const g = makeGlobals('index', { defaultTimeZone: 'Nonexistent/Zone' });
     expect(g.timezoneChooser).toContain('select');
     expect(g.timezoneChooser).not.toContain('noscript');
   });

@@ -84,14 +84,13 @@ function getOffsetMinutes(tz: string, date: Date): number {
   return (utcTs - date.getTime()) / 60000;
 }
 
-// window.siteVariables.timezones is replaced by DefinePlugin at build time.
-// The typeof guard prevents a ReferenceError in test environments where
-// window is not defined.
+// typeof guard prevents ReferenceError when tests import this module
+// without going through the bundler (which substitutes __SITE_TIMEZONES__).
 const TIMEZONES: TimezoneDef[] =
-  typeof window !== 'undefined' ? window.siteVariables.timezones : [];
+  typeof __SITE_TIMEZONES__ !== 'undefined' ? __SITE_TIMEZONES__ : [];
 
 function getDefaultTimezone() {
-  const value = window.siteVariables.defaultTimeZone;
+  const value = __SITE_DEFAULT_TIMEZONE__;
   return TIMEZONES.find(tz => tz.value === value)!;
 }
 

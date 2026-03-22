@@ -146,6 +146,9 @@ describe('custom markdown containers', () => {
         internalDomains: [],
         codeLanguages: {},
         features: { search: true, code: true, favicon: false },
+        title: 'Test',
+        titlePostfix: ' - Test',
+        defaultTimeZone: 'America/New_York',
       } as SiteVariables,
       { validatorOptions: { enabled: false } },
     );
@@ -242,6 +245,9 @@ describe('hidden_fence rule', () => {
         internalDomains: [],
         codeLanguages: {},
         features: { search: true, code: true, favicon: false },
+        title: 'Test',
+        titlePostfix: ' - Test',
+        defaultTimeZone: 'America/New_York',
       } as SiteVariables,
       { validatorOptions: { enabled: false } },
     );
