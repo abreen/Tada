@@ -20,7 +20,7 @@
     "tsconfig.json"
   ],
   "scripts": {
-    "prepare": "husky",
+    "prepare": "husky && bun run scripts/check-deps.ts",
     "init-example": "bun run bin/tada.ts init example --default",
     "lint": "eslint src/ build/ bin/",
     "typecheck": "tsc --noEmit",
