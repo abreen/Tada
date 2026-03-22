@@ -1,5 +1,3 @@
-"""Functional tests for tada diff."""
-
 import json
 import os
 
