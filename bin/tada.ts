@@ -111,6 +111,9 @@ function printUsage() {
       continue;
     } else if (cmd === 'clean') {
       console.log('  clean              Remove the dist/ directory');
+      console.log(
+        '       [--prod]            Also prune old prod builds (keeps latest 2)',
+      );
       continue;
     } else if (cmd === 'diff') {
       console.log(
@@ -419,25 +422,26 @@ switch (command) {
         recursive: true,
         force: true,
       });
+      console.log('Cleaned dist/');
 
-      const prodBase = path.resolve(process.cwd(), 'dist-prod');
-      if (fs.existsSync(prodBase)) {
-        const { getVersions, pruneOldVersions } = await import(
-          path.join(packageDir, 'build/build-manifest.ts')
-        );
-        const before = getVersions(prodBase);
-        pruneOldVersions(prodBase);
-        const after = getVersions(prodBase);
-        const removed = before.length - after.length;
-
-        if (removed > 0) {
-          console.log(
-            `Pruned ${removed} old prod build(s), kept v${after.join(' and v')}`,
+      if (process.argv.includes('--prod')) {
+        const prodBase = path.resolve(process.cwd(), 'dist-prod');
+        if (fs.existsSync(prodBase)) {
+          const { getVersions, pruneOldVersions } = await import(
+            path.join(packageDir, 'build/build-manifest.ts')
           );
+          const before = getVersions(prodBase);
+          pruneOldVersions(prodBase);
+          const after = getVersions(prodBase);
+          const removed = before.length - after.length;
+
+          if (removed > 0) {
+            console.log(
+              `Pruned ${removed} old prod build(s), kept v${after.join(' and v')}`,
+            );
+          }
         }
       }
-
-      console.log('Cleaned dist/');
     })();
     break;
 
@@ -540,8 +544,17 @@ switch (command) {
         const resolvedOutDir = path.resolve(projectDir, outDirArg);
         copyChangedFiles(diff, newDistDir, resolvedOutDir);
 
+        // Include the manifest so the uploaded version can be compared later
+        const manifestSrc = path.join(prodBase, `v${newVer}.manifest.json`);
+        fs.copyFileSync(
+          manifestSrc,
+          path.join(resolvedOutDir, 'manifest.json'),
+        );
+
         const copiedCount = diff.added.length + diff.changed.length;
-        console.log(`\nCopied ${copiedCount} file(s) to ${outDirArg}`);
+        console.log(
+          `\nCopied ${copiedCount} file(s) + manifest.json to ${outDirArg}`,
+        );
 
         if (diff.removed.length > 0) {
           console.log(

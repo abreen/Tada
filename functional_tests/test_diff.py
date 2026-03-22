@@ -121,6 +121,7 @@ class TestDiffCopy:
         assert result.returncode == 0
         assert upload_dir.exists()
         assert "Copied" in result.stdout
+        assert (upload_dir / "manifest.json").exists()
 
     def test_copied_dir_has_fewer_files_than_dist(self, site_dir):
         run_tada("prod", cwd=str(site_dir), check=True)

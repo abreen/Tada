@@ -18,11 +18,21 @@ class TestClean:
 
 
 class TestCleanPrunesProdVersions:
-    def test_keeps_latest_two_prod_builds(self, site_dir):
+    def test_does_not_prune_without_flag(self, site_dir):
         for _ in range(4):
             run_tada("prod", cwd=str(site_dir), check=True)
 
-        result = run_tada("clean", cwd=str(site_dir))
+        run_tada("clean", cwd=str(site_dir))
+
+        # All versions should still exist
+        for v in range(1, 5):
+            assert (site_dir / "dist-prod" / f"v{v}").is_dir()
+
+    def test_keeps_latest_two_with_prod_flag(self, site_dir):
+        for _ in range(4):
+            run_tada("prod", cwd=str(site_dir), check=True)
+
+        result = run_tada("clean", "--prod", cwd=str(site_dir))
         assert result.returncode == 0
 
         # v1 and v2 should be pruned
@@ -41,7 +51,7 @@ class TestCleanPrunesProdVersions:
         run_tada("prod", cwd=str(site_dir), check=True)
         run_tada("prod", cwd=str(site_dir), check=True)
 
-        run_tada("clean", cwd=str(site_dir))
+        run_tada("clean", "--prod", cwd=str(site_dir))
 
         assert (site_dir / "dist-prod" / "v1").is_dir()
         assert (site_dir / "dist-prod" / "v2").is_dir()
@@ -50,7 +60,7 @@ class TestCleanPrunesProdVersions:
         for _ in range(3):
             run_tada("prod", cwd=str(site_dir), check=True)
 
-        result = run_tada("clean", cwd=str(site_dir))
+        result = run_tada("clean", "--prod", cwd=str(site_dir))
         assert "Pruned" in result.stdout
         assert "v2" in result.stdout
         assert "v3" in result.stdout
