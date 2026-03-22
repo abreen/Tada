@@ -25,7 +25,7 @@ def get_free_ports(n=2):
     ports = []
     for _ in range(n):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('', 0))
+        s.bind(('127.0.0.1', 0))
         ports.append(s.getsockname()[1])
         sockets.append(s)
     for s in sockets:
