@@ -63,7 +63,7 @@ jobs:
     - name: Upload static files as artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: example/dist/
+        path: example/dist-prod/v1/
 
   deploy:
     if: github.event_name == 'push'
