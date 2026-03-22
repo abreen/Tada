@@ -12,12 +12,18 @@ export interface SiteVariables {
   faviconFontWeight?: number;
   internalDomains?: string[];
   defaultTimeZone?: string;
-  features?: { search?: boolean; code?: boolean; favicon?: boolean };
+  features?: FeatureConfig;
   codeLanguages?: Record<string, string>;
   tintHue?: number;
   tintAmount?: number;
   vars?: Record<string, unknown>;
 }
+
+export type FeatureConfig = {
+  search: boolean;
+  code: boolean;
+  favicon: boolean;
+};
 
 /** A rendered content asset ready to write to dist/ */
 export interface Asset {
@@ -169,4 +175,5 @@ export interface SiteConfigInput {
   base: string;
   basePath: string;
   internalDomains: string[];
+  features: FeatureConfig;
 }

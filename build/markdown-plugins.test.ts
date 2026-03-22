@@ -122,7 +122,7 @@ describe('custom markdown containers', () => {
         basePath: '/',
         internalDomains: [],
         codeLanguages: {},
-        features: {},
+        features: { search: true, code: true, favicon: false },
       } as SiteVariables,
       { validatorOptions: { enabled: false } },
     );
@@ -218,7 +218,7 @@ describe('hidden_fence rule', () => {
         basePath: '/',
         internalDomains: [],
         codeLanguages: {},
-        features: {},
+        features: { search: true, code: true, favicon: false },
       } as SiteVariables,
       { validatorOptions: { enabled: false } },
     );

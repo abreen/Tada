@@ -223,6 +223,7 @@ async function initCommand(args: string[]): Promise<void> {
     base: 'http://localhost:8080',
     basePath: '/',
     internalDomains: ['localhost'],
+    features: { search: true, code: true, favicon: false },
   });
 
   const prodConfig = createSiteConfig({
@@ -235,6 +236,7 @@ async function initCommand(args: string[]): Promise<void> {
     base: prodBase,
     basePath: prodBasePath,
     internalDomains: [prodDomain],
+    features: { search: true, code: true, favicon: true },
   });
 
   fs.writeFileSync(

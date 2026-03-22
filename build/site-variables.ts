@@ -9,7 +9,7 @@ const configDir = getProjectDir();
 
 const DEFAULT: Partial<SiteVariables> = {
   basePath: '/',
-  features: { search: true, code: true },
+  features: { search: true, code: true, favicon: false },
 };
 
 const isValid = compileJsonSchema(siteSchema);

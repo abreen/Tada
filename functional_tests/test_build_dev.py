@@ -39,13 +39,13 @@ class TestDevBuild:
         woff2_files = list(dist.rglob("*.woff2"))
         assert len(woff2_files) > 0
 
-    def test_produces_favicon_files(self, built_dev_site):
+    def test_produces_no_favicon_files(self, built_dev_site):
         dist = built_dev_site / "dist"
-        assert (dist / "favicon.svg").exists()
+        assert not (dist / "favicon.svg").exists()
 
-    def test_produces_manifest(self, built_dev_site):
+    def test_produces_no_manifest(self, built_dev_site):
         dist = built_dev_site / "dist"
-        assert (dist / "manifest.json").exists()
+        assert not (dist / "manifest.json").exists()
 
     def test_exit_code_zero(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))

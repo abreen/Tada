@@ -172,6 +172,7 @@ describe('createSiteConfig', () => {
     base: 'https://example.edu',
     basePath: '/',
     internalDomains: ['example.edu'],
+    features: { search: true, code: true, favicon: false },
   };
 
   test('returns an object with all expected keys', () => {

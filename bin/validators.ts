@@ -65,11 +65,12 @@ export function createSiteConfig({
   base,
   basePath,
   internalDomains,
+  features,
 }: SiteConfigInput): SiteVariables {
   return {
     title,
     symbol,
-    features: { search: true, code: true, favicon: true },
+    features,
     base,
     basePath,
     internalDomains,
