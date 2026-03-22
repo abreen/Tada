@@ -565,7 +565,10 @@ initialBuild()
     watcher.on('add', onFileChange);
     watcher.on('unlink', onFileChange);
 
-    log.info`Watching for changes...`;
+    watcher.on('ready', () => {
+      broadcast('ready');
+      log.info`Watching for changes...`;
+    });
   })
   .catch(err => {
     log.error`Initial build failed: ${(err as Error).message}`;

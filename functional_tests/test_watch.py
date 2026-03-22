@@ -11,11 +11,10 @@ import websocket
 
 from conftest import TADA_BIN, get_free_ports
 
-SETTLE_DELAY_SEC = 1
-REBUILD_POLL_INTERVAL_SEC = 1
 REBUILD_TIMEOUT_SEC = 30
 INITIAL_BUILD_TIMEOUT_SEC = 60
 WEBSOCKET_TIMEOUT_SEC = 15
+WS_EVENT_WAIT_SEC = 0.5
 
 
 class WatchProcess:
@@ -43,23 +42,52 @@ class WatchProcess:
             start_new_session=True,
         )
 
+        # WebSocket state for detecting rebuilds and readiness
+        self._reload_event = threading.Event()
+        self._ready_event = threading.Event()
+        self._ws_connected = threading.Event()
+
+        def on_message(ws, message):
+            if message == "reload":
+                self._reload_event.set()
+            elif message == "ready":
+                self._ready_event.set()
+
+        def on_open(ws):
+            self._ws_connected.set()
+
+        def on_close(ws, close_status_code, close_msg):
+            self._ws_connected.clear()
+
+        self._ws = websocket.WebSocketApp(
+            f"ws://localhost:{self.ws_port}",
+            on_message=on_message,
+            on_open=on_open,
+            on_close=on_close,
+        )
+        self._ws_thread = threading.Thread(
+            target=lambda: self._ws.run_forever(reconnect=0.1),
+            daemon=True,
+        )
+        self._ws_thread.start()
+
     def wait_for_initial_build(self):
-        """Block until initial build is complete (dist/index.html exists)."""
+        """Block until the watcher is fully ready (initial build + file watching)."""
         deadline = time.monotonic() + INITIAL_BUILD_TIMEOUT_SEC
         while time.monotonic() < deadline:
+            if self._ready_event.wait(timeout=WS_EVENT_WAIT_SEC):
+                return
             if self.proc.poll() is not None:
                 raise RuntimeError(
                     f"Watch process exited early with code {self.proc.returncode}"
                 )
-            if (self.dist_dir / "index.html").exists():
-                # Give a moment for the watcher to fully set up
-                time.sleep(SETTLE_DELAY_SEC)
-                return
-            time.sleep(REBUILD_POLL_INTERVAL_SEC)
         raise TimeoutError("Initial watch build did not complete in time")
 
     def wait_for_rebuild(self, path: Path, condition="modified", before_mtime=None):
         """Wait for a file to be created, modified, or removed.
+
+        Waits for WebSocket 'reload' signals to detect rebuild completion,
+        then verifies the file condition.
 
         condition='exists': wait for path to exist
         condition='modified': wait for mtime to change from before_mtime
@@ -68,32 +96,44 @@ class WatchProcess:
         For 'modified', before_mtime MUST be captured by the caller BEFORE
         making the file change, to avoid a race condition.
         """
+        if condition == "modified" and before_mtime is None:
+            raise ValueError(
+                "before_mtime must be provided for 'modified' condition"
+            )
+
         deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
-        if condition == "exists":
-            while time.monotonic() < deadline:
-                if path.exists():
+
+        def _check():
+            if condition == "exists":
+                return path.exists()
+            elif condition == "removed":
+                return not path.exists()
+            elif condition == "modified":
+                return path.exists() and path.stat().st_mtime > before_mtime
+            return False
+
+        self._reload_event.clear()
+        while time.monotonic() < deadline:
+            if _check():
+                return
+            if self._reload_event.wait(timeout=WS_EVENT_WAIT_SEC):
+                self._reload_event.clear()
+                if _check():
                     return
-                time.sleep(REBUILD_POLL_INTERVAL_SEC)
-            raise TimeoutError(f"File {path} was not created within timeout")
-        elif condition == "removed":
-            while time.monotonic() < deadline:
-                if not path.exists():
-                    return
-                time.sleep(REBUILD_POLL_INTERVAL_SEC)
-            raise TimeoutError(f"File {path} was not removed within timeout")
-        elif condition == "modified":
-            if before_mtime is None:
-                raise ValueError(
-                    "before_mtime must be provided for 'modified' condition"
+            if self.proc.poll() is not None:
+                raise RuntimeError(
+                    f"Watch process exited with code {self.proc.returncode}"
                 )
-            while time.monotonic() < deadline:
-                if path.exists() and path.stat().st_mtime > before_mtime:
-                    return
-                time.sleep(REBUILD_POLL_INTERVAL_SEC)
-            raise TimeoutError(f"File {path} was not modified within timeout")
+        raise TimeoutError(
+            f"File {path} did not meet condition '{condition}' within timeout"
+        )
 
     def stop(self):
         """Terminate the watch process and all children (serve, etc.)."""
+        if self._ws is not None:
+            self._ws.close()
+            self._ws = None
+
         if self.proc.poll() is None:
             pgid = os.getpgid(self.proc.pid)
             os.killpg(pgid, signal.SIGTERM)
