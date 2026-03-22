@@ -34,6 +34,7 @@ const COMMANDS = {
   watch: 'Watch for changes and rebuild',
   serve: 'Start a local development server',
   clean: null,
+  diff: null,
 };
 
 interface InitQuestion {
@@ -110,6 +111,15 @@ function printUsage() {
       continue;
     } else if (cmd === 'clean') {
       console.log('  clean              Remove the dist/ directory');
+      continue;
+    } else if (cmd === 'diff') {
+      console.log(
+        '  diff               Show changed files since last prod build',
+      );
+      console.log('       [N M]               Compare version N vs version M');
+      console.log(
+        '       [--copy <dir>]      Copy changed files to a directory',
+      );
       continue;
     }
     console.log(`  ${cmd.padEnd(18)} ${desc}`);
@@ -404,11 +414,143 @@ switch (command) {
   }
 
   case 'clean':
-    fs.rmSync(path.resolve(process.cwd(), 'dist'), {
-      recursive: true,
-      force: true,
-    });
-    console.log('Cleaned dist/');
+    (async () => {
+      fs.rmSync(path.resolve(process.cwd(), 'dist'), {
+        recursive: true,
+        force: true,
+      });
+
+      const prodBase = path.resolve(process.cwd(), 'dist-prod');
+      if (fs.existsSync(prodBase)) {
+        const { getVersions, pruneOldVersions } = await import(
+          path.join(packageDir, 'build/build-manifest.ts')
+        );
+        const before = getVersions(prodBase);
+        pruneOldVersions(prodBase);
+        const after = getVersions(prodBase);
+        const removed = before.length - after.length;
+
+        if (removed > 0) {
+          console.log(
+            `Pruned ${removed} old prod build(s), kept v${after.join(' and v')}`,
+          );
+        }
+      }
+
+      console.log('Cleaned dist/');
+    })();
+    break;
+
+  case 'diff':
+    (async () => {
+      const { loadManifest, diffManifests, copyChangedFiles, getVersions } =
+        await import(path.join(packageDir, 'build/build-manifest.ts'));
+
+      const projectDir = process.cwd();
+      const prodBase = path.resolve(projectDir, 'dist-prod');
+      const versions = getVersions(prodBase);
+
+      if (versions.length === 0) {
+        console.error('Error: No prod builds found. Run "tada prod" first.');
+        process.exit(1);
+      }
+
+      // Parse version arguments: tada diff [N M] [--copy dir]
+      const args = process.argv.slice(3);
+      const copyIdx = args.indexOf('--copy');
+      const versionArgs = copyIdx === -1 ? args : args.slice(0, copyIdx);
+      const numericArgs = versionArgs
+        .map(a => parseInt(a, 10))
+        .filter(n => !isNaN(n));
+
+      let oldVer: number;
+      let newVer: number;
+
+      if (numericArgs.length === 2) {
+        [oldVer, newVer] = numericArgs.sort((a, b) => a - b);
+      } else if (numericArgs.length === 0) {
+        if (versions.length < 2) {
+          console.error(
+            'Error: Need at least two prod builds to diff. Run "tada prod" again.',
+          );
+          process.exit(1);
+        }
+        oldVer = versions[versions.length - 2];
+        newVer = versions[versions.length - 1];
+      } else {
+        console.error('Error: Provide zero or two version numbers.');
+        console.log('Usage: tada diff [N M] [--copy <dir>]');
+        process.exit(1);
+      }
+
+      const oldManifestPath = path.join(prodBase, `v${oldVer}.manifest.json`);
+      const newManifestPath = path.join(prodBase, `v${newVer}.manifest.json`);
+
+      const oldManifest = loadManifest(oldManifestPath);
+      if (!oldManifest) {
+        console.error(`Error: No manifest for v${oldVer}.`);
+        process.exit(1);
+      }
+      const newManifest = loadManifest(newManifestPath);
+      if (!newManifest) {
+        console.error(`Error: No manifest for v${newVer}.`);
+        process.exit(1);
+      }
+
+      const diff = diffManifests(oldManifest, newManifest);
+      const totalChanges =
+        diff.added.length + diff.changed.length + diff.removed.length;
+
+      console.log(`Comparing v${oldVer} \u2192 v${newVer}`);
+
+      if (totalChanges === 0) {
+        console.log('\nNo changes between builds.');
+        return;
+      }
+
+      if (diff.added.length > 0) {
+        console.log(`\nAdded (${diff.added.length}):`);
+        for (const f of diff.added) {
+          console.log(`  + ${f}`);
+        }
+      }
+      if (diff.changed.length > 0) {
+        console.log(`\nChanged (${diff.changed.length}):`);
+        for (const f of diff.changed) {
+          console.log(`  ~ ${f}`);
+        }
+      }
+      if (diff.removed.length > 0) {
+        console.log(`\nRemoved (${diff.removed.length}):`);
+        for (const f of diff.removed) {
+          console.log(`  - ${f}`);
+        }
+      }
+
+      console.log(`\nTotal: ${totalChanges} file(s) differ`);
+
+      if (copyIdx !== -1) {
+        const outDirArg = args[copyIdx + 1];
+        if (!outDirArg) {
+          console.error('Error: --copy requires a directory argument');
+          process.exit(1);
+        }
+
+        const newDistDir = path.join(prodBase, `v${newVer}`);
+        const resolvedOutDir = path.resolve(projectDir, outDirArg);
+        copyChangedFiles(diff, newDistDir, resolvedOutDir);
+
+        const copiedCount = diff.added.length + diff.changed.length;
+        console.log(`\nCopied ${copiedCount} file(s) to ${outDirArg}/`);
+
+        if (diff.removed.length > 0) {
+          console.log(
+            `\nNote: ${diff.removed.length} file(s) were removed from the build.`,
+          );
+          console.log('Delete these from your S3 bucket manually if needed.');
+        }
+      }
+    })();
     break;
 
   case '--version':
