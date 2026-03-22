@@ -163,6 +163,81 @@ class TestInitNoInteractiveFlags:
         assert prod["basePath"] == "/cs101"
 
 
+class TestInitInteractive:
+    """Tests for interactive mode (no --no-interactive flag)."""
+
+    def test_all_defaults(self, tmp_path):
+        """Pressing Enter for every question uses default values."""
+        result = run_tada("init", "testsite", cwd=str(tmp_path), input="\n" * 8)
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+        dev = json.loads((site / "site.dev.json").read_text())
+        assert dev["title"] == "Introduction to Computer Science"
+        assert dev["symbol"] == "CS 0"
+        assert dev["base"] == "http://localhost:8080"
+        assert dev["basePath"] == "/"
+
+    def test_custom_values(self, tmp_path):
+        answers = "\n".join([
+            "My Course",           # title
+            "MC 1",                # symbol
+            "tomato",              # themeColor
+            "200",                 # tintHue
+            "50",                  # tintAmount
+            "America/New_York",    # defaultTimeZone
+            "https://school.edu",  # prodBase
+            "/my-course",          # prodBasePath
+        ]) + "\n"
+        result = run_tada("init", "testsite", cwd=str(tmp_path), input=answers)
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+        dev = json.loads((site / "site.dev.json").read_text())
+        prod = json.loads((site / "site.prod.json").read_text())
+        assert dev["title"] == "My Course"
+        assert dev["symbol"] == "MC 1"
+        assert dev["defaultTimeZone"] == "America/New_York"
+        assert prod["base"] == "https://school.edu"
+        assert prod["basePath"] == "/my-course"
+        assert "school.edu" in prod["internalDomains"]
+
+    def test_validation_reprompts(self, tmp_path):
+        """An invalid answer causes a re-prompt; the next valid answer is accepted."""
+        answers = "\n".join([
+            "My Course",           # title
+            "lowercase",           # symbol — INVALID (not uppercase)
+            "MC 1",                # symbol — valid retry
+            "tomato",              # themeColor
+            "20",                  # tintHue
+            "100",                 # tintAmount
+            "America/New_York",    # defaultTimeZone
+            "https://example.edu", # prodBase
+            "/",                   # prodBasePath
+        ]) + "\n"
+        result = run_tada("init", "testsite", cwd=str(tmp_path), input=answers)
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        assert "Error" in result.stderr
+        dev = json.loads((tmp_path / "testsite" / "site.dev.json").read_text())
+        assert dev["symbol"] == "MC 1"
+
+    def test_bare_interactive(self, tmp_path):
+        """Interactive mode with --bare creates a minimal site."""
+        result = run_tada("init", "testsite", "--bare", cwd=str(tmp_path), input="\n" * 8)
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+        content_files = [f for f in (site / "content").rglob("*") if f.is_file()]
+        assert len(content_files) == 1
+        assert not (site / "authors.json").exists()
+
+    def test_prompts_are_shown(self, tmp_path):
+        """Each question's prompt text appears on stdout."""
+        result = run_tada("init", "testsite", cwd=str(tmp_path), input="\n" * 8)
+        assert result.returncode == 0
+        assert "Site title" in result.stdout
+        assert "Logo symbol" in result.stdout
+        assert "Theme color" in result.stdout
+        assert "Production base URL" in result.stdout
+
+
 class TestInitErrors:
     def test_no_dirname_exits_1(self, tmp_path):
         result = run_tada("init", cwd=str(tmp_path))
