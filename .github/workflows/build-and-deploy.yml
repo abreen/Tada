@@ -1,10 +1,5 @@
 name: Build and deploy
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 on:
   push:
     branches: [ "main" ]
@@ -12,11 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,8 +24,6 @@ jobs:
     - name: Unit tests
       run: bun test
 
-    # If unit tests didn't fail, run the functional tests
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -46,7 +35,17 @@ jobs:
     - name: Run functional tests
       run: bun run test:functional
 
-    # Initialize & build the example site configured for GitHub Pages
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Bun
+      uses: oven-sh/setup-bun@v2
+
+    - run: bun install
 
     - name: Initialize example site
       run: >
@@ -63,12 +62,28 @@ jobs:
       with:
         path: example/dist/
 
+  deploy:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
 
   purge:
-    needs: build
+    if: github.event_name == 'push'
+    needs: deploy
     runs-on: ubuntu-latest
     steps:
       - name: Purge Cloudflare cache
