@@ -17,6 +17,10 @@ export function getDistDir(): string {
   return path.resolve(getProjectDir(), 'dist');
 }
 
+export function getProdDistDir(): string {
+  return path.resolve(getProjectDir(), 'dist-prod');
+}
+
 export function getPublicDir(): string {
   return path.resolve(getProjectDir(), 'public');
 }

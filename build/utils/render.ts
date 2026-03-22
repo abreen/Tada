@@ -13,7 +13,7 @@ import {
   renderCodeWithComments,
 } from './code';
 import { extensionIsMarkdown } from './file-types';
-import { createApplyBasePath, normalizeOutputPath, getDistDir } from './paths';
+import { createApplyBasePath, normalizeOutputPath } from './paths';
 import { parseFrontMatterAndContent } from './front-matter';
 import { createMarkdown } from './markdown';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
@@ -109,6 +109,7 @@ export function injectAssetTags(
   html: string,
   assetFiles: string[],
   applyBasePath: (subPath: string) => string,
+  distDir: string,
 ): string {
   const jsAssets = assetFiles.filter(f => f.endsWith('.js'));
   const cssAssets = assetFiles.filter(f => f.endsWith('.css'));
@@ -118,8 +119,6 @@ export function injectAssetTags(
     .join('');
   const criticalAssets = cssAssets.filter(f => f.includes('critical.bundle.'));
   const asyncAssets = cssAssets.filter(f => !f.includes('critical.bundle.'));
-
-  const distDir = getDistDir();
   const criticalTags = criticalAssets
     .map(asset => {
       const css = fs.readFileSync(path.join(distDir, asset), 'utf-8');
@@ -149,6 +148,7 @@ function toContentAssetPath(contentDir: string, filePath: string): string {
 export function renderPlainTextPageAsset({
   filePath,
   contentDir,
+  distDir,
   siteVariables,
   validInternalTargets,
   assetFiles,
@@ -191,6 +191,7 @@ export function renderPlainTextPageAsset({
     render(`${pageVariables.template}.html`, templateParameters) as string,
     assetFiles,
     applyBasePath,
+    distDir,
   );
 
   return [
@@ -204,6 +205,7 @@ export function renderPlainTextPageAsset({
 export function renderCodePageAsset({
   filePath,
   contentDir,
+  distDir,
   siteVariables,
   assetFiles,
 }: RenderCodePageOptions): Asset[] {
@@ -244,6 +246,7 @@ export function renderCodePageAsset({
     render('code.html', templateParameters) as string,
     assetFiles,
     applyBasePath,
+    distDir,
   );
 
   return [
@@ -377,6 +380,7 @@ export function stripHtmlComments(str: string): string {
 export function renderLiterateJavaPageAsset({
   filePath,
   contentDir,
+  distDir,
   siteVariables,
   assetFiles,
   skipExecution,
@@ -509,6 +513,7 @@ export function renderLiterateJavaPageAsset({
     render('literate.html', templateParameters) as string,
     assetFiles,
     applyBasePath,
+    distDir,
   );
 
   return [

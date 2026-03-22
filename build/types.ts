@@ -74,6 +74,7 @@ export interface Logger {
 export interface RenderPlainTextOptions {
   filePath: string;
   contentDir: string;
+  distDir: string;
   siteVariables: SiteVariables;
   validInternalTargets: Set<string>;
   assetFiles: string[];
@@ -83,6 +84,7 @@ export interface RenderPlainTextOptions {
 export interface RenderCodePageOptions {
   filePath: string;
   contentDir: string;
+  distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
 }
@@ -91,6 +93,7 @@ export interface RenderCodePageOptions {
 export interface RenderLiterateJavaOptions {
   filePath: string;
   contentDir: string;
+  distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
   skipExecution?: boolean;

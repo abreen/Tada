@@ -73,10 +73,10 @@ function createScssPlugin(siteVariables: SiteVariables) {
 
 export async function bundle(
   siteVariables: SiteVariables,
-  { mode = 'development' }: { mode?: string } = {},
+  { mode = 'development', distDir }: { mode?: string; distDir?: string } = {},
 ): Promise<string[]> {
   const packageDir = getPackageDir();
-  const distDir = getDistDir();
+  const resolvedDistDir = distDir ?? getDistDir();
   const isDev = mode === 'development';
 
   const entrypoints = [
@@ -86,7 +86,7 @@ export async function bundle(
 
   const result = await Bun.build({
     entrypoints,
-    outdir: distDir,
+    outdir: resolvedDistDir,
     naming: '[name].bundle.[ext]',
     minify: mode === 'production',
     sourcemap: isDev ? 'inline' : 'none',
@@ -104,7 +104,10 @@ export async function bundle(
 
   // Return the output filenames for asset tag injection
   const assetFiles = result.outputs.map(output =>
-    path.relative(distDir, output.path).split(path.sep).join(path.posix.sep),
+    path
+      .relative(resolvedDistDir, output.path)
+      .split(path.sep)
+      .join(path.posix.sep),
   );
 
   return assetFiles;
