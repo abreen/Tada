@@ -513,7 +513,6 @@ async function diffCommand(args: string[]): Promise<void> {
       console.log(
         `\nNote: ${diff.removed.length} file(s) were removed from the build.`,
       );
-      console.log('Delete these from your S3 bucket manually if needed.');
     }
   }
 }
