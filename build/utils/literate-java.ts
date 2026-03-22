@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { createMarkdown } from './markdown';
 import { makeLogger } from '../log';
 import { parseFrontMatterAndContent } from './front-matter';
@@ -88,7 +88,7 @@ export function compileJavaSource(
   log.debug`Compiling ${className}.java (${javaSource.split('\n').length} lines) in ${tempDir}`;
 
   try {
-    execSync(`javac "${className}.java"`, {
+    execFileSync('javac', [`${className}.java`], {
       cwd: tempDir,
       timeout: 30000,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -120,7 +120,7 @@ function ensureRunnerCompiled(runnerDir: string): void {
   log.debug`Compiling LiterateRunner.java`;
 
   try {
-    execSync('javac LiterateRunner.java', {
+    execFileSync('javac', ['LiterateRunner.java'], {
       cwd: runnerDir,
       timeout: 30000,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -150,8 +150,9 @@ export function executeLiterateJava(
   log.debug`Running LiterateRunner with ${blockRanges.length} block range(s)`;
 
   try {
-    const result = execSync(
-      `java -cp "${runnerDir}" LiterateRunner "${className}" "${classPath}" '${rangesJson}'`,
+    const result = execFileSync(
+      'java',
+      ['-cp', runnerDir, 'LiterateRunner', className, classPath, rangesJson],
       { timeout: 30000, encoding: 'utf-8' },
     );
     const entries: LiterateRunnerEntry[] = JSON.parse(result);
@@ -174,7 +175,7 @@ export function executeLiterateJava(
 
 export function checkJavac(): boolean {
   try {
-    execSync('javac -version', { stdio: ['pipe', 'pipe', 'pipe'] });
+    execFileSync('javac', ['-version'], { stdio: ['pipe', 'pipe', 'pipe'] });
     return true;
   } catch {
     return false;
