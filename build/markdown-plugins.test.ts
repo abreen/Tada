@@ -10,7 +10,7 @@ import { stripHtmlComments } from './utils/render.js';
 import type { SiteVariables } from './types.js';
 
 describe('apply-base-path-plugin', () => {
-  test('rewrites internal links, images, and raw html image sources', () => {
+  test('rewrites internal links, images, and raw html sources', () => {
     const md = new MarkdownIt({ html: true });
     md.use(applyBasePathPlugin, {
       basePath: '/course/',
@@ -25,12 +25,35 @@ describe('apply-base-path-plugin', () => {
         '![Image](/images/pic.png)',
         '',
         '<img src="/images/raw.png" alt="Raw">',
+        '',
+        '<a href="/about/">About</a>',
       ].join('\n'),
     );
 
     expect(html).toContain('href="/course/src/example.html?view=1#top"');
     expect(html).toContain('src="/course/images/pic.png"');
     expect(html).toContain('src="/course/images/raw.png"');
+    expect(html).toContain('href="/course/about/"');
+  });
+
+  test('does not rewrite external or relative raw html links', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      [
+        '<a href="https://example.com/">External</a>',
+        '',
+        '<a href="relative.html">Relative</a>',
+      ].join('\n'),
+    );
+
+    expect(html).toContain('href="https://example.com/"');
+    expect(html).toContain('href="relative.html"');
   });
 
   test('rewrites relative code file links without applying base path', () => {

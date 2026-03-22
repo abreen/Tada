@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from conftest import run_tada
 
 
@@ -51,6 +53,66 @@ class TestProdBuild:
         )
 
         assert dev_htmls == prod_htmls
+
+
+class TestProdBuildWithBasePath:
+    """Tests for prod builds where basePath is not /."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--bare", "--no-interactive",
+            "--prod-base-path", "/test",
+            "--prod-base", "https://example.edu",
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        # Add a second page so we can link to it
+        about_dir = site / "content" / "about"
+        about_dir.mkdir()
+        (about_dir / "index.md").write_text(
+            "title: About\n\nThis is the about page.\n"
+        )
+
+        # Rewrite index.md with links in both Markdown and HTML syntax
+        (site / "content" / "index.md").write_text(
+            "title: Home\n\n"
+            "[About page](/about/index.html)\n\n"
+            '<a href="/about/index.html">HTML link</a>\n\n'
+            "![Logo](/images/logo.png)\n\n"
+            '<img src="/images/banner.png" alt="Banner">\n'
+        )
+
+        yield site
+
+    @pytest.fixture
+    def built_site(self, site_dir):
+        result = run_tada("prod", cwd=str(site_dir))
+        assert result.returncode == 0, f"prod build failed: {result.stderr}"
+        yield site_dir
+
+    def test_head_asset_links_include_base_path(self, built_site):
+        html = (built_site / "dist" / "index.html").read_text()
+        assert "/test/index.bundle.css" in html
+        assert "/test/index.bundle.js" in html
+
+    def test_markdown_links_include_base_path(self, built_site):
+        html = (built_site / "dist" / "index.html").read_text()
+        assert 'href="/test/about/index.html"' in html
+
+    def test_raw_html_links_include_base_path(self, built_site):
+        html = (built_site / "dist" / "index.html").read_text()
+        assert '<a href="/test/about/index.html">HTML link</a>' in html
+
+    def test_markdown_images_include_base_path(self, built_site):
+        html = (built_site / "dist" / "index.html").read_text()
+        assert 'src="/test/images/logo.png"' in html
+
+    def test_raw_html_images_include_base_path(self, built_site):
+        html = (built_site / "dist" / "index.html").read_text()
+        assert 'src="/test/images/banner.png"' in html
 
 
 class TestProdBuildErrors:

@@ -1,6 +1,7 @@
 import type MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import { createApplyBasePath } from './utils/paths.js';
+import { isFeatureEnabled } from './features.js';
 import { makeLogger } from './log.js';
 import type { SiteVariables } from './types.js';
 
@@ -11,7 +12,7 @@ export default function applyBasePathPlugin(
   siteVariables: SiteVariables,
 ): void {
   const applyBasePath = createApplyBasePath(siteVariables);
-  const rewriteCodeLinks = siteVariables.features?.code !== false;
+  const rewriteCodeLinks = isFeatureEnabled(siteVariables, 'code');
 
   function rewriteInternalHref(href: string): string {
     const match = href.match(/^([^?#]*)(.*)$/);
@@ -67,15 +68,25 @@ export default function applyBasePathPlugin(
         token.attrSet('src', afterApply);
       }
     } else if (token.type === 'html_block' || token.type === 'html_inline') {
-      token.content = token.content.replace(
-        /(<img\b[^>]*\bsrc=")(\/)([^"]*")/g,
-        (match, prefix, slash, rest) => {
-          const src = slash + rest.slice(0, -1);
-          const afterApply = applyBasePath(src);
-          log.debug`Applying base path to img tag src: ${src} -> ${afterApply}`;
-          return prefix + afterApply + '"';
-        },
-      );
+      token.content = token.content
+        .replace(
+          /(<a\b[^>]*\bhref=")(\/)([^"]*")/g,
+          (match, prefix, slash, rest) => {
+            const href = slash + rest.slice(0, -1);
+            const afterApply = applyBasePath(href);
+            log.debug`Applying base path to a tag href: ${href} -> ${afterApply}`;
+            return prefix + afterApply + '"';
+          },
+        )
+        .replace(
+          /(<img\b[^>]*\bsrc=")(\/)([^"]*")/g,
+          (match, prefix, slash, rest) => {
+            const src = slash + rest.slice(0, -1);
+            const afterApply = applyBasePath(src);
+            log.debug`Applying base path to img tag src: ${src} -> ${afterApply}`;
+            return prefix + afterApply + '"';
+          },
+        );
     }
 
     token.children?.map(checkAndApplyBasePath);

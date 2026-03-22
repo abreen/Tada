@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
 import { stripHtml } from 'string-strip-html';
+import { isFeatureEnabled } from '../features.js';
 import { makeLogger } from '../log.js';
 import { B } from '../colors.js';
 import createGlobals from '../globals.js';
@@ -288,10 +289,9 @@ function renderPlainTextContent(
       filePath,
       sourceUrlPath,
       validTargets: validInternalTargets,
-      codeExtensions:
-        siteVariables.features?.code === false
-          ? []
-          : Object.keys(siteVariables.codeLanguages!),
+      codeExtensions: isFeatureEnabled(siteVariables, 'code')
+        ? Object.keys(siteVariables.codeLanguages!)
+        : [],
     },
   });
 
