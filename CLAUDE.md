@@ -48,9 +48,7 @@ projects by `tada init` — it is not a buildable site on its own.
 
 ## Formatting
 
-- Prettier: trailing commas, single quotes, no parens on single arrow params
-- Pre-commit hook runs `bunx lint-staged && bun run lint && bun run typecheck`
-- Run `bun run format` to format the entire codebase manually
+The pre-commit hook runs Prettier. Do not run any commands to format code.
 
 ## Path resolution
 
