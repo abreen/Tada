@@ -185,7 +185,7 @@ describe('createSiteConfig', () => {
       basePath: '/',
       internalDomains: ['example.edu'],
       defaultTimeZone: 'America/New_York',
-      features: { search: true, code: true, favicon: true },
+      features: { search: true, code: true, favicon: false },
       codeLanguages: { java: 'java', py: 'python' },
       vars: {},
     });
