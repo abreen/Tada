@@ -1,15 +1,17 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This codebase is a static site generator written in TypeScript and uses Bun.
 
-This codebase is a static site generator written in JavaScript/TypeScript.
-The runtime is Bun. Build logic lives in `build/`.
-
+- Build logic lives in `build/`
 - Site content lives in `content/`
-- Markdown & HTML content is processed; other file types are copied into `dist/`
+- Markdown & HTML content is processed; other file types are copied unchanged
 - Lodash HTML templates in `templates/` are internal to the package
-- Client-side TypeScript is in `src/`
+- Client-side code is in `src/`
 - Static assets are in `public/`
+
+## Spec
+
+High-level feature specs live in `spec/`. Read them for design context.
 
 ## CLI commands
 
@@ -50,16 +52,6 @@ projects by `tada init` — it is not a buildable site on its own.
 - Pre-commit hook runs `bunx lint-staged && bun run lint && bun run typecheck`
 - Run `bun run format` to format the entire codebase manually
 
-## Logging
-
-Set `TADA_LOG_LEVEL` to control build log verbosity. Valid levels (most to least
-verbose): `debug`, `info`, `warn`, `error`. Default is `info`.
-
-## Fonts
-
-- TTF fonts in `fonts/{family}/ttf/` are used only for favicon generation
-- WOFF2 fonts in `fonts/{family}/woff2/` are copied into site builds
-
 ## Path resolution
 
 `build/utils/paths.js` provides `getPackageDir()` (the Tada package root,
@@ -75,29 +67,6 @@ are validated against JSON schemas in `templates/`.
 
 Use `<%= page.* %>` to access a page's front matter and `<%= site.* %>` for
 values from the active site config.
-
-## Config files
-
-- `site.dev.json` --- development config (`base: http://localhost:8080`, `basePath: /`)
-- `site.prod.json` --- production config (real domain and base path)
-- `site.title` --- site title, used in the header and to derive `titlePostfix`
-- `site.symbol` --- short text (1-5 chars) for the logo and favicon (derives `faviconSymbol`)
-- `site.themeColor` --- HSL theme color (derives `faviconColor` if not set)
-- Arbitrary template variables live under the `vars` key in the site config JSON
-
-## Build pipeline
-
-The build (`build/pipeline.ts`) runs in phases:
-
-1. **Setup**: compile templates, initialize Shiki highlighter
-2. **Bundle + assets** (parallel): Bun-bundled CSS/JS, font copying, favicons, manifest
-3. **Copy**: public/ files and non-processed content assets into `dist/`
-4. **Render**: process Markdown, HTML, and code pages into `dist/`
-5. **Post-build**: Pagefind search indexing (if enabled)
-
-Watch mode (`build/watch.ts`) uses Chokidar with 300 ms debounce and a WebSocket
-server on port 35729 for live reload. Incremental rebuilds are scoped by change
-category: `content | public | src | templates | config`.
 
 ## Critical CSS
 
@@ -127,53 +96,3 @@ directly). Otherwise, add them to `style.scss` or a component stylesheet.
 Each component lives in `src/<name>/` with an `index.ts` (exporting async
 `mount()`) and `style.scss`. Import Sass styles in `src/index.ts` to include
 them in the bundle. Shared utilities are in `src/util.ts`.
-
-## Content front matter
-
-Each file in `content/` starts with front matter as plain `key: value` lines
-terminated by a blank line. **Do not use `---` delimiters** — Tada's front matter
-format is not standard YAML front matter. Example:
-
-```
-title: My Page
-author: alex
-description: A page about something.
-
-Content starts here after the blank line.
-```
-
-Key fields:
-
-- `title` (required) --- page title for `<title>` and page heading
-- `skip` --- set to `true` to skip building the page
-- `author` --- author handle resolved via `authors.json`
-- `description` --- meta description
-- `toc` --- set to `true` to show a table of contents
-- `parent` / `parentLabel` --- URL and label for a breadcrumb link above the title
-- `published` --- date of publishing (e.g., `2025-09-09`)
-
-Arbitrary fields are also accessible in templates via `<%= page.fieldName %>`.
-
-## Markdown processing
-
-- `build/external-links-plugin.js` --- rewrites external links (uses `site.internalDomains`)
-- `build/apply-base-path-plugin.js` --- prefixes internal links and image URLs with `site.basePath`
-- Markdown is processed with markdown-it and plugins: anchor, container, deflist, footnote
-- Code fences are highlighted at build time using Shiki
-
-## Search index
-
-- When enabled via site config, Pagefind creates a search index after the build
-- `src/search/` reads the index client-side and renders results
-
-## PDF processing
-
-- PDFs are copied into `dist/` unchanged
-- When search is enabled via site config, text from reachable PDFs is indexed by Pagefind
-
-## Code page generation
-
-- When enabled via site config, a special HTML page is generated for Java source files
-- A syntax tree is built from the Java source to generate a table of contents
-- Method line numbers are embedded in HTML for Pagefind to index
-- Syntax highlighting is done at build time using Shiki (`build/utils/shiki-highlighter.js`)

@@ -14,8 +14,7 @@
             "text": { "type": "string" },
             "internal": { "type": "string", "pattern": "^\\/.*$" },
             "external": { "type": "string", "pattern": "^https?:\\/\\/.*$" },
-            "disabled": { "type": "boolean" },
-            "keywords": { "type": "array", "items": { "type": "string" } }
+            "disabled": { "type": "boolean" }
           },
           "oneOf": [{ "required": ["internal"] }, { "required": ["external"] }],
           "additionalProperties": false
