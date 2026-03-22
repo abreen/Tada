@@ -106,12 +106,69 @@ Start a development web server, watch for changes and rebuild automatically.
 
 ### `tada clean`
 
-Remove the `dist/` directory.
+Remove the `dist/` directory. Pass `--prod` to also prune old production
+builds (keeps the latest two versions).
 
 
 ### `tada prod`
 
-Build the site for production (uses `site.prod.json`).
+Build the site for production (uses `site.prod.json`). Each prod build is
+saved to a versioned directory under `dist-prod/` (e.g., `dist-prod/v1/`,
+`dist-prod/v2/`) with a manifest file that records the SHA-256 hash of every
+output file.
+
+
+### `tada diff`
+
+Compare two production builds and list added, changed, and removed files.
+With no arguments, compares the last two builds. You can also specify version
+numbers explicitly:
+
+    tada diff          # compare latest two builds
+    tada diff 1 3      # compare v1 and v3
+
+Use `--copy <dir>` to copy only the changed and added files to a directory:
+
+    tada diff --copy upload/
+
+The output directory will also include a `manifest.json` for the newer build.
+
+
+## Development vs. production builds
+
+`tada dev` and `tada watch` build to the `dist/` directory using
+`site.dev.json` (typically `localhost` URLs). `tada watch` includes a
+development server with live reload; `tada serve` is a standalone server
+for previewing a `tada dev` build. Dev builds overwrite `dist/` each time.
+
+`tada prod` builds to a new versioned directory under `dist-prod/` each time
+it runs. Previous production builds are preserved, so you can compare any
+two versions with `tada diff`.
+
+
+## Deploying to S3
+
+If you host your site in an S3 bucket, `tada diff --copy` lets you upload
+only the files that changed between prod builds instead of re-uploading
+everything.
+
+First time:
+
+```
+tada prod
+# Upload the entire dist-prod/v1/ directory to your S3 bucket
+```
+
+After making changes:
+
+```
+tada prod
+tada diff --copy upload/
+# Upload just the upload/ directory to S3 (only changed files)
+```
+
+If `tada diff` reports removed files, delete those from your S3 bucket
+manually.
 
 
 ## Prerequisites
