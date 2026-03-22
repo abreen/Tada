@@ -102,6 +102,7 @@ export class ContentRenderer {
   renderSourceAssets(
     filePath: string,
     contentDir: string,
+    distDir: string,
     validInternalTargets: Set<string>,
     assetFiles: string[],
   ): Asset[] {
@@ -113,6 +114,7 @@ export class ContentRenderer {
         ...renderLiterateJavaPageAsset({
           filePath,
           contentDir,
+          distDir,
           siteVariables: this.siteVariables,
           assetFiles,
           skipExecution: !this.javacAvailable,
@@ -126,6 +128,7 @@ export class ContentRenderer {
         ...renderPlainTextPageAsset({
           filePath,
           contentDir,
+          distDir,
           siteVariables: this.siteVariables,
           validInternalTargets,
           assetFiles,
@@ -141,6 +144,7 @@ export class ContentRenderer {
           ...renderCodePageAsset({
             filePath,
             contentDir,
+            distDir,
             siteVariables: this.siteVariables,
             assetFiles,
           }),
@@ -274,6 +278,7 @@ export class ContentRenderer {
         assets = this.renderSourceAssets(
           filePath,
           contentDir,
+          distDir,
           validInternalTargets,
           assetFiles,
         );
