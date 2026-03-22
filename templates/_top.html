@@ -54,7 +54,7 @@
     <header data-pagefind-ignore>
       <details>
         <summary aria-label="Toggle site navigation">
-          <span class="logo" aria-hidden="true"><%= site.symbol %></span>
+          <% if (site.symbol) { %><span class="logo" aria-hidden="true"><%= site.symbol %></span><% } %>
           <span class="site-title" aria-hidden="true"><%= site.title %></span>
           <div id="to-top-container" class="to-top-container"></div>
           <% if (site.features.search) { %>

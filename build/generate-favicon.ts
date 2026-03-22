@@ -117,8 +117,15 @@ export async function generateFavicons(
   const svgSize = 512;
   const filenameBase = 'favicon';
 
-  if (!color || !symbol) {
-    throw new Error('Missing required "color" and/or "symbol" options');
+  if (!symbol) {
+    throw new Error(
+      'Favicon generation requires "symbol" in site config (or "faviconSymbol")',
+    );
+  }
+  if (!color) {
+    throw new Error(
+      'Favicon generation requires "themeColor" in site config (or "faviconColor")',
+    );
   }
 
   const { themeColorLight, textOnThemeLight } = deriveTheme(color);

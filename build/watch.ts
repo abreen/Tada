@@ -337,12 +337,23 @@ async function rebuild(): Promise<void> {
         ...(await bundleReloadClient()),
       ];
 
+      copyFonts(distDir);
+
+      if (isFeatureEnabled(siteVariables, 'favicon')) {
+        await generateFavicons(siteVariables, distDir);
+        generateManifest(siteVariables, distDir);
+      }
+
       const result = contentRenderer.processContent({ distDir, assetFiles });
       for (const err of result.errors) {
         log.error`${err.message}`;
       }
       if (result.errors.length === 0) {
         printFlair();
+        if (!serveStarted) {
+          serveStarted = true;
+          serve();
+        }
         broadcast('reload');
         if (pagefindRunner) {
           pagefindRunner.update(distDir, result.htmlAssetsByPath);
@@ -366,6 +377,10 @@ async function rebuild(): Promise<void> {
       }
       if (result.errors.length === 0) {
         printFlair();
+        if (!serveStarted) {
+          serveStarted = true;
+          serve();
+        }
         broadcast('reload');
         if (pagefindRunner) {
           pagefindRunner.update(distDir, result.htmlAssetsByPath);
@@ -493,6 +508,10 @@ async function rebuild(): Promise<void> {
 
     if (result.errors.length === 0) {
       printFlair();
+      if (!serveStarted) {
+        serveStarted = true;
+        serve();
+      }
       broadcast('reload');
 
       if (pagefindRunner) {
@@ -527,7 +546,10 @@ function onFileChange(filePath: string): void {
 // --- Start ---
 
 initialBuild()
-  .then(() => {
+  .catch(err => {
+    log.error`Initial build failed: ${(err as Error).message}`;
+  })
+  .finally(() => {
     // Watch content, public, src, templates, data files, site config
     const watchPaths: string[] = [contentDir, publicDir];
 
@@ -569,8 +591,4 @@ initialBuild()
       broadcast('ready');
       log.info`Watching for changes...`;
     });
-  })
-  .catch(err => {
-    log.error`Initial build failed: ${(err as Error).message}`;
-    process.exit(1);
   });
