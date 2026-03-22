@@ -132,10 +132,10 @@ export function loadManifest(filePath: string): BuildManifest | null {
   }
 }
 
-export function pruneOldVersions(prodBaseDir: string): void {
+export function pruneOldVersions(prodBaseDir: string): number[] {
   const versions = getVersions(prodBaseDir);
   if (versions.length <= 2) {
-    return;
+    return [];
   }
 
   const toRemove = versions.slice(0, versions.length - 2);
@@ -146,6 +146,8 @@ export function pruneOldVersions(prodBaseDir: string): void {
     const manifestFile = path.join(prodBaseDir, `v${v}.manifest.json`);
     fs.rmSync(manifestFile, { force: true });
   }
+
+  return toRemove;
 }
 
 export function copyChangedFiles(

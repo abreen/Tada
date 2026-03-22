@@ -73,7 +73,7 @@ class TestDiffWithChanges:
         run_tada("prod", cwd=str(site_dir), check=True)
 
         result = run_tada("diff", cwd=str(site_dir))
-        assert "file(s) differ" in result.stdout
+        assert "differ" in result.stdout
 
 
 class TestDiffExplicitVersions:

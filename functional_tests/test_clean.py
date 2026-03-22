@@ -12,9 +12,10 @@ class TestClean:
         result = run_tada("clean", cwd=str(built_dev_site))
         assert "Cleaned dist/" in result.stdout
 
-    def test_clean_idempotent(self, site_dir):
+    def test_clean_nothing_to_clean(self, site_dir):
         result = run_tada("clean", cwd=str(site_dir))
         assert result.returncode == 0
+        assert "Nothing to clean" in result.stdout
 
 
 class TestCleanPrunesProdVersions:
@@ -51,19 +52,19 @@ class TestCleanPrunesProdVersions:
         run_tada("prod", cwd=str(site_dir), check=True)
         run_tada("prod", cwd=str(site_dir), check=True)
 
-        run_tada("clean", "--prod", cwd=str(site_dir))
+        result = run_tada("clean", "--prod", cwd=str(site_dir))
+        assert "Nothing to clean" in result.stdout
 
         assert (site_dir / "dist-prod" / "v1").is_dir()
         assert (site_dir / "dist-prod" / "v2").is_dir()
 
-    def test_clean_stdout_mentions_pruning(self, site_dir):
-        for _ in range(3):
+    def test_clean_prod_logs_each_removed(self, site_dir):
+        for _ in range(4):
             run_tada("prod", cwd=str(site_dir), check=True)
 
         result = run_tada("clean", "--prod", cwd=str(site_dir))
-        assert "Pruned" in result.stdout
-        assert "v2" in result.stdout
-        assert "v3" in result.stdout
+        assert "Removed v1" in result.stdout
+        assert "Removed v2" in result.stdout
 
 
 class TestRebuildAfterClean:

@@ -12,6 +12,13 @@ import {
   validateBasePath,
   createSiteConfig,
 } from './validators';
+import {
+  loadManifest,
+  diffManifests,
+  copyChangedFiles,
+  getVersions,
+  pruneOldVersions,
+} from '../build/build-manifest';
 
 const { version } = packageJson;
 
@@ -112,7 +119,7 @@ function printUsage() {
     } else if (cmd === 'clean') {
       console.log('  clean              Remove the dist/ directory');
       console.log(
-        '       [--prod]            Also prune old prod builds (keeps latest 2)',
+        '       [--prod]            Prune old prod builds, keeping the two latest',
       );
       continue;
     } else if (cmd === 'diff') {
@@ -378,37 +385,30 @@ async function initCommand(args: string[]): Promise<void> {
   console.log(`  tada serve`);
 }
 
-async function cleanCommand(args: string[]): Promise<void> {
-  fs.rmSync(path.resolve(process.cwd(), 'dist'), {
-    recursive: true,
-    force: true,
-  });
-  console.log('Cleaned dist/');
-
+function cleanCommand(args: string[]): void {
   if (args.includes('--prod')) {
     const prodBase = path.resolve(process.cwd(), 'dist-prod');
-    if (fs.existsSync(prodBase)) {
-      const { getVersions, pruneOldVersions } = await import(
-        path.join(packageDir, 'build/build-manifest.ts')
-      );
-      const before = getVersions(prodBase);
-      pruneOldVersions(prodBase);
-      const after = getVersions(prodBase);
-      const removed = before.length - after.length;
-
-      if (removed > 0) {
-        console.log(
-          `Pruned ${removed} old prod build(s), kept v${after.join(' and v')}`,
-        );
-      }
+    const removed = pruneOldVersions(prodBase);
+    if (removed.length === 0) {
+      console.log('Nothing to clean.');
+      return;
     }
+    for (const v of removed) {
+      console.log(`Removed v${v}`);
+    }
+    return;
   }
+
+  const distDir = path.resolve(process.cwd(), 'dist');
+  if (!fs.existsSync(distDir)) {
+    console.log('Nothing to clean.');
+    return;
+  }
+  fs.rmSync(distDir, { recursive: true });
+  console.log('Cleaned dist/');
 }
 
-async function diffCommand(args: string[]): Promise<void> {
-  const { loadManifest, diffManifests, copyChangedFiles, getVersions } =
-    await import(path.join(packageDir, 'build/build-manifest.ts'));
-
+function diffCommand(args: string[]): void {
   const projectDir = process.cwd();
   const prodBase = path.resolve(projectDir, 'dist-prod');
   const versions = getVersions(prodBase);
@@ -462,7 +462,9 @@ async function diffCommand(args: string[]): Promise<void> {
   const totalChanges =
     diff.added.length + diff.changed.length + diff.removed.length;
 
-  console.log(`Comparing v${oldVer} and v${newVer}`);
+  const fmtDate = (iso: string) => new Date(iso).toLocaleString();
+  console.log(`v${oldVer}  ${fmtDate(oldManifest.buildTime)}`);
+  console.log(`v${newVer}  ${fmtDate(newManifest.buildTime)}`);
 
   if (totalChanges === 0) {
     console.log('\nNo changes between builds.');
@@ -488,7 +490,8 @@ async function diffCommand(args: string[]): Promise<void> {
     }
   }
 
-  console.log(`\nTotal: ${totalChanges} file(s) differ`);
+  const noun = (n: number) => (n === 1 ? 'file' : 'files');
+  console.log(`\nTotal: ${totalChanges} ${noun(totalChanges)} differ`);
 
   if (copyIdx !== -1) {
     const outDirArg = args[copyIdx + 1];
@@ -506,12 +509,12 @@ async function diffCommand(args: string[]): Promise<void> {
 
     const copiedCount = diff.added.length + diff.changed.length;
     console.log(
-      `\nCopied ${copiedCount} file(s) + manifest.json to ${outDirArg}`,
+      `\nCopied ${copiedCount} ${noun(copiedCount)} + manifest.json to ${outDirArg}`,
     );
 
     if (diff.removed.length > 0) {
       console.log(
-        `\nNote: ${diff.removed.length} file(s) were removed from the build.`,
+        `\nNote: ${diff.removed.length} ${noun(diff.removed.length)} were removed from the build.`,
       );
     }
   }
