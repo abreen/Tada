@@ -167,6 +167,17 @@ class TestDiffCopy:
         assert result.returncode == 0
         assert "Copied" in result.stdout
 
+    def test_copy_includes_pagefind(self, site_dir):
+        run_tada("prod", cwd=str(site_dir), check=True)
+
+        index_md = site_dir / "content" / "index.md"
+        index_md.write_text("title: Home\n\nChanged.\n")
+        run_tada("prod", cwd=str(site_dir), check=True)
+
+        upload_dir = site_dir / "upload"
+        run_tada("diff", "--copy", str(upload_dir), cwd=str(site_dir))
+        assert (upload_dir / "pagefind").is_dir()
+
 
 class TestManifestCreation:
     def test_prod_build_creates_manifest(self, site_dir):

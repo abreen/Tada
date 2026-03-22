@@ -504,6 +504,12 @@ function diffCommand(args: string[]): void {
     const resolvedOutDir = path.resolve(projectDir, outDirArg);
     copyChangedFiles(diff, newDistDir, resolvedOutDir);
 
+    // Always include pagefind/ (excluded from manifest but needed for search)
+    const pagefindSrc = path.join(newDistDir, 'pagefind');
+    if (fs.existsSync(pagefindSrc)) {
+      copyDirRecursive(pagefindSrc, path.join(resolvedOutDir, 'pagefind'));
+    }
+
     const manifestSrc = path.join(prodBase, `v${newVer}.manifest.json`);
     fs.copyFileSync(manifestSrc, path.join(resolvedOutDir, 'manifest.json'));
 
