@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import { parseArgs } from 'util';
 import packageJson from '../package.json' with { type: 'json' };
 import {
   validateSymbol,
@@ -97,10 +98,15 @@ function printUsage() {
   for (const [cmd, desc] of Object.entries(COMMANDS)) {
     if (cmd === 'init') {
       console.log('  init <dirname>     Initialize a new site');
-      console.log('       [--default]     (Use defaults for all options)');
       console.log(
-        '       [--bare]        (Create a minimal site with one page)',
+        '       [--no-interactive]  (Skip prompts; use defaults or flags)',
       );
+      console.log(
+        '       [--bare]            (Create a minimal site with one page)',
+      );
+      console.log('       [--title, --symbol, --theme-color, --tint-hue,');
+      console.log('        --tint-amount, --default-time-zone, --prod-base,');
+      console.log('        --prod-base-path]');
       continue;
     } else if (cmd === 'clean') {
       console.log('  clean              Remove the dist/ directory');
@@ -127,14 +133,69 @@ function copyDirRecursive(src: string, dest: string): void {
   }
 }
 
+const FLAG_TO_KEY: Record<string, string> = {
+  title: 'title',
+  symbol: 'symbol',
+  'theme-color': 'themeColor',
+  'tint-hue': 'tintHue',
+  'tint-amount': 'tintAmount',
+  'default-time-zone': 'defaultTimeZone',
+  'prod-base': 'prodBase',
+  'prod-base-path': 'prodBasePath',
+};
+
 async function initCommand(args: string[]): Promise<void> {
-  const useDefaults = args.includes('--default');
-  const bare = args.includes('--bare');
-  const dirname = args.filter(a => !a.startsWith('--'))[0];
+  let values: Record<string, string | boolean | undefined>;
+  let positionals: string[];
+
+  try {
+    ({ values, positionals } = parseArgs({
+      args,
+      options: {
+        'no-interactive': { type: 'boolean', default: false },
+        bare: { type: 'boolean', default: false },
+        title: { type: 'string', default: INIT_QUESTIONS.title.defaultValue },
+        symbol: { type: 'string', default: INIT_QUESTIONS.symbol.defaultValue },
+        'theme-color': {
+          type: 'string',
+          default: INIT_QUESTIONS.themeColor.defaultValue,
+        },
+        'tint-hue': {
+          type: 'string',
+          default: INIT_QUESTIONS.tintHue.defaultValue,
+        },
+        'tint-amount': {
+          type: 'string',
+          default: INIT_QUESTIONS.tintAmount.defaultValue,
+        },
+        'default-time-zone': {
+          type: 'string',
+          default: INIT_QUESTIONS.defaultTimeZone.defaultValue,
+        },
+        'prod-base': {
+          type: 'string',
+          default: INIT_QUESTIONS.prodBase.defaultValue,
+        },
+        'prod-base-path': {
+          type: 'string',
+          default: INIT_QUESTIONS.prodBasePath.defaultValue,
+        },
+      },
+      strict: true,
+      allowPositionals: true,
+    }));
+  } catch (e: unknown) {
+    console.error(`Error: ${(e as Error).message}`);
+    process.exit(1);
+  }
+
+  const noInteractive = values['no-interactive'] as boolean;
+  const bare = values.bare as boolean;
+  const dirname = positionals[0];
 
   if (!dirname) {
     console.error('Error: Provide a name for the new directory');
-    console.log('Usage: tada init <dirname> [--default] [--bare]');
+    console.log('Usage: tada init <dirname> [--no-interactive] [--bare]');
     process.exit(1);
   }
 
@@ -145,9 +206,9 @@ async function initCommand(args: string[]): Promise<void> {
   }
 
   const message = `Creating a new Tada site in ${projectDir}`;
-  if (useDefaults && bare) {
+  if (noInteractive && bare) {
     console.log(message + ' using default config (bare)');
-  } else if (useDefaults) {
+  } else if (noInteractive) {
     console.log(message + ' using default config');
   } else if (bare) {
     console.log(message + ' (bare)');
@@ -157,9 +218,15 @@ async function initCommand(args: string[]): Promise<void> {
 
   const config: Record<string, string> = {};
 
-  if (useDefaults) {
-    for (const [key, { defaultValue }] of Object.entries(INIT_QUESTIONS)) {
-      config[key] = defaultValue;
+  if (noInteractive) {
+    for (const [flag, key] of Object.entries(FLAG_TO_KEY)) {
+      const value = values[flag] as string;
+      const error = INIT_QUESTIONS[key].validate(value);
+      if (error) {
+        console.error(`Error: --${flag}: ${error}`);
+        process.exit(1);
+      }
+      config[key] = value;
     }
   } else {
     const questions = Object.entries(INIT_QUESTIONS);

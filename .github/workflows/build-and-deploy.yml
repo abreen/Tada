@@ -23,7 +23,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install dependencies
-      run: sudo apt install -y mupdf-tools jq
+      run: sudo apt install -y mupdf-tools
 
     - name: Use Bun
       uses: oven-sh/setup-bun@v2
@@ -46,21 +46,13 @@ jobs:
     - name: Run functional tests
       run: bun run test:functional
 
-    # Build the example site and configure for GitHub Pages
+    # Initialize & build the example site configured for GitHub Pages
 
     - name: Initialize example site
-      run: bun run init-example
-
-    - name: Modify config for GitHub Pages
       run: >
-        jq '
-        .base |= "https://abreen.io" |
-        .basePath |= "/Tada" |
-        .internalDomains |= ["abreen.io"]'
-        site.prod.json > site.prod.json.new
-
-        mv site.prod.json.new site.prod.json
-      working-directory: example
+        bun run bin/tada.ts init example --no-interactive
+        --prod-base https://abreen.io
+        --prod-base-path /Tada
 
     - name: Build example site
       run: ../bin/tada.ts prod

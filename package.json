@@ -21,10 +21,11 @@
   ],
   "scripts": {
     "prepare": "husky && bun run scripts/check-deps.ts",
-    "init-example": "bun run bin/tada.ts init example --default",
+    "init-example": "bun run bin/tada.ts init example --no-interactive",
     "lint": "eslint src/ build/ bin/",
     "typecheck": "tsc --noEmit",
-    "test:functional": "python3 -m pip install -q -r functional_tests/requirements.txt && python3 -m pytest functional_tests/ -v -n auto --durations=10"
+    "test:functional": "python3 -m pip install -q -r functional_tests/requirements.txt && python3 -m pytest functional_tests/ -v -n auto --durations=10",
+    "test:all": "bun test && bun run test:functional"
   },
   "engines": {
     "bun": ">=1.0.0"

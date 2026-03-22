@@ -62,7 +62,7 @@ class TestDevBuildDefaultContent:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--default", cwd=str(tmp_path))
+        result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
         assert result.returncode == 0, f"init failed: {result.stderr}"
         site = tmp_path / "testsite"
         assert site.is_dir()

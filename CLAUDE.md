@@ -38,7 +38,7 @@ Watch mode tests are slow (~10s each) due to polling for rebuilds.
 This repository is the Tada **package**, not a Tada site. Do not run `tada dev`
 or `tada prod` in this directory — there is no site here. To test:
 
-1. `bun run init-example --default`
+1. `bun run init-example`
 2. `cd example`
 3. `../bin/tada.js dev` (or `prod`, `serve`, etc.)
 

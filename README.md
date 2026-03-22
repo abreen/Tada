@@ -78,8 +78,13 @@ Create a new Tada site in a new directory. Prompts for:
 - **Production base URL**: e.g. `https://example.edu`
 - **Production base path**: e.g. `/cs101` (defaults to `/`)
 
-Pass `--default` to use the default values for all options without being
-prompted.
+Pass `--no-interactive` to skip prompts and use default values for all options.
+You can also override specific defaults with flags:
+
+    tada init mysite --no-interactive --prod-base https://example.edu --prod-base-path /cs101
+
+Available flags: `--title`, `--symbol`, `--theme-color`, `--tint-hue`,
+`--tint-amount`, `--default-time-zone`, `--prod-base`, `--prod-base-path`.
 
 
 ### `tada dev`

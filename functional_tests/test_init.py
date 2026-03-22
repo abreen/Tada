@@ -8,7 +8,7 @@ from conftest import run_tada
 class TestInitDefault:
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--default", cwd=str(tmp_path))
+        result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
         assert result.returncode == 0, f"init failed: {result.stderr}"
         site = tmp_path / "testsite"
         assert site.is_dir()
@@ -59,7 +59,7 @@ class TestInitDefault:
         assert (site_dir / "content" / "lectures" / "01" / "index.md").exists()
 
     def test_stdout_contains_success_message(self, tmp_path):
-        result = run_tada("init", "mysite", "--default", cwd=str(tmp_path))
+        result = run_tada("init", "mysite", "--no-interactive", cwd=str(tmp_path))
         assert result.returncode == 0
         assert "Generated a new site" in result.stdout
         assert "Next steps" in result.stdout
@@ -95,6 +95,72 @@ class TestInitBare:
 
     def test_no_authors_json(self, site_dir):
         assert not (site_dir / "authors.json").exists()
+
+
+class TestInitNoInteractiveFlags:
+    def test_prod_base_path_flag(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--no-interactive",
+            "--prod-base-path", "/test",
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 0
+        config = json.loads((tmp_path / "testsite" / "site.prod.json").read_text())
+        assert config["basePath"] == "/test"
+
+    def test_prod_base_flag(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--no-interactive",
+            "--prod-base", "https://myschool.edu",
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 0
+        config = json.loads((tmp_path / "testsite" / "site.prod.json").read_text())
+        assert config["base"] == "https://myschool.edu"
+        assert "myschool.edu" in config["internalDomains"]
+
+    def test_title_flag(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--no-interactive",
+            "--title", "My Course",
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 0
+        config = json.loads((tmp_path / "testsite" / "site.dev.json").read_text())
+        assert config["title"] == "My Course"
+
+    def test_invalid_flag_value_exits_1(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--no-interactive",
+            "--prod-base", "not-a-url",
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 1
+        assert "Error" in result.stderr
+
+    def test_unknown_flag_exits_1(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--no-interactive",
+            "--nonexistent", "value",
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 1
+
+    def test_multiple_flags(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--no-interactive",
+            "--title", "CS 101",
+            "--symbol", "CS 1",
+            "--prod-base", "https://example.edu",
+            "--prod-base-path", "/cs101",
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 0
+        dev = json.loads((tmp_path / "testsite" / "site.dev.json").read_text())
+        prod = json.loads((tmp_path / "testsite" / "site.prod.json").read_text())
+        assert dev["title"] == "CS 101"
+        assert dev["symbol"] == "CS 1"
+        assert prod["basePath"] == "/cs101"
 
 
 class TestInitErrors:
