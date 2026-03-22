@@ -27,7 +27,7 @@ async function runPipeline(mode: 'development' | 'production'): Promise<void> {
   const isDev = mode === 'development';
   const siteVariables = isDev ? getDevSiteVariables() : getProdSiteVariables();
   let distDir: string;
-  let prodVersion: number | undefined;
+  let prodVersion: number;
 
   if (isDev) {
     distDir = getDistDir();
@@ -90,11 +90,11 @@ async function runPipeline(mode: 'development' | 'production'): Promise<void> {
   }
 
   // Phase 5: Build manifest (production only)
-  if (!isDev && prodVersion !== undefined) {
+  if (!isDev) {
     const prodBase = getProdDistDir();
-    const manifestPath = path.join(prodBase, `v${prodVersion}.manifest.json`);
+    const manifestPath = path.join(prodBase, `v${prodVersion!}.manifest.json`);
     await generateBuildManifest(distDir, manifestPath);
-    log.info`Built dist-prod/v${prodVersion}/`;
+    log.info`Built dist-prod/v${prodVersion!}/`;
   }
 
   printFlair();
