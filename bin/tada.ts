@@ -501,7 +501,7 @@ switch (command) {
       const totalChanges =
         diff.added.length + diff.changed.length + diff.removed.length;
 
-      console.log(`Comparing v${oldVer} \u2192 v${newVer}`);
+      console.log(`Comparing v${oldVer} and v${newVer}`);
 
       if (totalChanges === 0) {
         console.log('\nNo changes between builds.');

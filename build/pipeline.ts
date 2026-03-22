@@ -94,7 +94,7 @@ async function runPipeline(mode: 'development' | 'production'): Promise<void> {
     const prodBase = getProdDistDir();
     const manifestPath = path.join(prodBase, `v${prodVersion}.manifest.json`);
     await generateBuildManifest(distDir, manifestPath);
-    log.info`Built v${prodVersion} → dist-prod/v${prodVersion}/`;
+    log.info`Built dist-prod/v${prodVersion}/`;
   }
 
   printFlair();
