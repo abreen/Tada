@@ -10,6 +10,15 @@ PACKAGE_DIR = Path(__file__).resolve().parent.parent
 TADA_BIN = PACKAGE_DIR / "bin" / "tada.ts"
 
 
+def pytest_configure(config):
+    """When CLAUDECODE=1, reduce output verbosity."""
+    if os.environ.get("CLAUDECODE") == "1":
+        config.option.verbose = -1
+        config.option.tbstyle = "line"
+        config.option.durations = None
+        config.option.no_header = True
+
+
 def get_free_ports(n=2):
     """Allocate n free TCP ports by binding to port 0."""
     sockets = []

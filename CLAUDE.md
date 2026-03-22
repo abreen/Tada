@@ -22,11 +22,9 @@ The runtime is Bun. Build logic lives in `build/`.
 - Format code: `bun run format` (for Tada development only)
 - Lint: `bun run lint`
 - Typecheck: `bun run typecheck` (runs `tsc --noEmit`)
-- Run unit tests: `CLAUDECODE=1 bun test`
-- Run a single unit test: `CLAUDECODE=1 bun test build/code.test.ts`
-- Run functional tests: `bun run test:functional`
-
-You should use the `CLAUDECODE` env var with `bun test` to reduce output tokens.
+- Run unit tests: `bun test`
+- Run a single unit test: `bun test build/code.test.ts`
+- Run functional tests: `python3 -m pytest functional_tests/ -n auto`
 
 Functional tests are black-box Python/pytest tests in `functional_tests/` that
 exercise the CLI end-to-end (init, dev, prod, watch, clean). They use
