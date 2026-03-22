@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "required": ["base", "title", "defaultTimeZone"],
+  "required": ["base", "title", "defaultTimeZone", "themeColor"],
   "properties": {
     "features": {
       "type": "object",

@@ -151,6 +151,7 @@ describe('renderCodeWithComments', () => {
       internalDomains: [],
       title: 'Test',
       titlePostfix: ' - Test',
+      themeColor: 'steelblue',
       defaultTimeZone: 'America/New_York',
     } as SiteVariables);
 

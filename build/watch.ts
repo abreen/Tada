@@ -198,10 +198,8 @@ const publicDir: string = getPublicDir();
 const distDir: string = getDistDir();
 const packageDir: string = getPackageDir();
 
-let siteVariables: SiteVariables = getDevSiteVariables();
-let processedExtSet = new Set<string>(
-  getProcessedExtensions(Object.keys(siteVariables.codeLanguages || {})),
-);
+let siteVariables: SiteVariables;
+let processedExtSet = new Set<string>();
 let publicRelPaths: Set<string> = new Set();
 let contentAssetRelPaths: Set<string> = new Set();
 let contentRenderer: ContentRenderer;
@@ -213,6 +211,10 @@ const pendingChanges = new Set<string>();
 let rebuilding = false;
 
 async function initialBuild(): Promise<void> {
+  siteVariables = getDevSiteVariables();
+  processedExtSet = new Set(
+    getProcessedExtensions(Object.keys(siteVariables.codeLanguages || {})),
+  );
   fs.mkdirSync(distDir, { recursive: true });
 
   compileTemplates(siteVariables);

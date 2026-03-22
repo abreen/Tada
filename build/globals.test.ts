@@ -7,6 +7,7 @@ const baseSite: SiteVariables = {
   basePath: '/',
   title: 'Test',
   titlePostfix: ' - Test',
+  themeColor: 'hsl(195 70% 40%)',
   defaultTimeZone: 'America/New_York',
 };
 

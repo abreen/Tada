@@ -6,7 +6,7 @@ export interface SiteVariables {
   titlePostfix: string;
   symbol?: string;
   faviconSymbol?: string;
-  themeColor?: string;
+  themeColor: string;
   faviconColor?: string;
   faviconFontWeight?: number;
   internalDomains?: string[];
