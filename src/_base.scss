@@ -104,3 +104,29 @@ pre {
     padding: 0;
   }
 }
+
+input[type='text'],
+input[type='search'] {
+  background: var(--bg-color);
+  color: var(--fg-color);
+  border: var(--control-border-width) solid var(--fg2-color);
+  border-radius: var(--border-radius);
+  font-size: 12pt;
+  padding: 4px 4px;
+}
+
+input[type='search'] {
+  background-color: var(--bg-color);
+  background-image: var(--icon-search);
+  background-repeat: no-repeat;
+  background-position: left 6px center;
+  background-size: 16px 16px;
+  padding-left: 2rem;
+  border-radius: 18px;
+  min-width: 0;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

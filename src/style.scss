@@ -47,40 +47,6 @@
   outline-offset: 1px;
 }
 
-.info {
-  @include user-select(none);
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: baseline;
-  color: var(--fg2-color);
-  font-size: var(--font-size-smaller);
-
-  @media (width < 450px) {
-    grid-template-columns: 1fr;
-  }
-
-  aside.author {
-    a {
-      text-decoration: none;
-
-      .text {
-        color: var(--fg2-color);
-        text-decoration: underline;
-        text-decoration-color: var(--fg2-color);
-        text-decoration-thickness: 1px;
-        text-underline-offset: 3px;
-      }
-    }
-
-    .avatar {
-      width: 24px;
-      height: 24px;
-      vertical-align: middle;
-      margin-left: 4px;
-    }
-  }
-}
-
 a.disabled {
   color: var(--fg-color-translucent);
   text-decoration-color: var(--fg-color-translucent);
@@ -231,16 +197,6 @@ main details {
 main details {
   border-radius: var(--border-radius);
   border: 2px solid var(--fg-color);
-}
-
-input[type='text'],
-input[type='search'] {
-  background: var(--bg-color);
-  color: var(--fg-color);
-  border: var(--control-border-width) solid var(--fg2-color);
-  border-radius: var(--border-radius);
-  font-size: 12pt;
-  padding: 4px 4px;
 }
 
 button,

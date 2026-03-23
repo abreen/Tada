@@ -8,21 +8,7 @@ header {
     gap: 0.5rem;
 
     input.search {
-      background-color: var(--bg-color);
-      background-image: var(--icon-search);
-      background-repeat: no-repeat;
-      background-position: left 6px center;
-      background-size: 16px 16px;
-      padding-left: 2rem;
-
-      border-radius: 18px;
       flex: 1;
-      min-width: 0;
-
-      &:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
     }
   }
 
