@@ -357,14 +357,49 @@ async function initCommand(args: string[]): Promise<void> {
       ) + '\n',
     );
   } else {
-    // Copy nav and authors data files to the project root
-    fs.copyFileSync(
-      path.join(packageDir, 'config/nav.json'),
+    // Create nav and authors data files in the project root
+    fs.writeFileSync(
       path.join(projectDir, 'nav.json'),
+      JSON.stringify(
+        [
+          {
+            title: 'Navigation',
+            links: [{ text: 'Home', internal: '/index.html' }],
+          },
+          {
+            title: 'Topics',
+            links: [
+              { text: 'Lectures', internal: '/lectures/index.html' },
+              {
+                text: 'Problem Sets',
+                internal: '/problem_sets/index.html',
+                disabled: true,
+              },
+            ],
+          },
+          {
+            title: 'Links',
+            links: [
+              { text: 'Zoom', external: 'https://zoom.com' },
+              {
+                text: 'Canvas',
+                external: 'https://www.instructure.com/',
+                disabled: true,
+              },
+            ],
+          },
+        ],
+        null,
+        2,
+      ) + '\n',
     );
-    fs.copyFileSync(
-      path.join(packageDir, 'config/authors.json'),
+    fs.writeFileSync(
       path.join(projectDir, 'authors.json'),
+      JSON.stringify(
+        { alex: { name: 'Alex Breen', avatar: '/avatars/alex.jpg' } },
+        null,
+        2,
+      ) + '\n',
     );
 
     // Copy content/ and public/ from the package

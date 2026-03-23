@@ -8,12 +8,7 @@ import type { SiteVariables, WatchState } from './types';
 import { B } from './colors';
 import { makeLogger, printFlair } from './log';
 import { getDevSiteVariables } from './site-variables';
-import {
-  compileTemplates,
-  getHtmlTemplatesDir,
-  getJsonDataDir,
-  JSON_DATA_FILES,
-} from './templates';
+import { compileTemplates, getJsonDataDir, JSON_DATA_FILES } from './templates';
 import {
   getContentDir,
   getPublicDir,
@@ -74,7 +69,7 @@ async function bundleReloadClient(): Promise<string[]> {
   );
 }
 
-type ChangeCategory = 'content' | 'public' | 'src' | 'templates' | 'config';
+type ChangeCategory = 'content' | 'public' | 'config';
 
 const log = makeLogger(__filename);
 const wslog = makeLogger('WebSocket');
@@ -203,7 +198,6 @@ function toPublicRelativePath(filePath: string): string | null {
 const contentDir: string = getContentDir();
 const publicDir: string = getPublicDir();
 const distDir: string = getDistDir();
-const packageDir: string = getPackageDir();
 
 let siteVariables: SiteVariables;
 let processedExtSet = new Set<string>();
@@ -279,8 +273,6 @@ function classifyChange(filePath: string): ChangeCategory | null {
   const resolved = path.resolve(filePath);
   const resolvedContentDir = path.resolve(contentDir) + path.sep;
   const resolvedPublicDir = path.resolve(publicDir) + path.sep;
-  const resolvedSrcDir = path.resolve(packageDir, 'src') + path.sep;
-  const htmlTemplatesDir = path.resolve(getHtmlTemplatesDir()) + path.sep;
   const jsonDataDir = getJsonDataDir();
   const siteConfigPath = path.resolve('site.dev.json');
 
@@ -290,16 +282,10 @@ function classifyChange(filePath: string): ChangeCategory | null {
   if (resolved.startsWith(resolvedPublicDir)) {
     return 'public';
   }
-  if (resolved.startsWith(resolvedSrcDir)) {
-    return 'src';
-  }
   if (
-    resolved.startsWith(htmlTemplatesDir) ||
+    resolved === siteConfigPath ||
     JSON_DATA_FILES.some(f => resolved === path.resolve(jsonDataDir, f))
   ) {
-    return 'templates';
-  }
-  if (resolved === siteConfigPath) {
     return 'config';
   }
   return null;
@@ -375,48 +361,8 @@ async function rebuild(): Promise<void> {
       return;
     }
 
-    // Source changed, re-bundle, then re-render all content
-    if (categories.has('src')) {
-      assetFiles = [
-        ...(await bundle(siteVariables, { mode: 'development' })),
-        ...(await bundleReloadClient()),
-      ];
-      // Force full content re-render since asset filenames may have changed
-      const result = contentRenderer.processContent({ distDir, assetFiles });
-      for (const err of result.errors) {
-        log.error`${err.message}`;
-      }
-      if (result.errors.length === 0) {
-        printFlair();
-        if (!serveStarted) {
-          serveStarted = true;
-          serve();
-        }
-        broadcast('reload');
-        if (pagefindRunner) {
-          pagefindRunner.update(distDir, result.htmlAssetsByPath);
-          setImmediate(() => pagefindRunner!.run());
-        }
-        succeeded = true;
-      }
-      return;
-    }
-
-    // Templates/data changed, recompile templates, re-render all content
-    if (categories.has('templates')) {
-      const detection = changeDetector.detectChanges(changes);
-      if (detection.templateError) {
-        log.error`Template error: ${detection.templateError.message}`;
-        return;
-      }
-    }
-
     // Public file changed, copy just that file
-    if (
-      categories.has('public') &&
-      !categories.has('content') &&
-      !categories.has('templates')
-    ) {
+    if (categories.has('public') && !categories.has('content')) {
       for (const filePath of changes) {
         if (classifyChange(filePath) === 'public') {
           const absPath = path.resolve(filePath);
@@ -436,12 +382,8 @@ async function rebuild(): Promise<void> {
       return;
     }
 
-    // Content and/or templates changed, incremental rebuild
+    // Content changed, incremental rebuild
     const detection = changeDetector.detectChanges(changes);
-    if (detection.templateError) {
-      log.error`Template error: ${detection.templateError.message}`;
-      return;
-    }
 
     if (detection.needsRestart) {
       log.event`Content structure changed, full rebuild`;
@@ -566,20 +508,10 @@ initialBuild()
     initialBuildFailed = true;
   })
   .finally(() => {
-    // Watch content, public, src, templates, data files, site config
+    // Watch content, public, data files, site config
     const watchPaths: string[] = [contentDir, publicDir];
 
-    // Watch package src/ and templates/ for Tada development
-    const srcDir = path.resolve(packageDir, 'src');
-    const templatesDir = getHtmlTemplatesDir();
-    if (fs.existsSync(srcDir)) {
-      watchPaths.push(srcDir);
-    }
-    if (fs.existsSync(templatesDir)) {
-      watchPaths.push(templatesDir);
-    }
-
-    // Watch data files
+    // Watch data files (nav.json, authors.json)
     const jsonDataDir = getJsonDataDir();
     for (const dataFile of JSON_DATA_FILES) {
       const dataPath = path.join(jsonDataDir, dataFile);
