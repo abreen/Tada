@@ -22,6 +22,13 @@ declare module 'pagefind' {
   export function close(): Promise<void>;
 }
 
+declare module 'katex/contrib/render-a11y-string' {
+  export default function renderA11yString(
+    text: string,
+    settings?: Record<string, unknown>,
+  ): string;
+}
+
 declare module 'jsdom' {
   export class JSDOM {
     constructor(html?: string | Buffer, options?: Record<string, unknown>);

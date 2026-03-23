@@ -349,6 +349,20 @@ describe('katex plugin', () => {
     expect(html).toContain('class="katex-display"');
   });
 
+  test('includes aria-label for inline math', () => {
+    const md = createProjectMarkdown();
+    const html = md.render('$E = mc^2$');
+    expect(html).toContain('aria-label="E, equals, m, c, squared"');
+  });
+
+  test('includes aria-label for display math', () => {
+    const md = createProjectMarkdown();
+    const html = md.render('$$\\frac{1}{2}$$');
+    expect(html).toContain(
+      'aria-label="start fraction, 1, divided by, 2, end fraction"',
+    );
+  });
+
   test('throws on invalid LaTeX syntax', () => {
     const md = createProjectMarkdown();
     expect(() => md.render('$\\invalidcommand{$')).toThrow();
