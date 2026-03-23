@@ -235,7 +235,7 @@ input[type='submit']:focus-visible,
 input[type='text']:focus-visible,
 input[type='search']:focus-visible {
   border-color: var(--fg-color);
-  background: var(--bg2-color);
+  background-color: var(--bg2-color);
 }
 
 button.icon-button {
