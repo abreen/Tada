@@ -3,11 +3,10 @@
 This codebase is a static site generator written in TypeScript and uses Bun.
 
 - Build logic lives in `build/`
-- Site content lives in `content/`
+- Default site content and static assets for `tada init` live in `init/`
 - Markdown & HTML content is processed; other file types are copied unchanged
 - Lodash HTML templates in `templates/` are internal to the package
 - Client-side code is in `src/`
-- Static assets are in `public/`
 
 ## Spec
 
@@ -43,8 +42,8 @@ or `tada prod` in this directory — there is no site here. To test:
 2. `cd example`
 3. `../bin/tada.js dev` (or `prod`, `serve`, etc.)
 
-The `content/` directory in this repo is the default content copied into new
-projects by `tada init` — it is not a buildable site on its own.
+The `init/` directory contains the default content and public files copied into
+new projects by `tada init` — it is not a buildable site on its own.
 
 ## Formatting
 

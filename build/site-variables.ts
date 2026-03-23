@@ -3,7 +3,7 @@ import path from 'path';
 import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { getProjectDir } from './utils/paths';
 import type { SiteVariables } from './types';
-import siteSchema from './site.schema.json' with { type: 'json' };
+import siteSchema from '../schema/site.schema.json' with { type: 'json' };
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 
 const configDir = getProjectDir();

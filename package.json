@@ -13,9 +13,8 @@
     "src/",
     "templates/",
     "fonts/",
-    "config/",
-    "content/",
-    "public/",
+    "init/",
+    "schema/",
     "types/",
     "tsconfig.json"
   ],

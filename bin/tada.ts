@@ -404,11 +404,11 @@ async function initCommand(args: string[]): Promise<void> {
 
     // Copy content/ and public/ from the package
     copyDirRecursive(
-      path.join(packageDir, 'content'),
+      path.join(packageDir, 'init/content'),
       path.join(projectDir, 'content'),
     );
     copyDirRecursive(
-      path.join(packageDir, 'public'),
+      path.join(packageDir, 'init/public'),
       path.join(projectDir, 'public'),
     );
   }

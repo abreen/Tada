@@ -100,9 +100,10 @@ export function compileTemplates(
       continue;
     }
 
-    // Schema validation (schemas live in the package templates dir)
+    // Schema validation
+    const schemaDir = path.resolve(getPackageDir(), 'schema');
     const schemaFile = `${path.parse(fileName).name}.schema.json`;
-    const schemaPath = path.join(htmlDir, schemaFile);
+    const schemaPath = path.join(schemaDir, schemaFile);
     if (!fs.existsSync(schemaPath)) {
       throw new Error(`Missing JSON Schema for ${fileName}: ${schemaPath}`);
     }
