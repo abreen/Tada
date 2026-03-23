@@ -128,6 +128,20 @@ See `config/site.dev.json` and `config/site.prod.json` to change `site.basePath`
 and `site.internalDomains`.
 
 
+## LaTeX
+
+$\LaTeX$ support is implemented via [KaTeX](https://katex.org/). The standard
+dollar sign-based syntax is supported. Wrap inline math in single `$`,
+or use `$$` for a math block.
+
+Here's an example: selection sort performs $O(n^2)$ comparisons. And to
+demonstrate a block, here's the exact number of comparisons:
+
+$$
+(n-1) + (n-2) + \dots + 1 = \sum_{i=1}^{n-1}i
+$$
+
+
 ## Additional syntax
 
 !!! note Headings are links

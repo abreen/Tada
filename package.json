@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@tsconfig/node23": "^23.0.2",
+    "@vscode/markdown-it-katex": "^1.1.2",
     "ajv": "^8.17.1",
     "chokidar": "^4.0.0",
     "culori": "^4.0.2",
@@ -38,6 +39,7 @@
     "front-matter": "^4.0.2",
     "java-parser": "^3.0.1",
     "jsdom": "^26.1.0",
+    "katex": "^0.16.40",
     "lodash": "^4.17.21",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",

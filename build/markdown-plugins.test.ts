@@ -6,7 +6,7 @@ import deflistIdPlugin from './deflist-id-plugin';
 import externalLinksPlugin from './external-links-plugin';
 import headingSubtitlePlugin from './heading-subtitle-plugin';
 import { createMarkdown } from './utils/markdown';
-import { stripHtmlComments } from './utils/render';
+import { stripHtmlComments, injectKatexStylesheet } from './utils/render';
 import type { SiteVariables } from './types';
 
 describe('apply-base-path-plugin', () => {
@@ -315,5 +315,68 @@ describe('stripHtmlComments', () => {
   test('returns input unchanged when there are no comments', () => {
     const input = '<p>Hello world</p>';
     expect(stripHtmlComments(input)).toBe(input);
+  });
+});
+
+describe('katex plugin', () => {
+  function createProjectMarkdown() {
+    return createMarkdown(
+      {
+        base: '',
+        basePath: '/',
+        internalDomains: [],
+        codeLanguages: {},
+        features: { search: true, code: true, favicon: false },
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+        defaultTimeZone: 'America/New_York',
+      } as SiteVariables,
+      { validatorOptions: { enabled: false } },
+    );
+  }
+
+  test('renders inline math with $ delimiters', () => {
+    const md = createProjectMarkdown();
+    const html = md.render('The equation $E = mc^2$ is famous.');
+    expect(html).toContain('class="katex"');
+    expect(html).toContain('mc');
+  });
+
+  test('renders display math with $$ delimiters', () => {
+    const md = createProjectMarkdown();
+    const html = md.render('$$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$');
+    expect(html).toContain('class="katex-display"');
+  });
+
+  test('throws on invalid LaTeX syntax', () => {
+    const md = createProjectMarkdown();
+    expect(() => md.render('$\\invalidcommand{$')).toThrow();
+  });
+
+  test('does not produce katex output when no math delimiters are used', () => {
+    const md = createProjectMarkdown();
+    const html = md.render('Just a normal paragraph with a $5 price tag.');
+    expect(html).not.toContain('class="katex"');
+  });
+});
+
+describe('injectKatexStylesheet', () => {
+  test('injects deferred KaTeX stylesheet link into <head>', () => {
+    const html =
+      '<html><head><meta charset="UTF-8"></head><body></body></html>';
+    const result = injectKatexStylesheet(html, p => p);
+
+    expect(result).toContain('href="/katex/katex.min.css"');
+    expect(result).toContain('media="print"');
+    expect(result).toContain('onload="this.media=\'all\'"');
+    expect(result).toContain('<noscript>');
+  });
+
+  test('applies basePath to the stylesheet URL', () => {
+    const html = '<html><head></head><body></body></html>';
+    const result = injectKatexStylesheet(html, p => '/course' + p);
+
+    expect(result).toContain('href="/course/katex/katex.min.css"');
   });
 });

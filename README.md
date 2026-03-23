@@ -23,6 +23,7 @@ A static site generator. The successor to Presto.
 - Internal link validation at build time (broken links fail the build)
 - Internal links automatically prefixed with base path, if specified
 - Time zone chooser (automatically adjusts `<datetime>` elements)
+- LaTeX math rendered at build time via [KaTeX][katex]
 - Extended Markdown syntax
   * `<<< details ... <<<` renders a collapsible box
   * `::: section ... :::` renders a special section with a fancy background
@@ -334,3 +335,4 @@ templates][lodash].
 [pagefind]: https://pagefind.app/
 [mutool]: https://mupdf.readthedocs.io/en/latest/tools/mutool.html
 [jep467]: https://openjdk.org/jeps/467
+[katex]: https://katex.org/

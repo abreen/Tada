@@ -138,6 +138,17 @@ export function injectAssetTags(
     .replace('</head>', `${scriptTags}</head>`);
 }
 
+export function injectKatexStylesheet(
+  html: string,
+  applyBasePath: (subPath: string) => string,
+): string {
+  const href = applyBasePath('/katex/katex.min.css');
+  const tag =
+    `<link href="${href}" rel="stylesheet" media="print" onload="this.media='all'">` +
+    `<noscript><link href="${href}" rel="stylesheet"></noscript>`;
+  return html.replace('<head>', `<head>${tag}`);
+}
+
 function toContentAssetPath(contentDir: string, filePath: string): string {
   return path
     .relative(contentDir, filePath)
@@ -187,12 +198,14 @@ export function renderPlainTextPageAsset({
     subPath,
   });
 
-  const html = injectAssetTags(
-    render(`${pageVariables.template}.html`, templateParameters) as string,
-    assetFiles,
-    applyBasePath,
-    distDir,
-  );
+  const templateHtml = render(
+    `${pageVariables.template}.html`,
+    templateParameters,
+  ) as string;
+  let html = injectAssetTags(templateHtml, assetFiles, applyBasePath, distDir);
+  if (templateHtml.includes('class="katex"')) {
+    html = injectKatexStylesheet(html, applyBasePath);
+  }
 
   return [
     {
@@ -509,12 +522,11 @@ export function renderLiterateJavaPageAsset({
     subPath,
   });
 
-  const html = injectAssetTags(
-    render('literate.html', templateParameters) as string,
-    assetFiles,
-    applyBasePath,
-    distDir,
-  );
+  const templateHtml = render('literate.html', templateParameters) as string;
+  let html = injectAssetTags(templateHtml, assetFiles, applyBasePath, distDir);
+  if (templateHtml.includes('class="katex"')) {
+    html = injectKatexStylesheet(html, applyBasePath);
+  }
 
   return [
     {

@@ -15,6 +15,8 @@ import externalLinksPlugin from '../external-links-plugin';
 import validateInternalLinksPlugin from '../validate-internal-links-plugin';
 import applyBasePathPlugin from '../apply-base-path-plugin';
 import { tocPlugin } from '../toc-plugin';
+import markdownItKatex from '@vscode/markdown-it-katex';
+import katex from 'katex';
 import type { SiteVariables } from '../types';
 
 interface CreateMarkdownOptions {
@@ -44,6 +46,7 @@ export function createMarkdown(
     .use(validateInternalLinksPlugin, validatorOptions)
     .use(applyBasePathPlugin, siteVariables)
     .use(tocPlugin)
+    .use(markdownItKatex)
     .use(markdownItContainer, 'details', {
       marker: '<',
       validate: function (params: string) {
@@ -77,6 +80,29 @@ export function createMarkdown(
         }
       },
     });
+
+  // The @vscode/markdown-it-katex plugin's renderers swallow errors thrown
+  // by katex.renderToString() and return error HTML instead of propagating
+  // the exception. Override the renderers so parse errors fail the build.
+  // The plugin's tokenizer ($ and $$ delimiter parsing) is kept.
+  markdown.renderer.rules.math_inline = (tokens: Token[], idx: number) => {
+    const latex = tokens[idx].content;
+    const displayMode = /\\begin\{(align|equation|gather|cd|alignat)\}/i.test(
+      latex,
+    );
+    return katex.renderToString(latex, { throwOnError: true, displayMode });
+  };
+  const katexBlockRenderer = (tokens: Token[], idx: number) => {
+    const latex = tokens[idx].content;
+    return (
+      `<p class="katex-block">` +
+      katex.renderToString(latex, { throwOnError: true, displayMode: true }) +
+      `</p>\n`
+    );
+  };
+  markdown.renderer.rules.math_block = katexBlockRenderer;
+  markdown.renderer.rules.math_inline_block = katexBlockRenderer;
+  markdown.renderer.rules.math_inline_bare_block = katexBlockRenderer;
 
   const usedIds = new Map<string, number>();
   markdown.use(markdownItContainer, 'alert', {

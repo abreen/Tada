@@ -18,6 +18,7 @@ import {
 import { isFeatureEnabled } from './features';
 import { bundle } from './bundle';
 import { copyFonts } from './generate-fonts';
+import { copyKatexAssets } from './generate-katex-assets';
 import { generateFavicons } from './generate-favicon';
 import { generateManifest } from './generate-manifest';
 import {
@@ -234,6 +235,7 @@ async function initialBuild(): Promise<void> {
   ];
 
   copyFonts(distDir);
+  copyKatexAssets(distDir);
 
   if (isFeatureEnabled(siteVariables, 'favicon')) {
     await generateFavicons(siteVariables, distDir);
@@ -335,6 +337,7 @@ async function rebuild(): Promise<void> {
       ];
 
       copyFonts(distDir);
+      copyKatexAssets(distDir);
 
       if (isFeatureEnabled(siteVariables, 'favicon')) {
         await generateFavicons(siteVariables, distDir);
