@@ -7,8 +7,9 @@ set up your development environment and submit changes.
 ## Prerequisites
 
 - [Bun](https://bun.sh/)
-- [Python 3](https://www.python.org/) (for functional tests)
+- A recent Java JDK (for the literate Java feature)
 - [MuPDF](https://mupdf.com/) (the `mutool` command for PDF text extraction)
+- Python 3 (for functional tests)
 
 
 ## Getting started

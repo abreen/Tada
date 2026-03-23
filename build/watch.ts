@@ -325,6 +325,8 @@ async function rebuild(): Promise<void> {
     }
   }
 
+  let succeeded = false;
+
   try {
     // Site config changed, full restart
     if (categories.has('config')) {
@@ -368,8 +370,8 @@ async function rebuild(): Promise<void> {
           pagefindRunner.update(distDir, result.htmlAssetsByPath);
           setImmediate(() => pagefindRunner!.run());
         }
+        succeeded = true;
       }
-      rebuilding = false;
       return;
     }
 
@@ -395,8 +397,8 @@ async function rebuild(): Promise<void> {
           pagefindRunner.update(distDir, result.htmlAssetsByPath);
           setImmediate(() => pagefindRunner!.run());
         }
+        succeeded = true;
       }
-      rebuilding = false;
       return;
     }
 
@@ -405,7 +407,6 @@ async function rebuild(): Promise<void> {
       const detection = changeDetector.detectChanges(changes);
       if (detection.templateError) {
         log.error`Template error: ${detection.templateError.message}`;
-        rebuilding = false;
         return;
       }
     }
@@ -431,7 +432,7 @@ async function rebuild(): Promise<void> {
       }
       printFlair();
       broadcast('reload');
-      rebuilding = false;
+      succeeded = true;
       return;
     }
 
@@ -439,7 +440,6 @@ async function rebuild(): Promise<void> {
     const detection = changeDetector.detectChanges(changes);
     if (detection.templateError) {
       log.error`Template error: ${detection.templateError.message}`;
-      rebuilding = false;
       return;
     }
 
@@ -527,11 +527,14 @@ async function rebuild(): Promise<void> {
         pagefindRunner.update(distDir, result.htmlAssetsByPath);
         setImmediate(() => pagefindRunner!.run());
       }
+      succeeded = true;
     }
   } catch (err) {
     log.error`Build failed: ${(err as Error).message}`;
-    broadcast('error');
   } finally {
+    if (!succeeded) {
+      broadcast('error');
+    }
     rebuilding = false;
 
     // If more changes accumulated during rebuild, schedule another

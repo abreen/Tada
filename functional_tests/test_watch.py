@@ -403,3 +403,46 @@ class TestWatchConfigBreakAndRecover:
 
         html = index_html.read_text()
         assert original_title in html
+
+
+class TestWatchLiterateJavaError:
+    """A Java compilation error should stop the build but not crash watch mode."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        yield tmp_path / "testsite"
+
+    def test_compilation_error_no_crash_then_fix(self, site_dir):
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
+
+            # Pair.java.md should have been compiled and rendered
+            pair_html = site_dir / "dist" / "lectures" / "01" / "Pair.html"
+            assert pair_html.exists()
+            before_mtime = pair_html.stat().st_mtime
+
+            # Introduce a compilation error
+            pair_md = site_dir / "content" / "lectures" / "01" / "Pair.java.md"
+            original = pair_md.read_text()
+            pair_md.write_text(
+                "title: Pair\n\n"
+                "```java\n"
+                "public class Pair { this is not valid java }\n"
+                "```\n"
+            )
+
+            # Should receive an error event (not a crash)
+            wp.wait_for_error()
+            assert wp.proc.poll() is None
+
+            # Restore the original file
+            pair_md.write_text(original)
+
+            # Wait for successful rebuild
+            wp.wait_for_rebuild(pair_html, "modified", before_mtime=before_mtime)
+            assert pair_html.exists()
+        finally:
+            wp.stop()
