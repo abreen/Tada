@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import websocket
 
-from conftest import TADA_BIN, get_free_ports
+from conftest import TADA_BIN, get_free_ports, run_tada
 
 REBUILD_TIMEOUT_SEC = 30
 INITIAL_BUILD_TIMEOUT_SEC = 60
@@ -45,6 +45,7 @@ class WatchProcess:
         # WebSocket state for detecting rebuilds and readiness
         self._reload_event = threading.Event()
         self._ready_event = threading.Event()
+        self._error_event = threading.Event()
         self._ws_connected = threading.Event()
 
         def on_message(ws, message):
@@ -52,6 +53,8 @@ class WatchProcess:
                 self._reload_event.set()
             elif message == "ready":
                 self._ready_event.set()
+            elif message == "error":
+                self._error_event.set()
 
         def on_open(ws):
             self._ws_connected.set()
@@ -82,6 +85,19 @@ class WatchProcess:
                     f"Watch process exited early with code {self.proc.returncode}"
                 )
         raise TimeoutError("Initial watch build did not complete in time")
+
+    def wait_for_error(self):
+        """Block until an 'error' WebSocket message is received."""
+        deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
+        while time.monotonic() < deadline:
+            if self._error_event.wait(timeout=WS_EVENT_WAIT_SEC):
+                self._error_event.clear()
+                return
+            if self.proc.poll() is not None:
+                raise RuntimeError(
+                    f"Watch process exited with code {self.proc.returncode}"
+                )
+        raise TimeoutError("Did not receive 'error' message within timeout")
 
     def wait_for_rebuild(self, path: Path, condition="modified", before_mtime=None):
         """Wait for a file to be created, modified, or removed.
@@ -307,3 +323,83 @@ class TestWatchWebSocket:
         assert "WebSocket" in content, (
             "watch-reload-client.bundle.js is empty or missing WebSocket code"
         )
+
+
+class TestWatchBadConfigAtStart:
+    """Starting watch with an invalid config does not crash; fixing it recovers."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        # Break the config by removing the required "title" field
+        config_path = site / "site.dev.json"
+        config = json.loads(config_path.read_text())
+        del config["title"]
+        config_path.write_text(json.dumps(config, indent=2) + "\n")
+
+        yield site
+
+    def test_bad_config_no_crash_then_fix(self, site_dir):
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()  # "ready" is broadcast regardless of build success
+
+            # The deferred "error" event should have been broadcast before "ready"
+            assert wp._error_event.is_set()
+            wp._error_event.clear()
+
+            # Initial build should have failed — no dist output
+            assert not (site_dir / "dist" / "index.html").exists()
+
+            # Process must still be running
+            assert wp.proc.poll() is None
+
+            # Fix the config by restoring the title
+            config_path = site_dir / "site.dev.json"
+            config = json.loads(config_path.read_text())
+            config["title"] = "Recovered Title"
+            config_path.write_text(json.dumps(config, indent=2) + "\n")
+
+            # Wait for the successful rebuild
+            index_html = site_dir / "dist" / "index.html"
+            wp.wait_for_rebuild(index_html, "exists")
+
+            html = index_html.read_text()
+            assert "Recovered Title" in html
+        finally:
+            wp.stop()
+
+
+class TestWatchConfigBreakAndRecover:
+    """Breaking the config mid-watch causes an error event; fixing it recovers."""
+
+    def test_break_config_then_fix(self, watch, site_dir):
+        index_html = site_dir / "dist" / "index.html"
+        assert index_html.exists()
+        before_mtime = index_html.stat().st_mtime
+
+        # Break the config by removing the required "title" field
+        config_path = site_dir / "site.dev.json"
+        config = json.loads(config_path.read_text())
+        original_title = config["title"]
+        del config["title"]
+        config_path.write_text(json.dumps(config, indent=2) + "\n")
+
+        # Should receive an error event (not a crash)
+        watch.wait_for_error()
+
+        # Process must still be running
+        assert watch.proc.poll() is None
+
+        # Fix the config
+        config["title"] = original_title
+        config_path.write_text(json.dumps(config, indent=2) + "\n")
+
+        # Wait for the successful rebuild
+        watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
+
+        html = index_html.read_text()
+        assert original_title in html

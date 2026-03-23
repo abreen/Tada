@@ -82,6 +82,7 @@ const wslog = makeLogger('WebSocket');
 // --- WebSocket server (unchanged) ---
 
 let webSocketsReady = false;
+let watcherReady = false;
 let webServerReady = false;
 let webServerTimeout: ReturnType<typeof setTimeout> | undefined;
 let serveStarted = false;
@@ -92,6 +93,12 @@ try {
 
   wss.on('connection', (conn: WebSocket) => {
     wslog.debug`WebSocket client connected`;
+    if (watcherReady && conn.readyState === WebSocket.OPEN) {
+      if (initialBuildFailed) {
+        conn.send('error');
+      }
+      conn.send('ready');
+    }
     conn.on('close', () => {
       wslog.debug`WebSocket client disconnected`;
     });
@@ -523,6 +530,7 @@ async function rebuild(): Promise<void> {
     }
   } catch (err) {
     log.error`Build failed: ${(err as Error).message}`;
+    broadcast('error');
   } finally {
     rebuilding = false;
 
@@ -547,9 +555,12 @@ function onFileChange(filePath: string): void {
 
 // --- Start ---
 
+let initialBuildFailed = false;
+
 initialBuild()
   .catch(err => {
     log.error`Initial build failed: ${(err as Error).message}`;
+    initialBuildFailed = true;
   })
   .finally(() => {
     // Watch content, public, src, templates, data files, site config
@@ -590,6 +601,10 @@ initialBuild()
     watcher.on('unlink', onFileChange);
 
     watcher.on('ready', () => {
+      watcherReady = true;
+      if (initialBuildFailed) {
+        broadcast('error');
+      }
       broadcast('ready');
       log.info`Watching for changes...`;
     });
