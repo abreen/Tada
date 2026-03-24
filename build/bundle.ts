@@ -17,9 +17,9 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const tintAmount = siteVariables.tintAmount ?? 100;
 
   const iconColor = `hsl(${tintHue}deg ${(8 * tintAmount) / 100}% 8%)`;
-  const iconColorHover = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 60%)`;
+  const iconColorHover = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 45%)`;
   const iconColorDark = `hsl(${tintHue}deg ${(20 * tintAmount) / 100}% 90%)`;
-  const iconColorHoverDark = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 55%)`;
+  const iconColorHoverDark = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 60%)`;
   const iconColorTranslucentDark = `hsl(${tintHue}deg ${(85 * tintAmount) / 100}% 90%)`;
 
   const rendered = _.template(template)({
