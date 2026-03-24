@@ -17,7 +17,6 @@ export default (window: Window) => {
     link.className = 'heading-anchor';
     link.href = `#${el.id}`;
     link.title = 'Link to this heading';
-    link.setAttribute('aria-label', 'Link to this heading');
 
     // Move all existing child nodes into the link
     while (el.firstChild) {
