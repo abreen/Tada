@@ -51,20 +51,12 @@ a.disabled {
   color: var(--fg-color-translucent);
   text-decoration-color: var(--fg-color-translucent);
   cursor: not-allowed;
-}
 
-@media (hover: hover) {
-  a:hover {
-    color: var(--fg2-color);
+  @media (hover: hover) {
+    &:hover {
+      color: var(--fg-color-translucent);
+    }
   }
-
-  a.disabled:hover {
-    color: var(--fg-color-translucent);
-  }
-}
-
-a:active {
-  color: var(--link-active-color);
 }
 
 a.external::after {
@@ -425,6 +417,10 @@ dl {
         &:hover {
           text-decoration-color: var(--fg2-color);
         }
+      }
+
+      &:active {
+        text-decoration-color: var(--link-active-color);
       }
     }
   }

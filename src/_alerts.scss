@@ -40,6 +40,10 @@
 
   a {
     text-decoration-color: var(--fg-color);
+
+    &:hover {
+      text-decoration-color: inherit;
+    }
   }
 
   dfn {
