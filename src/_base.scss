@@ -1,3 +1,5 @@
+@use 'mixins' as *;
+
 :root {
   --box-border-width: 5px;
 
@@ -11,10 +13,6 @@
   --section-padding: 64px;
 
   --main-width: 900px;
-}
-
-p {
-  margin: 0 0 1rem 0;
 }
 
 h1,
@@ -116,6 +114,43 @@ pre {
   code {
     padding: 0;
   }
+}
+
+details .content > *:first-child {
+  margin-top: 0;
+}
+
+details .content > *:last-child {
+  margin-bottom: 0;
+}
+
+details summary {
+  cursor: pointer;
+  @include user-select(none);
+  padding: var(--details-padding);
+}
+
+details .content {
+  padding: 0 var(--details-padding) var(--details-padding)
+    var(--details-padding);
+}
+
+@media (hover: hover) {
+  details summary {
+    &:hover {
+      color: var(--fg2-color);
+    }
+
+    &:active {
+      color: var(--link-active-color);
+    }
+  }
+}
+
+main details {
+  margin-bottom: 1rem;
+  border-radius: var(--border-radius);
+  border: 2px solid var(--fg-color);
 }
 
 input[type='text'],

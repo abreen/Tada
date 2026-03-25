@@ -133,34 +133,6 @@ a.footnote-ref,
   @include user-select(none);
 }
 
-details .content > p:last-child,
-details .content > div:last-child {
-  margin-bottom: 0;
-}
-
-details summary {
-  cursor: pointer;
-  @include user-select(none);
-  padding: var(--details-padding);
-}
-
-details .content {
-  padding: 0 var(--details-padding) var(--details-padding)
-    var(--details-padding);
-}
-
-@media (hover: hover) {
-  details summary {
-    &:hover {
-      color: var(--fg2-color);
-    }
-
-    &:active {
-      color: var(--link-active-color);
-    }
-  }
-}
-
 hr {
   border: none;
   height: 32px;
@@ -179,16 +151,6 @@ hr::after {
   mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 12'><rect x='0' y='5.5' width='96' height='1' fill='black'/><path d='M 64,6 C 71,6 80,4.5 80,1 C 80,4.5 89,6 96,6 C 89,6 80,7.5 80,11 C 80,7.5 71,6 64,6 Z' fill='black'/><rect x='64' y='5.5' width='96' height='1' fill='black'/></svg>");
   mask-size: 100% 100%;
   mask-repeat: no-repeat;
-}
-
-main p,
-main details {
-  margin-bottom: 1rem;
-}
-
-main details {
-  border-radius: var(--border-radius);
-  border: 2px solid var(--fg-color);
 }
 
 button,
@@ -242,10 +204,6 @@ button.icon-button {
   font-weight: 400;
   font-style: normal;
   vertical-align: top;
-}
-
-li {
-  margin-bottom: 0.5rem;
 }
 
 ol.styled-list,
