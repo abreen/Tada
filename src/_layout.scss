@@ -52,7 +52,7 @@ body.literate main table {
   width: 100%;
 }
 
-@media (max-width: 899px) {
+@media (width < 900px) {
   .toc-is-active .main-content {
     display: flex;
     flex-direction: column;
@@ -81,7 +81,7 @@ body.literate main table {
   }
 }
 
-@media (min-width: 900px) {
+@media (width >= 900px) {
   body.default main table,
   body.literate main table {
     width: auto;
