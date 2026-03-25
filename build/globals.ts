@@ -18,8 +18,16 @@ export default function createGlobals(
   const defaultTz = timezones.find(
     t => t.value === siteVariables.defaultTimeZone,
   )!;
+  const options = timezones
+    .map(tz => {
+      const label =
+        tz.value === 'UTC' ? tz.label : `${tz.label} (${tz.abbreviation})`;
+      const selected = tz.value === defaultTz.value ? ' selected' : '';
+      return `<option value="${tz.value}"${selected}>${label}</option>`;
+    })
+    .join('');
   const renderTimeZoneChooser = () =>
-    `<select class="time-zone" hidden></select><noscript>Times shown in ${defaultTz.abbreviation}.</noscript>`;
+    `<span class="time-zone-label" hidden>Times shown in </span><select class="time-zone" hidden disabled>${options}</select><noscript>Times shown in ${defaultTz.abbreviation}.</noscript>`;
 
   return {
     isHomePage: subPath === 'index',

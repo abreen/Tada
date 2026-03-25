@@ -100,25 +100,10 @@ function computeOffsets(baseDate: Date) {
   });
 }
 
-function init(element: HTMLDataListElement, selectedTz: string) {
-  const beforeText = window.document.createTextNode('Times shown in ');
-  element.parentElement?.insertBefore(beforeText, element);
-
-  TIMEZONES.forEach(tz => {
-    const opt = document.createElement('option');
-    opt.value = tz.value;
-    if (tz.value === 'UTC') {
-      opt.textContent = tz.label;
-    } else {
-      opt.textContent = `${tz.label} (${tz.abbreviation})`;
-    }
-    if (tz.value === selectedTz) {
-      opt.selected = true;
-    }
-    element.appendChild(opt);
-  });
-
-  element.removeAttribute('hidden');
+function init(element: HTMLSelectElement, selectedTz: string) {
+  element.value = selectedTz;
+  element.hidden = false;
+  element.disabled = false;
 }
 
 function dominantPeriodStyle(

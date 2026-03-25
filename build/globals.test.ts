@@ -30,10 +30,11 @@ describe('createGlobals', () => {
     expect(g.cx).toBe(g.classNames);
   });
 
-  test('renderTimeZoneChooser includes noscript when defaultTimeZone is set', () => {
+  test('renderTimeZoneChooser includes hidden disabled select, inline script, and noscript', () => {
     const g = makeGlobals('index', { defaultTimeZone: 'America/New_York' });
-    expect(g.renderTimeZoneChooser()).toContain('noscript');
-    expect(g.renderTimeZoneChooser()).toContain('select');
+    const html = g.renderTimeZoneChooser();
+    expect(html).toContain('<select class="time-zone" hidden disabled>');
+    expect(html).toContain('<noscript>Times shown in ET.</noscript>');
   });
 });
 
