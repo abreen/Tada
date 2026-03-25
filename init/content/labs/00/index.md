@@ -10,7 +10,7 @@ In this lab, we'll explore the [`VowelCounter` program](./VowelCounter.html).
 
 ??? question What is an input stream?
 
-An input stream is abstraction that represents arbitrary data going into a
+An input stream is an abstraction that represents arbitrary data going into a
 program. The data in a stream doesn't have a predefined size or length.
 When you write a program that uses an input stream, the program may wait for
 more data.
