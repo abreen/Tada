@@ -382,9 +382,7 @@ describe('injectKatexStylesheet', () => {
     const result = injectKatexStylesheet(html, p => p);
 
     expect(result).toContain('href="/katex/katex.min.css"');
-    expect(result).toContain('media="print"');
-    expect(result).toContain('onload="this.media=\'all\'"');
-    expect(result).toContain('<noscript>');
+    expect(result).toContain('rel="stylesheet"');
   });
 
   test('applies basePath to the stylesheet URL', () => {

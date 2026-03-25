@@ -70,7 +70,7 @@ values from the active site config.
 To avoid render-blocking CSS, the build produces two CSS bundles:
 
 - `critical.bundle.css` --- inlined into every HTML page as a `<style>` tag
-- `index.bundle.css` --- loaded asynchronously via `media="print" onload`
+- `index.bundle.css` --- loaded as a standard stylesheet (non-blocking since critical CSS is inlined)
 
 Critical CSS (`src/critical.scss`) imports shared Sass partials rather than
 duplicating rules:

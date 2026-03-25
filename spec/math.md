@@ -44,6 +44,4 @@ The compiled CSS and woff2 font files are copied to `dist/katex/` during the
 build's asset phase.
 
 The stylesheet is included conditionally: only pages whose rendered HTML
-contains `class="katex"` get a deferred `<link>` tag. The deferred loading
-uses the `media="print" onload="this.media='all'"` pattern (same as the main
-stylesheet) with a `<noscript>` fallback.
+contains `class="katex"` get a `<link rel="stylesheet">` tag.

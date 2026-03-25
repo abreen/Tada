@@ -34,10 +34,9 @@ class TestKatexRendering:
         html = (built_site / "dist" / "math.html").read_text()
         assert "katex.min.css" in html
 
-    def test_katex_stylesheet_is_deferred(self, built_site):
+    def test_katex_stylesheet_is_linked(self, built_site):
         html = (built_site / "dist" / "math.html").read_text()
-        assert 'media="print"' in html
-        assert "this.media='all'" in html
+        assert 'rel="stylesheet"' in html
 
     def test_non_math_page_has_no_katex_stylesheet(self, built_site):
         html = (built_site / "dist" / "index.html").read_text()

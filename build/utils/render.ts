@@ -127,9 +127,7 @@ export function injectAssetTags(
     .join('');
   const asyncLinkTags = asyncAssets
     .map(
-      asset =>
-        `<link href="${applyBasePath('/' + asset)}" rel="stylesheet" media="print" onload="this.media='all'">` +
-        `<noscript><link href="${applyBasePath('/' + asset)}" rel="stylesheet"></noscript>`,
+      asset => `<link href="${applyBasePath('/' + asset)}" rel="stylesheet">`,
     )
     .join('');
 
@@ -143,9 +141,7 @@ export function injectKatexStylesheet(
   applyBasePath: (subPath: string) => string,
 ): string {
   const href = applyBasePath('/katex/katex.min.css');
-  const tag =
-    `<link href="${href}" rel="stylesheet" media="print" onload="this.media='all'">` +
-    `<noscript><link href="${href}" rel="stylesheet"></noscript>`;
+  const tag = `<link href="${href}" rel="stylesheet">`;
   return html.replace('<head>', `<head>${tag}`);
 }
 
