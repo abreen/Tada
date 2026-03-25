@@ -511,23 +511,28 @@ initialBuild()
     initialBuildFailed = true;
   })
   .finally(() => {
-    // Watch content, public, data files, site config
     const watchPaths: string[] = [contentDir, publicDir];
 
-    // Watch data files (nav.json, authors.json)
+    // Watch config files (nav.json, authors.json, site config) via the
+    // project root directory (depth 0). Chokidar v4 doesn't emit unlink
+    // for individually watched files, so we must watch the directory.
     const jsonDataDir = getJsonDataDir();
-    for (const dataFile of JSON_DATA_FILES) {
-      const dataPath = path.join(jsonDataDir, dataFile);
-      if (fs.existsSync(dataPath)) {
-        watchPaths.push(dataPath);
+    const configFilePaths = new Set([
+      ...JSON_DATA_FILES.map(f => path.resolve(jsonDataDir, f)),
+      path.resolve('site.dev.json'),
+    ]);
+    const configWatcher = chokidar.watch(jsonDataDir, {
+      ignoreInitial: true,
+      depth: 0,
+    });
+    const onConfigFileChange = (filePath: string) => {
+      if (configFilePaths.has(path.resolve(filePath))) {
+        onFileChange(filePath);
       }
-    }
-
-    // Watch site config
-    const siteConfigPath = path.resolve('site.dev.json');
-    if (fs.existsSync(siteConfigPath)) {
-      watchPaths.push(siteConfigPath);
-    }
+    };
+    configWatcher.on('add', onConfigFileChange);
+    configWatcher.on('change', onConfigFileChange);
+    configWatcher.on('unlink', onConfigFileChange);
 
     const watcher = chokidar.watch(watchPaths, {
       ignoreInitial: true,

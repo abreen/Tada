@@ -174,6 +174,8 @@ def watch(site_dir):
 
 
 class TestWatchEditContent:
+    """Modifying a Markdown or HTML file triggers a build."""
+
     def test_editing_markdown_triggers_rebuild(self, watch, site_dir):
         index_md = site_dir / "content" / "index.md"
         index_html = site_dir / "dist" / "index.html"
@@ -205,6 +207,8 @@ class TestWatchEditContent:
 
 
 class TestWatchAddContent:
+    """Adding a new file to content/ triggers a build."""
+
     def test_adding_new_markdown_file(self, watch, site_dir):
         new_md = site_dir / "content" / "new_page.md"
         new_md.write_text("title: New Page\n\nHello from new page.\n")
@@ -224,6 +228,8 @@ class TestWatchAddContent:
 
 
 class TestWatchRemoveContent:
+    """Removing a Markdown file triggers a build."""
+
     def test_removing_markdown_triggers_rebuild(self, watch, site_dir):
         md_file = site_dir / "content" / "markdown.md"
         md_file.write_text("title: Markdown\n\nSome content.\n")
@@ -238,6 +244,8 @@ class TestWatchRemoveContent:
 
 
 class TestWatchPublicFiles:
+    """Editing/adding a file to public/ triggers a build."""
+
     def test_editing_public_file(self, watch, site_dir):
         public_file = site_dir / "public" / "test.txt"
         dist_file = site_dir / "dist" / "test.txt"
@@ -261,6 +269,8 @@ class TestWatchPublicFiles:
 
 
 class TestWatchConfig:
+    """Modifying the site config triggers a build."""
+
     def test_config_change_triggers_full_rebuild(self, watch, site_dir):
         config_path = site_dir / "site.dev.json"
         index_html = site_dir / "dist" / "index.html"
@@ -276,6 +286,8 @@ class TestWatchConfig:
 
 
 class TestWatchWebSocket:
+    """Watch mode uses a WebSocket to tell the client to reload."""
+
     def test_receives_reload_message_on_content_change(self, watch, site_dir):
         """Connect to the watch WebSocket and verify a 'reload' message is
         broadcast when a content file changes."""
@@ -403,6 +415,86 @@ class TestWatchConfigBreakAndRecover:
 
         html = index_html.read_text()
         assert original_title in html
+
+
+class TestWatchConfigFileDetection:
+    """Deleting/moving & re-adding config files re-builds and doesn't crash."""
+
+    def test_editing_nav_json_triggers_rebuild(self, watch, site_dir):
+        index_html = site_dir / "dist" / "index.html"
+        before_mtime = index_html.stat().st_mtime
+
+        nav_path = site_dir / "nav.json"
+        nav = json.loads(nav_path.read_text())
+        nav_path.write_text(json.dumps(nav, indent=2) + "\n")
+
+        watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
+
+    def test_deleting_nav_json_triggers_error_then_restore_recovers(self, watch, site_dir):
+        index_html = site_dir / "dist" / "index.html"
+        assert index_html.exists()
+        before_mtime = index_html.stat().st_mtime
+
+        nav_path = site_dir / "nav.json"
+        nav_backup = nav_path.read_text()
+        nav_path.unlink()
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+
+        nav_path.write_text(nav_backup)
+        watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
+
+    def test_missing_nav_json_at_start_then_create_recovers(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site_dir = tmp_path / "testsite"
+
+        nav_path = site_dir / "nav.json"
+        nav_backup = nav_path.read_text()
+        nav_path.unlink()
+
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
+            assert wp._error_event.is_set()
+            wp._error_event.clear()
+            assert not (site_dir / "dist" / "index.html").exists()
+            assert wp.proc.poll() is None
+
+            nav_path.write_text(nav_backup)
+
+            index_html = site_dir / "dist" / "index.html"
+            wp.wait_for_rebuild(index_html, "exists")
+            assert index_html.exists()
+        finally:
+            wp.stop()
+
+    def test_deleting_site_config_triggers_error_then_restore_recovers(self, watch, site_dir):
+        index_html = site_dir / "dist" / "index.html"
+        assert index_html.exists()
+        before_mtime = index_html.stat().st_mtime
+
+        config_path = site_dir / "site.dev.json"
+        config_backup = config_path.read_text()
+        config_path.unlink()
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+
+        config_path.write_text(config_backup)
+        watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
+
+
+    def test_creating_authors_json_triggers_rebuild(self, watch, site_dir):
+        index_html = site_dir / "dist" / "index.html"
+        before_mtime = index_html.stat().st_mtime
+
+        authors_path = site_dir / "authors.json"
+        assert not authors_path.exists()
+        authors_path.write_text(json.dumps({"jdoe": {"name": "Jane Doe", "avatar": "/jdoe.png"}}) + "\n")
+
+        watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
 
 
 class TestWatchLiterateJavaError:

@@ -23,7 +23,12 @@ const renderStack: string[] = [];
 let errorStack: string[] | null = null;
 
 // JSON data files that live in the user's config directory
-const JSON_DATA_FILES: string[] = ['nav.json', 'authors.json'];
+const REQUIRED_JSON_DATA_FILES: string[] = ['nav.json'];
+const OPTIONAL_JSON_DATA_FILES: string[] = ['authors.json'];
+const JSON_DATA_FILES: string[] = [
+  ...REQUIRED_JSON_DATA_FILES,
+  ...OPTIONAL_JSON_DATA_FILES,
+];
 
 function getHtmlTemplatesDir(): string {
   return path.resolve(getPackageDir(), 'templates');
@@ -97,6 +102,9 @@ export function compileTemplates(
   for (const fileName of JSON_DATA_FILES) {
     const filePath = path.join(jsonDir, fileName);
     if (!fs.existsSync(filePath)) {
+      if (REQUIRED_JSON_DATA_FILES.includes(fileName)) {
+        throw new Error(`Missing required config file: ${filePath}`);
+      }
       continue;
     }
 
