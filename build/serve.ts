@@ -20,7 +20,9 @@ try {
   process.exit(1);
 }
 
-function resolvePathname(pathname: string): string | null {
+function resolvePathname(
+  pathname: string,
+): { filePath: string; mtime: Date } | null {
   let decodedPath: string;
   try {
     decodedPath = decodeURIComponent(pathname);
@@ -49,17 +51,27 @@ function resolvePathname(pathname: string): string | null {
     return null;
   }
 
-  return resolvedPath;
+  return { filePath: resolvedPath, mtime: stat.mtime };
 }
 
 function createResponse(req: Request): Response {
   const url = new URL(req.url);
-  const filePath = resolvePathname(url.pathname);
-  if (!filePath) {
+  const result = resolvePathname(url.pathname);
+  if (!result) {
     return new Response('Not Found', { status: 404 });
   }
 
-  return new Response(Bun.file(filePath));
+  const headers = {
+    'Cache-Control': 'no-cache',
+    'Last-Modified': result.mtime.toUTCString(),
+  };
+
+  const ims = req.headers.get('If-Modified-Since');
+  if (ims && new Date(ims) >= new Date(headers['Last-Modified'])) {
+    return new Response(null, { status: 304, headers });
+  }
+
+  return new Response(Bun.file(result.filePath), { headers });
 }
 
 function getPortArg(): number {
