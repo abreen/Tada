@@ -109,7 +109,7 @@ Putting lower case and upper case vowels into a `String` allows us to use the
 nowhere in the string, `indexOf()` returns -1.
 
 When reading input from a terminal, the loop ends when the user presses
-<kbd>Ctrl-D</kbd> on the keyboard. If we type the input
+<kbd>Ctrl</kbd>+<kbd>D</kbd> on the keyboard. If we type the input
 
 ```text
 hello, world!

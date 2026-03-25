@@ -24,6 +24,6 @@ For example, `System.in.read()` returns -1 when the standard in stream doesn't
 have any more characters.
 
 Another example: the character `'q'` might be reserved to indicate a command
-like "quit." When a user types <kbd>q</kbd>, the program exits.
+like "quit." When a user presses <kbd>Q</kbd>, the program exits.
 
 ???

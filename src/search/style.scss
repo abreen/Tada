@@ -61,12 +61,8 @@ header {
         color: var(--fg2-color);
 
         kbd {
-          display: inline-block;
-          padding: 1px 5px;
-          border: 1px solid var(--fg2-color);
-          border-radius: 4px;
-          font-family: var(--font);
-          font-size: var(--font-size-small);
+          border-color: var(--fg2-color);
+          box-shadow: 0 2px 0 var(--fg2-color);
           line-height: 1.4;
         }
       }

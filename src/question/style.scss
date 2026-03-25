@@ -48,19 +48,25 @@
   @media (prefers-reduced-motion: no-preference) {
     transition:
       color 0.25s,
-      background-color 0.25s;
+      background-color 0.25s,
+      border-color 0.25s,
+      box-shadow 0.25s;
   }
 }
 
 .question-a-body:not([data-revealed]) > * {
   color: transparent;
   background-color: var(--bg2-color);
+  border-color: transparent;
+  box-shadow: none;
   pointer-events: none;
 }
 
 .question-a-body:not([data-revealed]) > * * {
   color: transparent;
   background-color: var(--bg2-color);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .question-a-body::after {

@@ -436,6 +436,17 @@ figure.bio {
   }
 }
 
+kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--fg-color);
+  border-radius: 4px;
+  box-shadow: 0 2px 0 var(--fg-color);
+  font-family: var(--font);
+  font-size: var(--font-size-small);
+  font-weight: 500;
+}
+
 select {
   font-family: var(--font);
   color: var(--fg-color);
