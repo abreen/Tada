@@ -4,13 +4,12 @@
   "properties": {
     "features": {
       "type": "object",
-      "default": { "search": true, "code": true },
+      "default": { "search": true, "code": true, "favicon": true },
       "properties": {
         "search": { "type": "boolean", "default": true },
         "code": { "type": "boolean", "default": true },
-        "favicon": { "type": "boolean", "default": false }
+        "favicon": { "type": "boolean", "default": true }
       },
-      "required": ["search", "code", "favicon"],
       "additionalProperties": false
     },
     "base": { "type": "string", "pattern": "^https?:\\/\\/[-.:a-zA-Z0-9]+$" },
