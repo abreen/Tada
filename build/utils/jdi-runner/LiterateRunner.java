@@ -95,6 +95,18 @@ public class LiterateRunner {
         stderrThread.setDaemon(true);
         stderrThread.start();
 
+        // Forward stdin to target VM in a background thread
+        OutputStream targetStdin = process.getOutputStream();
+        Thread stdinThread = new Thread(() -> {
+            try {
+                System.in.transferTo(targetStdin);
+                targetStdin.close();
+            } catch (IOException ignored) {
+            }
+        });
+        stdinThread.setDaemon(true);
+        stdinThread.start();
+
         int activeBlock = -1;
 
         try {
@@ -199,6 +211,7 @@ public class LiterateRunner {
             } catch (VMDisconnectedException ignored) {
             }
             stderrThread.join(1000);
+            stdinThread.join(1000);
         }
 
         // Output JSON to our own stdout

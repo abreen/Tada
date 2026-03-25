@@ -178,3 +178,13 @@ input[type='search'] {
     cursor: not-allowed;
   }
 }
+
+figure {
+  margin: 1rem 0;
+
+  figcaption {
+    margin: 0 3rem;
+    font-size: var(--font-size-smaller);
+    color: var(--fg2-color);
+  }
+}

@@ -412,6 +412,9 @@ export function renderLiterateJavaPageAsset({
 
   validateFrontMatter(pageVariables, filePath);
 
+  const stdin =
+    typeof pageVariables.stdin === 'string' ? pageVariables.stdin : undefined;
+
   // Compile and execute the concatenated Java source
   let tempDir: string | undefined;
   let blockOutputMap: Map<number, string> | null = null;
@@ -425,6 +428,7 @@ export function renderLiterateJavaPageAsset({
           className,
           tempDir,
           codeBlocks,
+          stdin,
         );
         blockOutputMap = new Map(
           outputEntries.map(e => [e.blockIndex, e.output]),
@@ -443,9 +447,17 @@ export function renderLiterateJavaPageAsset({
     validatorOptions: { enabled: false },
   });
   let fenceIndex = 0;
+  const defaultFence = md.renderer.rules.fence!;
 
-  md.renderer.rules.fence = (tokens, idx) => {
+  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     const token = tokens[idx];
+    const lang = token.info.trim();
+
+    // Non-Java fences render with the default renderer (no line numbers)
+    if (lang !== '' && lang !== 'java') {
+      return defaultFence(tokens, idx, options, env, self);
+    }
+
     const code = token.content;
     const lines = code.endsWith('\n')
       ? code.slice(0, -1).split('\n')

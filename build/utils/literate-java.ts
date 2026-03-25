@@ -39,6 +39,12 @@ export function parseLiterateJava(
       continue;
     }
 
+    // Skip fences with a non-Java language tag (e.g., ```text)
+    const lang = token.info.trim();
+    if (token.type === 'fence' && lang !== '' && lang !== 'java') {
+      continue;
+    }
+
     const code = token.content;
     const codeLines = code.endsWith('\n')
       ? code.slice(0, -1).split('\n')
@@ -138,6 +144,7 @@ export function executeLiterateJava(
   className: string,
   classPath: string,
   codeBlocks: LiterateCodeBlock[],
+  stdin?: string,
 ): LiterateRunnerEntry[] {
   const runnerDir = path.join(__dirname, 'jdi-runner');
   ensureRunnerCompiled(runnerDir);
@@ -153,9 +160,13 @@ export function executeLiterateJava(
     const result = execFileSync(
       'java',
       ['-cp', runnerDir, 'LiterateRunner', className, classPath, rangesJson],
-      { timeout: 30000, encoding: 'utf-8' },
+      { timeout: 30000, encoding: 'utf-8', input: stdin },
     );
-    const entries: LiterateRunnerEntry[] = JSON.parse(result);
+    const raw: [number, string][] = JSON.parse(result);
+    const entries: LiterateRunnerEntry[] = raw.map(([blockIndex, output]) => ({
+      blockIndex,
+      output,
+    }));
     log.debug`LiterateRunner returned ${entries.length} output entries`;
     return entries;
   } catch (err: unknown) {

@@ -370,6 +370,7 @@ async function initCommand(args: string[]): Promise<void> {
             title: 'Topics',
             links: [
               { text: 'Lectures', internal: '/lectures/index.html' },
+              { text: 'Labs', internal: '/labs/index.html' },
               {
                 text: 'Problem Sets',
                 internal: '/problem_sets/index.html',

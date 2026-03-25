@@ -13,3 +13,11 @@ but do not appear in the rendered output. This is useful for boilerplate like
 import statements.
 
 The rendered page interleaves prose, visible code blocks, and execution output.
+
+If the program reads from standard input, provide the input as a `stdin` front
+matter field. The string is sent to the program's stdin when it runs. Use YAML
+double-quoted strings to include escape sequences like `\n`:
+
+```
+stdin: "hello, world!\n"
+```
