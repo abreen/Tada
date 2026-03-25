@@ -19,6 +19,11 @@ jobs:
     - name: Install dependencies
       run: sudo apt install -y mupdf-tools openjdk-25-jdk-headless
 
+    - name: Set up Java 25
+      run: |
+        echo "JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64" >> "$GITHUB_ENV"
+        echo "/usr/lib/jvm/java-25-openjdk-amd64/bin" >> "$GITHUB_PATH"
+
     - name: Use Bun
       uses: oven-sh/setup-bun@v2
 
@@ -47,6 +52,11 @@ jobs:
 
     - name: Install dependencies
       run: sudo apt install -y mupdf-tools openjdk-25-jdk-headless
+
+    - name: Set up Java 25
+      run: |
+        echo "JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64" >> "$GITHUB_ENV"
+        echo "/usr/lib/jvm/java-25-openjdk-amd64/bin" >> "$GITHUB_PATH"
 
     - name: Use Bun
       uses: oven-sh/setup-bun@v2
