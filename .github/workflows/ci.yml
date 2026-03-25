@@ -16,6 +16,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install dependencies
+      run: sudo apt install -y mupdf-tools openjdk-25-jdk
+
     - name: Use Bun
       uses: oven-sh/setup-bun@v2
 
@@ -43,7 +46,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install dependencies
-      run: sudo apt install -y mupdf-tools
+      run: sudo apt install -y mupdf-tools openjdk-25-jdk
 
     - name: Use Bun
       uses: oven-sh/setup-bun@v2
