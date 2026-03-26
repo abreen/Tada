@@ -116,6 +116,21 @@ function printUsage() {
       console.log('        --tint-amount, --default-time-zone, --prod-base,');
       console.log('        --prod-base-path]');
       continue;
+    } else if (cmd === 'watch') {
+      console.log(`  ${cmd.padEnd(18)} ${desc}`);
+      console.log(
+        '       [--port <n>]        HTTP server port (default: 8080)',
+      );
+      console.log(
+        '       [--ws-port <n>]     WebSocket port for live reload (default: 35729)',
+      );
+      continue;
+    } else if (cmd === 'serve') {
+      console.log(`  ${cmd.padEnd(18)} ${desc}`);
+      console.log(
+        '       [--port <n>]        HTTP server port (default: 8080)',
+      );
+      continue;
     } else if (cmd === 'clean') {
       console.log('  clean              Remove the dist/ directory');
       console.log(
