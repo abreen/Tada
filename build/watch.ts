@@ -75,7 +75,7 @@ type ChangeCategory = 'content' | 'public' | 'config';
 const log = makeLogger(__filename);
 const wslog = makeLogger('WebSocket');
 
-// --- WebSocket server (unchanged) ---
+// --- WebSocket server ---
 
 let webSocketsReady = false;
 let watcherReady = false;

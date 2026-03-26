@@ -11,9 +11,22 @@ files, and config. The rebuild scope depends on the category:
 - **Config or data file change** -- full restart (site config, `nav.json`,
   `authors.json`)
 
-A WebSocket server sends reload messages to connected browsers after each
-rebuild. If a build fails, an error message is sent instead. A client-side script
-(included only in development builds) listens for these messages and reloads the
-page.
+Watch mode also starts a development web server, but only after the first
+successful build.
 
-Watch mode also starts a development web server.
+## Client-side reload script
+
+The reload script lives in `build/watch-reload-client.ts`. It is bundled
+separately and included as an asset only in watch mode.
+
+The script opens a WebSocket connection to `ws://localhost:<port>` (the port is
+chosen at bundle time via `__WEBSOCKET_PORT__`. It handles two message types:
+
+- **`rebuilding`** -- adds a shimmer animation to the page header and sets a
+  `wait` cursor on the body, giving visual feedback that a rebuild is in
+  progress
+- **`reload`** -- calls `window.location.reload()` to refresh the page with the
+  new build output
+
+The server also sends `error` when a build fails and `ready` when the watcher is
+initialized (used only by functional tests).
