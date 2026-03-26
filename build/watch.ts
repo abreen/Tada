@@ -543,12 +543,28 @@ initialBuild()
     watcher.on('add', onFileChange);
     watcher.on('unlink', onFileChange);
 
-    watcher.on('ready', () => {
+    let configWatcherReady = false;
+    let contentWatcherReady = false;
+
+    function onWatcherReady(): void {
+      if (!configWatcherReady || !contentWatcherReady) {
+        return;
+      }
       watcherReady = true;
       if (initialBuildFailed) {
         broadcast('error');
       }
       broadcast('ready');
       log.info`Watching for changes...`;
+    }
+
+    configWatcher.on('ready', () => {
+      configWatcherReady = true;
+      onWatcherReady();
+    });
+
+    watcher.on('ready', () => {
+      contentWatcherReady = true;
+      onWatcherReady();
     });
   });
