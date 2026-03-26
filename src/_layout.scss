@@ -26,18 +26,11 @@ body > .container {
   padding-bottom: 2rem;
 }
 
-body.default .body,
-body.literate .body {
-  > *:first-child {
-    margin-top: 0;
-  }
-}
-
 body.default .title-and-info,
 body.default nav.toc,
 body.literate .title-and-info,
 body.literate nav.toc {
-  margin-bottom: 2rem;
+  margin-bottom: var(--gap);
 }
 
 body.default .title-and-info,
@@ -45,6 +38,11 @@ body.literate .title-and-info {
   h1 {
     margin: 0;
   }
+}
+
+body.default .title-and-info {
+  padding-bottom: var(--gap);
+  border-bottom: 1px solid var(--fg2-color);
 }
 
 body.default main table,
