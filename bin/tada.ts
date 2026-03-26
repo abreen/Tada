@@ -152,7 +152,18 @@ function printUsage() {
 }
 
 function run(cmd: string): void {
-  execSync(cmd, { cwd: process.cwd(), stdio: 'inherit' });
+  try {
+    execSync(cmd, { cwd: process.cwd(), stdio: 'inherit' });
+  } catch (err: unknown) {
+    const code = (err as { status?: number }).status;
+    if (code != null) {
+      console.error(`tada ${command} failed with exit code ${code}`);
+      process.exit(code);
+    } else {
+      console.error(`tada ${command} failed`);
+      process.exit(1);
+    }
+  }
 }
 
 function copyDirRecursive(src: string, dest: string): void {
