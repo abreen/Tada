@@ -22,6 +22,7 @@ Page content starts here.
 - **parent** -- URL for a breadcrumb link above the title
 - **parentLabel** -- label for the breadcrumb link
 - **skip** -- set to `true` to exclude the page from the build
+- **stdin** -- input string sent to a literate Java program's stdin at build time (see [Literate Java](literate-java.md))
 
 Title and description support inline Markdown formatting.
 
