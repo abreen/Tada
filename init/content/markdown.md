@@ -25,8 +25,6 @@ the `<main>` element.
 Note that the table of contents contains more than just headings, but
 also alerts (notes and warnings) `<hr>` elements.
 
----
-
 ## Basic syntax
 
 <!---
