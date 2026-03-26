@@ -155,6 +155,7 @@ main details {
 
 input[type='text'],
 input[type='search'] {
+  font-family: var(--font);
   background: var(--bg-color);
   color: var(--fg-color);
   border: var(--control-border-width) solid var(--fg2-color);
