@@ -4,6 +4,11 @@
   "type": "module",
   "description": "A static site generator",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abreen/Tada.git"
+  },
+  "author": "Alex Breen <npm@abreen.email>",
   "bin": {
     "tada": "bin/tada.ts"
   },
@@ -20,6 +25,7 @@
   ],
   "scripts": {
     "prepare": "husky && bun run scripts/check-deps.ts",
+    "prepack": "bun run scripts/prepack.ts",
     "init-example": "bun run bin/tada.ts init example --no-interactive",
     "lint": "eslint src/ build/ bin/",
     "typecheck": "tsc --noEmit",
@@ -29,6 +35,10 @@
   "engines": {
     "bun": ">=1.0.0"
   },
+  "os": [
+    "darwin",
+    "linux"
+  ],
   "dependencies": {
     "@tsconfig/node23": "^23.0.2",
     "@vscode/markdown-it-katex": "^1.1.2",
