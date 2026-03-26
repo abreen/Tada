@@ -178,6 +178,7 @@ manually.
 - [MuPDF](https://mupdf.com/) (optional, for PDF text extraction in search)
   - On macOS: `brew install mupdf-tools`
   - On Fedora: `dnf install mupdf`
+  - On Ubuntu: `apt-get install mupdf-tools`
 
 > You may skip MuPDF if you don't need search results to include links to PDF
 > pages. You can also turn off `features.search` in the config to disable
