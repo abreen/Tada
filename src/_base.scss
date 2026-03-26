@@ -25,14 +25,6 @@ h6 {
   -webkit-break-after: avoid;
   break-after: avoid;
   line-height: 1.3;
-
-  /*
-   * Enable Inter's features:
-   * ss03 - round quotes & commas
-   * ss04 - disambiguation (make uppercase i and lowercase L distinct)
-   * dlig - discretionary ligatures (for style)
-   */
-  font-feature-settings: 'ss03', 'ss04', 'dlig';
 }
 
 h1 {
@@ -50,11 +42,15 @@ body {
   line-height: var(--line-height);
 
   /*
-   * Enable Inter's features for legibility:
-   * ss03 - round quotes & commas
-   * ss04 - disambiguation (make uppercase i and lowercase L distinct)
+   * Enable Inter's features:
+   * liga - standard ligatures
+   * calt - contextual alternates
+   * ss03 - round quotes & commas (legibility)
+   * cv01 - alternate 1 (style)
+   * cv05 - lower case L with tail (legibility)
+   * cv10 - capital G with spur (style)
    */
-  font-feature-settings: 'ss03', 'ss04';
+  font-feature-settings: 'liga', 'calt', 'ss03', 'cv01', 'cv05', 'cv10';
 
   @media (prefers-color-scheme: dark) {
     & {
