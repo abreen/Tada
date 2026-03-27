@@ -14,6 +14,8 @@ import type {
 
 const log = makeLogger(__filename);
 
+let runnerClassDir: string | null = null;
+
 const MAIN_PATTERN = /\bvoid\s+main\s*\(/m;
 
 export function parseLiterateJava(
@@ -111,33 +113,36 @@ export function compileJavaSource(
   return tempDir;
 }
 
-function ensureRunnerCompiled(runnerDir: string): void {
-  const sourceFile = path.join(runnerDir, 'LiterateRunner.java');
-  const classFile = path.join(runnerDir, 'LiterateRunner.class');
-
-  if (
-    fs.existsSync(classFile) &&
-    fs.statSync(classFile).mtimeMs >= fs.statSync(sourceFile).mtimeMs
-  ) {
-    log.debug`LiterateRunner.class is up to date`;
-    return;
+// Compile LiterateRunner.java into a per-process temp directory so that
+// parallel builds never clobber each other and a stale .class file from a
+// different Java version is never reused.
+function ensureRunnerCompiled(): string {
+  if (runnerClassDir) {
+    return runnerClassDir;
   }
 
-  log.debug`Compiling LiterateRunner.java`;
+  const sourceDir = path.join(__dirname, 'jdi-runner');
+  const sourceFile = path.join(sourceDir, 'LiterateRunner.java');
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-runner-'));
+
+  log.debug`Compiling LiterateRunner.java into ${tempDir}`;
 
   try {
-    execFileSync('javac', ['LiterateRunner.java'], {
-      cwd: runnerDir,
+    execFileSync('javac', ['-d', tempDir, sourceFile], {
       timeout: 30000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch (err: unknown) {
     const execErr = err as { stderr?: Buffer; message: string };
     const stderr = execErr.stderr ? execErr.stderr.toString() : execErr.message;
+    fs.rmSync(tempDir, { recursive: true, force: true });
     throw new Error(`Failed to compile LiterateRunner.java:\n${stderr}`, {
       cause: err,
     });
   }
+
+  runnerClassDir = tempDir;
+  return tempDir;
 }
 
 export function executeLiterateJava(
@@ -146,8 +151,7 @@ export function executeLiterateJava(
   codeBlocks: LiterateCodeBlock[],
   stdin?: string,
 ): LiterateRunnerEntry[] {
-  const runnerDir = path.join(__dirname, 'jdi-runner');
-  ensureRunnerCompiled(runnerDir);
+  const runnerDir = ensureRunnerCompiled();
 
   const blockRanges = codeBlocks.map(b => [b.javaStartLine, b.javaEndLine]);
   const rangesJson = JSON.stringify(blockRanges);

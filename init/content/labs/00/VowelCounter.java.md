@@ -61,46 +61,45 @@ from the standard in, counting how many characters are vowels. When there are
 no more characters in the stream, the program prints the total number of vowels.
 
 <!---
-Hiding the method signature for main() keeps us focused on the program's logic,
+Hiding the first few lines keeps us focused on the program's logic,
 and avoids discussion of IOException.
 ```
-void main() throws Exception {
+public class VowelCounter {
+    public static void main(String[] args) throws Exception {
 ```
 -->
 
 We'll start the program with a `numVowels` counter initialized to zero,
-the additive identity, and a second integer variable `ch` used to store the
-return value of the `read()` method:
+the additive identity.
 
 ```
-    int numVowels = 0;
-    int ch;
+        int numVowels = 0;
 ```
 
 Using an indefinite loop (since we don't know in advance how many characters
 we'll get), we call the `read()` method and check if it returned the sentinel:
 
 ```
-    while (true) {
-        ch = System.in.read();
-        if (ch == -1) {
-            break;
-        }
+        while (true) {
+            int ch = System.in.read();
+            if (ch == -1) {
+                break;
+            }
 ```
 
 If `read()` returns the sentinel, we stop the loop with `break`. Otherwise,
 we test whether `ch` is a vowel:
 
 ```
-        if ("aeiouAEIOU".indexOf(ch) >= 0) {
-            numVowels++;
-        }
+            if ("aeiouAEIOU".indexOf(ch) >= 0) {
+                numVowels++;
+            }
 ```
 
 <!---
 Hide the closing brace of the `while` loop to avoid indenting the conditional.
 ```
-    }
+        }
 ```
 -->
 
@@ -118,12 +117,13 @@ hello, world!
 Then the last line of the program, which prints the total count, will output 3:
 
 ```
-    IO.println("vowels: " + numVowels);
+        System.out.println("vowels: " + numVowels);
 ```
 
 <!---
-Hiding the closing brace for main().
+Hiding the closing braces.
 ```
+    }
 }
 ```
 -->
