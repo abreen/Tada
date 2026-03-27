@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { makeLogger } from './log';
 import { isFeatureEnabled } from './features';
+import { validateConfigLinks } from './validate-config-links';
+import { json } from './templates';
 import { initHighlighter } from './utils/shiki-highlighter';
 import {
   getBuildContentFiles,
@@ -256,6 +258,15 @@ export class ContentRenderer {
       Object.keys(this.siteVariables.codeLanguages || {}),
     );
     const errors: Error[] = [];
+
+    const configLinkErrors = validateConfigLinks(
+      validInternalTargets,
+      json('nav.json'),
+      json('authors.json'),
+    );
+    for (const msg of configLinkErrors) {
+      errors.push(new Error(msg));
+    }
 
     this.pruneRemovedSources(buildFileSet, removedHtmlAssetPaths);
 

@@ -7,6 +7,7 @@ import { makeLogger } from '../log';
 import { B } from '../colors';
 import createGlobals from '../globals';
 import { render, json } from '../templates';
+import { validateParentLink } from '../validate-config-links';
 import {
   extractJavaMethodToc,
   renderCodeSegment,
@@ -347,6 +348,15 @@ function renderPlainTextContent(
   }
 
   resolveAuthor(pageVariablesProcessed, filePath);
+
+  const parentError = validateParentLink(
+    pageVariablesProcessed.parent,
+    filePath,
+    validInternalTargets,
+  );
+  if (parentError) {
+    throw new Error(parentError);
+  }
 
   const strippedContent = stripHtmlComments(content);
 

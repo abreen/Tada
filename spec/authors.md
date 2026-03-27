@@ -7,4 +7,6 @@ When a page's front matter includes an `author` field, the handle is resolved
 against this file. The rendered page shows a byline with the author's name and
 avatar image, linked to the profile URL if provided.
 
-The file is validated against a JSON schema at build time.
+The file is validated against a JSON schema at build time. The `avatar` and `url`
+paths are also validated against the set of known build targets; a broken path
+fails the build.

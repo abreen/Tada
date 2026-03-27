@@ -37,5 +37,11 @@ external. External links open in a new tab.
 ## Internal link validation
 
 Internal links are checked against the set of known pages at build time. Broken
-links produce a warning. The validator treats directory paths and their
-corresponding `index.html` as equivalent.
+links cause the build to fail.
+
+This validation covers:
+
+- Links in Markdown content (both Markdown syntax and raw HTML)
+- `internal` links in `nav.json` (but disabled links are skipped)
+- `url` and `avatar` paths in `authors.json`
+- `parent` breadcrumb links in front matter

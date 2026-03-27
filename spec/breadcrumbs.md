@@ -6,3 +6,6 @@ base path is automatically applied to the URL.
 
 This provides a simple one-level "back to" navigation, not a full breadcrumb
 trail.
+
+The `parent` URL is validated against the set of known pages at build time. A
+broken parent link fails the build.
