@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { parseArgs } from 'util';
 import packageJson from '../package.json' with { type: 'json' };
 import {
@@ -151,9 +151,9 @@ function printUsage() {
   }
 }
 
-function run(cmd: string): void {
+function run(args: string[]): void {
   try {
-    execSync(cmd, { cwd: process.cwd(), stdio: 'inherit' });
+    execFileSync('bun', args, { cwd: process.cwd(), stdio: 'inherit' });
   } catch (err: unknown) {
     const code = (err as { status?: number }).status;
     if (code != null) {
@@ -612,28 +612,22 @@ switch (command) {
 
   case 'dev':
     requireSiteConfig('dev');
-    run(`bun ${path.join(packageDir, 'build/pipeline.ts')} dev`);
+    run([path.join(packageDir, 'build/pipeline.ts'), 'dev']);
     break;
 
   case 'prod':
     requireSiteConfig('prod');
-    run(`bun ${path.join(packageDir, 'build/pipeline.ts')} prod`);
+    run([path.join(packageDir, 'build/pipeline.ts'), 'prod']);
     break;
 
   case 'watch': {
     requireSiteConfig('dev');
-    const watchArgs = process.argv.slice(3).join(' ');
-    run(
-      `bun ${path.join(packageDir, 'build/watch.ts')}${watchArgs ? ' ' + watchArgs : ''}`,
-    );
+    run([path.join(packageDir, 'build/watch.ts'), ...process.argv.slice(3)]);
     break;
   }
 
   case 'serve': {
-    const serveArgs = process.argv.slice(3).join(' ');
-    run(
-      `bun ${path.join(packageDir, 'build/serve.ts')}${serveArgs ? ' ' + serveArgs : ''}`,
-    );
+    run([path.join(packageDir, 'build/serve.ts'), ...process.argv.slice(3)]);
     break;
   }
 
