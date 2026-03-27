@@ -13,7 +13,7 @@ import { bundle } from './bundle';
 import { copyFonts } from './generate-fonts';
 import { copyKatexAssets } from './generate-katex-assets';
 import { generateFavicons } from './generate-favicon';
-import { generateManifest } from './generate-manifest';
+import { generateWebAppManifest } from './generate-web-app-manifest';
 import { copyPublicFiles, copyContentAssets } from './copy';
 import { getProcessedExtensions } from './utils/file-types';
 import { ContentRenderer } from './generate-content-assets';
@@ -64,7 +64,7 @@ async function runPipeline(mode: 'development' | 'production'): Promise<void> {
   const assetFiles = results[0] as string[]; // bundle output filenames
 
   if (isFeatureEnabled(siteVariables, 'favicon')) {
-    generateManifest(siteVariables, distDir);
+    generateWebAppManifest(siteVariables, distDir);
   }
 
   const publicRelPaths = copyPublicFiles(publicDir, distDir);
@@ -93,9 +93,8 @@ async function runPipeline(mode: 'development' | 'production'): Promise<void> {
 
   // Phase 5: Build manifest (production only)
   if (!isDev) {
-    const prodBase = getProdDistDir();
-    const manifestPath = path.join(prodBase, `v${prodVersion!}.manifest.json`);
-    await generateBuildManifest(distDir, manifestPath);
+    const manifestPath = path.join(distDir, 'tada.manifest.json');
+    await generateBuildManifest(distDir, manifestPath, prodVersion!);
     log.info`Built dist-prod/v${prodVersion!}/`;
   }
 

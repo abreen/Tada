@@ -20,7 +20,7 @@ import { bundle } from './bundle';
 import { copyFonts } from './generate-fonts';
 import { copyKatexAssets } from './generate-katex-assets';
 import { generateFavicons } from './generate-favicon';
-import { generateManifest } from './generate-manifest';
+import { generateWebAppManifest } from './generate-web-app-manifest';
 import {
   copyPublicFiles,
   copyContentAssets,
@@ -239,7 +239,7 @@ async function initialBuild(): Promise<void> {
 
   if (isFeatureEnabled(siteVariables, 'favicon')) {
     await generateFavicons(siteVariables, distDir);
-    generateManifest(siteVariables, distDir);
+    generateWebAppManifest(siteVariables, distDir);
   }
 
   publicRelPaths = copyPublicFiles(publicDir, distDir);
@@ -341,7 +341,7 @@ async function rebuild(): Promise<void> {
 
       if (isFeatureEnabled(siteVariables, 'favicon')) {
         await generateFavicons(siteVariables, distDir);
-        generateManifest(siteVariables, distDir);
+        generateWebAppManifest(siteVariables, distDir);
       }
 
       const result = contentRenderer.processContent({ distDir, assetFiles });

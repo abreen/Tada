@@ -2,9 +2,11 @@ import fs from 'fs';
 import path from 'path';
 
 const EXCLUDED_DIRS = new Set(['pagefind']);
+const EXCLUDED_FILES = new Set(['tada.manifest.json']);
 
 export interface BuildManifest {
-  version: 1;
+  schema: 1;
+  build: number;
   buildTime: string;
   files: Record<string, string>;
 }
@@ -72,6 +74,9 @@ export async function walkAndHash(
     if (EXCLUDED_DIRS.has(topLevel)) {
       continue;
     }
+    if (EXCLUDED_FILES.has(entry.name)) {
+      continue;
+    }
 
     result[rel] = await hashFile(abs);
   }
@@ -112,10 +117,12 @@ export function getNextVersion(prodBaseDir: string): number {
 export async function generateBuildManifest(
   distDir: string,
   manifestPath: string,
+  buildVersion: number,
 ): Promise<void> {
   const files = await walkAndHash(distDir);
   const manifest: BuildManifest = {
-    version: 1,
+    schema: 1,
+    build: buildVersion,
     buildTime: new Date().toISOString(),
     files,
   };
@@ -142,9 +149,6 @@ export function pruneOldVersions(prodBaseDir: string): number[] {
   for (const v of toRemove) {
     const vDir = path.join(prodBaseDir, `v${v}`);
     fs.rmSync(vDir, { recursive: true, force: true });
-
-    const manifestFile = path.join(prodBaseDir, `v${v}.manifest.json`);
-    fs.rmSync(manifestFile, { force: true });
   }
 
   return toRemove;

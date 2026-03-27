@@ -506,8 +506,16 @@ function diffCommand(args: string[]): void {
     process.exit(1);
   }
 
-  const oldManifestPath = path.join(prodBase, `v${oldVer}.manifest.json`);
-  const newManifestPath = path.join(prodBase, `v${newVer}.manifest.json`);
+  const oldManifestPath = path.join(
+    prodBase,
+    `v${oldVer}`,
+    'tada.manifest.json',
+  );
+  const newManifestPath = path.join(
+    prodBase,
+    `v${newVer}`,
+    'tada.manifest.json',
+  );
 
   const oldManifest = loadManifest(oldManifestPath);
   if (!oldManifest) {
@@ -572,12 +580,15 @@ function diffCommand(args: string[]): void {
       copyDirRecursive(pagefindSrc, path.join(resolvedOutDir, 'pagefind'));
     }
 
-    const manifestSrc = path.join(prodBase, `v${newVer}.manifest.json`);
-    fs.copyFileSync(manifestSrc, path.join(resolvedOutDir, 'manifest.json'));
+    const manifestSrc = path.join(newDistDir, 'tada.manifest.json');
+    fs.copyFileSync(
+      manifestSrc,
+      path.join(resolvedOutDir, 'tada.manifest.json'),
+    );
 
     const copiedCount = diff.added.length + diff.changed.length;
     console.log(
-      `\nCopied ${copiedCount} ${noun(copiedCount)} + manifest.json to ${outDirArg}`,
+      `\nCopied ${copiedCount} ${noun(copiedCount)} + tada.manifest.json to ${outDirArg}`,
     );
 
     if (diff.removed.length > 0) {

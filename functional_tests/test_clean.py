@@ -36,17 +36,15 @@ class TestCleanPrunesProdVersions:
         result = run_tada("clean", "--prod", cwd=str(site_dir))
         assert result.returncode == 0
 
-        # v1 and v2 should be pruned
+        # v1 and v2 should be pruned (manifests are inside version dirs)
         assert not (site_dir / "dist-prod" / "v1").exists()
         assert not (site_dir / "dist-prod" / "v2").exists()
-        assert not (site_dir / "dist-prod" / "v1.manifest.json").exists()
-        assert not (site_dir / "dist-prod" / "v2.manifest.json").exists()
 
         # v3 and v4 should be kept
         assert (site_dir / "dist-prod" / "v3").is_dir()
         assert (site_dir / "dist-prod" / "v4").is_dir()
-        assert (site_dir / "dist-prod" / "v3.manifest.json").exists()
-        assert (site_dir / "dist-prod" / "v4.manifest.json").exists()
+        assert (site_dir / "dist-prod" / "v3" / "tada.manifest.json").exists()
+        assert (site_dir / "dist-prod" / "v4" / "tada.manifest.json").exists()
 
     def test_keeps_all_when_two_or_fewer(self, site_dir):
         run_tada("prod", cwd=str(site_dir), check=True)

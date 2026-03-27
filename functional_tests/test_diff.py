@@ -119,7 +119,7 @@ class TestDiffCopy:
         assert result.returncode == 0
         assert upload_dir.exists()
         assert "Copied" in result.stdout
-        assert (upload_dir / "manifest.json").exists()
+        assert (upload_dir / "tada.manifest.json").exists()
 
     def test_copied_dir_has_fewer_files_than_dist(self, site_dir):
         run_tada("prod", cwd=str(site_dir), check=True)
@@ -167,6 +167,27 @@ class TestDiffCopy:
         assert result.returncode == 0
         assert "Copied" in result.stdout
 
+    def test_copy_manifest_is_from_newer_version(self, site_dir):
+        run_tada("prod", cwd=str(site_dir), check=True)
+
+        index_md = site_dir / "content" / "index.md"
+        index_md.write_text("title: Home\n\nVersion 2.\n")
+        run_tada("prod", cwd=str(site_dir), check=True)
+
+        upload_dir = site_dir / "upload"
+        run_tada(
+            "diff", "1", "2", "--copy", str(upload_dir), cwd=str(site_dir),
+        )
+
+        v2_manifest = json.loads(
+            (site_dir / "dist-prod" / "v2" / "tada.manifest.json").read_text()
+        )
+        copied_manifest = json.loads(
+            (upload_dir / "tada.manifest.json").read_text()
+        )
+        assert copied_manifest["build"] == 2
+        assert copied_manifest["buildTime"] == v2_manifest["buildTime"]
+
     def test_copy_includes_pagefind(self, site_dir):
         run_tada("prod", cwd=str(site_dir), check=True)
 
@@ -182,11 +203,12 @@ class TestDiffCopy:
 class TestManifestCreation:
     def test_prod_build_creates_manifest(self, site_dir):
         run_tada("prod", cwd=str(site_dir), check=True)
-        manifest_path = site_dir / "dist-prod" / "v1.manifest.json"
+        manifest_path = site_dir / "dist-prod" / "v1" / "tada.manifest.json"
         assert manifest_path.exists()
 
         manifest = json.loads(manifest_path.read_text())
-        assert manifest["version"] == 1
+        assert manifest["schema"] == 1
+        assert manifest["build"] == 1
         assert "buildTime" in manifest
         assert len(manifest["files"]) > 0
 
@@ -196,21 +218,27 @@ class TestManifestCreation:
 
     def test_manifest_excludes_pagefind(self, built_prod_site):
         manifest = json.loads(
-            (built_prod_site / "dist-prod" / "v1.manifest.json").read_text()
+            (built_prod_site / "dist-prod" / "v1" / "tada.manifest.json").read_text()
         )
         pagefind_keys = [
             k for k in manifest["files"] if k.startswith("pagefind")
         ]
         assert len(pagefind_keys) == 0
 
+    def test_manifest_excludes_itself(self, built_prod_site):
+        manifest = json.loads(
+            (built_prod_site / "dist-prod" / "v1" / "tada.manifest.json").read_text()
+        )
+        assert "tada.manifest.json" not in manifest["files"]
+
     def test_multiple_builds_increment_versions(self, site_dir):
         run_tada("prod", cwd=str(site_dir), check=True)
         run_tada("prod", cwd=str(site_dir), check=True)
         run_tada("prod", cwd=str(site_dir), check=True)
 
-        assert (site_dir / "dist-prod" / "v1").is_dir()
-        assert (site_dir / "dist-prod" / "v2").is_dir()
-        assert (site_dir / "dist-prod" / "v3").is_dir()
-        assert (site_dir / "dist-prod" / "v1.manifest.json").exists()
-        assert (site_dir / "dist-prod" / "v2.manifest.json").exists()
-        assert (site_dir / "dist-prod" / "v3.manifest.json").exists()
+        for v in [1, 2, 3]:
+            assert (site_dir / "dist-prod" / f"v{v}").is_dir()
+            manifest_path = site_dir / "dist-prod" / f"v{v}" / "tada.manifest.json"
+            assert manifest_path.exists()
+            manifest = json.loads(manifest_path.read_text())
+            assert manifest["build"] == v

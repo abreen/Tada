@@ -95,7 +95,7 @@ function createManifest(siteVariables: SiteVariables): WebAppManifest {
   };
 }
 
-export function generateManifest(
+export function generateWebAppManifest(
   siteVariables: SiteVariables,
   distDir: string,
 ): void {

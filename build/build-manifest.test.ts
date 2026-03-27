@@ -15,8 +15,11 @@ import {
 } from './build-manifest';
 import type { BuildManifest, ManifestDiff } from './build-manifest';
 
-function makeManifest(files: Record<string, string>): BuildManifest {
-  return { version: 1, buildTime: '2025-01-01T00:00:00.000Z', files };
+function makeManifest(
+  files: Record<string, string>,
+  build: number = 1,
+): BuildManifest {
+  return { schema: 1, build, buildTime: '2025-01-01T00:00:00.000Z', files };
 }
 
 let tmpDir: string;
@@ -149,6 +152,14 @@ describe('walkAndHash', () => {
     expect('pagefind/pagefind.js' in result).toBe(false);
   });
 
+  test('excludes tada.manifest.json', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'index.html'), '<html></html>');
+    fs.writeFileSync(path.join(tmpDir, 'tada.manifest.json'), '{"schema":1}');
+    const result = await walkAndHash(tmpDir);
+    expect(Object.keys(result)).toEqual(['index.html']);
+    expect('tada.manifest.json' in result).toBe(false);
+  });
+
   test('returns empty object for empty directory', async () => {
     const result = await walkAndHash(tmpDir);
     expect(result).toEqual({});
@@ -179,7 +190,7 @@ describe('getVersions', () => {
     fs.mkdirSync(path.join(tmpDir, 'v1'));
     fs.mkdirSync(path.join(tmpDir, 'other'));
     fs.mkdirSync(path.join(tmpDir, 'v2x'));
-    fs.writeFileSync(path.join(tmpDir, 'v3.manifest.json'), '{}');
+    fs.writeFileSync(path.join(tmpDir, 'some-file.json'), '{}');
     expect(getVersions(tmpDir)).toEqual([1]);
   });
 
@@ -209,29 +220,31 @@ describe('getNextVersion', () => {
 });
 
 describe('generateBuildManifest', () => {
-  test('writes valid JSON with version, buildTime, and files', async () => {
+  test('writes valid JSON with schema, build, buildTime, and files', async () => {
     const distDir = path.join(tmpDir, 'dist');
     fs.mkdirSync(distDir);
     fs.writeFileSync(path.join(distDir, 'index.html'), '<html></html>');
 
-    const manifestPath = path.join(tmpDir, 'manifest.json');
-    await generateBuildManifest(distDir, manifestPath);
+    const manifestPath = path.join(distDir, 'tada.manifest.json');
+    await generateBuildManifest(distDir, manifestPath, 3);
 
     const raw = fs.readFileSync(manifestPath, 'utf8');
     const manifest = JSON.parse(raw) as BuildManifest;
 
-    expect(manifest.version).toBe(1);
+    expect(manifest.schema).toBe(1);
+    expect(manifest.build).toBe(3);
     expect(typeof manifest.buildTime).toBe('string');
     expect(manifest.buildTime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(typeof manifest.files).toBe('object');
     expect('index.html' in manifest.files).toBe(true);
+    expect('tada.manifest.json' in manifest.files).toBe(false);
   });
 });
 
 describe('loadManifest', () => {
   test('loads and parses a manifest from a file', () => {
     const manifest = makeManifest({ 'index.html': 'abc123' });
-    const filePath = path.join(tmpDir, 'manifest.json');
+    const filePath = path.join(tmpDir, 'tada.manifest.json');
     fs.writeFileSync(filePath, JSON.stringify(manifest, null, 2) + '\n');
 
     const loaded = loadManifest(filePath);
@@ -247,10 +260,11 @@ describe('loadManifest', () => {
 describe('pruneOldVersions', () => {
   function setupVersions(versions: number[]) {
     for (const v of versions) {
-      fs.mkdirSync(path.join(tmpDir, `v${v}`));
+      const vDir = path.join(tmpDir, `v${v}`);
+      fs.mkdirSync(vDir);
       fs.writeFileSync(
-        path.join(tmpDir, `v${v}.manifest.json`),
-        JSON.stringify(makeManifest({})),
+        path.join(vDir, 'tada.manifest.json'),
+        JSON.stringify(makeManifest({}, v)),
       );
     }
   }
@@ -263,12 +277,18 @@ describe('pruneOldVersions', () => {
     expect(fs.existsSync(path.join(tmpDir, 'v3'))).toBe(true);
   });
 
-  test('also removes manifest files for pruned versions', () => {
+  test('removes manifests inside pruned version directories', () => {
     setupVersions([1, 2, 3]);
     pruneOldVersions(tmpDir);
-    expect(fs.existsSync(path.join(tmpDir, 'v1.manifest.json'))).toBe(false);
-    expect(fs.existsSync(path.join(tmpDir, 'v2.manifest.json'))).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, 'v3.manifest.json'))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, 'v1', 'tada.manifest.json'))).toBe(
+      false,
+    );
+    expect(fs.existsSync(path.join(tmpDir, 'v2', 'tada.manifest.json'))).toBe(
+      true,
+    );
+    expect(fs.existsSync(path.join(tmpDir, 'v3', 'tada.manifest.json'))).toBe(
+      true,
+    );
   });
 
   test('keeps all versions when there are 2 or fewer', () => {

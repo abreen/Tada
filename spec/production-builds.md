@@ -1,9 +1,10 @@
 # Production Builds
 
 Production builds are versioned. Each build writes to `dist-prod/v{N}/` where N
-is automatically incremented. A manifest file (`v{N}.manifest.json`) is written
-alongside each version, recording the build time and a SHA-256 hash of every
-output file (excluding the search index directory).
+is automatically incremented. A build manifest (`tada.manifest.json`) is written
+inside each version directory, recording the schema version, build number, build
+time, and a SHA-256 hash of every output file (excluding the search index
+directory and the manifest itself).
 
 Production builds differ from development builds in several ways:
 
