@@ -77,14 +77,18 @@ class WatchProcess:
     def wait_for_initial_build(self):
         """Block until the watcher is fully ready (initial build + file watching)."""
         deadline = time.monotonic() + INITIAL_BUILD_TIMEOUT_SEC
+        saw_error = False
         while time.monotonic() < deadline:
             if self._ready_event.wait(timeout=WS_EVENT_WAIT_SEC):
                 return
+            if self._error_event.is_set():
+                saw_error = True
             if self.proc.poll() is not None:
                 raise RuntimeError(
                     f"Watch process exited early with code {self.proc.returncode}"
                 )
-        raise TimeoutError("Initial watch build did not complete in time")
+        detail = " (received 'error' WebSocket message during wait)" if saw_error else ""
+        raise TimeoutError(f"Initial watch build did not complete in time{detail}")
 
     def wait_for_error(self):
         """Block until an 'error' WebSocket message is received."""
@@ -93,6 +97,11 @@ class WatchProcess:
             if self._error_event.wait(timeout=WS_EVENT_WAIT_SEC):
                 self._error_event.clear()
                 return
+            if self._reload_event.is_set():
+                self._reload_event.clear()
+                raise AssertionError(
+                    "Expected 'error' WebSocket message but received 'reload' instead"
+                )
             if self.proc.poll() is not None:
                 raise RuntimeError(
                     f"Watch process exited with code {self.proc.returncode}"
@@ -128,6 +137,7 @@ class WatchProcess:
                 return path.exists() and path.stat().st_mtime > before_mtime
             return False
 
+        saw_error = False
         self._reload_event.clear()
         while time.monotonic() < deadline:
             if _check():
@@ -136,12 +146,16 @@ class WatchProcess:
                 self._reload_event.clear()
                 if _check():
                     return
+            if self._error_event.is_set():
+                self._error_event.clear()
+                saw_error = True
             if self.proc.poll() is not None:
                 raise RuntimeError(
                     f"Watch process exited with code {self.proc.returncode}"
                 )
+        detail = " (received 'error' WebSocket message during wait)" if saw_error else ""
         raise TimeoutError(
-            f"File {path} did not meet condition '{condition}' within timeout"
+            f"File {path} did not meet condition '{condition}' within timeout{detail}"
         )
 
     def stop(self):
