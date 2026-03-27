@@ -524,6 +524,7 @@ initialBuild()
     const configWatcher = chokidar.watch(jsonDataDir, {
       ignoreInitial: true,
       depth: 0,
+      awaitWriteFinish: { stabilityThreshold: 100 },
     });
     const onConfigFileChange = (filePath: string) => {
       if (configFilePaths.has(path.resolve(filePath))) {

@@ -137,7 +137,6 @@ class WatchProcess:
                 return path.exists() and path.stat().st_mtime > before_mtime
             return False
 
-        saw_error = False
         self._reload_event.clear()
         while time.monotonic() < deadline:
             if _check():
@@ -148,14 +147,15 @@ class WatchProcess:
                     return
             if self._error_event.is_set():
                 self._error_event.clear()
-                saw_error = True
+                raise AssertionError(
+                    "Expected 'reload' WebSocket message but received 'error' instead"
+                )
             if self.proc.poll() is not None:
                 raise RuntimeError(
                     f"Watch process exited with code {self.proc.returncode}"
                 )
-        detail = " (received 'error' WebSocket message during wait)" if saw_error else ""
         raise TimeoutError(
-            f"File {path} did not meet condition '{condition}' within timeout{detail}"
+            f"File {path} did not meet condition '{condition}' within timeout"
         )
 
     def stop(self):
@@ -504,9 +504,17 @@ class TestWatchConfigFileDetection:
         index_html = site_dir / "dist" / "index.html"
         before_mtime = index_html.stat().st_mtime
 
+        # Create the avatar file so the authors.json avatar path is valid
+        avatar_dir = site_dir / "public" / "avatars"
+        avatar_dir.mkdir(parents=True)
+        (avatar_dir / "jdoe.png").write_bytes(b"")
+
+        watch.wait_for_rebuild(site_dir / "dist" / "avatars" / "jdoe.png", "exists")
+        before_mtime = index_html.stat().st_mtime
+
         authors_path = site_dir / "authors.json"
         assert not authors_path.exists()
-        authors_path.write_text(json.dumps({"jdoe": {"name": "Jane Doe", "avatar": "/jdoe.png"}}) + "\n")
+        authors_path.write_text(json.dumps({"jdoe": {"name": "Jane Doe", "avatar": "/avatars/jdoe.png"}}) + "\n")
 
         watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
 
