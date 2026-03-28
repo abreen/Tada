@@ -1,0 +1,169 @@
+{
+  "repo_notes": [
+    {
+      "content": "Tada is a static site generator built with TypeScript on the Bun runtime, designed for educational content (course websites, documentation). Key directories: build/ contains the entire build pipeline (~55 TypeScript files) orchestrated by build/pipeline.ts in five phases; src/ contains client-side interactive components (search, TOC, time zone chooser, etc.) each as a module with mount()/style.scss; templates/ has Lodash HTML templates internal to the package; schema/ has JSON schemas for config validation; init/ has boilerplate for new sites; spec/ has feature design documents. The CLI entry point is bin/tada.ts."
+    },
+    {
+      "content": "Key architectural patterns: (1) The build pipeline runs Setup, Bundle, Copy, Render, Post-build, with bundling and asset generation parallelized in phase 2. (2) Content rendering is polymorphic -- Markdown, HTML, source code, and literate Java each have distinct rendering paths dispatched by build/generate-content-assets.ts. (3) Markdown processing uses markdown-it with ~10 custom plugins for syntax highlighting (Shiki), math (KaTeX), alerts, Q&A blocks, collapsible details, heading subtitles, and link validation. (4) The client uses no framework -- vanilla TypeScript components mounted in parallel by src/index.ts. (5) Two CSS bundles: critical (inlined in <style>) and full (loaded asynchronously). (6) Internal links across Markdown, nav.json, authors.json, and breadcrumbs are all validated at build time."
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "High-level introduction to Tada: a TypeScript/Bun static site generator for educational content. Cover who it's for (instructors, course staff), key capabilities (Markdown with extensions, source code pages, literate Java, full-text search, theming), the major subsystems (build pipeline in build/, frontend components in src/, templates in templates/), and how they relate. Link to all child sections."
+    },
+    {
+      "title": "Getting Started",
+      "purpose": "How to install Tada (npm package), create a new site with `tada init`, and run the development workflow. Cover prerequisites (Bun >= 1.0, Java JDK for literate Java, MuPDF for PDF indexing, Python for functional tests), the init command's interactive prompts and --no-interactive/--bare flags, the resulting project directory layout (site.dev.json, site.prod.json, content/, public/, nav.json, authors.json), and how to run tada dev + tada serve to preview locally.",
+      "parent": "Overview"
+    },
+    {
+      "title": "CLI Reference",
+      "purpose": "Complete reference for all `tada` CLI commands defined in bin/tada.ts: init (create site), dev (development build to dist/), prod (production build to dist-prod/v{N}/), serve (static file server on port 8080), watch (file monitoring with live reload), clean (remove dist/ or prune old prod versions), diff (compare production builds via manifests). Cover flags, exit codes, and when to use each command.",
+      "parent": "Overview"
+    },
+    {
+      "title": "Site Configuration",
+      "purpose": "Overview of how Tada sites are configured via JSON config files and data files. Two config files (site.dev.json for development, site.prod.json for production) define the site's identity and behavior. Two data files (nav.json for navigation, authors.json for author metadata) are validated against JSON schemas in schema/. Link to child pages for the config schema, navigation/authors, and theming."
+    },
+    {
+      "title": "site.json Configuration Reference",
+      "purpose": "Detailed reference for all fields in site.dev.json and site.prod.json, validated against schema/site.schema.json via AJV. Required fields: base (full site URL), title, defaultTimeZone (IANA), themeColor (HSL). Optional fields: basePath (default '/'), symbol (1-5 chars for logo/favicon), tintHue/tintAmount (background tint), internalDomains (array), codeLanguages (extension-to-language map, default Java+Python), vars (arbitrary key-value pairs for templates). Feature flags: search (default true), code (default true), favicon (default false).",
+      "parent": "Site Configuration"
+    },
+    {
+      "title": "Navigation and Authors",
+      "purpose": "How to define site navigation in nav.json (array of sections, each with title and links; links have text + internal path or external URL; disabled flag for non-clickable links) and author metadata in authors.json (handles mapped to name, avatar path, profile URL). Both validated against JSON schemas in schema/. Internal links in nav.json and avatar/url paths in authors.json are validated at build time. Template variable interpolation in these files uses site.vars.",
+      "parent": "Site Configuration"
+    },
+    {
+      "title": "Theming and Visual Identity",
+      "purpose": "How Tada derives a full visual palette from themeColor (HSL primary accent), tintHue (0-360), and tintAmount (0-100). The build/utils/derive-theme.ts module computes light and dark mode variants, text-on-theme contrast colors, and tinted background colors. Covers favicon generation via build/generate-favicon.ts (symbol text rendered to PNG/ICO/SVG at multiple sizes using bundled TTF fonts and sharp), web app manifest generation, and how theme values are compiled into CSS custom properties at build time via templates/_theme.scss.",
+      "parent": "Site Configuration"
+    },
+    {
+      "title": "Build Pipeline",
+      "purpose": "Overview of the five-phase build pipeline orchestrated by build/pipeline.ts: (1) Setup -- compile Lodash templates, initialize Shiki syntax highlighter; (2) Bundle + Assets -- JavaScript/CSS bundling, font copying, favicon and KaTeX asset generation, all run in parallel; (3) Copy -- static files from public/ and non-page content assets; (4) Render -- process Markdown/HTML/code/literate-Java into HTML via ContentRenderer; (5) Post-build -- Pagefind search indexing and production manifest generation. Cover the dev vs prod distinction (dist/ vs dist-prod/v{N}/).",
+      "page_notes": [
+        {
+          "content": "The key orchestration file is build/pipeline.ts. Phase 2 runs bundling and asset generation in parallel for performance. The ContentRenderer in phase 4 is the most complex phase. Each phase is a distinct async function."
+        }
+      ]
+    },
+    {
+      "title": "Asset Bundling",
+      "purpose": "How Tada bundles client-side TypeScript and SCSS using Bun's built-in bundler, implemented in build/bundle.ts. Cover the two-bundle CSS strategy: critical.bundle.css (inlined as <style> for first paint) and index.bundle.css (loaded asynchronously, self-contained). The SCSS plugin compiles .scss imports via sass. Theme values are injected as build-time globals via createDefine(). JavaScript is bundled into index.bundle.js with deferred loading. Source maps are included in dev builds only.",
+      "parent": "Build Pipeline"
+    },
+    {
+      "title": "Content Rendering",
+      "purpose": "How the ContentRenderer class (build/generate-content-assets.ts) processes content/ files into HTML output. Cover file type detection (build/utils/file-types.ts distinguishes Markdown, HTML, literate Java, and code files), the rendering dispatch logic that routes each type to its renderer (build/utils/render.ts), YAML front matter parsing (build/utils/front-matter.ts), internal link validation (build/validate-internal-links-plugin.ts), base path rewriting (build/apply-base-path-plugin.ts), and the processContent() lifecycle.",
+      "parent": "Build Pipeline",
+      "page_notes": [
+        {
+          "content": "The ContentRenderer is the central class that coordinates rendering. It discovers content files via build/utils/content-files.ts, applies the appropriate renderer based on file type, and wraps results in Lodash templates. Link validation and base path rewriting are implemented as markdown-it plugins. HTML content pages bypass the Markdown pipeline but still go through the template system."
+        }
+      ]
+    },
+    {
+      "title": "Markdown Processing",
+      "purpose": "The full Markdown pipeline configured in build/utils/markdown.ts: markdown-it with custom plugins for syntax highlighting (Shiki via build/utils/shiki-highlighter.ts), math (KaTeX via @vscode/markdown-it-katex with custom error propagation), alert blocks (!!! note/warning), Q&A blocks (??? question), collapsible details (<<<), generic sections (:::), footnotes, definition lists with auto-generated IDs (build/deflist-id-plugin.ts), heading subtitles (build/heading-subtitle-plugin.ts), and TOC extraction (build/toc-plugin.ts). Covers front matter parsing and template variable injection into page content.",
+      "parent": "Build Pipeline",
+      "page_notes": [
+        {
+          "content": "Key design decisions: (1) KaTeX renders math at build time with no client-side JS, with aria-labels for accessibility. The KaTeX stylesheet is conditionally included only on pages that contain math. (2) Shiki provides dual-theme code highlighting (light+dark) with theme colors applied via CSS. (3) Smart typography converts straight quotes to curly quotes. (4) Each custom plugin is a separate file in build/ following the markdown-it plugin pattern."
+        }
+      ]
+    },
+    {
+      "title": "Production Builds and Versioning",
+      "purpose": "How production builds differ from dev: versioned output to dist-prod/v{N}/ with auto-incremented version numbers, tada.manifest.json generation (build/build-manifest.ts) with schema version, build number, timestamp, and SHA-256 hashes of every output file. The diff command (build/diff.ts) compares two manifests to identify added/changed/removed files, with --copy flag for incremental deployment. The clean --prod command prunes old versions keeping only the two most recent. No live-reload client or source maps in production.",
+      "parent": "Build Pipeline"
+    },
+    {
+      "title": "Content Authoring",
+      "purpose": "Guide for site authors: how to write content pages in the content/ directory, use YAML front matter (no --- delimiters), structure subdirectories for sections, and leverage Tada's special content types. Content types: Markdown (.md, .markdown) for standard pages, HTML (.html) for raw HTML with template support, source code files (Java, Python, etc.) for syntax-highlighted code browsing, and literate Java (.java.md) for executable prose+code documents. content/index.md is required as the home page."
+    },
+    {
+      "title": "Front Matter and Page Variables",
+      "purpose": "Complete reference for front matter fields parsed by build/utils/front-matter.ts: title (required, supports inline Markdown), author (handle matching authors.json), description (for <meta> tag), published (ISO date string), toc (boolean to enable floating TOC sidebar), parent/parentLabel (single breadcrumb link, validated at build time), skip (exclude page from build), stdin (input for literate Java execution). How front matter maps to page.* template variables, how arbitrary custom fields are accessible, and how template variable interpolation works in page content.",
+      "parent": "Content Authoring"
+    },
+    {
+      "title": "Source Code Pages",
+      "purpose": "How Tada renders source code files as browsable HTML when the code feature is enabled. Recognized extensions are configured via codeLanguages in site config (default: Java and Python). Rendering (build/utils/code.ts) produces syntax-highlighted HTML with line numbers as anchor links and a download button. Java files get special treatment: consecutive /// Markdown documentation comments (Java 25) are extracted, rendered as Markdown, and displayed inline between code segments. Java files also get an auto-generated TOC listing methods, constructors, and fields via java-parser. Links to code files in Markdown are rewritten to point to the generated .html page.",
+      "parent": "Content Authoring"
+    },
+    {
+      "title": "Literate Java Pages",
+      "purpose": "How .java.md files work when the code feature is enabled. Parsing (build/utils/literate-java.ts) extracts interleaved Markdown prose and Java fenced code blocks. All Java blocks are concatenated into a compilable source file, compiled via javac, and (if main() exists) executed via the JDI-based LiterateRunner (build/utils/jdi-runner/LiterateRunner.java). Output is captured per code block and displayed alongside each block. Hidden fences contribute to compilation but don't appear in output. The stdin front matter field provides standard input using YAML double-quoted strings for escape sequences.",
+      "parent": "Content Authoring"
+    },
+    {
+      "title": "Templates System",
+      "purpose": "Overview of Tada's internal Lodash HTML template system, compiled at build time by build/templates.ts. Templates are internal to the package (in templates/) and not user-editable. Three page templates (default.html, code.html, literate.html) compose the page structure from shared partials. Templates receive variables from site config, front matter, and utility functions. Link to child pages for variable reference and template file details."
+    },
+    {
+      "title": "Template Variables and Utility Functions",
+      "purpose": "All variables available in Lodash templates: page.* (front matter fields), site.* (config values including base, basePath, title, symbol, theme colors), content (rendered HTML body), isHomePage (boolean). Utility functions defined in build/templates.ts: applyBasePath() (prefix internal URLs), renderTimeZoneChooser() (render the time zone selector partial), isoDate()/readableDate() (date formatting), classNames() (conditional CSS classes), json() (load and parse JSON data files), render() (render a sub-template). How vars from site config are accessible in templates and in nav.json/authors.json via interpolation.",
+      "parent": "Templates System"
+    },
+    {
+      "title": "HTML Template Files",
+      "purpose": "The internal template files in templates/: page templates default.html (standard pages), code.html (source code pages with line numbers, code TOC, download button), literate.html (literate Java with interleaved output blocks). Partials: _top.html (HTML head, critical CSS inline, opening body), _heading.html (page title with optional breadcrumb and subtitle), _bottom.html (scripts, non-critical CSS link, footer), _author.html (author byline with avatar), _download.html (file download button). How templates compose the page structure and interface with Pagefind via data-pagefind-body/data-pagefind-ignore attributes.",
+      "parent": "Templates System"
+    },
+    {
+      "title": "Frontend Components",
+      "purpose": "Overview of Tada's client-side interactive components. All components live in src/<name>/ with index.ts (exporting async mount()) and style.scss. The bootstrap module src/index.ts mounts all components in parallel on DOMContentLoaded, with error isolation per component. Shared utilities in src/util.ts. No framework -- vanilla TypeScript with direct DOM manipulation. Components: anchor links, table of contents, search, Q&A toggle, time zone chooser, scroll-to-top, print handler, code scrollbar, and header navigation."
+    },
+    {
+      "title": "CSS Architecture",
+      "purpose": "The SCSS module structure and dual-bundle strategy. Critical CSS (src/critical.scss) imports shared partials (_base.scss for core element styles, _layout.scss for page layout, header/_base.scss for header positioning) and is inlined as <style> in every page. Full CSS (src/style.scss + component stylesheets) is loaded asynchronously and intentionally re-includes critical rules for cacheability. CSS custom properties serve as design tokens. Responsive layout modes: body.default, body.literate, body.code, .toc-is-active. Dual-theme Shiki code highlighting applies light and dark styles via media query and CSS custom properties.",
+      "parent": "Frontend Components"
+    },
+    {
+      "title": "Search Component",
+      "purpose": "The Pagefind-powered search UI in src/search/. Lazy index loading on first interaction. The search pipeline: input, debounced doSearch(), Pagefind API call, render results. PDF result grouping (PDFs linked from reachable pages are indexed with per-page text via build/utils/pdf-text.ts using MuPDF, and results are grouped by document with page numbers). Keyboard navigation (arrow keys, Enter, Escape). ARIA accessibility (combobox/listbox pattern). Index staleness detection via ETag comparison. The is-typing CSS state prevents layout shift. Page reachability (build/reachability.ts) determines which pages are indexed.",
+      "parent": "Frontend Components",
+      "page_notes": [
+        {
+          "content": "The search index is generated post-build by build/pagefind.ts using the Pagefind library. Only pages reachable from index.html (determined by BFS traversal in build/reachability.ts) are indexed. PDF text extraction requires MuPDF (mutool). The pagefind/ directory is excluded from production manifests."
+        }
+      ]
+    },
+    {
+      "title": "Table of Contents and Navigation Components",
+      "purpose": "The floating TOC sidebar (src/toc/): sources include headings (with auto-generated IDs via build/text-to-id.ts), alert blocks (notes/warnings), and horizontal rules (as visual separators). Scroll tracking highlights the active TOC entry. Java code pages generate TOC from source structure (methods, constructors, fields) instead of headings. Also covers: anchor links on headings and definition lists (src/anchor/), breadcrumb navigation via parent/parentLabel front matter, the scroll-to-top button (src/top/), and the header navigation component (src/header/) which renders nav.json sections.",
+      "parent": "Frontend Components"
+    },
+    {
+      "title": "Time Zone, Q&A, and Other Components",
+      "purpose": "The time zone chooser (src/timezone/): renders a dropdown of IANA zones via renderTimeZoneChooser() template function, persists selection to localStorage, reformats all <time> elements to the chosen zone with DST-aware offset calculation, detects 12/24-hour format, shows next/prev day indicators when the converted time falls on a different day. Q&A toggle blocks (src/question/): collapsible answer sections. Print handler (src/print/): opens all <details> elements before printing. Code scrollbar (src/code/): sticky horizontal scrollbar synced with wide code blocks.",
+      "parent": "Frontend Components"
+    },
+    {
+      "title": "Development Workflow",
+      "purpose": "Overview of the development tools and workflow for working on Tada itself. The repository is the Tada package, not a Tada site -- use `bun run init-example` to create a test site in example/. Key commands: bun test (unit tests), bun run test:functional (pytest end-to-end tests), bun run lint, bun run typecheck. Pre-commit hooks enforce formatting (Prettier), linting, and type checking. Link to child pages for watch mode, testing strategy, and CI/CD."
+    },
+    {
+      "title": "Watch Mode and Live Reload",
+      "purpose": "How watch mode (build/watch.ts) works: chokidar file monitoring with 300ms debounce. Change classification: content changes re-render only affected pages (tracked by build/content-watch.ts ContentChangeDetector), public file changes copy only the changed file, config/data file changes (site.json, nav.json, authors.json) trigger a full pipeline restart. The WebSocket-based live reload: a separately bundled client script (build/watch-reload-client.ts) injected into pages connects to the dev server. Four message types: rebuilding (shimmer animation), reload (page refresh), error (build failure), ready (watcher initialized for tests). The dev server starts only after the first successful build.",
+      "parent": "Development Workflow"
+    },
+    {
+      "title": "Testing",
+      "purpose": "The two-tier testing strategy: (1) Unit tests via bun test for individual build modules (*.test.ts files alongside source), covering markdown plugins, front matter parsing, theme derivation, code rendering, etc. (2) Functional/black-box tests via pytest (functional_tests/ directory) that exercise the CLI end-to-end by running tada commands via subprocess and asserting on exit codes, stdout, and file system state. Key pytest fixtures in conftest.py: run_tada (subprocess runner), site_dir (temporary site), built_dev_site (pre-built site for assertions). Watch mode tests are slow (~10s each). Run with bun run test:functional, not pytest directly.",
+      "parent": "Development Workflow"
+    },
+    {
+      "title": "CI/CD and Deployment",
+      "purpose": "The GitHub Actions pipeline: test (unit + functional), build (tada init + tada prod to build the Tada docs site itself), deploy, Cloudflare cache purge. Dependency checking via build/check-deps.ts verifies required tools (Bun, Java, MuPDF) are available. Pre-commit hooks via Husky run Prettier formatting, ESLint linting, and TypeScript type checking. The prepack script in package.json prepares the npm package for publishing.",
+      "parent": "Development Workflow"
+    },
+    {
+      "title": "Glossary",
+      "purpose": "Definitions of all codebase-specific terms, abbreviations, and domain concepts: content page, front matter (no --- delimiters), literate Java (.java.md), code page, critical CSS, basePath, theme derivation, build manifest, reachability (BFS from index.html), Pagefind, Shiki, KaTeX, JDI runner, content asset vs public file, internal vs external link, feature flags. Each entry includes code pointers to the relevant files, classes, or functions."
+    }
+  ]
+}
