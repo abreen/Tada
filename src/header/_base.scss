@@ -97,6 +97,7 @@ header summary .to-top-container {
   height: var(--header-collapsed-height);
   pointer-events: none;
   white-space: nowrap;
+  padding: 0 var(--gap) 0 0;
 
   &:has(.is-visible) {
     display: flex;
@@ -116,7 +117,7 @@ header summary .search-controls {
   display: flex;
   align-items: center;
   height: var(--header-collapsed-height);
-  padding: 0 var(--gap);
+  padding: 0 var(--gap) 0 0;
   min-width: 0;
 
   input.search {
