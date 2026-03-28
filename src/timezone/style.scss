@@ -14,3 +14,22 @@ span.next-prev-day {
   align-items: center;
   gap: 4px;
 }
+
+@media print {
+  .timezone-wrapper .icon-button {
+    display: none;
+  }
+
+  select.time-zone {
+    appearance: none;
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+
+    option {
+      display: none;
+    }
+  }
+}
