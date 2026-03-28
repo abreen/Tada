@@ -132,8 +132,22 @@ export function injectAssetTags(
     )
     .join('');
 
+  const fontPreloadTags = [
+    'inter/InterVariable.woff2',
+    'google-sans-code/GoogleSansCodeVariable.woff2',
+  ]
+    .filter(f => fs.existsSync(path.join(distDir, f)))
+    .map(
+      f =>
+        `<link rel="preload" href="${applyBasePath('/' + f)}" as="font" type="font/woff2" crossorigin>`,
+    )
+    .join('');
+
   return html
-    .replace('<head>', `<head>${criticalTags}${asyncLinkTags}`)
+    .replace(
+      '<head>',
+      `<head>${fontPreloadTags}${criticalTags}${asyncLinkTags}`,
+    )
     .replace('</head>', `${scriptTags}</head>`);
 }
 
