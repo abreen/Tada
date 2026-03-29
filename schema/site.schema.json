@@ -52,6 +52,15 @@
     "codeLanguages": {
       "type": "object",
       "additionalProperties": { "type": "string" }
+    },
+    "github": {
+      "type": "object",
+      "properties": {
+        "repo": { "type": "string" },
+        "defaultBranch": { "type": "string", "default": "main" }
+      },
+      "required": ["repo"],
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

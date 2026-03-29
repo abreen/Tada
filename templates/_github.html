@@ -1,0 +1,7 @@
+<% if (site.github) { %>
+<footer class="github-links">
+  <% var branch = site.github.defaultBranch || 'main'; %>
+  <a href="https://github.com/<%= site.github.repo %>/blob/<%= branch %>/<%= page.sourcePath %>">View source</a>
+  <a href="https://github.com/<%= site.github.repo %>/edit/<%= branch %>/<%= page.sourcePath %>">Edit page</a>
+</footer>
+<% } %>

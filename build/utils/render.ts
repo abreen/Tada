@@ -191,6 +191,8 @@ export function renderPlainTextPageAsset({
 
   validateFrontMatter(pageVariables, filePath);
 
+  pageVariables.sourcePath = `content/${subPath}${ext}`;
+
   if (!pageVariables.template) {
     pageVariables.template = 'default';
   }
@@ -250,6 +252,7 @@ export function renderCodePageAsset({
   const pageVariables: Record<string, unknown> = {
     template: 'code',
     filePath,
+    sourcePath: `content/${subPath}${ext}`,
     title: `${name}${ext}`,
     titleHtml,
     codeFilePath,
@@ -535,6 +538,7 @@ export function renderLiterateJavaPageAsset({
   pageVariables.titleHtml = titleHtml;
   pageVariables.title = stripHtml(titleHtml).result;
   pageVariables.template = 'literate';
+  pageVariables.sourcePath = `content/${toContentAssetPath(contentDir, filePath)}`;
   pageVariables.codeFilePath = codeFilePath;
   pageVariables.downloadName = javaFileName;
 

@@ -458,6 +458,16 @@ select {
   font-size: inherit;
 }
 
+footer.github-links {
+  padding: 2rem 0 1rem;
+  font-size: var(--font-size-smaller);
+  color: var(--fg2-color);
+
+  a + a {
+    margin-left: 1rem;
+  }
+}
+
 // Shiki dual-theme support (defaultColor: false — CSS custom properties only,
 // no inline color/background-color, so no !important needed)
 .shiki span {

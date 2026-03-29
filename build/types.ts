@@ -16,6 +16,7 @@ export interface SiteVariables {
   tintHue?: number;
   tintAmount?: number;
   vars?: Record<string, unknown>;
+  github?: { repo: string; defaultBranch?: string };
 }
 
 export type FeatureConfig = {
