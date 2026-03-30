@@ -233,12 +233,12 @@ export function createTraceHelpers(context: TraceContext): {
       const iconNext = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/></svg>`;
       const iconLast = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/><line x1='22' y1='6' x2='22' y2='18'/></svg>`;
       const controls =
-        `<button class="trace-btn trace-first" disabled aria-label="First step">${iconFirst}</button>` +
-        `<button class="trace-btn trace-prev" disabled aria-label="Previous step">${iconPrev}</button>` +
+        `<button class="trace-btn trace-first" disabled tabindex="-1" aria-label="First step">${iconFirst}</button>` +
+        `<button class="trace-btn trace-prev" disabled tabindex="-1" aria-label="Previous step">${iconPrev}</button>` +
         `<span class="trace-step-counter">1 / ${totalSteps}</span>` +
         `<button class="trace-btn trace-next" aria-label="Next step">${iconNext}</button>` +
-        `<button class="trace-btn trace-last" aria-label="Last step">${iconLast}</button>`;
-      return `<div class="trace-widget" data-trace-manifest="${manifestUrl}"><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls">${controls}</div></div><div class="trace-content"><div class="trace-left"><div class="trace-source">${highlightedSource}</div></div><div class="trace-right"><div class="trace-diagram"></div><pre class="trace-output"></pre></div></div></div></div>`;
+        `<button class="trace-btn trace-last" tabindex="-1" aria-label="Last step">${iconLast}</button>`;
+      return `<div class="trace-widget" data-trace-manifest="${manifestUrl}"><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-left"><div class="trace-source">${highlightedSource}</div></div><div class="trace-right"><div class="trace-diagram"></div><pre class="trace-output"></pre></div></div></div></div>`;
     },
   };
 }

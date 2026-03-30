@@ -1005,6 +1005,10 @@ export function updateStepControls(
   const prev = container.querySelector('.trace-prev') as HTMLButtonElement;
   const next = container.querySelector('.trace-next') as HTMLButtonElement;
   const last = container.querySelector('.trace-last') as HTMLButtonElement;
+  const btns = [first, prev, next, last];
+
+  const focused = document.activeElement;
+
   if (first) {
     first.disabled = currentStep === 0;
   }
@@ -1016,6 +1020,28 @@ export function updateStepControls(
   }
   if (last) {
     last.disabled = currentStep >= totalSteps - 1;
+  }
+
+  // When a clicked button becomes disabled, the browser removes focus.
+  // Move focus to a sensible sibling so the outline stays visible.
+  if (focused instanceof HTMLButtonElement && focused.disabled) {
+    if (focused === first || focused === prev) {
+      next?.focus();
+    } else if (focused === next || focused === last) {
+      prev?.focus();
+    }
+  }
+
+  // Keep roving tabindex on exactly one enabled button.
+  const enabled = btns.filter(b => b && !b.disabled);
+  const hasTabbable = enabled.some(b => b.tabIndex === 0);
+  if (!hasTabbable && enabled.length > 0) {
+    enabled[0].tabIndex = 0;
+  }
+  for (const b of btns) {
+    if (b && b.disabled) {
+      b.tabIndex = -1;
+    }
   }
 }
 

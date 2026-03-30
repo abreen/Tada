@@ -19,8 +19,8 @@ header {
   }
 
   @media (hover: hover) {
-    .results-container.is-typing a.result:hover:not(:focus-visible),
-    .results-container.is-typing a.sub-result:hover:not(:focus-visible) {
+    .results-container.is-typing a.result:hover:not(:focus),
+    .results-container.is-typing a.sub-result:hover:not(:focus) {
       background: transparent;
     }
   }
@@ -89,9 +89,8 @@ header {
         }
       }
 
-      a.result:focus-visible {
+      a.result:focus {
         background: var(--bg2-color);
-        outline: 2px solid var(--theme-color);
         outline-offset: -2px;
       }
     }
@@ -162,9 +161,8 @@ header {
           background: var(--bg2-color);
         }
 
-        &:focus-visible {
+        &:focus {
           background: var(--bg2-color);
-          outline: 2px solid var(--theme-color);
           outline-offset: -2px;
         }
 

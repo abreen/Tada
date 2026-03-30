@@ -167,27 +167,36 @@ input[type='submit'] {
   text-decoration: none;
 }
 
-button:active,
-a.button:active,
-input[type='submit']:active {
+button:disabled,
+input[type='submit']:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button:active:not(:disabled),
+a.button:not(.disabled):active,
+input[type='submit']:active:not(:disabled) {
   background: var(--link-active-color) !important;
   color: var(--bg-color) !important;
 }
 
 @media (hover: hover) {
-  button:hover,
-  a.button:hover,
-  input[type='submit']:hover {
+  button:hover:not(:disabled),
+  a.button:not(.disabled):hover,
+  input[type='submit']:hover:not(:disabled) {
     background: var(--bg2-color);
     cursor: pointer;
   }
 }
 
-button:focus-visible,
-a.button:focus-visible,
-input[type='submit']:focus-visible,
-input[type='text']:focus-visible,
-input[type='search']:focus-visible {
+button:focus,
+a.button:focus,
+input[type='submit']:focus,
+input[type='text']:focus,
+input[type='search']:focus,
+select:focus {
+  outline: 2px solid var(--theme-color);
+  outline-offset: 1px;
   border-color: var(--fg-color);
   background-color: var(--bg2-color);
 }
@@ -204,6 +213,10 @@ button.icon-button {
   font-weight: 400;
   font-style: normal;
   vertical-align: top;
+}
+
+button.icon-button:focus {
+  background-color: var(--bg2-color);
 }
 
 ol.styled-list,

@@ -35,6 +35,15 @@
   @include user-select(none);
 }
 
+.question-a-body:focus {
+  outline: 2px solid var(--theme-color);
+  outline-offset: -2px;
+}
+
+.question-a-body[data-revealed]:focus {
+  outline: none;
+}
+
 .question-a-body > *:first-child {
   margin-top: 0;
 }

@@ -142,6 +142,28 @@ async function initWidget(root: HTMLElement): Promise<void> {
     goToStep(state, elements, manifestUrl, manifest.totalSteps - 1),
   );
 
+  const btns = [firstBtn, prevBtn, nextBtn, lastBtn];
+  controls.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+      return;
+    }
+    const enabled = btns.filter(b => !b.disabled);
+    const idx = enabled.indexOf(document.activeElement as HTMLButtonElement);
+    if (idx < 0) {
+      return;
+    }
+    e.preventDefault();
+    const next =
+      e.key === 'ArrowRight'
+        ? enabled[(idx + 1) % enabled.length]
+        : enabled[(idx - 1 + enabled.length) % enabled.length];
+    for (const b of enabled) {
+      b.tabIndex = -1;
+    }
+    next.tabIndex = 0;
+    next.focus();
+  });
+
   const elements: WidgetElements = { root, source, controls, output, diagram };
 
   const initResult = renderMemoryDiagram(diagram, step);

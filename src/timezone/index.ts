@@ -272,6 +272,7 @@ export default (window: Window) => {
       }
       syncAll(defaultTz.value);
       updateTimes(defaultTz.value);
+      selectEl.focus();
     });
   });
 
