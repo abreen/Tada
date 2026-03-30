@@ -125,6 +125,15 @@ details summary {
   cursor: pointer;
   @include user-select(none);
   padding: var(--details-padding);
+
+  &:focus {
+    outline: none;
+  }
+}
+
+main details:focus-within {
+  outline: 2px solid var(--theme-color);
+  outline-offset: 1px;
 }
 
 details .content {
