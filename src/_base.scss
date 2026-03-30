@@ -105,6 +105,7 @@ pre {
   border-radius: var(--mono-border-radius);
   line-height: var(--mono-line-height);
   overflow: auto;
+  overscroll-behavior: none;
   padding: var(--gap);
 
   code {
