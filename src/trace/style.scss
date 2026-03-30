@@ -90,11 +90,10 @@
   overflow-y: auto;
   overscroll-behavior: none;
 
-  border-radius: var(--mono-border-radius);
-
   & > pre {
     margin: 0;
-    border-radius: 0;
+    padding: 0;
+    overflow: clip;
   }
 
   .line-number.trace-line-active {

@@ -10,6 +10,7 @@ body.code .file-header {
 body.code .code-body {
   background: var(--bg2-color);
   border-radius: var(--border-radius);
+  clip-path: inset(0 round var(--border-radius));
   display: grid;
   grid-template-columns: minmax(100%, max-content);
   overflow-x: auto;
