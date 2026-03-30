@@ -32,6 +32,10 @@ export class ContentRenderer {
   private sourceFileCache: Map<string, Asset[]>;
   private lastBuildFiles: Set<string>;
   private javacAvailable: boolean | undefined;
+  private traceCache: Map<
+    string,
+    { manifestUrl: string; highlightedSource: string; totalSteps: number }
+  > = new Map();
 
   constructor(siteVariables: SiteVariables) {
     this.siteVariables = siteVariables || {};
@@ -134,6 +138,7 @@ export class ContentRenderer {
           siteVariables: this.siteVariables,
           validInternalTargets,
           assetFiles,
+          traceCache: this.traceCache,
         }),
       );
       return assets;

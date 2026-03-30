@@ -14,6 +14,7 @@ import {
   renderCodeWithComments,
 } from './code';
 import { extensionIsMarkdown } from './file-types';
+import { createTraceHelpers } from './trace';
 import { createApplyBasePath, normalizeOutputPath } from './paths';
 import { parseFrontMatterAndContent } from './front-matter';
 import { createMarkdown } from './markdown';
@@ -174,6 +175,7 @@ export function renderPlainTextPageAsset({
   siteVariables,
   validInternalTargets,
   assetFiles,
+  traceCache,
 }: RenderPlainTextOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = path.relative(contentDir, path.join(dir, name));
@@ -186,7 +188,12 @@ export function renderPlainTextPageAsset({
     siteVariables,
     applyBasePath,
     validInternalTargets,
-    { validateInternalLinks: extensionIsMarkdown(ext.toLowerCase()) },
+    {
+      validateInternalLinks: extensionIsMarkdown(ext.toLowerCase()),
+      traceCache,
+      contentDir,
+      distDir,
+    },
   );
 
   validateFrontMatter(pageVariables, filePath);
@@ -299,7 +306,20 @@ function renderPlainTextContent(
   siteVariables: SiteVariables,
   applyBasePath: (subPath: string) => string,
   validInternalTargets: Set<string>,
-  { validateInternalLinks = true } = {},
+  {
+    validateInternalLinks = true,
+    traceCache,
+    contentDir,
+    distDir,
+  }: {
+    validateInternalLinks?: boolean;
+    traceCache?: Map<
+      string,
+      { manifestUrl: string; highlightedSource: string; totalSteps: number }
+    >;
+    contentDir?: string;
+    distDir?: string;
+  } = {},
 ): {
   content: string | null;
   pageVariables: Record<string, unknown>;
@@ -381,6 +401,17 @@ function renderPlainTextContent(
     applyBasePath,
     subPath,
   });
+
+  if (traceCache && contentDir && distDir) {
+    const helpers = createTraceHelpers({
+      filePath,
+      contentDir,
+      distDir,
+      applyBasePath,
+      cache: traceCache,
+    });
+    params.renderTrace = helpers.renderTrace;
+  }
 
   let html: string;
   try {

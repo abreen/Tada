@@ -10,6 +10,7 @@ import './question/style.scss';
 import './search/style.scss';
 import './timezone/style.scss';
 import './toc/style.scss';
+import './trace/style.scss';
 
 import mountTableOfContents from './toc';
 import mountSearch from './search';
@@ -20,6 +21,7 @@ import mountAnchor from './anchor';
 import mountQuestion from './question';
 import mountTimeZone from './timezone';
 import mountCode from './code';
+import mountTrace from './trace';
 
 import { scheduleTask, formatDuration } from './util';
 
@@ -33,6 +35,7 @@ const COMPONENTS = {
   question: mountQuestion,
   timeZone: mountTimeZone,
   code: mountCode,
+  trace: mountTrace,
 };
 
 let startTime = -1;

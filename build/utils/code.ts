@@ -403,6 +403,7 @@ export function renderCodeSegment(
   lines: string[],
   startLine: number,
   lang: string,
+  { linkLineNumbers = true }: { linkLineNumbers?: boolean } = {},
 ): string {
   const source = lines.join('\n');
   let lineHtml: string[] | undefined;
@@ -427,7 +428,10 @@ export function renderCodeSegment(
 
   const rows = lineHtml.map((line, i) => {
     const lineNumber = startLine + i;
-    return `<span class="code-row"><a class="line-number" data-pagefind-ignore tabindex="-1" id="L${lineNumber}" href="#L${lineNumber}">${lineNumber}</a><code class="shiki language-${lang}">${line}</code></span>`;
+    const lineNumEl = linkLineNumbers
+      ? `<a class="line-number" data-pagefind-ignore tabindex="-1" id="L${lineNumber}" href="#L${lineNumber}">${lineNumber}</a>`
+      : `<span class="line-number" data-pagefind-ignore data-line="${lineNumber}">${lineNumber}</span>`;
+    return `<span class="code-row">${lineNumEl}<code class="shiki language-${lang}">${line}</code></span>`;
   });
 
   return `<pre>${rows.join('')}</pre>`;
