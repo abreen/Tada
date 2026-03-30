@@ -1032,10 +1032,14 @@ export function updateStepControls(
     }
   }
 
-  // Keep roving tabindex on exactly one enabled button.
+  // Roving tabindex: the focused button is the Tab stop.
+  const currentFocus = document.activeElement;
   const enabled = btns.filter(b => b && !b.disabled);
-  const hasTabbable = enabled.some(b => b.tabIndex === 0);
-  if (!hasTabbable && enabled.length > 0) {
+  const focusedBtn = enabled.find(b => b === currentFocus);
+  for (const b of enabled) {
+    b.tabIndex = b === focusedBtn ? 0 : -1;
+  }
+  if (!focusedBtn && enabled.length > 0) {
     enabled[0].tabIndex = 0;
   }
   for (const b of btns) {
