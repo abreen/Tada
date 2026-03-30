@@ -63,13 +63,21 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  padding: 3px;
 }
 
 .trace-controls {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 3px 0;
+  gap: 0.5rem;
+  padding: 6px;
+  border-radius: calc(var(--border-radius) + 4px);
+  background: var(--bg2-color);
+
+  &:focus-within {
+    outline: 2px solid var(--fg-color);
+    outline-offset: 1px;
+  }
 }
 
 .trace-btn {
@@ -77,7 +85,7 @@
   align-items: center;
   justify-content: center;
   min-width: 2.5em;
-  padding: 0.4em 1.5em;
+  padding: 0.5em 1.75em;
 }
 
 .trace-step-counter {

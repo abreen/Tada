@@ -166,6 +166,8 @@ async function initWidget(root: HTMLElement): Promise<void> {
 
   const elements: WidgetElements = { root, source, controls, output, diagram };
 
+  updateStepControls(controls, state.currentStep, manifest.totalSteps);
+
   const initResult = renderMemoryDiagram(diagram, step);
   if (initResult) {
     state.prevDiagramW = initResult.width;
