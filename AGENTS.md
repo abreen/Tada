@@ -8,9 +8,11 @@ This codebase is a static site generator written in TypeScript and uses Bun.
 - Lodash HTML templates in `templates/` are internal to the package
 - Client-side code is in `src/`
 
-## Spec
+## Feature specifications (specs)
 
-High-level feature specs live in `spec/`. Read them for design context.
+Each feature is documented separately in `spec/`. Consult the documentation
+to answer questions about functionality. When implementing new features or
+modifying existing ones, update the documentation in `spec/`.
 
 ## Style
 
@@ -25,18 +27,15 @@ High-level feature specs live in `spec/`. Read them for design context.
 - Start dev web server: `tada serve`
 - Watch files: `tada watch`
 - Clean build artifacts: `tada clean`
-- Format code: `bun run format` (for Tada development only)
 - Lint: `bun run lint`
-- Typecheck: `bun run typecheck` (runs `tsc --noEmit`)
+- Typecheck: `bun run typecheck`
 - Run unit tests: `bun test`
 - Run a single unit test: `bun test build/code.test.ts`
 - Run functional tests: `AGENT=1 bun run test:functional`
-- Do NOT run pytest directly, use the scripts above
 
 Functional tests are black-box Python/pytest tests in `functional_tests/` that
 exercise the CLI end-to-end (init, dev, prod, watch, clean). They use
 `subprocess` to run Tada and assert on exit codes, stdout, and file system state.
-Watch mode tests are slow (~10s each) due to polling for rebuilds.
 
 ## Testing locally
 
@@ -45,7 +44,7 @@ or `tada prod` in this directory, there is no site here. To test:
 
 1. `bun run init-example`
 2. `cd example`
-3. `../bin/tada.js dev` (or `prod`, `serve`, etc.)
+3. `../bin/tada.ts dev` (or `prod`, `serve`, etc.)
 
 The `init/` directory contains the default content and public files copied into
 new projects by `tada init`. It is not a buildable site on its own.
@@ -53,48 +52,4 @@ new projects by `tada init`. It is not a buildable site on its own.
 ## Formatting
 
 The pre-commit hook runs Prettier. Do not run any commands to format code.
-
-## Path resolution
-
-`build/utils/paths.js` provides `getPackageDir()` (the Tada package root,
-resolved via `__dirname`) and `getProjectDir()` (the user's project, resolved
-via `process.cwd()`). When developing Tada itself, both point to the repo root.
-When installed as a package, they differ.
-
-## Templates
-
-Lodash HTML templates and partials live in `templates/` (internal to the package).
-User-facing data files (`nav.json`, `authors.json`) live at the project root and
-are validated against JSON schemas in `templates/`.
-
-Use `<%= page.* %>` to access a page's front matter and `<%= site.* %>` for
-values from the active site config.
-
-## Critical CSS
-
-To avoid render-blocking CSS, the build produces two CSS bundles:
-
-- `critical.bundle.css`: inlined into every HTML page as a `<style>` tag
-- `index.bundle.css`: loaded as a standard stylesheet (non-blocking since critical CSS is inlined)
-
-Critical CSS (`src/critical.scss`) imports shared Sass partials rather than
-duplicating rules:
-
-- `src/_base.scss`: core element styles (body, headings, links, code, `:root` vars)
-- `src/_layout.scss`: page layout and responsive media queries
-- `src/header/_base.scss`: header bar positioning, logo, site title
-
-These partials are also `@use`d by `src/style.scss` and `src/header/style.scss`,
-so the rules are defined once and shared between both bundles. The full
-stylesheet intentionally re-includes the critical rules so it is self-contained
-and cacheable across page navigations.
-
-When adding new styles, decide whether they affect first-paint layout or
-appearance. If so, put them in the appropriate partial (not in `critical.scss`
-directly). Otherwise, add them to `style.scss` or a component stylesheet.
-
-## Client-side components
-
-Each component lives in `src/<name>/` with an `index.ts` (exporting async
-`mount()`) and `style.scss`. Import Sass styles in `src/index.ts` to include
-them in the bundle. Shared utilities are in `src/util.ts`.
+There is no code formatter for Python code.

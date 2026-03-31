@@ -10,7 +10,10 @@ The build produces two CSS bundles to optimize rendering performance:
   complete stylesheet, intentionally re-including the critical rules so it is
   self-contained and cacheable across page navigations.
 
-Shared style rules are defined once in common partials and imported by both
+Shared style rules are defined once in common Sass files and imported by both
 bundles, avoiding duplication in the source.
 
-JavaScript is bundled and loaded with deferred execution.
+When adding new styles, decide whether they affect first-paint layout or
+appearance. If they do, put them in the appropriate Sass file which is
+included by `critical.scss` (e.g., the `_base.scss` file). If they do not
+affect the first paint, add them to `style.scss` or a component stylesheet.

@@ -1,19 +1,14 @@
 # Templates
 
-Tada uses Lodash HTML templates to wrap page content.
-
-**Templates are internal to the package and not edited by site authors.**
+Tada uses Lodash HTML templates to wrap page content. **Templates are internal
+to the package and not edited by site authors.** They use the `render()`
+function to assemble a complete page.
 
 ## Page templates
 
 - **default**: standard page layout for Markdown and HTML content
 - **code**: source code page with line numbers and TOC
 - **literate**: literate Java page with execution output
-
-## Partials
-
-Templates are composed from partials for the header, navigation, page heading,
-author byline, download button, and footer.
 
 ## Template variables
 
