@@ -65,7 +65,7 @@ export function rewriteProseLinks(
   function rewriteCodeExt(p: string): string {
     for (const ext of codeExtensions) {
       if (p.endsWith(`.${ext}`)) {
-        return p.replace(new RegExp(`\\.${ext}$`), '.html');
+        return p + '.html';
       }
     }
     return p;

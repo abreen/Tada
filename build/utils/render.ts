@@ -290,7 +290,10 @@ export function renderCodePageAsset({
 
   return [
     {
-      assetPath: toContentAssetPath(contentDir, path.join(dir, `${name}.html`)),
+      assetPath: toContentAssetPath(
+        contentDir,
+        path.join(dir, `${name}${ext}.html`),
+      ),
       content: html,
     },
   ];
@@ -618,7 +621,7 @@ export function renderLiterateJavaPageAsset({
     {
       assetPath: toContentAssetPath(
         contentDir,
-        path.join(dir, `${className}.html`),
+        path.join(dir, `${className}.java.html`),
       ),
       content: html,
     },

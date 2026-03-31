@@ -24,10 +24,7 @@ export default function applyBasePathPlugin(
       // Rewrite code file links to .html links
       for (const ext of Object.keys(siteVariables.codeLanguages ?? {})) {
         if (modifiedPath.endsWith(`.${ext}`)) {
-          modifiedPath = modifiedPath.replace(
-            new RegExp(`\\.${ext}$`),
-            '.html',
-          );
+          modifiedPath += '.html';
           break;
         }
       }

@@ -219,26 +219,59 @@ class TestCodeFeatureEnabled:
         yield site_dir
 
     def test_java_file_rendered_as_html(self, built_site):
-        """Rectangle.java should produce Rectangle.html."""
+        """Rectangle.java should produce Rectangle.java.html."""
         dist = built_site / "dist"
-        html_file = dist / "lectures" / "01" / "Rectangle.html"
+        html_file = dist / "lectures" / "01" / "Rectangle.java.html"
         assert html_file.exists()
         html = html_file.read_text()
         assert "<html" in html
 
     def test_py_file_rendered_as_html(self, built_site):
-        """demo.py should produce demo.html."""
+        """demo.py should produce demo.py.html."""
         dist = built_site / "dist"
-        html_file = dist / "lectures" / "01" / "demo.html"
+        html_file = dist / "lectures" / "01" / "demo.py.html"
         assert html_file.exists()
         html = html_file.read_text()
         assert "<html" in html
 
     def test_markdown_links_rewritten_to_html(self, built_site):
-        """Links to .java/.py in rendered HTML should be rewritten to .html."""
+        """Links to .java/.py in rendered HTML should be rewritten to .java.html/.py.html."""
         html = (built_site / "dist" / "lectures" / "01" / "index.html").read_text()
-        assert 'Rectangle.html' in html
-        assert 'demo.html' in html
+        assert 'Rectangle.java.html' in html
+        assert 'demo.py.html' in html
+
+    def test_no_collision_same_base_name(self, built_site):
+        """Files with same base name but different extensions should produce distinct HTML files."""
+        dist = built_site / "dist"
+        # Rectangle.java should produce Rectangle.java.html
+        rectangle_java_html = dist / "lectures" / "01" / "Rectangle.java.html"
+        assert rectangle_java_html.exists()
+        # rectangle.py should produce rectangle.py.html
+        rectangle_py_html = dist / "lectures" / "01" / "rectangle.py.html"
+        assert rectangle_py_html.exists()
+
+
+class TestLiterateJavaPages:
+    """Literate Java pages should be rendered with .java.html extension."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        yield tmp_path / "testsite"
+
+    @pytest.fixture
+    def built_site(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"dev build failed: {result.stderr}"
+        yield site_dir
+
+    def test_literate_java_page_has_java_html_extension(self, built_site):
+        """Pair.java should produce Pair.java.html."""
+        dist = built_site / "dist"
+        # Pair.java.md is a literate Java page in the example site
+        java_html = dist / "lectures" / "01" / "Pair.java.html"
+        assert java_html.exists(), f"Expected Pair.java.html to exist at {java_html}"
 
 
 class TestSearchFeatureEnabled:
@@ -306,7 +339,7 @@ class TestCodeProseLinksRewritten:
             built_site / "dist-prod" / "v1" / "lectures" / "01" / "Linked.java"
         )
         content = java_file.read_text()
-        assert "https://example.edu/course/lectures/01/helper.html" in content
+        assert "https://example.edu/course/lectures/01/helper.py.html" in content
         assert "https://example.edu/course/about/index.html" in content
         # Original relative links should be gone
         assert "(./helper.py)" not in content
@@ -314,8 +347,8 @@ class TestCodeProseLinksRewritten:
     def test_prose_source_has_full_urls(self, built_site):
         """data-prose-source in the HTML page should contain rewritten links."""
         html_file = (
-            built_site / "dist-prod" / "v1" / "lectures" / "01" / "Linked.html"
+            built_site / "dist-prod" / "v1" / "lectures" / "01" / "Linked.java.html"
         )
         html = html_file.read_text()
-        assert "https://example.edu/course/lectures/01/helper.html" in html
+        assert "https://example.edu/course/lectures/01/helper.py.html" in html
         assert "https://example.edu/course/about/index.html" in html

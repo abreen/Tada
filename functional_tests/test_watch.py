@@ -581,7 +581,7 @@ class TestWatchLiterateJavaError:
             wp.wait_for_initial_build()
 
             # Pair.java.md should have been compiled and rendered
-            pair_html = site_dir / "dist" / "lectures" / "01" / "Pair.html"
+            pair_html = site_dir / "dist" / "lectures" / "01" / "Pair.java.html"
             assert pair_html.exists()
             before_mtime = pair_html.stat().st_mtime
 

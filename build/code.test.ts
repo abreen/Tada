@@ -189,7 +189,7 @@ describe('renderCodeWithComments', () => {
     expect(match).not.toBeNull();
     const decoded = match![1].replace(/&amp;/g, '&').replace(/&quot;/g, '"');
     expect(decoded).toContain(
-      'https://example.edu/course/lectures/01/rect.html',
+      'https://example.edu/course/lectures/01/rect.py.html',
     );
   });
 });
@@ -210,7 +210,7 @@ describe('rewriteProseLinks', () => {
     const lines = ['/// See [rectangle.py](./rectangle.py)'];
     const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
     expect(result[0]).toBe(
-      '/// See [rectangle.py](https://example.edu/course/lectures/01/rectangle.html)',
+      '/// See [rectangle.py](https://example.edu/course/lectures/01/rectangle.py.html)',
     );
   });
 
@@ -238,7 +238,7 @@ describe('rewriteProseLinks', () => {
     const lines = ['/// See [App](./App.java)'];
     const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
     expect(result[0]).toBe(
-      '/// See [App](https://example.edu/course/lectures/01/App.html)',
+      '/// See [App](https://example.edu/course/lectures/01/App.java.html)',
     );
   });
 
@@ -246,7 +246,7 @@ describe('rewriteProseLinks', () => {
     const lines = ['/// See [a](./a.py) and [b](./b.java)'];
     const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
     expect(result[0]).toBe(
-      '/// See [a](https://example.edu/course/lectures/01/a.html) and [b](https://example.edu/course/lectures/01/b.html)',
+      '/// See [a](https://example.edu/course/lectures/01/a.py.html) and [b](https://example.edu/course/lectures/01/b.java.html)',
     );
   });
 
@@ -260,7 +260,7 @@ describe('rewriteProseLinks', () => {
     const lines = ['/// See [code](./App.java?view=1#L5)'];
     const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
     expect(result[0]).toBe(
-      '/// See [code](https://example.edu/course/lectures/01/App.html?view=1#L5)',
+      '/// See [code](https://example.edu/course/lectures/01/App.java.html?view=1#L5)',
     );
   });
 
@@ -269,7 +269,7 @@ describe('rewriteProseLinks', () => {
     const lines = ['/// See [rect](./rect.py)'];
     const result = rewriteProseLinks(lines, vars, 'lectures/01');
     expect(result[0]).toBe(
-      '/// See [rect](https://example.edu/lectures/01/rect.html)',
+      '/// See [rect](https://example.edu/lectures/01/rect.py.html)',
     );
   });
 });

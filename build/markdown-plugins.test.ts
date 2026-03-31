@@ -31,7 +31,7 @@ describe('apply-base-path-plugin', () => {
       ].join('\n'),
     );
 
-    expect(html).toContain('href="/course/src/example.html?view=1#top"');
+    expect(html).toContain('href="/course/src/example.java.html?view=1#top"');
     expect(html).toContain('src="/course/images/pic.png"');
     expect(html).toContain('src="/course/images/raw.png"');
     expect(html).toContain('href="/course/about/"');
@@ -67,7 +67,7 @@ describe('apply-base-path-plugin', () => {
 
     const html = md.render('[App](./App.java)');
 
-    expect(html).toContain('href="./App.html"');
+    expect(html).toContain('href="./App.java.html"');
     expect(html).not.toContain('href="./App.java"');
   });
 
