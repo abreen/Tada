@@ -104,13 +104,19 @@
 
 .trace-source {
   --code-gutter-width: 4rem;
-  overflow-y: auto;
+  overflow: auto;
   overscroll-behavior: none;
 
   & > pre {
     margin: 0;
     padding: 0;
-    overflow: clip;
+    overflow: visible;
+    width: max-content;
+    min-width: 100%;
+
+    code {
+      padding-right: var(--gap);
+    }
   }
 
   .line-number.trace-line-active {
