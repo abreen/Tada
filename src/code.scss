@@ -1,7 +1,6 @@
 @use 'mixins' as *;
 
-body.code,
-body.literate {
+body.code {
   --code-gutter-width: 4rem;
 }
 

@@ -106,6 +106,7 @@
   --code-gutter-width: 4rem;
   overflow: auto;
   overscroll-behavior: none;
+  border-radius: var(--mono-border-radius);
 
   & > pre {
     margin: 0;
@@ -116,6 +117,24 @@
 
     code {
       padding-right: var(--gap);
+    }
+  }
+
+  & > pre:first-child {
+    *:first-child {
+      .line-number,
+      code {
+        padding-top: 0.5rem;
+      }
+    }
+  }
+
+  & > pre:last-child {
+    *:last-child {
+      .line-number,
+      code {
+        padding-bottom: 0.5rem;
+      }
     }
   }
 

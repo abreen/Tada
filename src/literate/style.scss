@@ -1,3 +1,7 @@
+body.literate {
+  --code-gutter-width: 4rem;
+}
+
 body.literate .body pre:has(.code-row) {
   background: var(--bg2-color);
   border-radius: var(--mono-border-radius);
@@ -11,13 +15,17 @@ body.literate .body pre:has(.code-row) {
     padding-right: var(--gap);
   }
 
-  .code-row {
-    &:first-child {
-      padding-top: var(--gap);
+  *:first-child {
+    .line-number,
+    code {
+      padding-top: 0.5rem;
     }
+  }
 
-    &:last-child {
-      padding-bottom: var(--gap);
+  *:last-child {
+    .line-number,
+    code {
+      padding-bottom: 0.5rem;
     }
   }
 }

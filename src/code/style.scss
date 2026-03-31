@@ -39,6 +39,24 @@ body.code .code-body > pre {
   margin: 0;
 }
 
+body.code .code-body > pre:first-child {
+  *:first-child {
+    .line-number,
+    code {
+      padding-top: 0.5rem;
+    }
+  }
+}
+
+body.code .code-body > pre:last-child {
+  *:last-child {
+    .line-number,
+    code {
+      padding-bottom: 0.5rem;
+    }
+  }
+}
+
 body.code pre {
   display: block;
   padding: 0;
@@ -69,6 +87,10 @@ body.code .code-prose {
     position: relative;
     padding: var(--gap) var(--gap) var(--gap)
       calc(var(--prose-indent, 0ch) - 0.2em);
+
+    *:first-of-type {
+      margin-top: 0;
+    }
 
     *:last-of-type {
       margin-bottom: 0;
