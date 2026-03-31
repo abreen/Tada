@@ -6,7 +6,7 @@ public class TraceDemo {
         return n + sum(n - 1);
     }
     public static void main(String[] args) {
-        int[] arr = new int[5];
+        int[] arr = new int[7];
         for (int i = 0; i < arr.length; i++) {
             int n = (int)Math.pow(2, i);
             arr[i] = n;
