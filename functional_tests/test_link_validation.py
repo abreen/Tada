@@ -62,6 +62,31 @@ class TestBrokenParentLink:
         assert "/nonexistent.html" in result.stdout
 
 
+class TestLinkToPartialBroken:
+    """Linking to a partial produces a build error."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        (site / "content" / "_partial.md").write_text("Partial content.\n")
+        (site / "content" / "page.md").write_text(
+            "title: Page\n\nSee [the partial](/_partial.html).\n"
+        )
+
+        yield site
+
+    def test_build_fails(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode != 0
+
+    def test_error_mentions_broken_path(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert "/_partial.html" in result.stdout
+
+
 class TestDisabledNavLinkSkipped:
     """A disabled nav link has no href in the HTML, so it is not validated."""
 
