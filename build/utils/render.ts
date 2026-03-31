@@ -12,6 +12,7 @@ import {
   extractJavaMethodToc,
   renderCodeSegment,
   renderCodeWithComments,
+  rewriteProseLinks,
 } from './code';
 import { extensionIsMarkdown } from './file-types';
 import { createTraceHelpers } from './trace';
@@ -245,9 +246,15 @@ export function renderCodePageAsset({
   const applyBasePath = createApplyBasePath(siteVariables);
   const lang = siteVariables.codeLanguages![ext.slice(1).toLowerCase()];
   const sourceCode = fs.readFileSync(filePath, 'utf-8');
+  const pageDirPath = path.relative(contentDir, dir);
 
   log.info`Rendering code page ${B`${subPath + ext}`}`;
-  const content = renderCodeWithComments(sourceCode, lang, siteVariables);
+  const content = renderCodeWithComments(
+    sourceCode,
+    lang,
+    siteVariables,
+    pageDirPath,
+  );
   const codeFilePath = applyBasePath(
     normalizeOutputPath(`/${toContentAssetPath(contentDir, filePath)}`),
   );
@@ -291,11 +298,24 @@ export function renderCodePageAsset({
 export function renderCopiedContentAsset({
   filePath,
   contentDir,
+  siteVariables,
 }: RenderCopiedContentOptions): Asset[] {
   const label = 'Copying source file';
   const relPath = toContentAssetPath(contentDir, filePath);
 
   log.info`${label} ${B`${relPath}`}`;
+
+  if (filePath.endsWith('.java') && isFeatureEnabled(siteVariables, 'code')) {
+    const sourceCode = fs.readFileSync(filePath, 'utf-8');
+    const pageDirPath = path.relative(contentDir, path.dirname(filePath));
+    const rewrittenLines = rewriteProseLinks(
+      sourceCode.split('\n'),
+      siteVariables,
+      pageDirPath,
+    );
+    return [{ assetPath: relPath, content: rewrittenLines.join('\n') }];
+  }
+
   return [{ assetPath: relPath, content: fs.readFileSync(filePath) }];
 }
 

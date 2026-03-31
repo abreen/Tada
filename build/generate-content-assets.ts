@@ -171,7 +171,11 @@ export class ContentRenderer {
     contentDir: string,
   ): void {
     for (const filePath of copiedSourceFiles) {
-      for (const asset of renderCopiedContentAsset({ filePath, contentDir })) {
+      for (const asset of renderCopiedContentAsset({
+        filePath,
+        contentDir,
+        siteVariables: this.siteVariables,
+      })) {
         const outPath = path.join(distDir, asset.assetPath);
         fs.mkdirSync(path.dirname(outPath), { recursive: true });
         fs.writeFileSync(outPath, asset.content);

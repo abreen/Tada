@@ -1,6 +1,10 @@
 import { describe, expect, test, beforeAll } from 'bun:test';
 import { initHighlighter } from './utils/shiki-highlighter';
-import { renderCodeWithComments, extractJavaMethodToc } from './utils/code';
+import {
+  renderCodeWithComments,
+  extractJavaMethodToc,
+  rewriteProseLinks,
+} from './utils/code';
 import type { SiteVariables } from './types';
 
 beforeAll(async () => {
@@ -161,5 +165,111 @@ describe('renderCodeWithComments', () => {
     expect(html).toContain('id="L3" href="#L3"');
     expect(html).not.toContain('id="L4" href="#L4"');
     expect(html).toContain('<code class="shiki language-java">');
+  });
+
+  test('data-prose-source contains rewritten links when pageDirPath is provided', () => {
+    const source = '/// See [rect](./rect.py)\npublic class Foo {}\n';
+    const html = renderCodeWithComments(
+      source,
+      'java',
+      {
+        base: 'https://example.edu',
+        basePath: '/course',
+        codeLanguages: { java: 'java', py: 'python' },
+        internalDomains: [],
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+        defaultTimeZone: 'America/New_York',
+      } as SiteVariables,
+      'lectures/01',
+    );
+
+    const match = html.match(/data-prose-source="([^"]*)"/);
+    expect(match).not.toBeNull();
+    const decoded = match![1].replace(/&amp;/g, '&').replace(/&quot;/g, '"');
+    expect(decoded).toContain(
+      'https://example.edu/course/lectures/01/rect.html',
+    );
+  });
+});
+
+describe('rewriteProseLinks', () => {
+  const siteVariables = {
+    base: 'https://example.edu',
+    basePath: '/course',
+    codeLanguages: { java: 'java', py: 'python' },
+    internalDomains: [],
+    title: 'Test',
+    titlePostfix: ' - Test',
+    themeColor: 'steelblue',
+    defaultTimeZone: 'America/New_York',
+  } as SiteVariables;
+
+  test('rewrites relative link with base + basePath', () => {
+    const lines = ['/// See [rectangle.py](./rectangle.py)'];
+    const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
+    expect(result[0]).toBe(
+      '/// See [rectangle.py](https://example.edu/course/lectures/01/rectangle.html)',
+    );
+  });
+
+  test('rewrites absolute link with base + basePath', () => {
+    const lines = ['/// See [about](/about.html)'];
+    const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
+    expect(result[0]).toBe(
+      '/// See [about](https://example.edu/course/about.html)',
+    );
+  });
+
+  test('leaves external links unchanged', () => {
+    const lines = ['/// See [Google](https://google.com)'];
+    const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
+    expect(result[0]).toBe('/// See [Google](https://google.com)');
+  });
+
+  test('leaves anchor links unchanged', () => {
+    const lines = ['/// See [section](#overview)'];
+    const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
+    expect(result[0]).toBe('/// See [section](#overview)');
+  });
+
+  test('applies code extension rewriting', () => {
+    const lines = ['/// See [App](./App.java)'];
+    const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
+    expect(result[0]).toBe(
+      '/// See [App](https://example.edu/course/lectures/01/App.html)',
+    );
+  });
+
+  test('handles multiple links on one line', () => {
+    const lines = ['/// See [a](./a.py) and [b](./b.java)'];
+    const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
+    expect(result[0]).toBe(
+      '/// See [a](https://example.edu/course/lectures/01/a.html) and [b](https://example.edu/course/lectures/01/b.html)',
+    );
+  });
+
+  test('does not rewrite non-comment lines', () => {
+    const lines = ['String s = "[link](./file.py)";'];
+    const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
+    expect(result[0]).toBe('String s = "[link](./file.py)";');
+  });
+
+  test('preserves query string and fragment', () => {
+    const lines = ['/// See [code](./App.java?view=1#L5)'];
+    const result = rewriteProseLinks(lines, siteVariables, 'lectures/01');
+    expect(result[0]).toBe(
+      '/// See [code](https://example.edu/course/lectures/01/App.html?view=1#L5)',
+    );
+  });
+
+  test('works with root basePath', () => {
+    const vars = { ...siteVariables, basePath: '/' } as SiteVariables;
+    const lines = ['/// See [rect](./rect.py)'];
+    const result = rewriteProseLinks(lines, vars, 'lectures/01');
+    expect(result[0]).toBe(
+      '/// See [rect](https://example.edu/lectures/01/rect.html)',
+    );
   });
 });

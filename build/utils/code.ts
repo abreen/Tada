@@ -1,10 +1,12 @@
 import MarkdownIt from 'markdown-it';
+import path from 'path';
 import { parse as parseJava } from 'java-parser';
 import { JSDOM } from 'jsdom';
 import { makeLogger } from '../log';
 import { getHighlighter } from './shiki-highlighter';
 import externalLinksPlugin from '../external-links-plugin';
 import applyBasePathPlugin from '../apply-base-path-plugin';
+import { createApplyBasePath } from './paths';
 import type { JavaTocEntry, SiteVariables } from '../types';
 
 interface CstNode {
@@ -43,6 +45,69 @@ function createCodeMarkdown(
   return new MarkdownIt({ html: true, typographer: true })
     .use(externalLinksPlugin, siteVariables)
     .use(applyBasePathPlugin, siteVariables, options);
+}
+
+// Matches Markdown links: [text](url)
+const MARKDOWN_LINK = /\[([^\]]*)\]\(([^)]+)\)/g;
+
+/**
+ * Rewrites Markdown links in raw `///` comment lines so that relative and
+ * absolute paths become full URLs using `base + basePath`.
+ */
+export function rewriteProseLinks(
+  lines: string[],
+  siteVariables: SiteVariables,
+  pageDirPath: string,
+): string[] {
+  const applyBasePath = createApplyBasePath(siteVariables);
+  const codeExtensions = Object.keys(siteVariables.codeLanguages ?? {});
+
+  function rewriteCodeExt(p: string): string {
+    for (const ext of codeExtensions) {
+      if (p.endsWith(`.${ext}`)) {
+        return p.replace(new RegExp(`\\.${ext}$`), '.html');
+      }
+    }
+    return p;
+  }
+
+  function rewriteHref(href: string): string {
+    // Separate pathname from query/fragment
+    const match = href.match(/^([^?#]*)(.*)$/);
+    const pathname = match ? match[1] : href;
+    const suffix = match ? match[2] : '';
+
+    // Leave external, protocol-relative, and anchor-only links unchanged
+    if (
+      /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(href) ||
+      href.startsWith('//') ||
+      href.startsWith('#')
+    ) {
+      return href;
+    }
+
+    if (pathname.startsWith('/')) {
+      // Absolute path: apply code ext rewriting, then base + basePath
+      return (
+        siteVariables.base + applyBasePath(rewriteCodeExt(pathname)) + suffix
+      );
+    }
+
+    // Relative path: resolve against page directory, then base + basePath
+    const resolved = path.posix.normalize(`/${pageDirPath}/${pathname}`);
+    return (
+      siteVariables.base + applyBasePath(rewriteCodeExt(resolved)) + suffix
+    );
+  }
+
+  return lines.map(line => {
+    if (!PROSE_LINE.test(line)) {
+      return line;
+    }
+    return line.replace(MARKDOWN_LINK, (whole, text, href) => {
+      return `[${text}](${rewriteHref(href)})`;
+    });
+  });
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -441,6 +506,7 @@ export function renderCodeWithComments(
   sourceCode: string,
   lang: string,
   siteVariables: SiteVariables,
+  pageDirPath?: string,
 ): string {
   const md = createCodeMarkdown(siteVariables);
   const lines = sourceCode.split('\n');
@@ -494,7 +560,10 @@ export function renderCodeWithComments(
         const prose = segment.lines
           .map(line => line.replace(/^\s*\/\/\/(\s?)/, ''))
           .join('\n');
-        const source = escapeAttr(segment.lines.join('\n'));
+        const rewrittenLines = pageDirPath
+          ? rewriteProseLinks(segment.lines, siteVariables, pageDirPath)
+          : segment.lines;
+        const source = escapeAttr(rewrittenLines.join('\n'));
         return `<div class="code-prose" data-prose-source="${source}" style="--prose-indent: ${indent}ch"><div class="code-prose-gutter"></div><div class="code-prose-content">${md.render(prose)}</div></div>`;
       }
     })

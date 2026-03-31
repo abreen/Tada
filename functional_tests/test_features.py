@@ -266,3 +266,56 @@ class TestSearchFeatureEnabled:
         pagefind_dir = built_site / "dist" / "pagefind"
         files = list(pagefind_dir.iterdir())
         assert len(files) > 0
+
+
+class TestCodeProseLinksRewritten:
+    """Markdown links in /// comments are rewritten to full URLs in copied source
+    files and in data-prose-source attributes."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--no-interactive",
+            "--prod-base-path", "/course",
+            "--prod-base", "https://example.edu",
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        # Add a Java file with /// links
+        code_dir = site / "content" / "lectures" / "01"
+        (code_dir / "Linked.java").write_text(
+            '/// See [`helper.py`](./helper.py)\n'
+            '/// and [`about`](/about/index.html)\n'
+            'public class Linked {}\n'
+        )
+        (code_dir / "helper.py").write_text("# helper\n")
+
+        yield site
+
+    @pytest.fixture
+    def built_site(self, site_dir):
+        result = run_tada("prod", cwd=str(site_dir))
+        assert result.returncode == 0, f"prod build failed: {result.stderr}"
+        yield site_dir
+
+    def test_copied_java_has_full_urls(self, built_site):
+        """The copied .java file should contain rewritten full URLs."""
+        java_file = (
+            built_site / "dist-prod" / "v1" / "lectures" / "01" / "Linked.java"
+        )
+        content = java_file.read_text()
+        assert "https://example.edu/course/lectures/01/helper.html" in content
+        assert "https://example.edu/course/about/index.html" in content
+        # Original relative links should be gone
+        assert "(./helper.py)" not in content
+
+    def test_prose_source_has_full_urls(self, built_site):
+        """data-prose-source in the HTML page should contain rewritten links."""
+        html_file = (
+            built_site / "dist-prod" / "v1" / "lectures" / "01" / "Linked.html"
+        )
+        html = html_file.read_text()
+        assert "https://example.edu/course/lectures/01/helper.html" in html
+        assert "https://example.edu/course/about/index.html" in html

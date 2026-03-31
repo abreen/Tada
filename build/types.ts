@@ -107,6 +107,7 @@ export interface RenderLiterateJavaOptions {
 export interface RenderCopiedContentOptions {
   filePath: string;
   contentDir: string;
+  siteVariables: SiteVariables;
 }
 
 /** Front matter parse result (from parseFrontMatterAndContent) */

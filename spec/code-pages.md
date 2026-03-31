@@ -20,7 +20,10 @@ rendered prose preserves the indentation level of the original comments.
 
 When a user copies a section that includes rendered prose, the original `///`
 comment lines are restored in the clipboard so that pasted text is valid Java
-source.
+source. Markdown links in these comment lines are rewritten to full URLs
+(using `base` + `basePath`) so they resolve when the source is viewed outside
+the site. The same rewriting is applied to the downloaded copy of the source
+file.
 
 ## Java table of contents
 

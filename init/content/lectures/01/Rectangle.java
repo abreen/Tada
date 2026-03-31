@@ -2,6 +2,8 @@
 ///
 /// Objects of this class may be mutated (changed after construction)
 /// by scaling using a _scale factor_ (a floating-point number between 0 and 1).
+///
+/// See [`rectangle.py`](./rectangle.py) for a Python version of this class.
 public class Rectangle {
     private int width;
     private int height;
