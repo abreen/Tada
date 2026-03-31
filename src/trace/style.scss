@@ -28,11 +28,16 @@
   @media (width >= 924px) {
     flex: 0 100 auto;
     min-width: 20rem;
+    max-width: 50%;
   }
 
   .trace-source {
     flex: 1;
-    min-height: 0;
+    max-height: 5lh;
+
+    @media (width >= 924px) {
+      max-height: none;
+    }
   }
 }
 
@@ -46,7 +51,7 @@
 
   .trace-diagram {
     flex: 1;
-    min-height: 0;
+    min-height: 12rem;
     border: 1px solid var(--fg2-color);
     border-radius: var(--border-radius);
     overflow: auto;
