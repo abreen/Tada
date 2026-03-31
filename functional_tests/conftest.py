@@ -11,8 +11,8 @@ TADA_BIN = PACKAGE_DIR / "bin" / "tada.ts"
 
 
 def pytest_configure(config):
-    """When CLAUDECODE=1, reduce output verbosity."""
-    if os.environ.get("CLAUDECODE") == "1":
+    """When AGENT is set, reduce output verbosity."""
+    if os.environ.get("AGENT", ""):
         config.option.verbose = -1
         config.option.tbstyle = "line"
         config.option.durations = None
