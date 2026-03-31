@@ -13,7 +13,7 @@
   min-height: 0;
   gap: var(--gap);
 
-  @media (min-width: 900px) {
+  @media (width >= 924px) {
     flex-direction: row;
   }
 }
@@ -25,7 +25,7 @@
   flex: 1 100 auto;
   min-height: 5lh;
 
-  @media (min-width: 900px) {
+  @media (width >= 924px) {
     flex: 0 100 auto;
     min-width: 20rem;
   }
@@ -53,7 +53,7 @@
     overscroll-behavior: none;
   }
 
-  @media (min-width: 900px) {
+  @media (width >= 924px) {
     min-width: 20rem;
   }
 }

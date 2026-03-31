@@ -36,7 +36,7 @@ body.literate .literate-code-output {
     white-space: pre-wrap;
   }
 
-  @media (max-width: 899px) {
+  @media (width < 924px) {
     > pre:first-child {
       margin-bottom: 0;
     }
@@ -50,7 +50,7 @@ body.literate .literate-code-output {
     }
   }
 
-  @media (min-width: 900px) {
+  @media (width >= 924px) {
     grid-template-columns: 1fr 1fr;
 
     > pre:last-child {
