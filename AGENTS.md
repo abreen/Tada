@@ -30,8 +30,8 @@ High-level feature specs live in `spec/`. Read them for design context.
 - Typecheck: `bun run typecheck` (runs `tsc --noEmit`)
 - Run unit tests: `bun test`
 - Run a single unit test: `bun test build/code.test.ts`
-- Run functional tests: `bun run test:functional`
-- Do NOT run pytest directly, just use the scripts above
+- Run functional tests: `AGENT=1 bun run test:functional`
+- Do NOT run pytest directly, use the scripts above
 
 Functional tests are black-box Python/pytest tests in `functional_tests/` that
 exercise the CLI end-to-end (init, dev, prod, watch, clean). They use
