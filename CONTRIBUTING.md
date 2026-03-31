@@ -72,10 +72,6 @@ bun test:all                  # Run all unit & functional tests
 The functional tests exercise the CLI end-to-end and may be slow on older
 machines.
 
-If you use Claude Code, the test commands will detect the `CLAUDECODE=1` env
-var (automatically set) and make the output quieter, to keep the context window
-free of unnecessary tokens.
-
 
 ## Code style
 
