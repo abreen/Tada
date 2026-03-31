@@ -50,7 +50,6 @@
     border: 1px solid var(--fg2-color);
     border-radius: var(--border-radius);
     overflow: auto;
-    overscroll-behavior: none;
   }
 
   @media (width >= 924px) {
@@ -105,7 +104,7 @@
 .trace-source {
   --code-gutter-width: 4rem;
   overflow: auto;
-  overscroll-behavior: none;
+  overscroll-behavior-x: none;
   clip-path: inset(0 round var(--mono-border-radius));
 
   & > pre {
