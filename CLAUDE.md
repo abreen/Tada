@@ -12,6 +12,11 @@ This codebase is a static site generator written in TypeScript and uses Bun.
 
 High-level feature specs live in `spec/`. Read them for design context.
 
+## Style
+
+- Do not use dashes, especially em dashes, just write plain sentences
+- Do not use decorative Unicode symbols, especially arrows
+
 ## CLI commands
 
 - Create a new site: `tada init <dirname>`
@@ -36,14 +41,14 @@ Watch mode tests are slow (~10s each) due to polling for rebuilds.
 ## Testing locally
 
 This repository is the Tada **package**, not a Tada site. Do not run `tada dev`
-or `tada prod` in this directory — there is no site here. To test:
+or `tada prod` in this directory, there is no site here. To test:
 
 1. `bun run init-example`
 2. `cd example`
 3. `../bin/tada.js dev` (or `prod`, `serve`, etc.)
 
 The `init/` directory contains the default content and public files copied into
-new projects by `tada init` — it is not a buildable site on its own.
+new projects by `tada init`. It is not a buildable site on its own.
 
 ## Formatting
 
@@ -69,15 +74,15 @@ values from the active site config.
 
 To avoid render-blocking CSS, the build produces two CSS bundles:
 
-- `critical.bundle.css` --- inlined into every HTML page as a `<style>` tag
-- `index.bundle.css` --- loaded as a standard stylesheet (non-blocking since critical CSS is inlined)
+- `critical.bundle.css`: inlined into every HTML page as a `<style>` tag
+- `index.bundle.css`: loaded as a standard stylesheet (non-blocking since critical CSS is inlined)
 
 Critical CSS (`src/critical.scss`) imports shared Sass partials rather than
 duplicating rules:
 
-- `src/_base.scss` --- core element styles (body, headings, links, code, `:root` vars)
-- `src/_layout.scss` --- page layout and responsive media queries
-- `src/header/_base.scss` --- header bar positioning, logo, site title
+- `src/_base.scss`: core element styles (body, headings, links, code, `:root` vars)
+- `src/_layout.scss`: page layout and responsive media queries
+- `src/header/_base.scss`: header bar positioning, logo, site title
 
 These partials are also `@use`d by `src/style.scss` and `src/header/style.scss`,
 so the rules are defined once and shared between both bundles. The full

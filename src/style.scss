@@ -471,7 +471,7 @@ select {
   font-size: inherit;
 }
 
-// Shiki dual-theme support (defaultColor: false — CSS custom properties only,
+// Shiki dual-theme support (defaultColor: false, CSS custom properties only,
 // no inline color/background-color, so no !important needed)
 .shiki span {
   color: var(--shiki-light);

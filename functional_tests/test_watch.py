@@ -377,7 +377,7 @@ class TestWatchBadConfigAtStart:
             assert wp._error_event.is_set()
             wp._error_event.clear()
 
-            # Initial build should have failed — no dist output
+            # Initial build should have failed, so no dist output
             assert not (site_dir / "dist" / "index.html").exists()
 
             # Process must still be running

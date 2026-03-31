@@ -204,8 +204,8 @@ class TestInitInteractive:
         """An invalid answer causes a re-prompt; the next valid answer is accepted."""
         answers = "\n".join([
             "My Course",           # title
-            "lowercase",           # symbol — INVALID (not uppercase)
-            "MC 1",                # symbol — valid retry
+            "lowercase",           # symbol (INVALID, not uppercase)
+            "MC 1",                # symbol (valid retry)
             "tomato",              # themeColor
             "20",                  # tintHue
             "100",                 # tintAmount

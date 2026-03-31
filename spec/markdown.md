@@ -69,6 +69,6 @@ Content grouped into a section.
 
 ## Other extensions
 
-- **Footnotes** -- standard footnote syntax
-- **Definition lists** -- terms followed by `: definition`, with auto-generated IDs
-- **Smart typography** -- curly quotes
+- **Footnotes**: standard footnote syntax
+- **Definition lists**: terms followed by `: definition`, with auto-generated IDs
+- **Smart typography**: curly quotes

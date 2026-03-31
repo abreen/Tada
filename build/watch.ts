@@ -75,7 +75,7 @@ type ChangeCategory = 'content' | 'public' | 'config';
 const log = makeLogger(__filename);
 const wslog = makeLogger('WebSocket');
 
-// --- WebSocket server ---
+// WebSocket server
 
 let webSocketsReady = false;
 let watcherReady = false;
@@ -124,7 +124,7 @@ function broadcast(msg: string): void {
   });
 }
 
-// --- Dev server ---
+// Dev server
 
 function serve(): void {
   const serveArgs = httpPort != null ? ['--port', String(httpPort)] : [];
@@ -156,7 +156,7 @@ function serve(): void {
   }, 10000);
 }
 
-// --- Path helpers ---
+// Path helpers
 
 function toContentMarkdownPath(filePath: string): string | null {
   if (!filePath) {
@@ -194,7 +194,7 @@ function toPublicRelativePath(filePath: string): string | null {
     .join(path.posix.sep);
 }
 
-// --- Watch mode ---
+// Watch mode
 
 const contentDir: string = getContentDir();
 const publicDir: string = getPublicDir();
@@ -502,7 +502,7 @@ function onFileChange(filePath: string): void {
   scheduleRebuild();
 }
 
-// --- Start ---
+// Start
 
 let initialBuildFailed = false;
 

@@ -4,9 +4,9 @@ Tada can create a new site in a named directory. The directory must not already
 exist. The command prompts for:
 
 - Site title
-- Logo symbol (1--5 uppercase characters, digits, hyphens, or spaces)
+- Logo symbol (1 to 5 uppercase characters, digits, hyphens, or spaces)
 - Theme color (any CSS color format)
-- Background tint hue (0--360 degrees) and amount (0--100%)
+- Background tint hue (0 to 360 degrees) and amount (0 to 100%)
 - Default time zone (IANA identifier)
 - Production base URL and base path
 

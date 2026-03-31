@@ -6,9 +6,9 @@ Tada uses Lodash HTML templates to wrap page content.
 
 ## Page templates
 
-- **default** -- standard page layout for Markdown and HTML content
-- **code** -- source code page with line numbers and TOC
-- **literate** -- literate Java page with execution output
+- **default**: standard page layout for Markdown and HTML content
+- **code**: source code page with line numbers and TOC
+- **literate**: literate Java page with execution output
 
 ## Partials
 
@@ -19,10 +19,10 @@ author byline, download button, and footer.
 
 Templates can access:
 
-- **page.\*** -- front matter fields (title, author, description, published, etc.)
-- **site.\*** -- all site config values
-- **content** -- the rendered page body
-- **isHomePage** -- true when rendering the home page
+- **page.\***: front matter fields (title, author, description, published, etc.)
+- **site.\***: all site config values
+- **content**: the rendered page body
+- **isHomePage**: true when rendering the home page
 
 Utility functions are available for formatting dates, applying the base path to
 URLs, rendering other templates, loading JSON data files, generating CSS class

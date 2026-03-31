@@ -2,11 +2,11 @@
 
 The build produces two CSS bundles to optimize rendering performance:
 
-- **Critical CSS** -- inlined as a `<style>` tag in every page's `<head>`.
+- **Critical CSS**: inlined as a `<style>` tag in every page's `<head>`.
   Contains core element styles, page layout, and header positioning so the page
   renders without waiting for an external stylesheet.
 
-- **Full CSS** -- loaded asynchronously after the page renders. Contains the
+- **Full CSS**: loaded asynchronously after the page renders. Contains the
   complete stylesheet, intentionally re-including the critical rules so it is
   self-contained and cacheable across page navigations.
 

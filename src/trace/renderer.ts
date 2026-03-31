@@ -448,7 +448,7 @@ function collectArrows(
       continue;
     }
 
-    // Choose side: stub left of target center → left, otherwise right
+    // Choose side: stub left of target center means left, otherwise right
     const centerX = target.x + target.width / 2;
     const side = pa.stubX <= centerX ? 'left' : 'right';
     const key = `${pa.targetId}:${side}`;

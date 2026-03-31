@@ -2,7 +2,7 @@
 
 Every content page starts with front matter: YAML `key: value` lines separated
 from the body by a blank line. Unlike most static site generators, there are no
-`---` delimiters --- a blank line ends the front matter.
+`---` delimiters. Instead, a blank line ends the front matter.
 
 ```
 title: My Page
@@ -14,15 +14,15 @@ Page content starts here.
 
 ## Fields
 
-- **title** (required) -- page title for `<title>` and the page heading
-- **author** -- author handle, resolved against `authors.json`
-- **description** -- meta description
-- **published** -- publication date, displayed below the title
-- **toc** -- set to `true` to render a table of contents
-- **parent** -- URL for a breadcrumb link above the title
-- **parentLabel** -- label for the breadcrumb link
-- **skip** -- set to `true` to exclude the page from the build
-- **stdin** -- input string sent to a literate Java program's stdin at build time (see [Literate Java](literate-java.md))
+- **title** (required): page title for `<title>` and the page heading
+- **author**: author handle, resolved against `authors.json`
+- **description**: meta description
+- **published**: publication date, displayed below the title
+- **toc**: set to `true` to render a table of contents
+- **parent**: URL for a breadcrumb link above the title
+- **parentLabel**: label for the breadcrumb link
+- **skip**: set to `true` to exclude the page from the build
+- **stdin**: input string sent to a literate Java program's stdin at build time (see [Literate Java](literate-java.md))
 
 Title and description support inline Markdown formatting.
 
