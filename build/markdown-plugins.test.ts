@@ -5,6 +5,7 @@ import applyBasePathPlugin from './apply-base-path-plugin';
 import deflistIdPlugin from './deflist-id-plugin';
 import externalLinksPlugin from './external-links-plugin';
 import headingSubtitlePlugin from './heading-subtitle-plugin';
+import columnsPlugin from './columns-plugin';
 import { createMarkdown } from './utils/markdown';
 import { stripHtmlComments, injectKatexStylesheet } from './utils/render';
 import type { SiteVariables } from './types';
@@ -372,6 +373,38 @@ describe('katex plugin', () => {
     const md = createProjectMarkdown();
     const html = md.render('Just a normal paragraph with a $5 price tag.');
     expect(html).not.toContain('class="katex"');
+  });
+});
+
+describe('columns plugin', () => {
+  const md = new MarkdownIt().use(columnsPlugin);
+
+  test('basic two-column layout', () => {
+    const html = md.render('+++\nCol 1\n+++\nCol 2\n+++\n');
+    expect(html).toContain('<div class="columns">');
+    expect(html).toContain('<p>Col 1</p>');
+    expect(html).toContain('<p>Col 2</p>');
+    // Two column divs inside the wrapper
+    expect(html).toMatch(
+      /<div class="columns">\n<div>\n.*<\/div>\n<div>\n.*<\/div>\n<\/div>/s,
+    );
+  });
+
+  test('rich markdown inside columns', () => {
+    const html = md.render('+++\n## Heading\n- item\n+++\nA paragraph.\n+++\n');
+    expect(html).toContain('<h2>Heading</h2>');
+    expect(html).toContain('<li>');
+    expect(html).toContain('<p>A paragraph.</p>');
+  });
+
+  test('incomplete block with only two fences is not matched', () => {
+    const html = md.render('+++\nContent\n+++\n');
+    expect(html).not.toContain('<div class="columns">');
+  });
+
+  test('empty columns produce no content errors', () => {
+    const html = md.render('+++\n+++\n+++\n');
+    expect(html).toContain('<div class="columns">');
   });
 });
 

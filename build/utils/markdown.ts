@@ -15,6 +15,7 @@ import externalLinksPlugin from '../external-links-plugin';
 import validateInternalLinksPlugin from '../validate-internal-links-plugin';
 import applyBasePathPlugin from '../apply-base-path-plugin';
 import { tocPlugin } from '../toc-plugin';
+import columnsPlugin from '../columns-plugin';
 import markdownItKatex from '@vscode/markdown-it-katex';
 import katex from 'katex';
 import renderA11yString from 'katex/contrib/render-a11y-string';
@@ -47,6 +48,7 @@ export function createMarkdown(
     .use(validateInternalLinksPlugin, validatorOptions)
     .use(applyBasePathPlugin, siteVariables)
     .use(tocPlugin)
+    .use(columnsPlugin)
     .use(markdownItKatex)
     .use(markdownItContainer, 'details', {
       marker: '<',

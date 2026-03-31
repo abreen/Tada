@@ -67,6 +67,23 @@ Content grouped into a section.
 ```
 
 
+## Two-column layout
+
+Arrange content in two equal columns:
+
+```markdown
++++
+First column content.
++++
+Second column content.
++++
+```
+
+The three `+++` lines act as opening fence, column separator, and closing fence.
+Each column's content is parsed as full Markdown (headings, lists, code blocks,
+etc.). The output is a CSS Grid container with two equal-width columns.
+
+
 ## Other extensions
 
 - **Footnotes**: standard footnote syntax

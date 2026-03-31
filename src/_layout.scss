@@ -173,9 +173,6 @@ body.literate main table {
 
 .columns {
   display: grid;
-  grid-template-columns: max-content auto;
-  gap: 1rem;
-  &.split {
-    grid-template-columns: repeat(auto-fit, minmax(300px, auto));
-  }
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
 }

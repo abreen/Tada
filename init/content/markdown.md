@@ -307,6 +307,7 @@ Here are the steps to follow when you are ready to submit your work for
 this problem set.
 
 ...
+
 :::
 ```
 
@@ -327,6 +328,35 @@ this problem set.
 Email the files you changed to the course staff.
 
 :::
+
+### Two-column layout
+
+Use
+
+```markdown
++++
+Content in the first column (on the left)...
++++
+Content in the second column (on the right)...
++++
+```
+
+to arrange Markdown content in two columns:
+
++++
+Here is a paragraph in the first column. It can contain any Markdown you want,
+including lists:
+1. One
+2. Two
+3. Three
++++
+Here's a paragraph in the second column. We'll use a code block on this side:
+```java
+static boolean isOdd(int n) {
+  return n % 2 == 1;
+}
+```
++++
 
 ---
 

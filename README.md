@@ -29,6 +29,7 @@ A static site generator. The successor to Presto.
   * `::: section ... :::` renders a special section with a fancy background
   * `!!! note ... !!!` and `!!! warning ... !!!` render alert boxes
   * `??? question ... ???` renders a Q & A section; answers hidden until click
+  * `+++ ... +++ ... +++` renders a two-column layout
   * Special heading subtitles with `## Heading # A subtitle here`
 - Automatically generated favicon
   * Text, color, font and font weight taken from config file
