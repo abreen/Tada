@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 This codebase is a static site generator written in TypeScript and uses Bun.
 
