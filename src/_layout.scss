@@ -45,6 +45,10 @@ body.default .title-and-info {
   border-bottom: 1px solid var(--fg2-color);
 }
 
+body.default main > *:first-child {
+  margin-top: 0;
+}
+
 body.default main table,
 body.literate main table {
   width: 100%;
