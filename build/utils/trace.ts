@@ -235,7 +235,7 @@ export function createTraceHelpers(context: TraceContext): {
       const controls =
         `<button class="trace-btn trace-first" disabled tabindex="-1" aria-label="First step" title="First step">${iconFirst}</button>` +
         `<button class="trace-btn trace-prev" disabled tabindex="-1" aria-label="Previous step" title="Previous step">${iconPrev}</button>` +
-        `<span class="trace-step-counter">1 / ${totalSteps}</span>` +
+        `<span class="trace-step-counter" style="min-width: ${String(totalSteps).length * 2 + 1}ch">1/${totalSteps}</span>` +
         `<button class="trace-btn trace-next" aria-label="Next step" title="Next step">${iconNext}</button>` +
         `<button class="trace-btn trace-last" tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`;
       return `<div class="trace-widget" data-trace-manifest="${manifestUrl}"><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-left"><div class="trace-source">${highlightedSource}</div></div><div class="trace-right"><div class="trace-diagram"></div><pre class="trace-output"></pre></div></div></div></div>`;

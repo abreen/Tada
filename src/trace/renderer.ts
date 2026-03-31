@@ -981,7 +981,7 @@ export function renderStepControls(
   );
   const counter = document.createElement('span');
   counter.className = 'trace-step-counter';
-  counter.textContent = `${currentStep + 1} / ${totalSteps}`;
+  counter.textContent = `${currentStep + 1}/${totalSteps}`;
 
   firstBtn.disabled = currentStep === 0;
   prevBtn.disabled = currentStep === 0;
@@ -997,9 +997,13 @@ export function updateStepControls(
   currentStep: number,
   totalSteps: number,
 ): void {
-  const counter = container.querySelector('.trace-step-counter');
+  const counter = container.querySelector(
+    '.trace-step-counter',
+  ) as HTMLElement | null;
   if (counter) {
-    counter.textContent = `${currentStep + 1} / ${totalSteps}`;
+    counter.textContent = `${currentStep + 1}/${totalSteps}`;
+    const digits = String(totalSteps).length;
+    counter.style.minWidth = `${digits * 2 + 1}ch`;
   }
   const first = container.querySelector('.trace-first') as HTMLButtonElement;
   const prev = container.querySelector('.trace-prev') as HTMLButtonElement;
