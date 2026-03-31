@@ -106,7 +106,7 @@
   --code-gutter-width: 4rem;
   overflow: auto;
   overscroll-behavior: none;
-  border-radius: var(--mono-border-radius);
+  clip-path: inset(0 round var(--mono-border-radius));
 
   & > pre {
     margin: 0;
