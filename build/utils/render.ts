@@ -16,6 +16,7 @@ import {
 } from './code';
 import { extensionIsMarkdown } from './file-types';
 import { createTraceHelpers } from './trace';
+import { createIncludeFunction } from './include';
 import { createApplyBasePath, normalizeOutputPath } from './paths';
 import { parseFrontMatterAndContent } from './front-matter';
 import { createMarkdown } from './markdown';
@@ -432,6 +433,8 @@ function renderPlainTextContent(
     });
     params.renderTrace = helpers.renderTrace;
   }
+
+  params.include = createIncludeFunction(filePath, params);
 
   let html: string;
   try {

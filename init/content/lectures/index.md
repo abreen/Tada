@@ -23,3 +23,6 @@ and other relevant information.
 
 [Lecture 1](/lectures/01/index.html)
 :   Introduction, computation, models of a computer
+
+[Lecture 2](/lectures/02/index.html)
+:   Algorithms

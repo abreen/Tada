@@ -5,6 +5,7 @@ import {
   getProcessedExtensions,
   extensionIsMarkdown,
   isLiterateJava,
+  isPartial,
 } from './file-types';
 import { getPublicDir, normalizeOutputPath } from './paths';
 
@@ -46,7 +47,7 @@ export function getBuildContentFiles(
   codeExtensions: string[],
 ): string[] {
   return getContentFiles(contentDir, codeExtensions).filter(
-    filePath => !shouldSkipContentFile(filePath),
+    filePath => !isPartial(filePath) && !shouldSkipContentFile(filePath),
   );
 }
 
@@ -103,6 +104,9 @@ export function getValidInternalTargets(
   );
 
   for (const filePath of contentFiles) {
+    if (isPartial(filePath)) {
+      continue;
+    }
     const relPath = path.relative(contentDir, filePath);
     const parsed = path.parse(relPath);
     const ext = parsed.ext.toLowerCase();

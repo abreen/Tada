@@ -5,7 +5,7 @@ export {
   getValidInternalTargets,
   shouldSkipContentFile,
 } from './utils/content-files';
-export { extensionIsMarkdown } from './utils/file-types';
+export { extensionIsMarkdown, isPartial } from './utils/file-types';
 export { createMarkdown } from './utils/markdown';
 export {
   createApplyBasePath,

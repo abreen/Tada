@@ -8,6 +8,10 @@ export function extensionIsMarkdown(ext: string): boolean {
   return ['.md', '.markdown'].includes(ext);
 }
 
+export function isPartial(filePath: string): boolean {
+  return path.basename(filePath).startsWith('_');
+}
+
 export function isLiterateJava(filePath: string): boolean {
   return path.basename(filePath).toLowerCase().endsWith('.java.md');
 }

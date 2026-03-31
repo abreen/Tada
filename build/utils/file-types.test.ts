@@ -3,6 +3,7 @@ import {
   getProcessedExtensions,
   extensionIsMarkdown,
   isLiterateJava,
+  isPartial,
 } from './file-types';
 
 describe('getProcessedExtensions', () => {
@@ -35,6 +36,23 @@ describe('extensionIsMarkdown', () => {
 
   test('returns false for .txt', () => {
     expect(extensionIsMarkdown('.txt')).toBe(false);
+  });
+});
+
+describe('isPartial', () => {
+  test('returns true for files starting with _', () => {
+    expect(isPartial('_foo.md')).toBe(true);
+    expect(isPartial('/content/subdir/_bar.html')).toBe(true);
+  });
+
+  test('returns false for regular files', () => {
+    expect(isPartial('index.md')).toBe(false);
+    expect(isPartial('/content/page.html')).toBe(false);
+  });
+
+  test('handles paths with directories', () => {
+    expect(isPartial('/content/lectures/02/_pr1.md')).toBe(true);
+    expect(isPartial('/content/lectures/02/subdir/_foobar.html')).toBe(true);
   });
 });
 

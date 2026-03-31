@@ -86,6 +86,29 @@ class TestDevBuildDefaultContent:
         # problem_sets/index.html has skip: true in front matter
         assert not (dist / "problem_sets" / "index.html").exists()
 
+    def test_partials_not_rendered_as_pages(self, built_dev_site):
+        dist = built_dev_site / "dist"
+        assert not (dist / "lectures" / "02" / "_pr1.html").exists()
+        assert not (dist / "lectures" / "02" / "subdir").exists()
+
+    def test_partial_content_included_in_parent(self, built_dev_site):
+        page = built_dev_site / "dist" / "lectures" / "02" / "index.html"
+        assert page.exists()
+        html = page.read_text()
+        assert "Problem 1" in html
+        assert "Problem 2" in html
+
+    def test_html_partial_included(self, built_dev_site):
+        page = built_dev_site / "dist" / "lectures" / "02" / "index.html"
+        html = page.read_text()
+        assert "HTML partial" in html
+
+    def test_template_variables_resolve_in_partials(self, built_dev_site):
+        page = built_dev_site / "dist" / "lectures" / "02" / "index.html"
+        html = page.read_text()
+        # _pr1.md uses <%= page.title %> which should resolve to "Lecture 2"
+        assert "Lecture 2" in html
+
 
 class TestDevBuildErrors:
     def test_missing_config_exits_1(self, tmp_path):

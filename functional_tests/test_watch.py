@@ -519,6 +519,28 @@ class TestWatchConfigFileDetection:
         watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
 
 
+class TestWatchPartials:
+    """Editing a partial triggers a rebuild of pages that include it."""
+
+    def test_editing_partial_triggers_rebuild(self, watch, site_dir):
+        # Create a partial and a page that includes it
+        partial = site_dir / "content" / "_greeting.md"
+        partial.write_text("Hello from partial")
+
+        page = site_dir / "content" / "with_partial.md"
+        page.write_text("title: Test Partial\n\n<%= include('_greeting.md') %>\n")
+
+        page_html = site_dir / "dist" / "with_partial.html"
+        watch.wait_for_rebuild(page_html, "exists")
+        assert "Hello from partial" in page_html.read_text()
+
+        # Now edit the partial and verify the page is rebuilt
+        before_mtime = page_html.stat().st_mtime
+        partial.write_text("Updated greeting")
+        watch.wait_for_rebuild(page_html, "modified", before_mtime=before_mtime)
+        assert "Updated greeting" in page_html.read_text()
+
+
 class TestWatchLiterateJavaError:
     """A Java compilation error should stop the build but not crash watch mode."""
 

@@ -448,6 +448,7 @@ async function rebuild(): Promise<void> {
       : {
           changedContentFiles: detection.changedContentFiles,
           templatesChanged: detection.templatesChanged,
+          partialsChanged: detection.partialsChanged,
         };
 
     const result = contentRenderer.processContent({

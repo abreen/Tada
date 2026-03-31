@@ -41,6 +41,7 @@ export interface ContentRenderOptions {
 export interface WatchState {
   changedContentFiles?: Set<string>;
   templatesChanged?: boolean;
+  partialsChanged?: boolean;
 }
 
 /** Result from ContentRenderer.processContent() */

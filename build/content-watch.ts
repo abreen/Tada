@@ -1,6 +1,6 @@
 import path from 'path';
 import type { SiteVariables } from './types';
-import { getContentDir, getBuildContentFiles } from './util';
+import { getContentDir, getBuildContentFiles, isPartial } from './util';
 import {
   compileTemplates,
   getHtmlTemplatesDir,
@@ -18,6 +18,7 @@ interface ChangeDetectionResult {
   needsRestart: boolean;
   changedContentFiles?: Set<string>;
   templatesChanged?: boolean;
+  partialsChanged?: boolean;
 }
 
 export class ContentChangeDetector {
@@ -84,9 +85,19 @@ export class ContentChangeDetector {
         jsonDataPaths.includes(filePath),
     );
     const templatesChanged = changedTemplatePaths.length > 0;
+    const partialsChanged = [...changedContentFiles].some(f => isPartial(f));
 
     for (const filePath of changedTemplatePaths) {
       log.event`${B`${path.basename(filePath)}`} changed, rebuilding`;
+    }
+
+    if (partialsChanged) {
+      const changedPartials = [...changedContentFiles].filter(f =>
+        isPartial(f),
+      );
+      for (const filePath of changedPartials) {
+        log.event`Partial ${B`${path.basename(filePath)}`} changed, rebuilding`;
+      }
     }
 
     // Check if site config changed
@@ -102,6 +113,7 @@ export class ContentChangeDetector {
       needsRestart,
       changedContentFiles,
       templatesChanged,
+      partialsChanged,
     };
   }
 }
