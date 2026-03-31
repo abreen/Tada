@@ -447,7 +447,7 @@ async function rebuild(): Promise<void> {
       ? undefined
       : {
           changedContentFiles: detection.changedContentFiles,
-          templatesChanged: detection.templatesChanged,
+          jsonDataChanged: detection.jsonDataChanged,
           partialsChanged: detection.partialsChanged,
         };
 

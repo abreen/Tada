@@ -57,12 +57,12 @@ export class ContentRenderer {
 
   getDirtySourceFiles(
     buildContentFiles: string[],
-    { changedContentFiles, templatesChanged, partialsChanged }: WatchState = {},
+    { changedContentFiles, jsonDataChanged, partialsChanged }: WatchState = {},
   ): Set<string> {
     if (
       this.lastBuildFiles.size === 0 ||
       !changedContentFiles ||
-      templatesChanged ||
+      jsonDataChanged ||
       partialsChanged
     ) {
       return new Set(buildContentFiles);

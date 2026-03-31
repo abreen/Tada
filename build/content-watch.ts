@@ -1,12 +1,7 @@
 import path from 'path';
 import type { SiteVariables } from './types';
 import { getContentDir, getBuildContentFiles, isPartial } from './util';
-import {
-  compileTemplates,
-  getHtmlTemplatesDir,
-  getJsonDataDir,
-  JSON_DATA_FILES,
-} from './templates';
+import { compileTemplates, getJsonDataDir, JSON_DATA_FILES } from './templates';
 import { getProjectDir } from './utils/paths';
 import { B } from './colors';
 import { makeLogger } from './log';
@@ -17,7 +12,7 @@ interface ChangeDetectionResult {
   templateError: Error | null;
   needsRestart: boolean;
   changedContentFiles?: Set<string>;
-  templatesChanged?: boolean;
+  jsonDataChanged?: boolean;
   partialsChanged?: boolean;
 }
 
@@ -37,10 +32,9 @@ export class ContentChangeDetector {
       [...(modifiedFiles || [])].map(filePath => path.resolve(filePath)),
     );
 
-    const htmlTemplatesDir = getHtmlTemplatesDir();
     const jsonDataDir = getJsonDataDir();
 
-    // Try to recompile templates
+    // Try to recompile templates (also re-reads JSON data files)
     let templateError: Error | null = null;
     try {
       compileTemplates(this.siteVariables);
@@ -54,7 +48,6 @@ export class ContentChangeDetector {
 
     const contentDir = getContentDir();
     const normalizedContentDir = path.resolve(contentDir) + path.sep;
-    const normalizedHtmlDir = path.resolve(htmlTemplatesDir) + path.sep;
     const buildContentFiles = getBuildContentFiles(
       contentDir,
       Object.keys(this.siteVariables.codeLanguages || {}),
@@ -74,20 +67,17 @@ export class ContentChangeDetector {
       ),
     );
 
-    // Check if any HTML template or JSON data file changed
+    // Check if any JSON data file changed (nav.json, authors.json)
     const jsonDataPaths = JSON_DATA_FILES.map(f =>
       path.resolve(jsonDataDir, f),
     );
-    const changedTemplatePaths = [...resolvedFiles].filter(
-      filePath =>
-        filePath === path.resolve(htmlTemplatesDir) ||
-        filePath.startsWith(normalizedHtmlDir) ||
-        jsonDataPaths.includes(filePath),
+    const changedJsonDataPaths = [...resolvedFiles].filter(filePath =>
+      jsonDataPaths.includes(filePath),
     );
-    const templatesChanged = changedTemplatePaths.length > 0;
+    const jsonDataChanged = changedJsonDataPaths.length > 0;
     const partialsChanged = [...changedContentFiles].some(f => isPartial(f));
 
-    for (const filePath of changedTemplatePaths) {
+    for (const filePath of changedJsonDataPaths) {
       log.event`${B`${path.basename(filePath)}`} changed, rebuilding`;
     }
 
@@ -112,7 +102,7 @@ export class ContentChangeDetector {
       templateError: null,
       needsRestart,
       changedContentFiles,
-      templatesChanged,
+      jsonDataChanged,
       partialsChanged,
     };
   }

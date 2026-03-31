@@ -40,7 +40,7 @@ export interface ContentRenderOptions {
 /** State passed from watch mode to control incremental rebuilds */
 export interface WatchState {
   changedContentFiles?: Set<string>;
-  templatesChanged?: boolean;
+  jsonDataChanged?: boolean;
   partialsChanged?: boolean;
 }
 
