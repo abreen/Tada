@@ -105,7 +105,6 @@
   --code-gutter-width: 4rem;
   overflow: auto;
   overscroll-behavior-x: none;
-  clip-path: inset(0 round var(--mono-border-radius));
 
   & > pre {
     margin: 0;
@@ -121,18 +120,28 @@
 
   & > pre:first-child {
     *:first-child {
-      .line-number,
+      .line-number {
+        padding-top: 0.5rem;
+        border-top-left-radius: var(--mono-border-radius);
+      }
+
       code {
         padding-top: 0.5rem;
+        border-top-right-radius: var(--mono-border-radius);
       }
     }
   }
 
   & > pre:last-child {
     *:last-child {
-      .line-number,
+      .line-number {
+        padding-bottom: 0.5rem;
+        border-bottom-left-radius: var(--mono-border-radius);
+      }
+
       code {
         padding-bottom: 0.5rem;
+        border-bottom-right-radius: var(--mono-border-radius);
       }
     }
   }
