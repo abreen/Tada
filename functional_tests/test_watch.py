@@ -540,6 +540,31 @@ class TestWatchPartials:
         watch.wait_for_rebuild(page_html, "modified", before_mtime=before_mtime)
         assert "Updated greeting" in page_html.read_text()
 
+    def test_editing_transitive_partial_in_subdir_triggers_rebuild(self, watch, site_dir):
+        # Create a nested partial structure:
+        # page.md -> subdir/_outer.md -> subdir/_inner.html
+        subdir = site_dir / "content" / "subdir"
+        subdir.mkdir()
+
+        inner = subdir / "_inner.html"
+        inner.write_text("<p>Inner partial</p>")
+
+        outer = subdir / "_outer.md"
+        outer.write_text("Outer then <%= include('_inner.html') %>")
+
+        page = site_dir / "content" / "transitive.md"
+        page.write_text("title: Transitive\n\n<%= include('subdir/_outer.md') %>\n")
+
+        page_html = site_dir / "dist" / "transitive.html"
+        watch.wait_for_rebuild(page_html, "exists")
+        assert "Inner partial" in page_html.read_text()
+
+        # Edit the deeply nested partial and verify the page rebuilds
+        before_mtime = page_html.stat().st_mtime
+        inner.write_text("<p>Updated inner</p>")
+        watch.wait_for_rebuild(page_html, "modified", before_mtime=before_mtime)
+        assert "Updated inner" in page_html.read_text()
+
 
 class TestWatchLiterateJavaError:
     """A Java compilation error should stop the build but not crash watch mode."""
