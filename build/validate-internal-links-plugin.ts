@@ -47,11 +47,11 @@ function rewriteCodeLink(
   pathname: string,
   codeExtPattern: RegExp | null,
 ): string {
-  if (!codeExtPattern) {
+  if (!codeExtPattern || !codeExtPattern.test(pathname)) {
     return pathname;
   }
 
-  return pathname.replace(codeExtPattern, '.html');
+  return `${pathname}.html`;
 }
 
 function resolveLinkPath(

@@ -116,21 +116,18 @@ export function getValidInternalTargets(
       .join(path.posix.sep);
 
     if (isLiterateJava(filePath)) {
-      const baseName = path.parse(parsed.name).name;
-      const literateSubPath = path
-        .join(parsed.dir, baseName)
+      // parsed.name is e.g. "VowelCounter.java"; the output page is
+      // VowelCounter.java.html and the source file is VowelCounter.java
+      const javaSubPath = path
+        .join(parsed.dir, parsed.name)
         .split(path.sep)
         .join(path.posix.sep);
-      addGeneratedRouteAliases(targets, `/${literateSubPath}.html`);
-      targets.add(
-        normalizeOutputPath(
-          `/${path.join(parsed.dir, parsed.name).split(path.sep).join(path.posix.sep)}`,
-        ),
-      );
+      addGeneratedRouteAliases(targets, `/${javaSubPath}.html`);
+      targets.add(normalizeOutputPath(`/${javaSubPath}`));
     } else if (extensionIsMarkdown(ext) || ext === '.html') {
       addGeneratedRouteAliases(targets, `/${subPath}.html`);
     } else if (codeExtensionSet.has(ext.slice(1))) {
-      addGeneratedRouteAliases(targets, `/${subPath}.html`);
+      addGeneratedRouteAliases(targets, `/${relPath}.html`);
       targets.add(normalizeOutputPath(`/${relPath}`));
     }
   }

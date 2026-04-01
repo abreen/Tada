@@ -80,9 +80,16 @@ describe('validateInternalLinks', () => {
     );
   });
 
-  test('rewrites code extensions to .html', () => {
-    const md = createMd(['/src/App.html'], { codeExtensions: ['java'] });
+  test('resolves code file links to .ext.html pages', () => {
+    const md = createMd(['/src/App.java.html'], { codeExtensions: ['java'] });
     expect(() => md.render('[App](/src/App.java)')).not.toThrow();
+  });
+
+  test('throws for link missing the code extension', () => {
+    const md = createMd(['/src/App.java.html'], { codeExtensions: ['java'] });
+    expect(() => md.render('[App](/src/App.html)')).toThrow(
+      'broken internal link',
+    );
   });
 
   test('detects directory links that should reference index.html', () => {
@@ -102,5 +109,26 @@ describe('validateInternalLinks', () => {
   test('allows protocol-relative URLs', () => {
     const md = createMd([]);
     expect(() => md.render('[CDN](//cdn.example.com/lib.js)')).not.toThrow();
+  });
+
+  test('throws for .java.html link when code feature is disabled', () => {
+    // When features.code is false, codeExtensions is [] and no code pages
+    // are generated. Only the raw .java file exists as a valid target.
+    const md = createMd(['/src/Rectangle.java'], { codeExtensions: [] });
+    expect(() => md.render('[Rect](/src/Rectangle.java.html)')).toThrow(
+      'broken internal link',
+    );
+  });
+
+  test('throws for .py.html link when code feature is disabled', () => {
+    const md = createMd(['/src/demo.py'], { codeExtensions: [] });
+    expect(() => md.render('[Demo](/src/demo.py.html)')).toThrow(
+      'broken internal link',
+    );
+  });
+
+  test('allows .java link to raw file when code feature is disabled', () => {
+    const md = createMd(['/src/Rectangle.java'], { codeExtensions: [] });
+    expect(() => md.render('[Rect](/src/Rectangle.java)')).not.toThrow();
   });
 });

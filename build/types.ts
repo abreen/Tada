@@ -79,6 +79,7 @@ export interface RenderPlainTextOptions {
   siteVariables: SiteVariables;
   validInternalTargets: Set<string>;
   assetFiles: string[];
+  literateJavaOutputPaths?: Set<string>;
   traceCache?: Map<
     string,
     { manifestUrl: string; highlightedSource: string; totalSteps: number }

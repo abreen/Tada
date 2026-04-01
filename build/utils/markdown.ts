@@ -23,6 +23,8 @@ import type { SiteVariables } from '../types';
 
 interface CreateMarkdownOptions {
   validatorOptions?: Record<string, unknown>;
+  literateJavaOutputPaths?: Set<string>;
+  sourceUrlPath?: string;
 }
 
 function capitalize(str: string): string {
@@ -37,7 +39,11 @@ export function createMarkdown(
   siteVariables: SiteVariables,
   options: CreateMarkdownOptions = {},
 ): MarkdownIt {
-  const { validatorOptions = {} } = options;
+  const {
+    validatorOptions = {},
+    literateJavaOutputPaths,
+    sourceUrlPath,
+  } = options;
   const markdown = new MarkdownIt({ html: true, typographer: true })
     .use(headingSubtitlePlugin)
     .use(markdownItAnchor, { tabIndex: false })
@@ -46,7 +52,10 @@ export function createMarkdown(
     .use(deflistIdPlugin)
     .use(externalLinksPlugin, siteVariables)
     .use(validateInternalLinksPlugin, validatorOptions)
-    .use(applyBasePathPlugin, siteVariables)
+    .use(applyBasePathPlugin, siteVariables, {
+      literateJavaOutputPaths,
+      sourceUrlPath,
+    })
     .use(tocPlugin)
     .use(columnsPlugin)
     .use(markdownItKatex)

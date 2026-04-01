@@ -4,7 +4,7 @@ title: Lab 0
 author: alex
 description: An example lab page for <%= site.title %>.
 
-In this lab, we'll explore the [`VowelCounter` program](./VowelCounter.html).
+In this lab, we'll explore the [`VowelCounter` program](./VowelCounter.java).
 
 ## Review questions
 

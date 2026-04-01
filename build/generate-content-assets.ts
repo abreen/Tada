@@ -112,6 +112,7 @@ export class ContentRenderer {
     distDir: string,
     validInternalTargets: Set<string>,
     assetFiles: string[],
+    literateJavaOutputPaths: Set<string>,
   ): Asset[] {
     const ext = path.extname(filePath).toLowerCase();
     const assets: Asset[] = [];
@@ -139,6 +140,7 @@ export class ContentRenderer {
           siteVariables: this.siteVariables,
           validInternalTargets,
           assetFiles,
+          literateJavaOutputPaths,
           traceCache: this.traceCache,
         }),
       );
@@ -267,6 +269,18 @@ export class ContentRenderer {
       buildContentFiles,
       Object.keys(this.siteVariables.codeLanguages || {}),
     );
+    const literateJavaOutputPaths = new Set<string>();
+    for (const filePath of buildContentFiles) {
+      if (isLiterateJava(filePath)) {
+        const parsed = path.parse(path.relative(contentDir, filePath));
+        const javaPath = path
+          .join(parsed.dir, parsed.name)
+          .split(path.sep)
+          .join(path.posix.sep);
+        literateJavaOutputPaths.add(`/${javaPath}`);
+      }
+    }
+
     const errors: Error[] = [];
 
     const configLinkErrors = validateConfigLinks(
@@ -302,6 +316,7 @@ export class ContentRenderer {
           distDir,
           validInternalTargets,
           assetFiles,
+          literateJavaOutputPaths,
         );
       } catch (err) {
         errors.push(err as Error);

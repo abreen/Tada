@@ -1,3 +1,4 @@
+import path from 'path';
 import type MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import { createApplyBasePath } from './utils/paths';
@@ -7,12 +8,20 @@ import type { SiteVariables } from './types';
 
 const log = makeLogger(__filename);
 
+interface ApplyBasePathOptions {
+  literateJavaOutputPaths?: Set<string>;
+  sourceUrlPath?: string;
+}
+
 export default function applyBasePathPlugin(
   md: MarkdownIt,
   siteVariables: SiteVariables,
+  pluginOptions: ApplyBasePathOptions = {},
 ): void {
   const applyBasePath = createApplyBasePath(siteVariables);
   const rewriteCodeLinks = isFeatureEnabled(siteVariables, 'code');
+  const literateJavaOutputPaths = pluginOptions.literateJavaOutputPaths;
+  const sourceUrlPath = pluginOptions.sourceUrlPath;
 
   function rewriteInternalHref(href: string): string {
     const match = href.match(/^([^?#]*)(.*)$/);
@@ -21,9 +30,19 @@ export default function applyBasePathPlugin(
     let modifiedPath = pathname;
 
     if (rewriteCodeLinks) {
-      // Rewrite code file links to .html links
       for (const ext of Object.keys(siteVariables.codeLanguages ?? {})) {
         if (modifiedPath.endsWith(`.${ext}`)) {
+          if (literateJavaOutputPaths && sourceUrlPath) {
+            const resolved = modifiedPath.startsWith('/')
+              ? modifiedPath
+              : path.posix.join(
+                  path.posix.dirname(sourceUrlPath),
+                  modifiedPath,
+                );
+            if (literateJavaOutputPaths.has(resolved)) {
+              break;
+            }
+          }
           modifiedPath += '.html';
           break;
         }
