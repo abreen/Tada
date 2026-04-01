@@ -7,11 +7,75 @@ import { B } from '../colors';
 import { normalizeOutputPath } from './paths';
 import { hasMainMethod } from './literate-java';
 import { renderCodeSegment } from './code';
-import type { TraceStep, TraceManifest } from '../types';
+import { computeLayout } from './trace-layout';
+import { generateStepSvg } from './trace-svg';
+import type { TraceStep, TraceManifest, TraceChunkEntry } from '../types';
 
 const log = makeLogger(__filename);
 
 const DEFAULT_CHUNK_SIZE = 50;
+
+/**
+ * Parse // @trace-ignore comments from Java source code.
+ * Returns a map of className -> fieldName[] for fields that should be
+ * excluded from layout consideration.
+ */
+export function parseIgnoreFields(source: string): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  const lines = source.split('\n');
+  // Track nesting: Java inner classes are reported as Outer$Inner by the tracer.
+  // Each entry is [className, braceDepthWhenOpened].
+  const classStack: { name: string; depth: number }[] = [];
+  let braceDepth = 0;
+
+  for (const line of lines) {
+    // Strip strings and comments (except @trace-ignore) to avoid false braces
+    const stripped = line
+      .replace(/"(?:[^"\\]|\\.)*"/g, '')
+      .replace(/\/\/(?!.*@trace-ignore).*/g, '');
+
+    const classMatch = stripped.match(/\bclass\s+(\w+)/);
+    if (classMatch) {
+      classStack.push({ name: classMatch[1], depth: braceDepth });
+    }
+
+    for (const ch of stripped) {
+      if (ch === '{') {
+        braceDepth++;
+      }
+      if (ch === '}') {
+        braceDepth--;
+        // Pop classes whose scope has ended
+        while (
+          classStack.length > 0 &&
+          braceDepth <= classStack[classStack.length - 1].depth
+        ) {
+          classStack.pop();
+        }
+      }
+    }
+
+    const currentClass =
+      classStack.length > 0 ? classStack.map(c => c.name).join('$') : null;
+
+    if (currentClass && line.includes('// @trace-ignore')) {
+      const before = line.split('//')[0].trim();
+      const withoutSemicolon = before.endsWith(';')
+        ? before.slice(0, -1).trim()
+        : before;
+      const parts = withoutSemicolon.split(/\s+/);
+      if (parts.length >= 2) {
+        const fieldName = parts[parts.length - 1];
+        if (!result[currentClass]) {
+          result[currentClass] = [];
+        }
+        result[currentClass].push(fieldName);
+      }
+    }
+  }
+
+  return result;
+}
 
 let tracerClassDir: string | null = null;
 
@@ -85,38 +149,51 @@ export function chunkTraceOutput(
     .trim()
     .split('\n')
     .filter(l => l.length > 0);
+
+  // Parse all steps first (needed for layout pass)
+  const allSteps: TraceStep[] = lines.map(l => JSON.parse(l));
+
   const lineToSteps: Record<number, number[]> = {};
-  let chunkSteps: TraceStep[] = [];
-  let chunkIndex = 0;
-
-  for (let stepIndex = 0; stepIndex < lines.length; stepIndex++) {
-    const step: TraceStep = JSON.parse(lines[stepIndex]);
-    chunkSteps.push(step);
-
+  for (let i = 0; i < allSteps.length; i++) {
+    const step = allSteps[i];
     if (!lineToSteps[step.line]) {
       lineToSteps[step.line] = [];
     }
-    lineToSteps[step.line].push(stepIndex);
+    lineToSteps[step.line].push(i);
+  }
 
-    if (chunkSteps.length >= chunkSize) {
+  // Parse @trace-ignore comments from source
+  const ignoreFields = parseIgnoreFields(source);
+
+  // Compute stable layout across all steps, then generate SVG per step
+  const layout = computeLayout(allSteps, ignoreFields);
+
+  let chunkEntries: TraceChunkEntry[] = [];
+  let chunkIndex = 0;
+
+  for (const step of allSteps) {
+    const svg = generateStepSvg(step, layout);
+    chunkEntries.push({ line: step.line, stdout: step.stdout, svg });
+
+    if (chunkEntries.length >= chunkSize) {
       fs.writeFileSync(
         path.join(traceOutputDir, `chunk-${chunkIndex}.json`),
-        JSON.stringify(chunkSteps),
+        JSON.stringify(chunkEntries),
       );
-      chunkSteps = [];
+      chunkEntries = [];
       chunkIndex++;
     }
   }
 
-  if (chunkSteps.length > 0) {
+  if (chunkEntries.length > 0) {
     fs.writeFileSync(
       path.join(traceOutputDir, `chunk-${chunkIndex}.json`),
-      JSON.stringify(chunkSteps),
+      JSON.stringify(chunkEntries),
     );
   }
 
   const manifest: TraceManifest = {
-    totalSteps: lines.length,
+    totalSteps: allSteps.length,
     chunkSize,
     sourceFile,
     source,
@@ -143,6 +220,7 @@ export interface TraceResult {
   manifestUrl: string;
   highlightedSource: string;
   totalSteps: number;
+  mtime: number;
 }
 
 export function createTraceHelpers(context: TraceContext): {
@@ -154,8 +232,14 @@ export function createTraceHelpers(context: TraceContext): {
   function getOrRunTrace(javaFile: string): TraceResult {
     const javaFilePath = path.resolve(pageDir, javaFile);
 
-    if (cache.has(javaFilePath)) {
-      return cache.get(javaFilePath)!;
+    const cached = cache.get(javaFilePath);
+    if (cached) {
+      const mtime = fs.statSync(javaFilePath, {
+        throwIfNoEntry: false,
+      })?.mtimeMs;
+      if (mtime !== undefined && mtime === cached.mtime) {
+        return cached;
+      }
     }
 
     if (!fs.existsSync(javaFilePath)) {
@@ -216,8 +300,14 @@ export function createTraceHelpers(context: TraceContext): {
       );
 
       const totalSteps = manifest.totalSteps;
-      cache.set(javaFilePath, { manifestUrl, highlightedSource, totalSteps });
-      return { manifestUrl, highlightedSource, totalSteps };
+      const mtime = fs.statSync(javaFilePath).mtimeMs;
+      cache.set(javaFilePath, {
+        manifestUrl,
+        highlightedSource,
+        totalSteps,
+        mtime,
+      });
+      return { manifestUrl, highlightedSource, totalSteps, mtime };
     } finally {
       fs.rmSync(targetClassDir, { recursive: true, force: true });
     }
@@ -238,7 +328,7 @@ export function createTraceHelpers(context: TraceContext): {
         `<span class="trace-step-counter" style="min-width: ${String(totalSteps).length * 2 + 1}ch">1/${totalSteps}</span>` +
         `<button class="trace-btn trace-next" aria-label="Next step" title="Next step">${iconNext}</button>` +
         `<button class="trace-btn trace-last" tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`;
-      return `<div class="trace-widget" data-trace-manifest="${manifestUrl}"><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-left"><div class="trace-source">${highlightedSource}</div></div><div class="trace-right"><div class="trace-diagram"></div><pre class="trace-output"></pre></div></div></div></div>`;
+      return `<div class="trace-widget" data-trace-manifest="${manifestUrl}"><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-source">${highlightedSource}</div><pre class="trace-output"></pre></div></div></div>`;
     },
   };
 }

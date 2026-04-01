@@ -90,6 +90,13 @@ export class ContentChangeDetector {
       }
     }
 
+    const changedJavaFiles = [...changedContentFiles].filter(f =>
+      f.endsWith('.java'),
+    );
+    for (const filePath of changedJavaFiles) {
+      log.event`${B`${path.basename(filePath)}`} changed, re-running traces`;
+    }
+
     // Check if site config changed
     const siteConfigChanged = resolvedFiles.has(
       path.resolve(this.siteConfigPath),

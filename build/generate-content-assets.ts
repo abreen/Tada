@@ -34,7 +34,12 @@ export class ContentRenderer {
   private javacAvailable: boolean | undefined;
   private traceCache: Map<
     string,
-    { manifestUrl: string; highlightedSource: string; totalSteps: number }
+    {
+      manifestUrl: string;
+      highlightedSource: string;
+      totalSteps: number;
+      mtime: number;
+    }
   > = new Map();
 
   constructor(siteVariables: SiteVariables) {
@@ -65,6 +70,15 @@ export class ContentRenderer {
       jsonDataChanged ||
       partialsChanged
     ) {
+      return new Set(buildContentFiles);
+    }
+
+    // If any .java file changed, the trace cache will be stale, so rebuild
+    // all content pages to pick up the new trace output.
+    const javaFileChanged = [...changedContentFiles].some(f =>
+      f.endsWith('.java'),
+    );
+    if (javaFileChanged) {
       return new Set(buildContentFiles);
     }
 

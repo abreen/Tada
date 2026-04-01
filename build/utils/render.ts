@@ -342,7 +342,12 @@ function renderPlainTextContent(
     validateInternalLinks?: boolean;
     traceCache?: Map<
       string,
-      { manifestUrl: string; highlightedSource: string; totalSteps: number }
+      {
+        manifestUrl: string;
+        highlightedSource: string;
+        totalSteps: number;
+        mtime: number;
+      }
     >;
     contentDir?: string;
     distDir?: string;

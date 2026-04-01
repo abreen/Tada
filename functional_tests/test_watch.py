@@ -560,6 +560,54 @@ class TestWatchPartials:
         assert "Updated inner" in page_html.read_text()
 
 
+class TestWatchTraceRebuildsOnJavaChange:
+    """Editing a Java file used by renderTrace re-runs the trace."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        yield tmp_path / "testsite"
+
+    def test_trace_rerun_on_java_edit(self, site_dir):
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
+
+            # The lab page that calls renderTrace('TraceDemo.java') should exist
+            lab_html = site_dir / "dist" / "labs" / "01" / "index.html"
+            assert lab_html.exists()
+
+            # Trace chunks should exist from the initial build
+            manifest_path = (
+                site_dir / "dist" / "labs" / "01" / "_traces" / "TraceDemo" / "manifest.json"
+            )
+            assert manifest_path.exists()
+            old_manifest = json.loads(manifest_path.read_text())
+            old_steps = old_manifest["totalSteps"]
+
+            before_mtime = manifest_path.stat().st_mtime
+
+            # Edit the Java file to change the trace output
+            java_file = site_dir / "content" / "labs" / "01" / "TraceDemo.java"
+            java_file.write_text(
+                "public class TraceDemo {\n"
+                "    public static void main(String[] args) {\n"
+                '        String s = "changed";\n'
+                "    }\n"
+                "}\n"
+            )
+
+            wp.wait_for_rebuild(manifest_path, "modified", before_mtime=before_mtime)
+
+            new_manifest = json.loads(manifest_path.read_text())
+            # The trace should have been re-run (different step count)
+            assert new_manifest["totalSteps"] != old_steps
+            assert '"changed"' in new_manifest["source"]
+        finally:
+            wp.stop()
+
+
 class TestWatchLiterateJavaError:
     """A Java compilation error should stop the build but not crash watch mode."""
 

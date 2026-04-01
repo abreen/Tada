@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { chunkTraceOutput } from './trace';
+import { chunkTraceOutput, parseIgnoreFields } from './trace';
 import type { TraceManifest } from '../types';
 
 describe('chunkTraceOutput', () => {
@@ -50,6 +50,11 @@ describe('chunkTraceOutput', () => {
     expect(chunk0).toHaveLength(3);
     expect(chunk1).toHaveLength(2);
 
+    // Chunks now contain TraceChunkEntry objects with precomputed SVG
+    expect(chunk0[0].svg).toContain('<svg');
+    expect(chunk0[0]).toHaveProperty('line');
+    expect(chunk0[0]).toHaveProperty('stdout');
+
     // Manifest (returned value and file on disk should both be correct)
     const manifestFile = JSON.parse(
       fs.readFileSync(path.join(outputDir, 'manifest.json'), 'utf-8'),
@@ -86,6 +91,53 @@ describe('chunkTraceOutput', () => {
     );
     expect(chunk0).toHaveLength(1);
     expect(chunk0[0].stdout).toBe('hello\n');
+  });
+
+  test('passes ignoreFields from source to layout', () => {
+    const source = `class Node {
+    int value;
+    Node left;
+    Node right;
+    Node parent; // @trace-ignore
+}
+public class Test {
+    public static void main(String[] args) {}
+}`;
+    const fields = parseIgnoreFields(source);
+    expect(fields).toEqual({ Node: ['parent'] });
+  });
+
+  test('parseIgnoreFields handles multiple classes', () => {
+    const source = `class A {
+    A prev; // @trace-ignore
+    A next;
+}
+class B {
+    B up; // @trace-ignore
+    B down; // @trace-ignore
+}`;
+    const fields = parseIgnoreFields(source);
+    expect(fields).toEqual({ A: ['prev'], B: ['up', 'down'] });
+  });
+
+  test('parseIgnoreFields handles inner classes with $ separator', () => {
+    const source = `public class SearchTreeDemo {
+    static class Node {
+        String data;
+        Node left;
+        Node right;
+        Node parent; // @trace-ignore
+    }
+
+    public static void main(String[] args) {}
+}`;
+    const fields = parseIgnoreFields(source);
+    expect(fields).toEqual({ SearchTreeDemo$Node: ['parent'] });
+  });
+
+  test('parseIgnoreFields returns empty for no annotations', () => {
+    const source = `class Node { int x; }`;
+    expect(parseIgnoreFields(source)).toEqual({});
   });
 
   test('maps repeated lines to multiple step indices', () => {
