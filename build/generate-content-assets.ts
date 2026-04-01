@@ -126,6 +126,8 @@ export class ContentRenderer {
           siteVariables: this.siteVariables,
           assetFiles,
           skipExecution: !this.javacAvailable,
+          validInternalTargets,
+          literateJavaOutputPaths,
         }),
       );
       return assets;

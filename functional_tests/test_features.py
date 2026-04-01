@@ -345,6 +345,35 @@ class TestLiterateJavaLinkNotRewritten:
         assert 'href="./Plain.java.html"' in html
 
 
+class TestLiterateJavaBrokenLink:
+    """A literate Java page with a broken internal link should fail the build."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        content = site / "content" / "test"
+        content.mkdir(parents=True)
+
+        (content / "Broken.java.md").write_text(
+            "title: Broken\n\n"
+            "See [this page](./nonexistent.html).\n\n"
+            "```java\n"
+            "public class Broken {}\n"
+            "```\n"
+        )
+
+        yield site
+
+    def test_build_fails(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode != 0
+        output = result.stdout + result.stderr
+        assert "broken internal link" in output
+
+
 class TestSearchFeatureEnabled:
     """When features.search is true, Pagefind search index is generated."""
 

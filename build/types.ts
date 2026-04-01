@@ -103,6 +103,8 @@ export interface RenderLiterateJavaOptions {
   siteVariables: SiteVariables;
   assetFiles: string[];
   skipExecution?: boolean;
+  validInternalTargets: Set<string>;
+  literateJavaOutputPaths?: Set<string>;
 }
 
 /** Options for copied content asset rendering */

@@ -480,6 +480,8 @@ export function renderLiterateJavaPageAsset({
   siteVariables,
   assetFiles,
   skipExecution,
+  validInternalTargets,
+  literateJavaOutputPaths,
 }: RenderLiterateJavaOptions): Asset[] {
   const { dir, name } = path.parse(filePath);
   const className = deriveClassName(filePath);
@@ -530,8 +532,18 @@ export function renderLiterateJavaPageAsset({
 
   // Render full markdown with a custom fence rule that replaces fences
   // with Shiki-highlighted code blocks and optional JDI output columns
+  const sourceUrlPath = `/${subPath}.java.html`;
   const md = createMarkdown(siteVariables, {
-    validatorOptions: { enabled: false },
+    validatorOptions: {
+      filePath,
+      sourceUrlPath,
+      validTargets: validInternalTargets,
+      codeExtensions: isFeatureEnabled(siteVariables, 'code')
+        ? Object.keys(siteVariables.codeLanguages!)
+        : [],
+    },
+    literateJavaOutputPaths,
+    sourceUrlPath,
   });
   let fenceIndex = 0;
   const defaultFence = md.renderer.rules.fence!;
