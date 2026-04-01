@@ -63,6 +63,16 @@ class TestCodeFeatureDisabled:
         assert 'Rectangle.java.html' not in html
         assert 'demo.java.html' not in html
 
+    def test_literate_java_page_still_rendered(self, built_site):
+        """Pair.java.md should still produce Pair.java.html when code is disabled."""
+        dist = built_site / "dist"
+        assert (dist / "lectures" / "01" / "Pair.java.html").exists()
+
+    def test_literate_java_source_still_generated(self, built_site):
+        """Pair.java.md should still produce Pair.java when code is disabled."""
+        dist = built_site / "dist"
+        assert (dist / "lectures" / "01" / "Pair.java").exists()
+
     def test_exit_code_zero(self, site_dir):
         """Build should succeed even with code feature disabled."""
         result = run_tada("dev", cwd=str(site_dir))
