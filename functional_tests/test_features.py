@@ -29,14 +29,14 @@ class TestCodeFeatureDisabled:
         yield site_dir
 
     def test_no_html_for_java_file(self, built_site):
-        """Rectangle.java should NOT produce Rectangle.html."""
+        """Rectangle.java should NOT produce Rectangle.java.html."""
         dist = built_site / "dist"
-        assert not (dist / "lectures" / "01" / "Rectangle.html").exists()
+        assert not (dist / "lectures" / "01" / "Rectangle.java.html").exists()
 
     def test_no_html_for_py_file(self, built_site):
-        """demo.py should NOT produce demo.html."""
+        """demo.py should NOT produce demo.py.html."""
         dist = built_site / "dist"
-        assert not (dist / "lectures" / "01" / "demo.html").exists()
+        assert not (dist / "lectures" / "01" / "demo.py.html").exists()
 
     def test_java_file_copied_as_is(self, built_site):
         """Rectangle.java should be copied unchanged to the output."""
@@ -60,8 +60,8 @@ class TestCodeFeatureDisabled:
         assert 'Rectangle.java' in html
         assert 'demo.py' in html
         # The links should NOT have been rewritten to .html
-        assert 'Rectangle.html' not in html
-        assert 'demo.html' not in html
+        assert 'Rectangle.java.html' not in html
+        assert 'demo.java.html' not in html
 
     def test_exit_code_zero(self, site_dir):
         """Build should succeed even with code feature disabled."""
@@ -267,11 +267,15 @@ class TestLiterateJavaPages:
         yield site_dir
 
     def test_literate_java_page_has_java_html_extension(self, built_site):
-        """Pair.java should produce Pair.java.html."""
+        """Pair.java.md should produce Pair.java.html and Pair.java."""
         dist = built_site / "dist"
         # Pair.java.md is a literate Java page in the example site
         java_html = dist / "lectures" / "01" / "Pair.java.html"
         assert java_html.exists(), f"Expected Pair.java.html to exist at {java_html}"
+
+        # The literate Java page should always produce a .java file
+        code_file = dist / "lectures" / "01" / "Pair.java"
+        assert code_file.exists(), f"Expected Pair.java to exist at {code_file}"
 
 
 class TestSearchFeatureEnabled:
