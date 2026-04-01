@@ -1,8 +1,6 @@
-import json
-
 import pytest
 
-from conftest import run_tada
+from conftest import run_tada, set_site_config
 
 
 class TestCodeFeatureDisabled:
@@ -14,11 +12,7 @@ class TestCodeFeatureDisabled:
         assert result.returncode == 0, f"init failed: {result.stderr}"
         site = tmp_path / "testsite"
 
-        # Disable the code feature
-        config_path = site / "site.dev.json"
-        config = json.loads(config_path.read_text())
-        config["features"]["code"] = False
-        config_path.write_text(json.dumps(config, indent=2) + "\n")
+        set_site_config(site, {"features": {"code": False}})
 
         yield site
 

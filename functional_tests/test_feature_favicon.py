@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from conftest import run_tada
+from conftest import run_tada, set_site_config
 
 
 class TestFaviconFeatureDisabled:
@@ -14,11 +14,7 @@ class TestFaviconFeatureDisabled:
         assert result.returncode == 0, f"init failed: {result.stderr}"
         site = tmp_path / "testsite"
 
-        # Explicitly disable favicon (it's false by default, but be explicit)
-        config_path = site / "site.dev.json"
-        config = json.loads(config_path.read_text())
-        config["features"]["favicon"] = False
-        config_path.write_text(json.dumps(config, indent=2) + "\n")
+        set_site_config(site, {"features": {"favicon": False}})
 
         yield site
 
@@ -60,11 +56,7 @@ class TestFaviconFeatureEnabled:
         assert result.returncode == 0, f"init failed: {result.stderr}"
         site = tmp_path / "testsite"
 
-        # Enable favicon
-        config_path = site / "site.dev.json"
-        config = json.loads(config_path.read_text())
-        config["features"]["favicon"] = True
-        config_path.write_text(json.dumps(config, indent=2) + "\n")
+        set_site_config(site, {"features": {"favicon": True}})
 
         yield site
 

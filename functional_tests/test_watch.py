@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import websocket
 
-from conftest import TADA_BIN, get_free_ports, run_tada
+from conftest import TADA_BIN, get_free_ports, run_tada, set_site_config
 
 REBUILD_TIMEOUT_SEC = 30
 INITIAL_BUILD_TIMEOUT_SEC = 60
@@ -286,13 +286,10 @@ class TestWatchConfig:
     """Modifying the site config triggers a build."""
 
     def test_config_change_triggers_full_rebuild(self, watch, site_dir):
-        config_path = site_dir / "site.dev.json"
         index_html = site_dir / "dist" / "index.html"
 
         before_mtime = index_html.stat().st_mtime
-        config = json.loads(config_path.read_text())
-        config["title"] = "Updated Title For Test"
-        config_path.write_text(json.dumps(config, indent=2))
+        set_site_config(site_dir, {"title": "Updated Title For Test"})
 
         watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
         html = index_html.read_text()
@@ -384,10 +381,7 @@ class TestWatchBadConfigAtStart:
             assert wp.proc.poll() is None
 
             # Fix the config by restoring the title
-            config_path = site_dir / "site.dev.json"
-            config = json.loads(config_path.read_text())
-            config["title"] = "Recovered Title"
-            config_path.write_text(json.dumps(config, indent=2) + "\n")
+            set_site_config(site_dir, {"title": "Recovered Title"})
 
             # Wait for the successful rebuild
             index_html = site_dir / "dist" / "index.html"

@@ -1,3 +1,4 @@
+import json
 import os
 import socket
 import subprocess
@@ -31,6 +32,18 @@ def get_free_ports(n=2):
     for s in sockets:
         s.close()
     return ports
+
+
+def set_site_config(site_dir, overrides, config_file="site.dev.json"):
+    """Read a site config file, deep-merge overrides, and write it back."""
+    config_path = site_dir / config_file
+    config = json.loads(config_path.read_text())
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(config.get(key), dict):
+            config[key].update(value)
+        else:
+            config[key] = value
+    config_path.write_text(json.dumps(config, indent=2) + "\n")
 
 
 def run_tada(*args, cwd=None, timeout=120, check=False, input=None):
