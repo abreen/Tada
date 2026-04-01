@@ -97,6 +97,7 @@ export function getValidInternalTargets(
   contentDir: string,
   contentFiles: string[],
   codeExtensions: string[],
+  codeEnabled: boolean,
 ): Set<string> {
   const targets = new Set<string>();
   const codeExtensionSet = new Set(
@@ -127,7 +128,9 @@ export function getValidInternalTargets(
     } else if (extensionIsMarkdown(ext) || ext === '.html') {
       addGeneratedRouteAliases(targets, `/${subPath}.html`);
     } else if (codeExtensionSet.has(ext.slice(1))) {
-      addGeneratedRouteAliases(targets, `/${relPath}.html`);
+      if (codeEnabled) {
+        addGeneratedRouteAliases(targets, `/${relPath}.html`);
+      }
       targets.add(normalizeOutputPath(`/${relPath}`));
     }
   }

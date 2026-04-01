@@ -73,6 +73,21 @@ class TestCodeFeatureDisabled:
         dist = built_site / "dist"
         assert (dist / "lectures" / "01" / "Pair.java").exists()
 
+    def test_code_html_link_rejected(self, site_dir):
+        """A link to Foo.java.html should fail when features.code is false."""
+        content = site_dir / "content" / "test"
+        content.mkdir(parents=True)
+        (content / "Foo.java").write_text("public class Foo {}\n")
+        (content / "index.md").write_text(
+            "title: Test\n\n"
+            "See [Foo](./Foo.java.html).\n"
+        )
+
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode != 0
+        output = result.stdout + result.stderr
+        assert "broken internal link" in output
+
     def test_exit_code_zero(self, site_dir):
         """Build should succeed even with code feature disabled."""
         result = run_tada("dev", cwd=str(site_dir))

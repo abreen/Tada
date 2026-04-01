@@ -270,6 +270,7 @@ export class ContentRenderer {
       contentDir,
       buildContentFiles,
       Object.keys(this.siteVariables.codeLanguages || {}),
+      isFeatureEnabled(this.siteVariables, 'code'),
     );
     const literateJavaOutputPaths = new Set<string>();
     for (const filePath of buildContentFiles) {
