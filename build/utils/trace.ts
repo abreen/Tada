@@ -328,7 +328,7 @@ export function createTraceHelpers(context: TraceContext): {
         `<span class="trace-step-counter" style="min-width: ${String(totalSteps).length * 2 + 1}ch">1/${totalSteps}</span>` +
         `<button class="trace-btn trace-next" aria-label="Next step" title="Next step">${iconNext}</button>` +
         `<button class="trace-btn trace-last" tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`;
-      return `<div class="trace-widget" data-trace-manifest="${manifestUrl}"><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-source">${highlightedSource}</div><pre class="trace-output"></pre></div></div></div>`;
+      return `<div class="trace-widget" data-trace-manifest="${manifestUrl}"><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-source-wrapper"><div class="trace-source">${highlightedSource}</div></div><pre class="trace-output"></pre></div></div></div>`;
     },
   };
 }
