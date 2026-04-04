@@ -11,7 +11,7 @@ import { computeLayout } from './trace-layout';
 import { generateStepSvg } from './trace-svg';
 import type { TraceStep, TraceManifest, TraceChunkEntry } from '../types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 const DEFAULT_CHUNK_SIZE = 50;
 
@@ -84,7 +84,7 @@ function ensureTracerCompiled(): string {
     return tracerClassDir;
   }
 
-  const sourceDir = path.join(__dirname, 'jdi-runner');
+  const sourceDir = path.join(import.meta.dir, 'jdi-runner');
   const sourceFile = path.join(sourceDir, 'TraceRunner.java');
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-tracer-'));
 

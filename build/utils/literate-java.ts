@@ -12,7 +12,7 @@ import type {
   LiterateRunnerEntry,
 } from '../types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 let runnerClassDir: string | null = null;
 
@@ -121,7 +121,7 @@ function ensureRunnerCompiled(): string {
     return runnerClassDir;
   }
 
-  const sourceDir = path.join(__dirname, 'jdi-runner');
+  const sourceDir = path.join(import.meta.dir, 'jdi-runner');
   const sourceFile = path.join(sourceDir, 'LiterateRunner.java');
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-runner-'));
 

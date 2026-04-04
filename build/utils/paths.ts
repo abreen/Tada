@@ -2,7 +2,7 @@ import path from 'path';
 import type { SiteVariables } from '../types';
 
 export function getPackageDir(): string {
-  return path.resolve(__dirname, '..', '..');
+  return path.resolve(import.meta.dir, '..', '..');
 }
 
 export function getProjectDir(): string {

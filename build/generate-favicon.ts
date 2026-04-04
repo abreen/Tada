@@ -8,7 +8,7 @@ import { getPackageDir } from './utils/paths';
 import { deriveTheme } from './utils/derive-theme';
 import type { SiteVariables } from './types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 const FONT_PATH = path.join(
   getPackageDir(),

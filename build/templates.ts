@@ -7,7 +7,7 @@ import { getPackageDir, getConfigDir } from './utils/paths';
 import type { ValidateFunction } from 'ajv';
 import type { Logger, SiteVariables } from './types';
 
-const log: Logger = makeLogger(__filename);
+const log: Logger = makeLogger(import.meta.url);
 
 // Store all templates in memory (don't read template files during build)
 const templates: Record<string, string> = {};

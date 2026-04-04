@@ -6,7 +6,7 @@ import { isFeatureEnabled } from './features';
 import { makeLogger } from './log';
 import type { SiteVariables } from './types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 interface ApplyBasePathOptions {
   literateJavaOutputPaths?: Set<string>;

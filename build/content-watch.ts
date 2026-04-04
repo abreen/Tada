@@ -6,7 +6,7 @@ import { getProjectDir } from './utils/paths';
 import { B } from './colors';
 import { makeLogger } from './log';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 interface ChangeDetectionResult {
   templateError: Error | null;

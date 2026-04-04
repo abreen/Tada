@@ -37,7 +37,7 @@ import type {
   RenderCopiedContentOptions,
 } from '../types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 

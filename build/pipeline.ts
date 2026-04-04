@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 import fs from 'fs';
 import { getDevSiteVariables, getProdSiteVariables } from './site-variables';
 import { compileTemplates } from './templates';
@@ -22,9 +21,11 @@ import { makeLogger, printFlair } from './log';
 import { generateBuildManifest, getNextVersion } from './build-manifest';
 import path from 'path';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
-async function runPipeline(mode: 'development' | 'production'): Promise<void> {
+export async function runPipeline(
+  mode: 'development' | 'production',
+): Promise<void> {
   const isDev = mode === 'development';
   const siteVariables = isDev ? getDevSiteVariables() : getProdSiteVariables();
   let distDir: string;
@@ -99,21 +100,4 @@ async function runPipeline(mode: 'development' | 'production'): Promise<void> {
   }
 
   printFlair();
-}
-
-// CLI entry point
-const arg = process.argv[2];
-if (arg === 'dev') {
-  runPipeline('development').catch(err => {
-    log.error`Build failed: ${err.message}`;
-    process.exit(1);
-  });
-} else if (arg === 'prod') {
-  runPipeline('production').catch(err => {
-    log.error`Build failed: ${err.message}`;
-    process.exit(1);
-  });
-} else {
-  console.error('Usage: pipeline.js <dev|prod>');
-  process.exit(1);
 }

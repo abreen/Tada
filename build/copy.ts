@@ -3,7 +3,7 @@ import path from 'path';
 import { makeLogger } from './log';
 import { B } from './colors';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 interface CollectedFile {
   abs: string;

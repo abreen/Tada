@@ -46,10 +46,23 @@ def set_site_config(site_dir, overrides, config_file="site.dev.json"):
     config_path.write_text(json.dumps(config, indent=2) + "\n")
 
 
+COVERAGE_PRELOAD = PACKAGE_DIR / "scripts" / "coverage-preload.ts"
+
+
+def _bun_command(*args):
+    """Build the bun command, injecting --preload for coverage if enabled."""
+    cmd = ["bun"]
+    if os.environ.get("TADA_COVERAGE"):
+        cmd.extend(["--preload", str(COVERAGE_PRELOAD)])
+    cmd.append(str(TADA_BIN))
+    cmd.extend(args)
+    return cmd
+
+
 def run_tada(*args, cwd=None, timeout=120, check=False, input=None):
     """Run a tada CLI command and return the CompletedProcess."""
     return subprocess.run(
-        ["bun", str(TADA_BIN), *args],
+        _bun_command(*args),
         cwd=cwd or os.getcwd(),
         capture_output=True,
         text=True,

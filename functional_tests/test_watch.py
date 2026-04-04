@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import websocket
 
-from conftest import TADA_BIN, get_free_ports, run_tada, set_site_config
+from conftest import TADA_BIN, get_free_ports, run_tada, set_site_config, _bun_command
 
 REBUILD_TIMEOUT_SEC = 30
 INITIAL_BUILD_TIMEOUT_SEC = 60
@@ -27,15 +27,13 @@ class WatchProcess:
         self._stdout_file = open(site_dir / "watch_stdout.log", "w")
         self._stderr_file = open(site_dir / "watch_stderr.log", "w")
         self.proc = subprocess.Popen(
-            [
-                "bun",
-                str(TADA_BIN),
+            _bun_command(
                 "watch",
                 "--port",
                 str(http_port),
                 "--ws-port",
                 str(self.ws_port),
-            ],
+            ),
             cwd=str(site_dir),
             stdout=self._stdout_file,
             stderr=self._stderr_file,

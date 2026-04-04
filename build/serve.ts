@@ -1,26 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import { getDistDir } from './util';
 import { makeLogger } from './log';
 import { B } from './colors';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
-function messageReady(port: number): void {
-  if (process.send) {
-    process.send({ ready: true, port });
-  }
-}
-
-let distDir: string;
-try {
-  distDir = getDistDir();
-} catch (err) {
-  log.error`Failed to start server: ${err}`;
-  process.exit(1);
-}
-
-function resolvePathname(
+export function resolvePathname(
+  distDir: string,
   pathname: string,
 ): { filePath: string; mtime: Date } | null {
   let decodedPath: string;
@@ -54,45 +40,35 @@ function resolvePathname(
   return { filePath: resolvedPath, mtime: stat.mtime };
 }
 
-function createResponse(req: Request): Response {
-  const url = new URL(req.url);
-  const result = resolvePathname(url.pathname);
-  if (!result) {
-    return new Response('Not Found', { status: 404 });
-  }
-
-  const headers = {
-    'Cache-Control': 'no-cache',
-    'Last-Modified': result.mtime.toUTCString(),
-  };
-
-  const ims = req.headers.get('If-Modified-Since');
-  if (ims && new Date(ims) >= new Date(headers['Last-Modified'])) {
-    return new Response(null, { status: 304, headers });
-  }
-
-  return new Response(Bun.file(result.filePath), { headers });
+export interface StartServerOptions {
+  port?: number;
+  distDir: string;
+  onReady?: (port: number) => void;
 }
 
-function getPortArg(): number {
-  const idx = process.argv.indexOf('--port');
-  if (idx === -1) {
-    return 8080;
-  }
-  const raw = process.argv[idx + 1];
-  if (!raw) {
-    log.error`--port requires a value`;
-    process.exit(1);
-  }
-  const port = parseInt(raw, 10);
-  if (isNaN(port) || port <= 0 || port >= 65536) {
-    log.error`Invalid port value: ${raw}`;
-    process.exit(1);
-  }
-  return port;
-}
+export function startServer(options: StartServerOptions): void {
+  const { port = 8080, distDir, onReady } = options;
 
-function listen(port: number): void {
+  function createResponse(req: Request): Response {
+    const url = new URL(req.url);
+    const result = resolvePathname(distDir, url.pathname);
+    if (!result) {
+      return new Response('Not Found', { status: 404 });
+    }
+
+    const headers = {
+      'Cache-Control': 'no-cache',
+      'Last-Modified': result.mtime.toUTCString(),
+    };
+
+    const ims = req.headers.get('If-Modified-Since');
+    if (ims && new Date(ims) >= new Date(headers['Last-Modified'])) {
+      return new Response(null, { status: 304, headers });
+    }
+
+    return new Response(Bun.file(result.filePath), { headers });
+  }
+
   try {
     const server = Bun.serve({
       port,
@@ -104,21 +80,11 @@ function listen(port: number): void {
     });
 
     log.info`Dev server: ${B`http://localhost:${server.port}/index.html`}`;
-    messageReady(server.port as number);
+    if (onReady) {
+      onReady(server.port as number);
+    }
   } catch (err) {
     log.error`Failed to start server on port ${port}: ${err}`;
     process.exit(1);
   }
 }
-
-listen(getPortArg());
-
-process.on('uncaughtException', err => {
-  log.error`Uncaught exception: ${err}`;
-  process.exit(1);
-});
-
-process.on('unhandledRejection', reason => {
-  log.error`Unhandled rejection: ${reason}`;
-  process.exit(1);
-});

@@ -24,7 +24,7 @@ import type {
   WatchState,
 } from './types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 export class ContentRenderer {
   private siteVariables: SiteVariables;
