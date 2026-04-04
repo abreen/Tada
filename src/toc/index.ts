@@ -2,12 +2,12 @@ import { debounce } from '../util';
 
 const LATENCY_MS = 50;
 
-type HeadingLevel = '1' | '2' | '3' | '4' | '5' | '6';
-type AlertType = 'warning' | 'note';
+export type HeadingLevel = '1' | '2' | '3' | '4' | '5' | '6';
+export type AlertType = 'warning' | 'note';
 
-type Alert = { type: AlertType; title: string };
-type Heading = { level: HeadingLevel; innerHtml: string; id: string };
-type Dinkus = { type: 'dinkus' };
+export type Alert = { type: AlertType; title: string };
+export type Heading = { level: HeadingLevel; innerHtml: string; id: string };
+export type Dinkus = { type: 'dinkus' };
 
 function getContainer(parent: HTMLElement): HTMLElement | null {
   return parent.querySelector('nav.toc');
@@ -40,7 +40,7 @@ function scrollIfNeeded(element: HTMLElement, doc: Document) {
   container.scrollTop = desiredScrollTop;
 }
 
-function getHighlightIndexes(items: (Heading | Alert | Dinkus)[]) {
+export function getHighlightIndexes(items: (Heading | Alert | Dinkus)[]) {
   const indexes: (number | null)[] = [];
   let currentHeadingIndex: number | null = null;
   let tocIndex = 0;
@@ -91,13 +91,13 @@ function getHeaderOffset(doc: Document) {
   return element.getBoundingClientRect().height;
 }
 
-function getViewportActivationPoint(doc: Document) {
+function getViewportActivationPoint(win: Window, doc: Document) {
   const headerOffset = getHeaderOffset(doc);
 
-  return headerOffset + (window.innerHeight - headerOffset) / 3;
+  return headerOffset + (win.innerHeight - headerOffset) / 3;
 }
 
-function headingToTableItem(el: HTMLHeadingElement): Heading {
+export function headingToTableItem(el: HTMLHeadingElement): Heading {
   const level = el.tagName[1] as HeadingLevel;
 
   const subtitle = el.querySelector('.heading-subtitle');
@@ -115,7 +115,7 @@ function headingToTableItem(el: HTMLHeadingElement): Heading {
   return { level, id: el.id, innerHtml: el.innerHTML };
 }
 
-function alertToTableItem(el: HTMLElement): Alert | null {
+export function alertToTableItem(el: HTMLElement): Alert | null {
   const classes = el.className
     .split(' ')
     .map(cl => cl.trim())
@@ -138,7 +138,7 @@ function alertToTableItem(el: HTMLElement): Alert | null {
   return null;
 }
 
-function switchCurrent(
+export function switchCurrent(
   oldCurrent: HTMLElement | null,
   newCurrent: HTMLElement,
 ) {
@@ -290,7 +290,10 @@ export default (window: Window) => {
   wireAlertClickHandlers(toc, headingsAndAlerts, items);
 
   function handleScroll() {
-    const viewportActivationPoint = getViewportActivationPoint(window.document);
+    const viewportActivationPoint = getViewportActivationPoint(
+      window,
+      window.document,
+    );
 
     let i = 0;
     for (let idx = 0; idx < headingsAndAlerts.length; idx++) {

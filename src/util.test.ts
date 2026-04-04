@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { formatDuration } from './util';
+import { JSDOM } from 'jsdom';
+import { formatDuration, removeClass, getElement, applyBasePath } from './util';
+
+function create(html: string) {
+  const dom = new JSDOM(`<body>${html}</body>`);
+  return dom.window;
+}
 
 describe('formatDuration', () => {
   test('formats sub-millisecond values', () => {
@@ -52,5 +58,78 @@ describe('formatDuration', () => {
 
   test('formats negative seconds', () => {
     expect(formatDuration(-5000)).toBe('-5.00000s');
+  });
+});
+
+describe('removeClass', () => {
+  test('removes a class from an element', () => {
+    const win = create('<div class="foo bar">X</div>');
+    const el = win.document.querySelector('div') as HTMLElement;
+    removeClass(el, 'foo');
+    expect(el.classList.contains('foo')).toBe(false);
+    expect(el.classList.contains('bar')).toBe(true);
+  });
+
+  test('removes the class attribute when no classes remain', () => {
+    const win = create('<div class="only">X</div>');
+    const el = win.document.querySelector('div') as HTMLElement;
+    removeClass(el, 'only');
+    expect(el.hasAttribute('class')).toBe(false);
+  });
+
+  test('keeps class attribute when other classes remain', () => {
+    const win = create('<div class="a b">X</div>');
+    const el = win.document.querySelector('div') as HTMLElement;
+    removeClass(el, 'a');
+    expect(el.hasAttribute('class')).toBe(true);
+    expect(el.className).toBe('b');
+  });
+});
+
+describe('getElement', () => {
+  test('returns the matching element', () => {
+    const win = create('<div id="target">Hello</div>');
+    const el = getElement(win.document, '#target');
+    expect(el.textContent).toBe('Hello');
+  });
+
+  test('throws when no element matches', () => {
+    const win = create('<div>No match</div>');
+    expect(() => getElement(win.document, '#missing')).toThrow(
+      'no element matching "#missing"',
+    );
+  });
+
+  test('works with a parent element scope', () => {
+    const win = create(
+      '<div id="a"><span class="inner">A</span></div><div id="b"><span class="inner">B</span></div>',
+    );
+    const parent = win.document.getElementById('b')!;
+    const el = getElement(parent, '.inner');
+    expect(el.textContent).toBe('B');
+  });
+});
+
+describe('applyBasePath', () => {
+  test('prepends the base path to a subpath', () => {
+    (globalThis as Record<string, unknown>).__SITE_BASE_PATH__ = '/docs/';
+    expect(applyBasePath('/page.html')).toBe('/docs/page.html');
+  });
+
+  test('handles base path without trailing slash', () => {
+    (globalThis as Record<string, unknown>).__SITE_BASE_PATH__ = '/docs';
+    expect(applyBasePath('/page.html')).toBe('/docs/page.html');
+  });
+
+  test('handles root base path', () => {
+    (globalThis as Record<string, unknown>).__SITE_BASE_PATH__ = '/';
+    expect(applyBasePath('/page.html')).toBe('/page.html');
+  });
+
+  test('throws for subpath not starting with /', () => {
+    (globalThis as Record<string, unknown>).__SITE_BASE_PATH__ = '/docs';
+    expect(() => applyBasePath('page.html')).toThrow(
+      'invalid internal path, must start with "/"',
+    );
   });
 });

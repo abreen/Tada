@@ -75,6 +75,10 @@ describe('to12Hour', () => {
   test('formats 23:59', () => {
     expect(to12Hour(23, 59)).toBe('11:59 p.m.');
   });
+
+  test('omits period when style is null', () => {
+    expect(to12Hour(14, 0, null)).toBe('2:00');
+  });
 });
 
 describe('normalizeHM', () => {
