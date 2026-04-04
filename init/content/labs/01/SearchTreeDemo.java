@@ -27,7 +27,5 @@ public class SearchTreeDemo {
         root = insert(root, null, "kiwi");
         root = insert(root, null, "apple");
         root = insert(root, null, "date");
-        root = insert(root, null, "grape");
-        root = insert(root, null, "mango");
     }
 }
