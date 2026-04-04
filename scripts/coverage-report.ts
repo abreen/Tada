@@ -5,6 +5,7 @@ import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
 import { parse as parseLcov } from '@saintedlama/lcov-parse';
+import { createInstrumenter } from 'istanbul-lib-instrument';
 
 const coverageDir = path.resolve(import.meta.dir, '..', 'coverage');
 const functionalDir = path.join(coverageDir, 'functional');
@@ -58,6 +59,41 @@ if (fs.existsSync(unitLcovPath)) {
       fc.data.f[idx] = hit ?? 0;
     }
     map.addFileCoverage(fc);
+  }
+}
+
+// Add zero-coverage entries for source files not touched by any test
+const transpiler = new Bun.Transpiler({ loader: 'ts', target: 'bun' });
+const instrumenter = createInstrumenter({
+  esModules: true,
+  compact: false,
+  produceSourceMap: false,
+});
+
+const packageDir = path.resolve(import.meta.dir, '..');
+for (const dir of ['build', 'src']) {
+  const base = path.join(packageDir, dir);
+  const entries = fs.readdirSync(base, {
+    recursive: true,
+    withFileTypes: true,
+  });
+  for (const entry of entries) {
+    if (
+      !entry.isFile() ||
+      !entry.name.endsWith('.ts') ||
+      entry.name.includes('.test.')
+    ) {
+      continue;
+    }
+    const absPath = path.join(entry.parentPath, entry.name);
+    if (map.data[absPath]) {
+      continue;
+    }
+    const source = fs.readFileSync(absPath, 'utf8');
+    const js = transpiler.transformSync(source);
+    instrumenter.instrumentSync(js, absPath);
+    const emptyCoverage = instrumenter.lastFileCoverage();
+    map.addFileCoverage(emptyCoverage);
   }
 }
 
