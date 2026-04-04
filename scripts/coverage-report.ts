@@ -4,15 +4,16 @@ import path from 'path';
 import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
+import { parse as parseLcov } from '@saintedlama/lcov-parse';
 
 const coverageDir = path.resolve(import.meta.dir, '..', 'coverage');
 const functionalDir = path.join(coverageDir, 'functional');
 const unitLcovPath = path.join(coverageDir, 'unit', 'lcov.info');
 const outputDir = path.join(coverageDir, 'report');
 
-// Merge all functional test coverage JSON files into one coverage map
 const map = libCoverage.createCoverageMap({});
 
+// Merge functional test coverage (Istanbul JSON files)
 if (fs.existsSync(functionalDir)) {
   for (const file of fs.readdirSync(functionalDir)) {
     if (!file.endsWith('.json')) {
@@ -25,29 +26,44 @@ if (fs.existsSync(functionalDir)) {
   }
 }
 
-// Write functional coverage as lcov
-const functionalLcovPath = path.join(coverageDir, 'functional.lcov');
-const context = libReport.createContext({ dir: coverageDir, coverageMap: map });
-const lcovReport = reports.create('lcovonly', { file: 'functional.lcov' });
-lcovReport.execute(context);
-
-// Merge with unit test lcov if it exists
-const mergedLcovPath = path.join(coverageDir, 'lcov.info');
-let merged = fs.readFileSync(functionalLcovPath, 'utf8');
+// Merge unit test coverage (Bun lcov output)
 if (fs.existsSync(unitLcovPath)) {
-  merged += fs.readFileSync(unitLcovPath, 'utf8');
+  const lcov = fs.readFileSync(unitLcovPath, 'utf8');
+  const records = await parseLcov(lcov);
+
+  for (const record of records) {
+    const absPath = path.resolve(coverageDir, '..', record.file);
+    const fc = libCoverage.createFileCoverage(absPath);
+    for (const { line, hit } of record.lines.details) {
+      const idx = Object.keys(fc.data.statementMap).length;
+      fc.data.statementMap[idx] = {
+        start: { line, column: 0 },
+        end: { line, column: 0 },
+      };
+      fc.data.s[idx] = hit;
+    }
+    for (const { line, name, hit } of record.functions.details) {
+      const idx = Object.keys(fc.data.fnMap).length;
+      fc.data.fnMap[idx] = {
+        name: name ?? `fn_${line}`,
+        decl: {
+          start: { line: line ?? 0, column: 0 },
+          end: { line: line ?? 0, column: 0 },
+        },
+        loc: {
+          start: { line: line ?? 0, column: 0 },
+          end: { line: line ?? 0, column: 0 },
+        },
+      };
+      fc.data.f[idx] = hit ?? 0;
+    }
+    map.addFileCoverage(fc);
+  }
 }
-fs.writeFileSync(mergedLcovPath, merged);
 
-// Generate HTML report from functional coverage (the interesting one)
+// Generate reports from merged coverage
 fs.mkdirSync(outputDir, { recursive: true });
-const htmlContext = libReport.createContext({
-  dir: outputDir,
-  coverageMap: map,
-});
-const htmlReport = reports.create('html', {});
-htmlReport.execute(htmlContext);
-
-// Print text summary
-const textReport = reports.create('text', {});
-textReport.execute(htmlContext);
+const context = libReport.createContext({ dir: outputDir, coverageMap: map });
+reports.create('lcovonly', { file: 'lcov.info' }).execute(context);
+reports.create('html', {}).execute(context);
+reports.create('text', {}).execute(context);
