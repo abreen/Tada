@@ -10,7 +10,7 @@ export default (window: Window) => {
   const mountParent =
     (window.document.getElementById(
       'to-top-container',
-    ) as HTMLElement | null) ?? document.body;
+    ) as HTMLElement | null) ?? window.document.body;
 
   function createLink(parent: HTMLElement): HTMLAnchorElement {
     const link = window.document.createElement('a');

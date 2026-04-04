@@ -17,8 +17,8 @@ function getCurrentListItem(parent: HTMLElement): HTMLLIElement | null {
   return parent.querySelector('nav.toc .current');
 }
 
-function scrollIfNeeded(element: HTMLElement) {
-  const container = getContainer(document.body);
+function scrollIfNeeded(element: HTMLElement, doc: Document) {
+  const container = getContainer(doc.body as HTMLElement);
   if (container == null) {
     return;
   }
@@ -82,8 +82,8 @@ function getTocElements(
 }
 
 /* Calculate how much to offset scroll calculations based on floating header */
-function getHeaderOffset() {
-  const element = document.querySelector('header details summary');
+function getHeaderOffset(doc: Document) {
+  const element = doc.querySelector('header details summary');
   if (!element) {
     return 0;
   }
@@ -91,8 +91,8 @@ function getHeaderOffset() {
   return element.getBoundingClientRect().height;
 }
 
-function getViewportActivationPoint() {
-  const headerOffset = getHeaderOffset();
+function getViewportActivationPoint(doc: Document) {
+  const headerOffset = getHeaderOffset(doc);
 
   return headerOffset + (window.innerHeight - headerOffset) / 3;
 }
@@ -176,7 +176,7 @@ function wireAlertClickHandlers(
           if (titleId) {
             history.replaceState(
               null,
-              document.title,
+              window.document.title,
               `${window.location.pathname}#${titleId}`,
             );
           }
@@ -227,7 +227,9 @@ export default (window: Window) => {
 
     const updateFromHash = () => {
       const line = parseHash(window.location.hash);
-      const existingItem = getCurrentListItem(document.body);
+      const existingItem = getCurrentListItem(
+        window.document.body as HTMLElement,
+      );
 
       if (line == null) {
         if (existingItem) {
@@ -248,7 +250,7 @@ export default (window: Window) => {
       const nextItem = elements[best]?.parentElement ?? null;
       if (nextItem != null && nextItem !== existingItem) {
         switchCurrent(existingItem, nextItem);
-        scrollIfNeeded(nextItem);
+        scrollIfNeeded(nextItem, window.document);
       }
     };
 
@@ -288,7 +290,7 @@ export default (window: Window) => {
   wireAlertClickHandlers(toc, headingsAndAlerts, items);
 
   function handleScroll() {
-    const viewportActivationPoint = getViewportActivationPoint();
+    const viewportActivationPoint = getViewportActivationPoint(window.document);
 
     let i = 0;
     for (let idx = 0; idx < headingsAndAlerts.length; idx++) {
@@ -300,14 +302,16 @@ export default (window: Window) => {
       }
     }
 
-    const existingItem = getCurrentListItem(document.body);
+    const existingItem = getCurrentListItem(
+      window.document.body as HTMLElement,
+    );
     const highlightIndex = highlightIndexes[i];
     const nextItem =
       highlightIndex == null ? null : elements[highlightIndex]?.parentElement;
 
     if (nextItem != null && nextItem !== existingItem) {
       switchCurrent(existingItem, nextItem);
-      scrollIfNeeded(nextItem);
+      scrollIfNeeded(nextItem, window.document);
     }
   }
   const debounced = debounce(handleScroll, LATENCY_MS);

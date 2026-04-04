@@ -43,6 +43,7 @@ async function goToStep(
   elements: WidgetElements,
   manifestUrl: string,
   stepIndex: number,
+  doc: Document,
 ): Promise<void> {
   stepIndex = Math.max(0, Math.min(stepIndex, state.manifest.totalSteps - 1));
   const lastChunk = Math.floor(stepIndex / state.manifest.chunkSize);
@@ -52,7 +53,7 @@ async function goToStep(
   }
   await Promise.all(loads);
   state.currentStep = stepIndex;
-  renderWidgetState(state, elements);
+  renderWidgetState(state, elements, doc);
 }
 
 function updateSourceHighlight(panel: HTMLElement, currentLine: number): void {
@@ -72,6 +73,7 @@ function updateStepControls(
   container: HTMLElement,
   currentStep: number,
   totalSteps: number,
+  doc: Document,
 ): void {
   const counter = container.querySelector(
     '.trace-step-counter',
@@ -87,7 +89,7 @@ function updateStepControls(
   const last = container.querySelector('.trace-last') as HTMLButtonElement;
   const btns = [first, prev, next, last];
 
-  const focused = document.activeElement;
+  const focused = doc.activeElement;
 
   if (first) {
     first.disabled = currentStep === 0;
@@ -113,7 +115,7 @@ function updateStepControls(
   }
 
   // Roving tabindex: the focused button is the Tab stop.
-  const currentFocus = document.activeElement;
+  const currentFocus = doc.activeElement;
   const enabled = btns.filter(b => b && !b.disabled);
   const focusedBtn = enabled.find(b => b === currentFocus);
   for (const b of enabled) {
@@ -129,13 +131,18 @@ function updateStepControls(
   }
 }
 
-function renderWidgetState(state: WidgetState, elements: WidgetElements): void {
+function renderWidgetState(
+  state: WidgetState,
+  elements: WidgetElements,
+  doc: Document,
+): void {
   const entry = getStep(state);
   updateSourceHighlight(elements.source, entry.line);
   updateStepControls(
     elements.controls,
     state.currentStep,
     state.manifest.totalSteps,
+    doc,
   );
   let output = '';
   for (let i = 0; i <= state.currentStep; i++) {
@@ -158,7 +165,7 @@ function renderWidgetState(state: WidgetState, elements: WidgetElements): void {
   }
 }
 
-async function initWidget(root: HTMLElement): Promise<void> {
+async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
   const manifestUrl = root.dataset.traceManifest;
   if (!manifestUrl) {
     return;
@@ -184,16 +191,16 @@ async function initWidget(root: HTMLElement): Promise<void> {
   const nextBtn = controls.querySelector('.trace-next') as HTMLButtonElement;
   const lastBtn = controls.querySelector('.trace-last') as HTMLButtonElement;
   firstBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, 0),
+    goToStep(state, elements, manifestUrl, 0, doc),
   );
   prevBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, state.currentStep - 1),
+    goToStep(state, elements, manifestUrl, state.currentStep - 1, doc),
   );
   nextBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, state.currentStep + 1),
+    goToStep(state, elements, manifestUrl, state.currentStep + 1, doc),
   );
   lastBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, manifest.totalSteps - 1),
+    goToStep(state, elements, manifestUrl, manifest.totalSteps - 1, doc),
   );
 
   const btns = [firstBtn, prevBtn, nextBtn, lastBtn];
@@ -202,7 +209,7 @@ async function initWidget(root: HTMLElement): Promise<void> {
       return;
     }
     const enabled = btns.filter(b => !b.disabled);
-    const idx = enabled.indexOf(document.activeElement as HTMLButtonElement);
+    const idx = enabled.indexOf(doc.activeElement as HTMLButtonElement);
     if (idx < 0) {
       return;
     }
@@ -220,7 +227,7 @@ async function initWidget(root: HTMLElement): Promise<void> {
 
   const elements: WidgetElements = { root, source, controls, output, diagram };
 
-  updateStepControls(controls, state.currentStep, manifest.totalSteps);
+  updateStepControls(controls, state.currentStep, manifest.totalSteps, doc);
 
   diagram.innerHTML = entry.svg;
   updateSourceHighlight(source, entry.line);
@@ -234,6 +241,6 @@ export default function mountTrace(window: Window): void {
   }
 
   for (const widget of widgets) {
-    initWidget(widget as HTMLElement);
+    initWidget(widget as HTMLElement, window.document);
   }
 }
