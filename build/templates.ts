@@ -120,7 +120,7 @@ export function compileTemplates(
     log.debug`Reading ${fileName}`;
     jsonData[fileName] = JSON.parse(
       _.template(fs.readFileSync(filePath, 'utf-8'))({
-        ...(siteVariables.vars || {}),
+        vars: siteVariables.vars || {},
         site: siteVariables,
         base: siteVariables.base,
         basePath: siteVariables.basePath,

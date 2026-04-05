@@ -24,7 +24,7 @@ Tada reads one of two JSON config files depending on the build mode:
 - **tintAmount**: background tint intensity, 0 to 100% (default: 100)
 - **internalDomains**: list of domains treated as internal for link styling
 - **codeLanguages**: maps file extensions to language names (default: Java, Python)
-- **vars**: arbitrary key-value pairs accessible in templates
+- **vars**: arbitrary key-value pairs accessible in templates as `vars.*`
 
 ## Feature flags
 

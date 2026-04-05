@@ -63,15 +63,42 @@ jobs:
 
     - run: bun install
 
+    - name: Download coverage report
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      with:
+        name: coverage-report
+        path: coverage/report/
+
+    - name: Extract coverage percentage
+      id: coverage
+      run: |
+        total=0; hit=0
+        while IFS= read -r line; do
+          case "$line" in
+            LF:*) total=$((total + ${line#LF:})) ;;
+            LH:*) hit=$((hit + ${line#LH:})) ;;
+          esac
+        done < coverage/report/lcov.info
+        echo "percent=$((hit * 100 / total))" >> "$GITHUB_OUTPUT"
+
     - name: Initialize example site
       run: >
         bun run bin/tada.ts init example --no-interactive
         --prod-base https://abreen.io
         --prod-base-path /Tada
 
+    - name: Add coverage vars to site config
+      run: |
+        jq --arg pct "${{ steps.coverage.outputs.percent }}" \
+           '.vars.testCoveragePercent = ($pct | tonumber) | .vars.testCoverageUrl = "coverage/"' \
+           example/site.prod.json > tmp.json && mv tmp.json example/site.prod.json
+
     - name: Build example site
       run: ../bin/tada.ts prod
       working-directory: example
+
+    - name: Copy coverage report into site
+      run: cp -r coverage/report/ example/dist-prod/v1/coverage/
 
     - name: Upload static files as artifact
       uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3

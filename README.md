@@ -234,7 +234,7 @@ Example site configuration JSON file:
 | `codeLanguages` | Map file extension to Shiki language (e.g., `"java": "java"`) |
 | `faviconColor` | *Optional*, background color for favicon (defaults to `themeColor`) |
 | `faviconFontWeight` | *Optional*, font weight used for favicon text (default `700`) |
-| `vars` | Arbitrary key/value variables exposed to templates/content (e.g., `<%= staffEmail %>`) |
+| `vars` | Arbitrary key/value variables exposed to templates/content as `vars.*` (e.g., `<%= vars.staffEmail %>`) |
 
 
 #### `nav.json`
@@ -327,7 +327,7 @@ templates][lodash].
 - Site config values are available under `site` (e.g., `site.title`)
 - Page variables (from front matter) are available under `page`
 - Custom variables from the `"vars"` property of the config are available
-  without any prefix (e.g., `<%= staffEmail %>`)
+  under `vars` (e.g., `<%= vars.staffEmail %>`)
 
 
 

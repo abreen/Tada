@@ -19,6 +19,10 @@ See the [Markdown examples page](/markdown.html) for syntax examples.
 
 !!! note
 For more documentation, see the [GitHub page][github].
+<% if (vars.testCoveragePercent) { %>
+<%= page.toolName %>'s code is <%= vars.testCoveragePercent %>% covered by automated
+tests. See [the test coverage metrics](<%= vars.testCoverageUrl %>).
+<% } %>
 !!!
 
 

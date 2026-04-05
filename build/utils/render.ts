@@ -98,7 +98,7 @@ function createTemplateParameters({
   subPath,
 }: TemplateParametersInput): Record<string, unknown> {
   return {
-    ...(siteVariables.vars || {}),
+    vars: siteVariables.vars || {},
     ...createGlobals(pageVariables, siteVariables, subPath),
     site: siteVariables,
     base: siteVariables.base,

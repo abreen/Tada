@@ -23,5 +23,5 @@ Utility functions are available for formatting dates, applying the base path to
 URLs, rendering other templates, loading JSON data files, generating CSS class
 strings, and rendering the time zone chooser.
 
-Site config values under `vars` are accessible as template variables, and both
-`nav.json` and `authors.json` support template interpolation using these values.
+Site config values are accessible in templates. Both `nav.json` and
+`authors.json` support template interpolation using these values.
