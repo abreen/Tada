@@ -90,15 +90,15 @@ jobs:
     - name: Add coverage vars to site config
       run: |
         jq --arg pct "${{ steps.coverage.outputs.percent }}" \
-           '.vars.testCoveragePercent = ($pct | tonumber) | .vars.testCoverageUrl = "coverage/"' \
+           '.vars.testCoveragePercent = ($pct | tonumber) | .vars.testCoverageUrl = "/coverage/index.html"' \
            example/site.prod.json > tmp.json && mv tmp.json example/site.prod.json
+
+    - name: Copy coverage report into public
+      run: cp -r coverage/report/ example/public/coverage/
 
     - name: Build example site
       run: ../bin/tada.ts prod
       working-directory: example
-
-    - name: Copy coverage report into site
-      run: cp -r coverage/report/ example/dist-prod/v1/coverage/
 
     - name: Upload static files as artifact
       uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3

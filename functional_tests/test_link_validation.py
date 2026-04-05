@@ -87,6 +87,58 @@ class TestLinkToPartialBroken:
         assert "/_partial.html" in result.stdout
 
 
+class TestLinkToPublicFile:
+    """A link to a file in public/ is valid."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        (site / "public" / "data.csv").write_text("a,b\n1,2\n")
+        (site / "content" / "page.md").write_text(
+            "title: Page\n\nDownload [the data](/data.csv).\n"
+        )
+
+        yield site
+
+    def test_build_succeeds(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"build failed: {result.stderr}"
+
+
+class TestLinkToPublicIndexHtml:
+    """A link to index.html inside a public/ subdirectory is valid."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        report_dir = site / "public" / "report"
+        report_dir.mkdir(parents=True)
+        (report_dir / "index.html").write_text("<html><body>Report</body></html>")
+        (site / "content" / "page.md").write_text(
+            "title: Page\n\nSee [the report](/report/index.html).\n"
+        )
+
+        yield site
+
+    def test_build_succeeds(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"build failed: {result.stderr}"
+
+    def test_directory_link_rejected(self, site_dir):
+        """Linking to /report/ instead of /report/index.html is an error."""
+        (site_dir / "content" / "page.md").write_text(
+            "title: Page\n\nSee [the report](/report/).\n"
+        )
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode != 0
+
+
 class TestDisabledNavLinkSkipped:
     """A disabled nav link has no href in the HTML, so it is not validated."""
 

@@ -36,8 +36,9 @@ external. External links open in a new tab.
 
 ## Internal link validation
 
-Internal links are checked against the set of known pages at build time. Broken
-links cause the build to fail.
+Internal links are checked against the set of known output paths at build time.
+This includes generated pages, assets in `content/`, and files in `public/`.
+Broken links cause the build to fail.
 
 This validation covers:
 
