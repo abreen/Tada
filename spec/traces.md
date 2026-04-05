@@ -22,12 +22,12 @@ metadata and a line-to-step index. These files are written to
 
 ## Widget
 
-The rendered widget shows the syntax-highlighted source on the left and a memory
-diagram on the right (stacked vertically on narrow viewports). A toolbar with
-step buttons and a counter lets the user navigate through execution steps. Chunks
-are fetched on demand as the user steps forward.
+The rendered widget uses a vertical layout: the memory diagram on top, the
+syntax-highlighted source below it, and program output at the bottom. A toolbar
+with step buttons and a counter lets the user navigate through execution steps.
+Chunks are fetched on demand as the user steps forward.
 
-The source panel highlights the current line. The memory diagram is drawn on an
-HTML canvas (Konva) and depicts stack frames with local variables, heap objects
-(arrays, objects, strings), and reference arrows between them. The diagram reads
-colors from CSS custom properties and re-renders on color scheme changes.
+The source panel highlights the current line. The memory diagram is rendered as
+SVG and depicts stack frames with local variables, heap objects (arrays, objects,
+strings), and reference arrows between them. The diagram reads colors from CSS
+custom properties and re-renders on color scheme changes.
