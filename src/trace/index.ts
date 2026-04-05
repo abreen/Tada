@@ -106,7 +106,11 @@ function updateStepControls(
 
   // When a clicked button becomes disabled, the browser removes focus.
   // Move focus to a sensible sibling so the outline stays visible.
-  if (focused instanceof HTMLButtonElement && focused.disabled) {
+  if (
+    focused &&
+    'disabled' in focused &&
+    (focused as HTMLButtonElement).disabled
+  ) {
     if (focused === first || focused === prev) {
       next?.focus();
     } else if (focused === next || focused === last) {
