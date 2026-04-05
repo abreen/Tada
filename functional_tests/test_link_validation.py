@@ -163,7 +163,7 @@ class TestDisabledNavLinkSkipped:
 
     def test_nonexistent_link_not_in_html(self, site_dir):
         run_tada("dev", cwd=str(site_dir))
-        build_dir = site_dir / "_build"
+        build_dir = site_dir / "dist"
         for html_file in build_dir.rglob("*.html"):
             content = html_file.read_text()
             assert "/nonexistent.html" not in content, (
