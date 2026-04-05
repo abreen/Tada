@@ -84,18 +84,18 @@ function getOffsetMinutes(tz: string, date: Date): number {
   return (utcTs - date.getTime()) / 60000;
 }
 
-// typeof guard prevents ReferenceError when tests import this module
-// without going through the bundler (which substitutes __SITE_TIMEZONES__).
-const TIMEZONES: TimeZone[] =
-  typeof __SITE_TIMEZONES__ !== 'undefined' ? __SITE_TIMEZONES__ : [];
+// Read lazily so tests can set __SITE_TIMEZONES__ before the first call.
+function getTimezones(): TimeZone[] {
+  return typeof __SITE_TIMEZONES__ !== 'undefined' ? __SITE_TIMEZONES__ : [];
+}
 
 function getDefaultTimezone() {
   const value = __SITE_DEFAULT_TIMEZONE__;
-  return TIMEZONES.find(tz => tz.value === value)!;
+  return getTimezones().find(tz => tz.value === value)!;
 }
 
 function computeOffsets(baseDate: Date) {
-  TIMEZONES.forEach(tz => {
+  getTimezones().forEach(tz => {
     tz.offsetMinutes = getOffsetMinutes(tz.value, baseDate);
   });
 }
@@ -134,7 +134,7 @@ export default (window: Window) => {
   let initialTz = defaultTz.value;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored && TIMEZONES.some(t => t.value === stored)) {
+    if (stored && getTimezones().some(t => t.value === stored)) {
       initialTz = stored;
     }
   } catch {
@@ -147,66 +147,69 @@ export default (window: Window) => {
 
   // Snapshot the original AM/PM style from each <time> element's text
   const periodStyles = new Map<HTMLTimeElement, PeriodStyle | null>();
-  Array.from(window.document.querySelectorAll('time[datetime]'))
-    .filter((el): el is HTMLTimeElement => el instanceof HTMLTimeElement)
-    .forEach(el => {
-      periodStyles.set(el, detectPeriodStyle(el.textContent ?? ''));
-    });
+  (
+    Array.from(
+      window.document.querySelectorAll('time[datetime]'),
+    ) as HTMLTimeElement[]
+  ).forEach(el => {
+    periodStyles.set(el, detectPeriodStyle(el.textContent ?? ''));
+  });
   const pagePeriodStyle = dominantPeriodStyle(periodStyles);
 
   function updateTimes(targetTz: string) {
-    const target = TIMEZONES.find(t => t.value === targetTz) || defaultTz;
+    const target = getTimezones().find(t => t.value === targetTz) || defaultTz;
     const targetOffset = target.offsetMinutes ?? 0;
     const deltaMinutes = targetOffset - defaultOffset;
 
-    Array.from(window.document.querySelectorAll('time[datetime]'))
-      .filter(el => el instanceof HTMLTimeElement)
-      .forEach(el => {
-        const datetime = el.getAttribute('datetime');
-        if (!datetime) {
-          return;
+    (
+      Array.from(
+        window.document.querySelectorAll('time[datetime]'),
+      ) as HTMLTimeElement[]
+    ).forEach(el => {
+      const datetime = el.getAttribute('datetime');
+      if (!datetime) {
+        return;
+      }
+
+      const isDefault = target.value === defaultTz.value;
+
+      const baseMinutes = parseHHMM(datetime);
+      if (isNaN(baseMinutes)) {
+        return;
+      }
+
+      // raw (can be < 0 or > 1439)
+      const rawMinutes = baseMinutes + deltaMinutes;
+      const dayShift = Math.floor(rawMinutes / 1440) - (rawMinutes < 0 ? 1 : 0);
+      // Normalize after computing dayShift
+      const [h, m] = normalizeHM(rawMinutes);
+
+      let suffix = '';
+      if (!isDefault) {
+        if (dayShift === 1) {
+          suffix = ' <span class="next-prev-day">(next day)</span>';
+        } else if (dayShift === -1) {
+          suffix = ' <span class="next-prev-day">(prev. day)</span>';
         }
+      }
 
-        const isDefault = target.value === defaultTz.value;
+      const originalStyle = periodStyles.get(el) ?? null;
+      const originalIsPm = Math.floor(baseMinutes / 60) >= 12;
+      const periodChanged = originalIsPm !== h >= 12 || dayShift !== 0;
+      const style =
+        originalStyle === null && periodChanged
+          ? pagePeriodStyle
+          : originalStyle;
+      el.innerHTML = to12Hour(h, m, style) + suffix;
 
-        const baseMinutes = parseHHMM(datetime);
-        if (isNaN(baseMinutes)) {
-          return;
-        }
-
-        // raw (can be < 0 or > 1439)
-        const rawMinutes = baseMinutes + deltaMinutes;
-        const dayShift =
-          Math.floor(rawMinutes / 1440) - (rawMinutes < 0 ? 1 : 0);
-        // Normalize after computing dayShift
-        const [h, m] = normalizeHM(rawMinutes);
-
-        let suffix = '';
-        if (!isDefault) {
-          if (dayShift === 1) {
-            suffix = ' <span class="next-prev-day">(next day)</span>';
-          } else if (dayShift === -1) {
-            suffix = ' <span class="next-prev-day">(prev. day)</span>';
-          }
-        }
-
-        const originalStyle = periodStyles.get(el) ?? null;
-        const originalIsPm = Math.floor(baseMinutes / 60) >= 12;
-        const periodChanged = originalIsPm !== h >= 12 || dayShift !== 0;
-        const style =
-          originalStyle === null && periodChanged
-            ? pagePeriodStyle
-            : originalStyle;
-        el.innerHTML = to12Hour(h, m, style) + suffix;
-
-        if (isDefault) {
-          el.classList.remove('is-modified');
-          el.title = '';
-        } else {
-          el.classList.add('is-modified');
-          el.title = `${to12Hour(...normalizeHM(baseMinutes), style ?? pagePeriodStyle)} ${defaultTz.abbreviation}`;
-        }
-      });
+      if (isDefault) {
+        el.classList.remove('is-modified');
+        el.title = '';
+      } else {
+        el.classList.add('is-modified');
+        el.title = `${to12Hour(...normalizeHM(baseMinutes), style ?? pagePeriodStyle)} ${defaultTz.abbreviation}`;
+      }
+    });
   }
 
   window.document
