@@ -29,7 +29,7 @@
     "lint": "eslint src/ build/ bin/",
     "typecheck": "tsc --noEmit",
     "test:functional": "python3 -m pip install -q -r functional_tests/requirements.txt && python3 -m pytest functional_tests/ -v -n auto --durations=10",
-    "test:all": "bun test && bun run test:functional",
+    "test:all": "bun test && bun run test:playwright && bun run test:functional",
     "test:coverage": "rm -rf coverage/unit coverage/functional && bun test --coverage && TADA_COVERAGE=1 python3 -m pip install -q -r functional_tests/requirements.txt && TADA_COVERAGE=1 python3 -m pytest functional_tests/ -v -n auto --durations=10 && bun run scripts/coverage-report.ts",
     "test:playwright": "bunx playwright test",
     "init-example": "bun run bin/tada.ts init example --no-interactive",
