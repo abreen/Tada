@@ -11,6 +11,24 @@ PACKAGE_DIR = Path(__file__).resolve().parent.parent
 TADA_BIN = PACKAGE_DIR / "bin" / "tada.ts"
 
 
+def pytest_addoption(parser):
+    parser.addoption("--shard", type=int, default=None,
+                     help="1-indexed shard number (requires --num-shards)")
+    parser.addoption("--num-shards", type=int, default=1,
+                     help="Total number of shards to split tests across")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Split collected tests by file across shards using round-robin."""
+    shard = config.getoption("--shard")
+    num_shards = config.getoption("--num-shards")
+    if shard is None or num_shards <= 1:
+        return
+    files = sorted(set(str(item.fspath) for item in items))
+    shard_files = set(f for i, f in enumerate(files) if i % num_shards == shard - 1)
+    items[:] = [item for item in items if str(item.fspath) in shard_files]
+
+
 def pytest_configure(config):
     """When AGENT is set, reduce output verbosity."""
     if os.environ.get("AGENT", ""):
