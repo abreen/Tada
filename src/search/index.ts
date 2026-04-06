@@ -329,10 +329,16 @@ export default (window: Window) => {
 
   async function update() {
     await doSearch(state);
+    if (!state.showResults) {
+      return;
+    }
     render(input!, resultsContainer, state);
   }
 
   function hide() {
+    if (!state.showResults) {
+      return;
+    }
     state.showResults = false;
     render(input!, resultsContainer, state);
   }
@@ -343,6 +349,12 @@ export default (window: Window) => {
       return;
     }
     state.value = value;
+    if (value.length === 0) {
+      hide();
+      state.results = [];
+      state.totalResults = 0;
+      return;
+    }
     state.showResults = true;
     update().catch(() => {});
   }

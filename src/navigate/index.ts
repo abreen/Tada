@@ -139,7 +139,6 @@ async function performNavigation(
     }
     const parsed = new URL(url);
     currentPath = parsed.pathname + parsed.search;
-    clearSearch();
 
     if (typeof scrollTarget === 'string') {
       // Hash target
@@ -263,7 +262,9 @@ export default function mountNavigate(window: Window): () => void {
 
     event.preventDefault();
 
-    // Close the header details if open (it persists across navigations)
+    // Clear search and close header immediately, before the fetch
+    clearSearch();
+
     const details = window.document.querySelector(
       'header details',
     ) as HTMLDetailsElement | null;

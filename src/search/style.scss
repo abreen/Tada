@@ -14,7 +14,6 @@ header {
 
   .results-container.is-showing .results {
     opacity: 1;
-    transform: translateY(0);
     pointer-events: all;
   }
 
@@ -40,13 +39,6 @@ header {
     max-height: 66vh;
     min-height: 80px;
     @include user-select(none);
-
-    @media (prefers-reduced-motion: no-preference) {
-      transform: translateY(-8px);
-      transition:
-        opacity 0.25s ease,
-        transform 0.25s ease;
-    }
 
     .results-info {
       display: flex;
