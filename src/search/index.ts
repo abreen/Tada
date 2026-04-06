@@ -201,10 +201,8 @@ function render(
     const hint = document.createElement('span');
     hint.className = 'search-hint';
     const kbd1 = document.createElement('kbd');
-    kbd1.textContent = 'Ctrl';
-    const kbd2 = document.createElement('kbd');
-    kbd2.textContent = 'Space';
-    hint.append(kbd1, '+', kbd2, '\u00a0to search');
+    kbd1.textContent = '/';
+    hint.append('Press\u00a0', kbd1, '\u00a0to search');
     infoSpan.appendChild(hint);
 
     resultsDiv.insertBefore(infoSpan, resultsDiv.firstChild);
@@ -493,7 +491,11 @@ export default (window: Window) => {
 
   function handleWindowKeyDown(e: KeyboardEvent) {
     resultsContainer.classList.add('is-typing');
-    if (e.key === ' ' && e.ctrlKey && !e.altKey && !e.metaKey) {
+    if (e.key === '/' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+        return;
+      }
       e.preventDefault();
       input!.focus();
     }
