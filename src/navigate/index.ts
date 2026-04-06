@@ -135,6 +135,11 @@ async function performNavigation(
   const parser = new DOMParser();
   const newDoc = parser.parseFromString(html, 'text/html');
 
+  if (!newDoc.querySelector('meta[name="generator"][content="Tada"]')) {
+    window.location.href = url;
+    return;
+  }
+
   const doSwap = () => {
     teardownPerPageComponents();
     swapContent(newDoc);
