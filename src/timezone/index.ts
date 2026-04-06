@@ -85,8 +85,16 @@ function getOffsetMinutes(tz: string, date: Date): number {
 }
 
 // Read lazily so tests can set __SITE_TIMEZONES__ before the first call.
+// Cache the result so mutations (like computeOffsets adding offsetMinutes)
+// persist across calls. The bundler inlines __SITE_TIMEZONES__ as a JSON
+// literal, so each raw access would create a fresh array.
+let _timezones: TimeZone[] | null = null;
 function getTimezones(): TimeZone[] {
-  return typeof __SITE_TIMEZONES__ !== 'undefined' ? __SITE_TIMEZONES__ : [];
+  if (_timezones === null) {
+    _timezones =
+      typeof __SITE_TIMEZONES__ !== 'undefined' ? __SITE_TIMEZONES__ : [];
+  }
+  return _timezones;
 }
 
 function getDefaultTimezone() {
