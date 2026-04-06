@@ -135,7 +135,7 @@ async function performNavigation(
   const parser = new DOMParser();
   const newDoc = parser.parseFromString(html, 'text/html');
 
-  const doSwap = async () => {
+  const doSwap = () => {
     teardownPerPageComponents();
     swapContent(newDoc);
     updateHead(newDoc);
@@ -160,14 +160,10 @@ async function performNavigation(
     } else {
       window.scrollTo({ top: 0 });
     }
-
-    await mountPerPageComponents(window);
   };
 
   const doc = document as Document & {
-    startViewTransition?: (cb: () => Promise<void>) => {
-      finished: Promise<void>;
-    };
+    startViewTransition?: (cb: () => void) => { finished: Promise<void> };
   };
 
   if (typeof doc.startViewTransition === 'function') {
@@ -200,7 +196,7 @@ async function performNavigation(
     );
 
     const transition = doc.startViewTransition(() => {
-      const result = doSwap();
+      doSwap();
       // Apply transition names to the new title if the old one was visible
       if (titleVisible) {
         const newTitleEl = document.querySelector('.title-and-info');
@@ -221,7 +217,6 @@ async function performNavigation(
           }
         }
       }
-      return result;
     });
     await transition.finished;
     document.documentElement.classList.remove('nav-forward', 'nav-back');
@@ -245,9 +240,10 @@ async function performNavigation(
       newBreadcrumb.style.viewTransitionName = '';
     }
   } else {
-    await doSwap();
+    doSwap();
   }
 
+  await mountPerPageComponents(window);
   currentAbortController = null;
 }
 
