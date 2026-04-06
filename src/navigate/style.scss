@@ -36,7 +36,9 @@ $duration: 200ms;
 ::view-transition-old(page-title),
 ::view-transition-new(page-title),
 ::view-transition-old(page-info),
-::view-transition-new(page-info) {
+::view-transition-new(page-info),
+::view-transition-old(page-breadcrumb),
+::view-transition-new(page-breadcrumb) {
   animation-duration: $duration;
 }
 

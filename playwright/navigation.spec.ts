@@ -1,5 +1,21 @@
 import { test, expect } from '@playwright/test';
 
+test.describe('graceful degradation without JS', () => {
+  test('links work with JavaScript disabled', async ({ browser }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+
+    await page.goto('/index.html');
+    await expect(page.locator('h1')).toContainText('Home');
+
+    await page.locator('main.body a[href="/markdown.html"]').click();
+    await expect(page).toHaveURL(/markdown\.html/);
+    await expect(page.locator('h1')).toContainText('Markdown Examples');
+
+    await context.close();
+  });
+});
+
 test.describe('client-side navigation', () => {
   test('clicking an internal link navigates without full reload', async ({
     page,

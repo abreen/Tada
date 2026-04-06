@@ -167,17 +167,25 @@ async function performNavigation(
   if (typeof doc.startViewTransition === 'function') {
     // Only give the title its own transition group if it's visible
     const titleEl = document.querySelector('.title-and-info');
+    const headerHeight =
+      document.querySelector('header')?.getBoundingClientRect().height ?? 0;
     const titleVisible =
-      titleEl != null && titleEl.getBoundingClientRect().bottom >= 0;
+      titleEl != null && titleEl.getBoundingClientRect().bottom >= headerHeight;
 
     if (titleVisible) {
       const h1 = titleEl.querySelector('h1') as HTMLElement | null;
       const info = titleEl.querySelector('.info') as HTMLElement | null;
+      const breadcrumb = titleEl.querySelector(
+        'a.breadcrumb',
+      ) as HTMLElement | null;
       if (h1) {
         h1.style.viewTransitionName = 'page-title';
       }
       if (info) {
         info.style.viewTransitionName = 'page-info';
+      }
+      if (breadcrumb) {
+        breadcrumb.style.viewTransitionName = 'page-breadcrumb';
       }
     }
 
@@ -193,11 +201,17 @@ async function performNavigation(
         if (newTitleEl) {
           const h1 = newTitleEl.querySelector('h1') as HTMLElement | null;
           const info = newTitleEl.querySelector('.info') as HTMLElement | null;
+          const breadcrumb = newTitleEl.querySelector(
+            'a.breadcrumb',
+          ) as HTMLElement | null;
           if (h1) {
             h1.style.viewTransitionName = 'page-title';
           }
           if (info) {
             info.style.viewTransitionName = 'page-info';
+          }
+          if (breadcrumb) {
+            breadcrumb.style.viewTransitionName = 'page-breadcrumb';
           }
         }
       }
@@ -217,6 +231,12 @@ async function performNavigation(
     }
     if (newInfo) {
       newInfo.style.viewTransitionName = '';
+    }
+    const newBreadcrumb = document.querySelector(
+      '.title-and-info a.breadcrumb',
+    ) as HTMLElement | null;
+    if (newBreadcrumb) {
+      newBreadcrumb.style.viewTransitionName = '';
     }
   } else {
     await doSwap();
