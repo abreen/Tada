@@ -10,7 +10,7 @@ SITE_DIR="$REPO_DIR/playwright/.test-site"
 rm -rf "$SITE_DIR"
 
 # Init and build
-bun run "$TADA" init "$SITE_DIR" --no-interactive
+bun run "$TADA" init "$SITE_DIR" --no-interactive --default-time-zone America/New_York
 cd "$SITE_DIR"
 bun run "$TADA" dev
 
