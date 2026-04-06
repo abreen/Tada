@@ -87,6 +87,30 @@ test.describe('client-side navigation', () => {
     expect(isOpen).toBe(false);
   });
 
+  test('header details closes when clicking link to current page', async ({
+    page,
+  }) => {
+    await page.goto('/lectures/index.html');
+
+    // Open the header details
+    await page.locator('header details > summary').click();
+    await expect(page.locator('header details')).toHaveAttribute('open', '');
+
+    // Click the nav link for the current page
+    await page.evaluate(() => {
+      const link = document.querySelector(
+        'header details nav a[href="/lectures/index.html"]',
+      ) as HTMLAnchorElement;
+      link?.click();
+    });
+
+    const isOpen = await page.evaluate(
+      () =>
+        (document.querySelector('header details') as HTMLDetailsElement)?.open,
+    );
+    expect(isOpen).toBe(false);
+  });
+
   test('search input clears on navigation', async ({ page }) => {
     await page.goto('/index.html');
 
@@ -149,6 +173,84 @@ test.describe('client-side navigation', () => {
     // Should be SPA navigation (no full reload)
     const marker = await page.evaluate(() => (window as any).__navMarker);
     expect(marker).toBe('alive');
+  });
+
+  test('search results disappear after clicking result for current page', async ({
+    page,
+  }) => {
+    await page.goto('/markdown.html', { waitUntil: 'networkidle' });
+
+    // Search for something that will match this page
+    const searchInput = page.locator('input[name="quick-search"]');
+    await searchInput.focus();
+    await searchInput.fill('markdown');
+
+    // Wait for search results to appear
+    const results = page.locator('.results-container .results a');
+    await expect(results.first()).toBeVisible({ timeout: 10000 });
+
+    // Find and click a result that links to the current page
+    const currentPageResult = page.locator(
+      '.results-container .results a[href="/markdown.html"]',
+    );
+    // Fall back to first result if exact match not found
+    const target =
+      (await currentPageResult.count()) > 0
+        ? currentPageResult.first()
+        : results.first();
+    await target.click();
+
+    // Results should be dismissed
+    const resultsContainer = page.locator('.results-container');
+    await expect(resultsContainer).not.toHaveClass(/is-showing/);
+
+    // Search input should be cleared
+    const value = await page.evaluate(() => {
+      const input = document.querySelector(
+        'input[name="quick-search"]',
+      ) as HTMLInputElement;
+      return input?.value ?? '';
+    });
+    expect(value).toBe('');
+  });
+
+  test('search results disappear after clicking result for heading on current page', async ({
+    page,
+  }) => {
+    await page.goto('/markdown.html', { waitUntil: 'networkidle' });
+
+    // Search for a heading on this page
+    const searchInput = page.locator('input[name="quick-search"]');
+    await searchInput.focus();
+    await searchInput.fill('markdown');
+
+    // Wait for search results with hash links (sub-results point to headings)
+    const results = page.locator('.results-container .results a');
+    await expect(results.first()).toBeVisible({ timeout: 10000 });
+
+    // Find a result with a hash (heading anchor)
+    const hashResult = page.locator(
+      '.results-container .results a[href*="/markdown.html#"]',
+    );
+    if ((await hashResult.count()) > 0) {
+      await hashResult.first().click();
+    } else {
+      // Click any result to verify dismissal
+      await results.first().click();
+    }
+
+    // Results should be dismissed
+    const resultsContainer = page.locator('.results-container');
+    await expect(resultsContainer).not.toHaveClass(/is-showing/);
+
+    // Search input should be cleared
+    const value = await page.evaluate(() => {
+      const input = document.querySelector(
+        'input[name="quick-search"]',
+      ) as HTMLInputElement;
+      return input?.value ?? '';
+    });
+    expect(value).toBe('');
   });
 
   test('header shimmer appears on slow connections', async ({ page }) => {

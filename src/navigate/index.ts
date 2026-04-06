@@ -272,6 +272,13 @@ export default function mountNavigate(window: Window): () => void {
       url.search === window.location.search
     ) {
       event.preventDefault();
+      clearSearch();
+      const details = window.document.querySelector(
+        'header details',
+      ) as HTMLDetailsElement | null;
+      if (details?.open) {
+        details.open = false;
+      }
       if (url.hash) {
         window.history.pushState(null, '', url.hash);
         const el = window.document.getElementById(url.hash.slice(1));
