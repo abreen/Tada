@@ -266,7 +266,9 @@ export default function mountNavigate(window: Window): () => void {
       return;
     }
 
-    if (!isEligibleLink(anchor.href, window.location.origin)) {
+    if (
+      !isEligibleLink(anchor.href, window.location.origin, __SITE_BASE_PATH__)
+    ) {
       return;
     }
 

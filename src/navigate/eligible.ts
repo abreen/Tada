@@ -29,7 +29,11 @@ const NON_HTML_EXTENSIONS = new Set([
   '.mp3',
 ]);
 
-export function isEligibleLink(href: string, origin: string): boolean {
+export function isEligibleLink(
+  href: string,
+  origin: string,
+  basePath: string,
+): boolean {
   let url: URL;
   try {
     url = new URL(href);
@@ -38,6 +42,10 @@ export function isEligibleLink(href: string, origin: string): boolean {
   }
 
   if (url.origin !== origin) {
+    return false;
+  }
+
+  if (!url.pathname.startsWith(basePath)) {
     return false;
   }
 
