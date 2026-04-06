@@ -34,7 +34,7 @@ export default (window: Window) => {
     } else {
       history.replaceState(null, '', cleanUrl);
     }
-    window.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     const toc = window.document.querySelector('nav.toc') as HTMLElement | null;
     if (toc) {
       toc.scrollTop = 0;

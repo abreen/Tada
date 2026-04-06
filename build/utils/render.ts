@@ -185,7 +185,7 @@ export function renderPlainTextPageAsset({
   const applyBasePath = createApplyBasePath(siteVariables);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
-  const { content, pageVariables, tocItems } = renderPlainTextContent(
+  const { content, pageVariables, tocItems, alertIds } = renderPlainTextContent(
     filePath,
     subPath,
     siteVariables,
@@ -209,6 +209,7 @@ export function renderPlainTextPageAsset({
   if (pageVariables.toc && tocItems) {
     pageVariables.tocHtml = generateTocHtml(
       tocItems as Parameters<typeof generateTocHtml>[0],
+      alertIds,
     );
   }
 
@@ -357,6 +358,7 @@ function renderPlainTextContent(
   content: string | null;
   pageVariables: Record<string, unknown>;
   tocItems: unknown[] | null;
+  alertIds: string[];
 } {
   const sourceUrlPath = `/${subPath}.html`;
   const md = createMarkdown(siteVariables, {
@@ -461,16 +463,19 @@ function renderPlainTextContent(
   }
 
   let tocItems: unknown[] | null = null;
+  let alertIds: string[] = [];
   if (extensionIsMarkdown(ext)) {
-    const env: Record<string, unknown> = {};
+    const env: Record<string, unknown> = { alertIds: [] as string[] };
     html = md.render(html!, env);
     tocItems = (env.tocItems as unknown[] | undefined) || null;
+    alertIds = env.alertIds as string[];
   }
 
   return {
     content: html,
     pageVariables: params.page as Record<string, unknown>,
     tocItems,
+    alertIds,
   };
 }
 
@@ -600,7 +605,7 @@ export function renderLiterateJavaPageAsset({
     return codeHtml;
   };
 
-  const env: Record<string, unknown> = {};
+  const env: Record<string, unknown> = { alertIds: [] as string[] };
   const contentHtml = md.render(stripHtmlComments(content), env);
 
   // Build page variables
@@ -621,6 +626,7 @@ export function renderLiterateJavaPageAsset({
   if (pageVariables.toc && env.tocItems) {
     pageVariables.tocHtml = generateTocHtml(
       env.tocItems as Parameters<typeof generateTocHtml>[0],
+      env.alertIds as string[],
     );
   }
 

@@ -1,0 +1,59 @@
+$shift: 40px;
+$duration: 200ms;
+
+@keyframes slide-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-$shift);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX($shift);
+  }
+}
+
+@keyframes slide-out-right {
+  to {
+    opacity: 0;
+    transform: translateX($shift);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-$shift);
+  }
+}
+
+// Page heading and info: crossfade in place instead of sliding with the page
+// view-transition-name is set via inline style by the navigator
+// only when .title-and-info is visible in the viewport
+
+::view-transition-old(page-title),
+::view-transition-new(page-title),
+::view-transition-old(page-info),
+::view-transition-new(page-info) {
+  animation-duration: $duration;
+}
+
+// Forward navigation: old content slides left, new content slides in from right
+.nav-forward::view-transition-old(root) {
+  animation: slide-out-left $duration ease-in;
+}
+
+.nav-forward::view-transition-new(root) {
+  animation: slide-in-right $duration ease-out;
+}
+
+// Back navigation: old content slides right, new content slides in from left
+.nav-back::view-transition-old(root) {
+  animation: slide-out-right $duration ease-in;
+}
+
+.nav-back::view-transition-new(root) {
+  animation: slide-in-left $duration ease-out;
+}

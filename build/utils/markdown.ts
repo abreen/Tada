@@ -127,7 +127,12 @@ export function createMarkdown(
     validate: function (params: string) {
       return !!params.trim().match(/^(note|warning)\s*"?(.+)?"?$/);
     },
-    render: function (tokens: Token[], idx: number) {
+    render: function (
+      tokens: Token[],
+      idx: number,
+      _options: unknown,
+      env: Record<string, unknown>,
+    ) {
       const matches = tokens[idx].info
         .trim()
         .match(/^(note|warning)\s*"?(.+)?"?$/);
@@ -140,19 +145,21 @@ export function createMarkdown(
         }
 
         const title = matches && matches[2]?.trim();
+        const displayTitle = title
+          ? markdown.utils.escapeHtml(curlyQuote(title))
+          : capitalize(type || '');
+        const baseId = textToId(title || type || '');
+        const count = (usedIds.get(baseId) ?? 0) + 1;
+        usedIds.set(baseId, count);
+        const titleId = count === 1 ? baseId : `${baseId}-${count}`;
+
+        if (!env.alertIds) {
+          env.alertIds = [];
+        }
+        (env.alertIds as string[]).push(titleId);
 
         let html = `<div class="${classNames.join(' ')}">`;
-        if (title) {
-          const baseId = textToId(title);
-          const count = (usedIds.get(baseId) ?? 0) + 1;
-          usedIds.set(baseId, count);
-          const titleId = count === 1 ? baseId : `${baseId}-${count}`;
-          const renderedTitle = markdown.utils.escapeHtml(curlyQuote(title));
-          html += `<p class="title" id="${titleId}">${renderedTitle}</p>\n`;
-        } else {
-          const defaultTitle = capitalize(type || '');
-          html += `<p class="title">${defaultTitle}</p>\n`;
-        }
+        html += `<p class="title" id="${titleId}">${displayTitle}</p>\n`;
         html += '<div class="content">\n';
         return html;
       } else {

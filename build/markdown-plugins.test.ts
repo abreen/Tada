@@ -231,10 +231,39 @@ describe('custom markdown containers', () => {
     expect(html).toContain('<div class="alert note">');
     expect(html).toContain('<p class="title" id="read-this">');
     expect(html).toContain(
-      '<div class="alert warning"><p class="title">Warning</p>',
+      '<div class="alert warning"><p class="title" id="warning">Warning</p>',
     );
     expect(html).toContain('<p>Body</p>');
     expect(html).toContain('<p>Careful</p>');
+  });
+
+  test('deduplicates alert IDs', () => {
+    const md = createProjectMarkdown();
+
+    const html = md.render(
+      [
+        '!!! note',
+        'First',
+        '!!!',
+        '',
+        '!!! note',
+        'Second',
+        '!!!',
+        '',
+        '!!! note "Custom"',
+        'Third',
+        '!!!',
+        '',
+        '!!! note "Custom"',
+        'Fourth',
+        '!!!',
+      ].join('\n'),
+    );
+
+    expect(html).toContain('<p class="title" id="note">Note</p>');
+    expect(html).toContain('<p class="title" id="note-2">Note</p>');
+    expect(html).toContain('id="custom"');
+    expect(html).toContain('id="custom-2"');
   });
 });
 

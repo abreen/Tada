@@ -37,7 +37,7 @@ function scrollIfNeeded(element: HTMLElement, doc: Document) {
     elementRect.height / 2;
   const desiredScrollTop = elementCenter - container.clientHeight / 2;
 
-  container.scrollTop = desiredScrollTop;
+  container.scrollTo({ top: desiredScrollTop, behavior: 'smooth' });
 }
 
 export function getHighlightIndexes(items: (Heading | Alert | Dinkus)[]) {
@@ -148,50 +148,6 @@ export function switchCurrent(
   newCurrent.classList.add('current');
 }
 
-function wireAlertClickHandlers(
-  toc: HTMLElement,
-  headingsAndAlerts: (HTMLHeadingElement | HTMLDivElement)[],
-  items: (Heading | Alert | Dinkus)[],
-) {
-  const alertLinks = toc.querySelectorAll('li.alert-item a');
-  let alertIdx = 0;
-  let scrollIdx = 0;
-
-  items.forEach(item => {
-    if (!('level' in item) && (item as Alert | Dinkus).type === 'dinkus') {
-      return;
-    }
-
-    if (!('level' in item)) {
-      // This is an alert item
-      const scrollEl = headingsAndAlerts[scrollIdx];
-      const link = alertLinks[alertIdx] as HTMLAnchorElement | undefined;
-      if (link && scrollEl) {
-        link.onclick = (e: MouseEvent) => {
-          e.preventDefault();
-
-          const titleElement = scrollEl.querySelector('.title');
-          const titleId = titleElement?.id || null;
-
-          if (titleId) {
-            history.replaceState(
-              null,
-              window.document.title,
-              `${window.location.pathname}#${titleId}`,
-            );
-          }
-
-          scrollEl.scrollIntoView();
-          scrollEl.focus();
-        };
-      }
-      alertIdx++;
-    }
-
-    scrollIdx++;
-  });
-}
-
 export default (window: Window) => {
   const toc = window.document.querySelector('nav.toc') as HTMLElement;
   if (toc == null) {
@@ -285,9 +241,6 @@ export default (window: Window) => {
     .filter(obj => obj != null);
 
   const highlightIndexes = getHighlightIndexes(items);
-
-  // Wire up click handlers for alert items
-  wireAlertClickHandlers(toc, headingsAndAlerts, items);
 
   function handleScroll() {
     const viewportActivationPoint = getViewportActivationPoint(

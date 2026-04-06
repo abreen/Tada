@@ -4,20 +4,14 @@ import type { JavaTocEntry } from './types';
 
 describe('generateTocHtml', () => {
   test('returns empty string for empty array', () => {
-    expect(generateTocHtml([])).toBe('');
-  });
-
-  test('returns empty string for null/undefined', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(generateTocHtml(null as any)).toBe('');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(generateTocHtml(undefined as any)).toBe('');
+    expect(generateTocHtml([], [])).toBe('');
   });
 
   test('generates heading items with correct level and link', () => {
-    const html = generateTocHtml([
-      { kind: 'heading', level: '2', id: 'intro', innerHtml: 'Introduction' },
-    ]);
+    const html = generateTocHtml(
+      [{ kind: 'heading', level: '2', id: 'intro', innerHtml: 'Introduction' }],
+      [],
+    );
     expect(html).toContain('<ol>');
     expect(html).toContain('class="heading-item level2"');
     expect(html).toContain('href="#intro"');
@@ -26,33 +20,54 @@ describe('generateTocHtml', () => {
   });
 
   test('generates dinkus items', () => {
-    const html = generateTocHtml([{ kind: 'dinkus' }]);
+    const html = generateTocHtml([{ kind: 'dinkus' }], []);
     expect(html).toContain('class="dinkus-item"');
   });
 
   test('generates alert items at one level deeper than last heading', () => {
-    const html = generateTocHtml([
-      { kind: 'heading', level: '2', id: 'sec', innerHtml: 'Section' },
-      { kind: 'alert', type: 'warning', title: 'Caution' },
-    ]);
+    const html = generateTocHtml(
+      [
+        { kind: 'heading', level: '2', id: 'sec', innerHtml: 'Section' },
+        { kind: 'alert', type: 'warning', title: 'Caution' },
+      ],
+      ['caution'],
+    );
     expect(html).toContain('class="alert-item level3 warning"');
+    expect(html).toContain('href="#caution"');
     expect(html).toContain('Caution');
   });
 
   test('alert before any heading uses level 2 (lastHeadingLevel defaults to 1)', () => {
-    const html = generateTocHtml([
-      { kind: 'alert', type: 'note', title: 'Note' },
-    ]);
+    const html = generateTocHtml(
+      [{ kind: 'alert', type: 'note', title: 'Note' }],
+      ['note'],
+    );
     expect(html).toContain('class="alert-item level2 note"');
+    expect(html).toContain('href="#note"');
+  });
+
+  test('alert links use deduplicated IDs', () => {
+    const html = generateTocHtml(
+      [
+        { kind: 'alert', type: 'note', title: 'Note' },
+        { kind: 'alert', type: 'note', title: 'Note' },
+      ],
+      ['note', 'note-2'],
+    );
+    expect(html).toContain('href="#note"');
+    expect(html).toContain('href="#note-2"');
   });
 
   test('handles mixed items in order', () => {
-    const html = generateTocHtml([
-      { kind: 'heading', level: '2', id: 'a', innerHtml: 'A' },
-      { kind: 'dinkus' },
-      { kind: 'heading', level: '3', id: 'b', innerHtml: 'B' },
-      { kind: 'alert', type: 'note', title: 'FYI' },
-    ]);
+    const html = generateTocHtml(
+      [
+        { kind: 'heading', level: '2', id: 'a', innerHtml: 'A' },
+        { kind: 'dinkus' },
+        { kind: 'heading', level: '3', id: 'b', innerHtml: 'B' },
+        { kind: 'alert', type: 'note', title: 'FYI' },
+      ],
+      ['fyi'],
+    );
     expect(html).toContain('level2');
     expect(html).toContain('dinkus-item');
     expect(html).toContain('level3');

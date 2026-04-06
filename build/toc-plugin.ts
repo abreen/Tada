@@ -17,6 +17,7 @@ interface AlertItem {
   kind: 'alert';
   type: string;
   title: string;
+  id?: string;
 }
 
 type TocItem = HeadingItem | DinkusItem | AlertItem;
@@ -103,12 +104,16 @@ export function tocPlugin(md: MarkdownIt): void {
   });
 }
 
-export function generateTocHtml(tocItems: TocItem[]): string {
+export function generateTocHtml(
+  tocItems: TocItem[],
+  alertIds: string[],
+): string {
   if (!tocItems || tocItems.length === 0) {
     return '';
   }
 
   let lastHeadingLevel = 1;
+  let alertIdx = 0;
   const parts = ['<ol>'];
 
   for (const item of tocItems) {
@@ -128,9 +133,11 @@ export function generateTocHtml(tocItems: TocItem[]): string {
 
     if (item.kind === 'alert') {
       const level = lastHeadingLevel + 1;
+      const id = alertIds[alertIdx++];
+      const href = `#${id}`;
       parts.push(
         `<li class="alert-item level${level} ${item.type}">` +
-          `<a href="#">${item.title}</a></li>`,
+          `<a href="${href}">${item.title}</a></li>`,
       );
     }
   }
