@@ -60,7 +60,7 @@ header nav div > p {
 }
 
 @media (hover: hover) {
-  header details summary:hover:not(:has(.results-container:hover)) {
+  header details summary:hover {
     background: var(--bg2-color);
   }
 
@@ -81,10 +81,6 @@ header .results-container {
   padding: var(--gap);
   pointer-events: none;
   z-index: 1000;
-
-  @container (max-width: 260px) {
-    display: none;
-  }
 }
 
 header ol {

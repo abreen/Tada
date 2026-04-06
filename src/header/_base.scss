@@ -22,7 +22,7 @@ header details summary {
   display: flex;
   align-items: center;
   height: var(--header-collapsed-height);
-  padding: 0;
+  padding: 0 200px 0 0;
   list-style-type: none;
   cursor: pointer;
   position: relative;
@@ -37,6 +37,10 @@ header details summary {
   &:focus-visible {
     outline-offset: -2px;
   }
+}
+
+header:has(.to-top-container .is-visible) details summary {
+  padding-right: 320px;
 }
 
 header details summary::-webkit-details-marker {
@@ -85,13 +89,24 @@ header summary .site-title {
   margin: 0 8px 0 0;
 }
 
-@container (max-width: 520px) {
+@container (max-width: 200px) {
   header summary .site-title {
     display: none;
   }
 }
 
-header summary .to-top-container {
+header > .header-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  height: var(--header-collapsed-height);
+  padding: 0 var(--gap) 0 0;
+  z-index: 1;
+}
+
+header .to-top-container {
   display: none;
   align-items: center;
   height: var(--header-collapsed-height);
@@ -111,19 +126,15 @@ header .results-container {
   display: none;
 }
 
-header summary .search-controls {
-  margin-left: auto;
-  pointer-events: auto;
+header .search-controls {
   display: flex;
   align-items: center;
   height: var(--header-collapsed-height);
-  padding: 0 var(--gap) 0 0;
-  min-width: 0;
 
   input.search {
     width: 180px;
 
-    @container (max-width: 280px) {
+    @media (max-width: 400px) {
       display: none;
     }
   }

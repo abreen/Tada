@@ -53,32 +53,32 @@
 
   <body class="<%= page.template %><% if (page.tocHtml) { %> toc-is-active<% } %>">
     <header data-pagefind-ignore>
+      <div class="header-controls">
+        <div id="to-top-container" class="to-top-container"></div>
+        <% if (site.features.search) { %>
+        <div class="search-controls">
+          <input type="search" class="search quick-search"
+                 autocomplete="off" name="quick-search"
+                 placeholder="Search"
+                 role="combobox"
+                 aria-haspopup="listbox"
+                 aria-autocomplete="list"
+                 aria-expanded="false"
+                 aria-controls="quick-search-results"
+                 disabled />
+          <script>document.currentScript.previousElementSibling.disabled=false;</script>
+        </div>
+        <% } %>
+      </div>
+      <div class="results-container" role="region"
+           aria-label="Search results"
+           aria-live="polite" aria-hidden="true" inert>
+        <div class="results" style="display:none"></div>
+      </div>
       <details>
         <summary aria-label="Toggle site navigation">
           <% if (site.symbol) { %><span class="logo" aria-hidden="true"><%= site.symbol %></span><% } %>
           <span class="site-title" aria-hidden="true"><%= site.title %></span>
-          <div id="to-top-container" class="to-top-container"></div>
-          <% if (site.features.search) { %>
-          <div class="search-controls">
-            <input type="search" class="search quick-search"
-                   autocomplete="off" name="quick-search"
-                   placeholder="Search"
-                   role="combobox"
-                   aria-haspopup="listbox"
-                   aria-autocomplete="list"
-                   aria-expanded="false"
-                   aria-controls="quick-search-results"
-                   disabled />
-            <script>document.currentScript.previousElementSibling.disabled=false;</script>
-            <% if (site.features.search) { %>
-            <div class="results-container" role="region"
-                 aria-label="Search results"
-                 aria-live="polite" aria-hidden="true" inert>
-              <div class="results" style="display:none"></div>
-            </div>
-            <% } %>
-          </div>
-          <% } %>
         </summary>
         <div class="content">
           <%= render('_nav.html') %>
