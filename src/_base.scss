@@ -104,8 +104,9 @@ pre {
   background: var(--bg2-color);
   border-radius: var(--mono-border-radius);
   line-height: var(--mono-line-height);
-  overflow: auto;
-  overscroll-behavior: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: none;
   padding: var(--gap);
 
   code {
