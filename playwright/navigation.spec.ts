@@ -150,4 +150,35 @@ test.describe('client-side navigation', () => {
     const marker = await page.evaluate(() => (window as any).__navMarker);
     expect(marker).toBe('alive');
   });
+
+  test('header shimmer appears on slow connections', async ({ page }) => {
+    await page.goto('/index.html');
+
+    // Throttle network after the page is fully loaded
+    const client = await page.context().newCDPSession(page);
+    await client.send('Network.enable');
+    await client.send('Network.emulateNetworkConditions', {
+      offline: false,
+      downloadThroughput: (10 * 1024) / 8,
+      uploadThroughput: (10 * 1024) / 8,
+      latency: 2000,
+    });
+
+    await page.locator('main.body a[href="/markdown.html"]').click();
+
+    // The header should get the loading class while fetching
+    await expect(page.locator('header.loading')).toBeVisible({ timeout: 5000 });
+
+    // Remove throttling so the fetch can complete
+    await client.send('Network.emulateNetworkConditions', {
+      offline: false,
+      downloadThroughput: -1,
+      uploadThroughput: -1,
+      latency: 0,
+    });
+
+    // After navigation completes, the class should be removed
+    await expect(page).toHaveURL(/markdown\.html/, { timeout: 15000 });
+    await expect(page.locator('header')).not.toHaveClass(/loading/);
+  });
 });

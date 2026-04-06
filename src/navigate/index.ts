@@ -108,10 +108,14 @@ async function performNavigation(
   const controller = new AbortController();
   currentAbortController = controller;
 
+  const header = document.querySelector('header');
+  header?.classList.add('loading');
+
   let response: Response;
   try {
     response = await fetch(url, { signal: controller.signal });
   } catch (err: unknown) {
+    header?.classList.remove('loading');
     if (err instanceof Error && err.name === 'AbortError') {
       return;
     }
@@ -121,11 +125,13 @@ async function performNavigation(
   }
 
   if (!response.ok) {
+    header?.classList.remove('loading');
     window.location.href = url;
     return;
   }
 
   const html = await response.text();
+  header?.classList.remove('loading');
   const parser = new DOMParser();
   const newDoc = parser.parseFromString(html, 'text/html');
 
