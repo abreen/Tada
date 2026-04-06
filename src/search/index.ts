@@ -104,6 +104,7 @@ function render(
   input: HTMLInputElement,
   resultsContainer: HTMLElement,
   state: State,
+  loading = false,
 ) {
   if (state.showResults) {
     resultsContainer.removeAttribute('inert');
@@ -216,15 +217,21 @@ function render(
     countSpan.className = 'results-count';
     infoSpan.insertBefore(countSpan, infoSpan.firstChild);
   }
-  const n = state.totalResults;
-  if (n === 0) {
-    countSpan.textContent = 'No results';
-  } else if (n === 1) {
-    countSpan.textContent = 'One result';
-  } else if (n <= MAX_RESULTS) {
-    countSpan.textContent = `${n} results`;
+  if (loading) {
+    countSpan.textContent = 'Loading\u2026';
+    infoSpan.classList.add('loading');
   } else {
-    countSpan.textContent = `Showing first ${MAX_RESULTS} results`;
+    infoSpan.classList.remove('loading');
+    const n = state.totalResults;
+    if (n === 0) {
+      countSpan.textContent = 'No results';
+    } else if (n === 1) {
+      countSpan.textContent = 'One result';
+    } else if (n <= MAX_RESULTS) {
+      countSpan.textContent = `${n} results`;
+    } else {
+      countSpan.textContent = `Showing first ${MAX_RESULTS} results`;
+    }
   }
 
   if (state.showResults) {
@@ -326,11 +333,14 @@ export default (window: Window) => {
   };
 
   async function update() {
+    if (state.showResults) {
+      render(input!, resultsContainer, state, true);
+    }
     await doSearch(state);
     if (!state.showResults) {
       return;
     }
-    render(input!, resultsContainer, state);
+    render(input!, resultsContainer, state, false);
   }
 
   function hide() {
