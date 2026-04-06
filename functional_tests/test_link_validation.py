@@ -24,13 +24,7 @@ class TestBrokenNavLink:
     def test_build_fails(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
-
-    def test_error_mentions_nav_json(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "nav.json" in result.stdout
-
-    def test_error_mentions_broken_path(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "/nonexistent.html" in result.stdout
 
 
@@ -52,13 +46,7 @@ class TestBrokenParentLink:
     def test_build_fails(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
-
-    def test_error_mentions_parent(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "parent" in result.stdout.lower()
-
-    def test_error_mentions_broken_path(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "/nonexistent.html" in result.stdout
 
 
@@ -81,9 +69,6 @@ class TestLinkToPartialBroken:
     def test_build_fails(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
-
-    def test_error_mentions_broken_path(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "/_partial.html" in result.stdout
 
 
@@ -160,9 +145,6 @@ class TestDisabledNavLinkSkipped:
     def test_build_succeeds(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode == 0, f"build failed: {result.stderr}"
-
-    def test_nonexistent_link_not_in_html(self, site_dir):
-        run_tada("dev", cwd=str(site_dir))
         build_dir = site_dir / "dist"
         for html_file in build_dir.rglob("*.html"):
             content = html_file.read_text()

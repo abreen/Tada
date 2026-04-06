@@ -73,8 +73,5 @@ class TestKatexErrorHandling:
     def test_build_fails_on_invalid_latex(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
-
-    def test_error_message_mentions_katex(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         output = result.stdout + result.stderr
         assert "KaTeX" in output or "katex" in output.lower()
