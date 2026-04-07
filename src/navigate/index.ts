@@ -147,7 +147,7 @@ async function performNavigation(
     updateHead(newDoc);
     if (isPush) {
       historyIndex++;
-      history.pushState({ navIndex: historyIndex }, '', url);
+      window.history.pushState({ navIndex: historyIndex }, '', url);
     }
     const parsed = new URL(url);
     currentPath = parsed.pathname + parsed.search;

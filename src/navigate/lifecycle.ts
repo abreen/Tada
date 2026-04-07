@@ -31,7 +31,7 @@ export async function mountPerPageComponents(
 
   const mountPromises = entries.map(([name, mount]) => {
     return new Promise<void>((resolve, reject) => {
-      scheduleTask(async () => {
+      scheduleTask(window, async () => {
         try {
           const cleanup = await mount(window);
           if (typeof cleanup === 'function') {

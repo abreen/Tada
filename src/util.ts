@@ -1,11 +1,12 @@
 export function debounce<T extends (...args: unknown[]) => void>(
+  win: Window,
   fn: T,
   time: number,
 ) {
   let timer: number;
   return (...args: Parameters<T>) => {
-    window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
+    win.clearTimeout(timer);
+    timer = win.setTimeout(() => {
       fn(...args);
     }, time);
   };
@@ -41,11 +42,11 @@ export function applyBasePath(subPath: string): string {
   return path + subPath;
 }
 
-export function scheduleTask(fn: () => void) {
-  if (typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(fn);
+export function scheduleTask(win: Window, fn: () => void) {
+  if (typeof win.requestIdleCallback === 'function') {
+    win.requestIdleCallback(fn);
   } else {
-    return setTimeout(fn, 0);
+    return win.setTimeout(fn, 0);
   }
 }
 

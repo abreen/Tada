@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const persistentEntries = Object.entries(PERSISTENT_COMPONENTS);
   const persistentPromises = persistentEntries.map(([name, mount]) => {
     return new Promise<void>((resolve, reject) => {
-      scheduleTask(async () => {
+      scheduleTask(window, async () => {
         try {
           mount(window);
           resolve();

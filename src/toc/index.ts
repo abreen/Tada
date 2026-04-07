@@ -270,7 +270,7 @@ export default (window: Window) => {
       scrollIfNeeded(nextItem, window.document);
     }
   }
-  const debounced = debounce(handleScroll, LATENCY_MS);
+  const debounced = debounce(window, handleScroll, LATENCY_MS);
   window.addEventListener('scroll', debounced, { passive: true });
 
   // Call after load to set current item

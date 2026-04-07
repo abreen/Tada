@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import mount from './index';
 
-function create(html = '') {
-  const dom = new JSDOM(`<body>${html}</body>`, { url: 'http://localhost/' });
+function create(html = '', url = 'http://localhost/') {
+  const dom = new JSDOM(`<body>${html}</body>`, { url });
   return dom.window;
 }
 
@@ -40,7 +40,132 @@ describe('top', () => {
     const cleanup = mount(win);
 
     expect(typeof cleanup).toBe('function');
-    // Should not throw
     cleanup!();
+  });
+
+  test('shows link when scrolled past threshold', async () => {
+    const win = create();
+    mount(win);
+
+    const link = win.document.querySelector('a.button') as HTMLElement;
+    expect(link.classList.contains('is-visible')).toBe(false);
+
+    Object.defineProperty(win, 'scrollY', { value: 300, writable: true });
+    win.dispatchEvent(new win.Event('scroll'));
+
+    // debounce is 50ms
+    await new Promise(r => setTimeout(r, 80));
+
+    expect(link.classList.contains('is-visible')).toBe(true);
+    expect(link.getAttribute('tabindex')).toBe('0');
+  });
+
+  test('hides link when scrolled back to top', async () => {
+    const win = create();
+    mount(win);
+
+    const link = win.document.querySelector('a.button') as HTMLElement;
+
+    Object.defineProperty(win, 'scrollY', { value: 300, writable: true });
+    win.dispatchEvent(new win.Event('scroll'));
+    await new Promise(r => setTimeout(r, 80));
+    expect(link.classList.contains('is-visible')).toBe(true);
+
+    Object.defineProperty(win, 'scrollY', { value: 0, writable: true });
+    win.dispatchEvent(new win.Event('scroll'));
+    await new Promise(r => setTimeout(r, 80));
+    expect(link.classList.contains('is-visible')).toBe(false);
+    expect(link.getAttribute('tabindex')).toBe('-1');
+  });
+
+  test('onclick scrolls to top', () => {
+    const win = create('', 'http://localhost/page');
+    mount(win);
+
+    const link = win.document.querySelector('a.button') as HTMLAnchorElement;
+
+    let called = false;
+    win.scrollTo = ((opts: { top: number }) => {
+      expect(opts.top).toBe(0);
+      called = true;
+    }) as typeof win.scrollTo;
+
+    const event = new win.MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
+    link.dispatchEvent(event);
+
+    expect(called).toBe(true);
+  });
+
+  test('onclick uses pushState when hash is present', () => {
+    const win = create('', 'http://localhost/page#section');
+    mount(win);
+
+    const link = win.document.querySelector('a.button') as HTMLAnchorElement;
+    win.scrollTo = (() => {}) as typeof win.scrollTo;
+
+    const pushed: string[] = [];
+    win.history.pushState = (_data: unknown, _title: string, url?: string) => {
+      pushed.push(url!);
+    };
+
+    const event = new win.MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
+    link.dispatchEvent(event);
+
+    expect(pushed).toEqual(['/page']);
+  });
+
+  test('onclick uses replaceState when no hash', () => {
+    const win = create('', 'http://localhost/page');
+    mount(win);
+
+    const link = win.document.querySelector('a.button') as HTMLAnchorElement;
+    win.scrollTo = (() => {}) as typeof win.scrollTo;
+
+    const replaced: string[] = [];
+    win.history.replaceState = (
+      _data: unknown,
+      _title: string,
+      url?: string,
+    ) => {
+      replaced.push(url!);
+    };
+
+    const event = new win.MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
+    link.dispatchEvent(event);
+
+    expect(replaced).toEqual(['/page']);
+  });
+
+  test('onclick resets toc scroll position when toc exists', () => {
+    const dom = new JSDOM(
+      `<body><nav class="toc" style="overflow:auto"></nav></body>`,
+      { url: 'http://localhost/' },
+    );
+    const win = dom.window;
+    mount(win);
+
+    win.scrollTo = (() => {}) as typeof win.scrollTo;
+
+    const toc = win.document.querySelector('nav.toc') as HTMLElement;
+    Object.defineProperty(toc, 'scrollTop', { value: 100, writable: true });
+
+    const link = win.document.querySelector('a.button') as HTMLAnchorElement;
+
+    const event = new win.MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
+    link.dispatchEvent(event);
+
+    expect(toc.scrollTop).toBe(0);
   });
 });

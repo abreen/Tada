@@ -59,6 +59,29 @@ describe('formatDuration', () => {
   test('formats negative seconds', () => {
     expect(formatDuration(-5000)).toBe('-5.00000s');
   });
+
+  test('formats milliseconds that round up to 1 second', () => {
+    // 999.999ms rounds to 1000.0ms, should switch to seconds format
+    expect(formatDuration(999.999)).toBe('1.00000s');
+  });
+
+  test('formats seconds that round from under 10 to 10', () => {
+    // 9.999995 seconds rounds to 10.00000 at 5 decimals, should switch
+    // to 4-decimal format
+    expect(formatDuration(9999.995)).toBe('10.0000s');
+  });
+
+  test('formats seconds that round up to exactly 60', () => {
+    // 59.99999s at 4 decimals rounds to 60.0000, should switch to minutes
+    expect(formatDuration(59999.999)).toBe('1m0.000s');
+  });
+
+  test('formats minutes where seconds round up to 60', () => {
+    // 1m59.9999s where seconds round to 60
+    const ms = 1 * 60000 + 59999.999;
+    const result = formatDuration(ms);
+    expect(result).toBe('2m0.000s');
+  });
 });
 
 describe('removeClass', () => {
