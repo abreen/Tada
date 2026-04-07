@@ -1,5 +1,24 @@
 import { test, expect } from '@playwright/test';
 
+test.describe('timezone chooser without JS', () => {
+  test('select is hidden and default timezone text shows', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.goto('/lectures/index.html');
+
+    const select = page.locator('select.time-zone');
+    await expect(select).toBeHidden();
+
+    // Verify the noscript fallback text is in the page content
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).toContain('Times shown in ET');
+
+    await context.close();
+  });
+});
+
 test.describe('timezone chooser', () => {
   test('changing timezone updates time text', async ({ page }) => {
     await page.goto('/lectures/index.html');
