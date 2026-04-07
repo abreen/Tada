@@ -177,7 +177,7 @@ async function performNavigation(
     const headerHeight =
       document.querySelector('header')?.getBoundingClientRect().height ?? 0;
     const titleVisible =
-      titleEl != null && titleEl.getBoundingClientRect().bottom >= headerHeight;
+      titleEl != null && titleEl.getBoundingClientRect().top >= headerHeight;
 
     if (titleVisible) {
       const h1 = titleEl.querySelector('h1') as HTMLElement | null;
@@ -202,24 +202,29 @@ async function performNavigation(
 
     const transition = doc.startViewTransition(() => {
       doSwap();
-      // Apply transition names to the new title if the old one was visible
-      if (titleVisible) {
-        const newTitleEl = document.querySelector('.title-and-info');
-        if (newTitleEl) {
-          const h1 = newTitleEl.querySelector('h1') as HTMLElement | null;
-          const info = newTitleEl.querySelector('.info') as HTMLElement | null;
-          const breadcrumb = newTitleEl.querySelector(
-            'a.breadcrumb',
-          ) as HTMLElement | null;
-          if (h1) {
-            h1.style.viewTransitionName = 'page-title';
-          }
-          if (info) {
-            info.style.viewTransitionName = 'page-info';
-          }
-          if (breadcrumb) {
-            breadcrumb.style.viewTransitionName = 'page-breadcrumb';
-          }
+      // Check title visibility on the new page independently (scroll
+      // has been restored by doSwap, so the position reflects the
+      // destination page)
+      const newTitleEl = document.querySelector('.title-and-info');
+      const newHeaderHeight =
+        document.querySelector('header')?.getBoundingClientRect().height ?? 0;
+      const newTitleVisible =
+        newTitleEl != null &&
+        newTitleEl.getBoundingClientRect().top >= newHeaderHeight;
+      if (newTitleVisible && newTitleEl) {
+        const h1 = newTitleEl.querySelector('h1') as HTMLElement | null;
+        const info = newTitleEl.querySelector('.info') as HTMLElement | null;
+        const breadcrumb = newTitleEl.querySelector(
+          'a.breadcrumb',
+        ) as HTMLElement | null;
+        if (h1) {
+          h1.style.viewTransitionName = 'page-title';
+        }
+        if (info) {
+          info.style.viewTransitionName = 'page-info';
+        }
+        if (breadcrumb) {
+          breadcrumb.style.viewTransitionName = 'page-breadcrumb';
         }
       }
     });
