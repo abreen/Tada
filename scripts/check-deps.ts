@@ -6,6 +6,10 @@ if (!Bun.which('javac')) {
   console.error('Warning: javac is required to develop this project.');
 }
 
+if (!Bun.which('mutool')) {
+  console.error('Warning: mutool (MuPDF) is required to run functional tests.');
+}
+
 if (!Bun.which('python3')) {
   console.error('Warning: python3 is required to run functional tests.');
 }
