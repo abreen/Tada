@@ -24,7 +24,7 @@
     "tsconfig.json"
   ],
   "scripts": {
-    "prepare": "husky && bun run scripts/check-deps.ts",
+    "prepare": "bunx husky && bun run scripts/check-deps.ts",
     "prepack": "bun run scripts/prepack.ts",
     "lint": "eslint src/ build/ bin/",
     "typecheck": "tsc --noEmit",
