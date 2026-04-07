@@ -179,6 +179,7 @@ export function renderPlainTextPageAsset({
   assetFiles,
   literateJavaOutputPaths,
   traceCache,
+  javacAvailable,
 }: RenderPlainTextOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = path.relative(contentDir, path.join(dir, name));
@@ -197,6 +198,7 @@ export function renderPlainTextPageAsset({
       contentDir,
       distDir,
       literateJavaOutputPaths,
+      javacAvailable,
     },
   );
 
@@ -339,6 +341,7 @@ function renderPlainTextContent(
     contentDir,
     distDir,
     literateJavaOutputPaths,
+    javacAvailable,
   }: {
     validateInternalLinks?: boolean;
     traceCache?: Map<
@@ -353,6 +356,7 @@ function renderPlainTextContent(
     contentDir?: string;
     distDir?: string;
     literateJavaOutputPaths?: Set<string>;
+    javacAvailable?: boolean;
   } = {},
 ): {
   content: string | null;
@@ -446,6 +450,7 @@ function renderPlainTextContent(
       distDir,
       applyBasePath,
       cache: traceCache,
+      javacAvailable,
     });
     params.renderTrace = helpers.renderTrace;
   }

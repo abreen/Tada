@@ -89,6 +89,7 @@ export interface RenderPlainTextOptions {
       mtime: number;
     }
   >;
+  javacAvailable?: boolean;
 }
 
 /** Options for code page asset rendering */

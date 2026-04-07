@@ -175,7 +175,15 @@ async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
     return;
   }
 
-  const res = await fetch(manifestUrl);
+  let res: Response;
+  try {
+    res = await fetch(manifestUrl);
+  } catch {
+    return;
+  }
+  if (!res.ok) {
+    return;
+  }
   const manifest: TraceManifest = await res.json();
 
   const state: WidgetState = { manifest, chunks: new Map(), currentStep: 0 };

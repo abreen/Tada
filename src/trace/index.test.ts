@@ -67,7 +67,7 @@ function setupFetch(responses: Record<string, unknown>): void {
     if (data === undefined) {
       throw new Error(`Unexpected fetch: ${url}`);
     }
-    return { json: async () => data } as Response;
+    return { ok: true, json: async () => data } as Response;
   }) as typeof fetch;
 }
 
@@ -124,9 +124,9 @@ describe('trace', () => {
       const url = typeof input === 'string' ? input : input.toString();
       fetched.push(url);
       if (url.includes('manifest.json')) {
-        return { json: async () => defaultManifest } as Response;
+        return { ok: true, json: async () => defaultManifest } as Response;
       }
-      return { json: async () => defaultChunk } as Response;
+      return { ok: true, json: async () => defaultChunk } as Response;
     }) as typeof fetch;
 
     const win = createWindow(widgetHtml());
@@ -437,12 +437,12 @@ describe('trace', () => {
       const url = typeof input === 'string' ? input : input.toString();
       fetched.push(url);
       if (url.includes('manifest.json')) {
-        return { json: async () => manifest } as Response;
+        return { ok: true, json: async () => manifest } as Response;
       }
       if (url.includes('chunk-0')) {
-        return { json: async () => chunk0 } as Response;
+        return { ok: true, json: async () => chunk0 } as Response;
       }
-      return { json: async () => chunk1 } as Response;
+      return { ok: true, json: async () => chunk1 } as Response;
     }) as typeof fetch;
 
     const win = createWindow(widgetHtml());
@@ -513,6 +513,32 @@ describe('trace', () => {
     const prev = win.document.querySelector('.trace-prev') as HTMLButtonElement;
     expect(first.tabIndex).toBe(-1);
     expect(prev.tabIndex).toBe(-1);
+  });
+
+  test('stays disabled when manifest fetch fails', async () => {
+    globalThis.fetch = (async () => {
+      return { ok: false, status: 404 } as Response;
+    }) as unknown as typeof fetch;
+
+    const win = createWindow(widgetHtml());
+    mount(win);
+    await flush();
+
+    const counter = win.document.querySelector('.trace-step-counter');
+    expect(counter!.textContent).toBe('');
+  });
+
+  test('stays disabled when manifest fetch throws', async () => {
+    globalThis.fetch = (async () => {
+      throw new TypeError('Failed to fetch');
+    }) as unknown as typeof fetch;
+
+    const win = createWindow(widgetHtml());
+    mount(win);
+    await flush();
+
+    const counter = win.document.querySelector('.trace-step-counter');
+    expect(counter!.textContent).toBe('');
   });
 
   test('at least one enabled button has tabIndex 0', async () => {

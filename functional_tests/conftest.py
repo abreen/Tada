@@ -77,7 +77,7 @@ def _bun_command(*args):
     return cmd
 
 
-def run_tada(*args, cwd=None, timeout=120, check=False, input=None):
+def run_tada(*args, cwd=None, timeout=120, check=False, input=None, env=None):
     """Run a tada CLI command and return the CompletedProcess."""
     return subprocess.run(
         _bun_command(*args),
@@ -87,6 +87,7 @@ def run_tada(*args, cwd=None, timeout=120, check=False, input=None):
         timeout=timeout,
         check=check,
         input=input,
+        env=env,
     )
 
 

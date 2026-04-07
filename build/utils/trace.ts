@@ -214,6 +214,7 @@ export interface TraceContext {
   distDir: string;
   applyBasePath: (subPath: string) => string;
   cache: Map<string, TraceResult>;
+  javacAvailable?: boolean;
 }
 
 export interface TraceResult {
@@ -223,10 +224,65 @@ export interface TraceResult {
   mtime: number;
 }
 
+function highlightSource(javaFile: string, source: string): string {
+  const sourceLines = source.split('\n');
+  if (sourceLines[sourceLines.length - 1] === '') {
+    sourceLines.pop();
+  }
+  const ext = path.extname(javaFile).slice(1).toLowerCase();
+  const lang = ext === 'java' ? 'java' : 'text';
+  return renderCodeSegment(sourceLines, 1, lang, { linkLineNumbers: false });
+}
+
+function renderWidgetHtml({
+  highlightedSource,
+  manifestUrl,
+  totalSteps,
+}: {
+  highlightedSource: string;
+  manifestUrl?: string;
+  totalSteps?: number;
+}): string {
+  const svgAttrs = `aria-hidden='true' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'`;
+  const iconFirst = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='6' x2='2' y2='18'/><polyline points='10 6 4 12 10 18'/><line x1='4' y1='12' x2='22' y2='12'/></svg>`;
+  const iconPrev = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><polyline points='10 6 4 12 10 18'/><line x1='4' y1='12' x2='22' y2='12'/></svg>`;
+  const iconNext = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/></svg>`;
+  const iconLast = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/><line x1='22' y1='6' x2='22' y2='18'/></svg>`;
+  const disabled = totalSteps === undefined;
+  const counterContent = disabled ? '--' : `1/${totalSteps}`;
+  const counterStyle = disabled
+    ? ''
+    : ` style="min-width: ${String(totalSteps).length * 2 + 1}ch"`;
+  const controls =
+    `<button class="trace-btn trace-first" disabled tabindex="-1" aria-label="First step" title="First step">${iconFirst}</button>` +
+    `<button class="trace-btn trace-prev" disabled tabindex="-1" aria-label="Previous step" title="Previous step">${iconPrev}</button>` +
+    `<span class="trace-step-counter"${counterStyle}>${counterContent}</span>` +
+    (disabled
+      ? `<button class="trace-btn trace-next" disabled tabindex="-1" aria-label="Next step" title="Next step">${iconNext}</button>`
+      : `<button class="trace-btn trace-next" aria-label="Next step" title="Next step">${iconNext}</button>`) +
+    (disabled
+      ? `<button class="trace-btn trace-last" disabled tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`
+      : `<button class="trace-btn trace-last" tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`);
+  const wrapperAttrs = manifestUrl
+    ? ` data-trace-manifest="${manifestUrl}"`
+    : '';
+  const wrapperClass = disabled
+    ? 'trace-widget trace-disabled'
+    : 'trace-widget';
+  return `<div class="${wrapperClass}"${wrapperAttrs}><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-source-wrapper"><div class="trace-source">${highlightedSource}</div></div><pre class="trace-output"></pre></div></div></div>`;
+}
+
 export function createTraceHelpers(context: TraceContext): {
   renderTrace: (javaFile: string) => string;
 } {
-  const { filePath, contentDir, distDir, applyBasePath, cache } = context;
+  const {
+    filePath,
+    contentDir,
+    distDir,
+    applyBasePath,
+    cache,
+    javacAvailable,
+  } = context;
   const pageDir = path.dirname(filePath);
 
   function getOrRunTrace(javaFile: string): TraceResult {
@@ -266,15 +322,7 @@ export function createTraceHelpers(context: TraceContext): {
         { timeout: 60000, encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 },
       );
 
-      const sourceLines = source.split('\n');
-      if (sourceLines[sourceLines.length - 1] === '') {
-        sourceLines.pop();
-      }
-      const ext = path.extname(javaFile).slice(1).toLowerCase();
-      const lang = ext === 'java' ? 'java' : 'text';
-      const highlightedSource = renderCodeSegment(sourceLines, 1, lang, {
-        linkLineNumbers: false,
-      });
+      const highlightedSource = highlightSource(javaFile, source);
 
       const relDir = path
         .relative(contentDir, pageDir)
@@ -315,20 +363,20 @@ export function createTraceHelpers(context: TraceContext): {
 
   return {
     renderTrace: (javaFile: string): string => {
+      if (javacAvailable === false) {
+        log.warn`javac was not found; trace for ${B`${javaFile}`} will be disabled`;
+        const javaFilePath = path.resolve(pageDir, javaFile);
+        if (!fs.existsSync(javaFilePath)) {
+          throw new Error(`Trace target not found: ${javaFilePath}`);
+        }
+        const source = fs.readFileSync(javaFilePath, 'utf-8');
+        return renderWidgetHtml({
+          highlightedSource: highlightSource(javaFile, source),
+        });
+      }
       const { manifestUrl, highlightedSource, totalSteps } =
         getOrRunTrace(javaFile);
-      const svgAttrs = `aria-hidden='true' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'`;
-      const iconFirst = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='6' x2='2' y2='18'/><polyline points='10 6 4 12 10 18'/><line x1='4' y1='12' x2='22' y2='12'/></svg>`;
-      const iconPrev = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><polyline points='10 6 4 12 10 18'/><line x1='4' y1='12' x2='22' y2='12'/></svg>`;
-      const iconNext = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/></svg>`;
-      const iconLast = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/><line x1='22' y1='6' x2='22' y2='18'/></svg>`;
-      const controls =
-        `<button class="trace-btn trace-first" disabled tabindex="-1" aria-label="First step" title="First step">${iconFirst}</button>` +
-        `<button class="trace-btn trace-prev" disabled tabindex="-1" aria-label="Previous step" title="Previous step">${iconPrev}</button>` +
-        `<span class="trace-step-counter" style="min-width: ${String(totalSteps).length * 2 + 1}ch">1/${totalSteps}</span>` +
-        `<button class="trace-btn trace-next" aria-label="Next step" title="Next step">${iconNext}</button>` +
-        `<button class="trace-btn trace-last" tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`;
-      return `<div class="trace-widget" data-trace-manifest="${manifestUrl}"><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-source-wrapper"><div class="trace-source">${highlightedSource}</div></div><pre class="trace-output"></pre></div></div></div>`;
+      return renderWidgetHtml({ highlightedSource, manifestUrl, totalSteps });
     },
   };
 }

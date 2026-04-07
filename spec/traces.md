@@ -20,6 +20,13 @@ output is split into chunk files of 50 steps each, plus a `manifest.json` with
 metadata and a line-to-step index. These files are written to
 `dist/_traces/{Name}/`. Results are cached per source file path.
 
+If `javac` is not available, `renderTrace` logs a warning and emits a disabled
+widget. The disabled widget shows the syntax-highlighted source code but has all
+navigation buttons disabled and no manifest URL. The client-side component also
+handles missing trace data gracefully: if fetching the manifest fails (network
+error or non-OK response), the widget stays in its initial state without
+crashing.
+
 ## Widget
 
 The rendered widget uses a vertical layout: the memory diagram on top, the

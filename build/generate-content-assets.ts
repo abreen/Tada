@@ -158,6 +158,7 @@ export class ContentRenderer {
           assetFiles,
           literateJavaOutputPaths,
           traceCache: this.traceCache,
+          javacAvailable: this.javacAvailable,
         }),
       );
       return assets;
@@ -316,8 +317,7 @@ export class ContentRenderer {
       log.info`Processing ${dirtySourceFiles.size} content ${noun}`;
     }
 
-    const hasLiterateJava = [...dirtySourceFiles].some(isLiterateJava);
-    if (hasLiterateJava && this.javacAvailable === undefined) {
+    if (this.javacAvailable === undefined && dirtySourceFiles.size > 0) {
       this.javacAvailable = checkJavac();
       if (!this.javacAvailable) {
         log.warn`javac was not found; literate Java pages will not include execution output`;
