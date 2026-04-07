@@ -21,7 +21,8 @@
     "init/",
     "schema/",
     "types/",
-    "tsconfig.json"
+    "tsconfig.json",
+    "!**/*.test.ts"
   ],
   "scripts": {
     "prepare": "bunx husky && bun run scripts/check-deps.ts",
