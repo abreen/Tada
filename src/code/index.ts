@@ -28,15 +28,16 @@ export default async function mount(window: Window): Promise<void> {
     const container = fragment.querySelector('.code-body');
     const topNodes = container ? container.childNodes : fragment.childNodes;
     topNodes.forEach(node => {
-      if (node.nodeType === Node.TEXT_NODE) {
+      if (node.nodeType === 3 /* Node.TEXT_NODE */) {
         const text = node.textContent ?? '';
         if (text.trim()) {
           lines.push(text);
         }
-      } else if (node instanceof Element) {
-        const codeRows = node.querySelectorAll('.code-row');
+      } else if ('querySelectorAll' in node) {
+        const el = node as Element;
+        const codeRows = el.querySelectorAll('.code-row');
         if (codeRows.length > 0) {
-          codeRows.forEach(row => {
+          codeRows.forEach((row: Element) => {
             const codeEl = row.querySelector('code');
             if (codeEl) {
               const text = codeEl.textContent ?? '';

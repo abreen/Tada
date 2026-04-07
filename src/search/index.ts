@@ -106,6 +106,8 @@ function render(
   state: State,
   loading = false,
 ) {
+  const doc = resultsContainer.ownerDocument;
+
   if (state.showResults) {
     resultsContainer.removeAttribute('inert');
   }
@@ -114,12 +116,12 @@ function render(
     '.results',
   ) as HTMLElement | null;
   if (!resultsDiv) {
-    resultsDiv = document.createElement('div');
+    resultsDiv = doc.createElement('div');
     resultsDiv.className = 'results';
     resultsContainer.appendChild(resultsDiv);
   }
 
-  const ol = document.createElement('ol');
+  const ol = doc.createElement('ol');
   ol.id = `${input.name}-results`;
   ol.role = 'listbox';
   ol.tabIndex = -1;
@@ -128,29 +130,29 @@ function render(
   const totalVisible = Math.min(state.results.length, MAX_RESULTS);
 
   state.results.slice(0, MAX_RESULTS).forEach((result, i) => {
-    const a = document.createElement('a');
+    const a = doc.createElement('a');
     a.id = `result-${i}`;
     a.className = 'result';
     a.href = result.url;
     a.tabIndex = 0;
 
-    const titleEl = document.createElement('div');
+    const titleEl = doc.createElement('div');
     titleEl.id = `title-${i}`;
     titleEl.className = 'title';
     titleEl.textContent = result.title;
     a.appendChild(titleEl);
 
-    const subtitle = document.createElement('div');
+    const subtitle = doc.createElement('div');
     subtitle.className = 'subtitle';
     subtitle.innerText = result.url;
     a.appendChild(subtitle);
 
-    const excerpt = document.createElement('div');
+    const excerpt = doc.createElement('div');
     excerpt.className = 'excerpt';
     excerpt.innerHTML = result.excerpt;
     a.appendChild(excerpt);
 
-    const li = document.createElement('li');
+    const li = doc.createElement('li');
     li.id = `option-${i}`;
     li.setAttribute('role', 'option');
     li.setAttribute('aria-selected', 'false');
@@ -161,26 +163,26 @@ function render(
 
     const subsToShow = result.subResults.slice(0, 5);
     if (subsToShow.length > 0) {
-      const subList = document.createElement('ul');
+      const subList = doc.createElement('ul');
       subList.className = 'sub-results';
       for (const sub of subsToShow) {
-        const subA = document.createElement('a');
+        const subA = doc.createElement('a');
         subA.href = sub.url;
         subA.className = 'sub-result';
 
-        const subTitle = document.createElement('div');
+        const subTitle = doc.createElement('div');
         subTitle.className = 'title';
         subTitle.textContent = sub.title;
         subA.appendChild(subTitle);
 
         if (sub.excerpt) {
-          const subExcerpt = document.createElement('div');
+          const subExcerpt = doc.createElement('div');
           subExcerpt.className = 'excerpt';
           subExcerpt.innerHTML = sub.excerpt;
           subA.appendChild(subExcerpt);
         }
 
-        const subLi = document.createElement('li');
+        const subLi = doc.createElement('li');
         subLi.appendChild(subA);
         subList.appendChild(subLi);
       }
@@ -196,12 +198,12 @@ function render(
     '.results-info',
   ) as HTMLSpanElement | null;
   if (!infoSpan) {
-    infoSpan = document.createElement('span');
+    infoSpan = doc.createElement('span');
     infoSpan.className = 'results-info';
 
-    const hint = document.createElement('span');
+    const hint = doc.createElement('span');
     hint.className = 'search-hint';
-    const kbd1 = document.createElement('kbd');
+    const kbd1 = doc.createElement('kbd');
     kbd1.textContent = '/';
     hint.append('Press\u00a0', kbd1, '\u00a0to search');
     infoSpan.appendChild(hint);
@@ -213,7 +215,7 @@ function render(
     '.results-count',
   ) as HTMLSpanElement | null;
   if (!countSpan) {
-    countSpan = document.createElement('span');
+    countSpan = doc.createElement('span');
     countSpan.className = 'results-count';
     infoSpan.insertBefore(countSpan, infoSpan.firstChild);
   }
@@ -248,6 +250,7 @@ function render(
 }
 
 export default (window: Window) => {
+  const { document } = window;
   const input = document.querySelector(
     'input.quick-search',
   ) as HTMLInputElement | null;
