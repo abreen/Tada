@@ -78,7 +78,8 @@ function swapContent(newDoc: Document): void {
   const newContainer = newDoc.querySelector('.container');
   const oldContainer = document.querySelector('.container');
   if (newContainer && oldContainer) {
-    oldContainer.replaceChildren(...newContainer.childNodes);
+    const imported = document.importNode(newContainer, true);
+    oldContainer.replaceChildren(...imported.childNodes);
   }
 
   // Update body class (carries template name and toc-is-active)
