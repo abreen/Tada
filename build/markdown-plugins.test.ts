@@ -229,7 +229,7 @@ describe('custom markdown containers', () => {
     );
 
     expect(html).toContain('<div class="alert note">');
-    expect(html).toContain('<p class="title" id="read-this">');
+    expect(html).toContain('<p class="title" id="read-this">Read this</p>');
     expect(html).toContain(
       '<div class="alert warning"><p class="title" id="warning">Warning</p>',
     );

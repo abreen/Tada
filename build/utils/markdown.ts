@@ -128,7 +128,7 @@ export function createMarkdown(
   markdown.use(markdownItContainer, 'alert', {
     marker: '!',
     validate: function (params: string) {
-      return !!params.trim().match(/^(note|warning)\s*"?(.+)?"?$/);
+      return !!params.trim().match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
     },
     render: function (
       tokens: Token[],
@@ -138,7 +138,7 @@ export function createMarkdown(
     ) {
       const matches = tokens[idx].info
         .trim()
-        .match(/^(note|warning)\s*"?(.+)?"?$/);
+        .match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
 
       if (tokens[idx].nesting === 1) {
         const classNames = ['alert'];
@@ -147,7 +147,7 @@ export function createMarkdown(
           classNames.push(type);
         }
 
-        const title = matches && matches[2]?.trim();
+        const title = matches && (matches[2] || matches[3])?.trim();
         const displayTitle = title
           ? markdown.utils.escapeHtml(curlyQuote(title))
           : capitalize(type || '');
