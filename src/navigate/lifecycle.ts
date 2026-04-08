@@ -39,7 +39,7 @@ export async function mountPerPageComponents(
           }
           resolve();
         } catch (err) {
-          if (__IS_DEV__) {
+          if (typeof __IS_DEV__ !== 'undefined' && __IS_DEV__) {
             console.error(`Failed to mount ${name} component:`, String(err));
           }
           reject();
