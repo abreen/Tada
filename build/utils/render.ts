@@ -377,6 +377,7 @@ function renderPlainTextContent(
     },
     literateJavaOutputPaths,
     sourceUrlPath,
+    validTargets: validInternalTargets,
   });
 
   const ext = path.extname(filePath);
@@ -559,6 +560,7 @@ export function renderLiterateJavaPageAsset({
     },
     literateJavaOutputPaths,
     sourceUrlPath,
+    validTargets: validInternalTargets,
   });
   let fenceIndex = 0;
   const defaultFence = md.renderer.rules.fence!;

@@ -11,6 +11,7 @@ const log = makeLogger(import.meta.url);
 interface ApplyBasePathOptions {
   literateJavaOutputPaths?: Set<string>;
   sourceUrlPath?: string;
+  validTargets?: Set<string>;
 }
 
 export default function applyBasePathPlugin(
@@ -22,6 +23,7 @@ export default function applyBasePathPlugin(
   const rewriteCodeLinks = isFeatureEnabled(siteVariables, 'code');
   const literateJavaOutputPaths = pluginOptions.literateJavaOutputPaths;
   const sourceUrlPath = pluginOptions.sourceUrlPath;
+  const validTargets = pluginOptions.validTargets;
 
   function rewriteInternalHref(href: string): string {
     const match = href.match(/^([^?#]*)(.*)$/);
@@ -40,6 +42,19 @@ export default function applyBasePathPlugin(
                   modifiedPath,
                 );
             if (literateJavaOutputPaths.has(resolved)) {
+              break;
+            }
+          }
+          // Only rewrite if the .html version exists. Public files with
+          // code extensions are copied as-is and have no .html page.
+          if (validTargets && sourceUrlPath) {
+            const resolved = modifiedPath.startsWith('/')
+              ? modifiedPath
+              : path.posix.join(
+                  path.posix.dirname(sourceUrlPath),
+                  modifiedPath,
+                );
+            if (!validTargets.has(`${resolved}.html`)) {
               break;
             }
           }

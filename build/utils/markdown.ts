@@ -25,6 +25,7 @@ interface CreateMarkdownOptions {
   validatorOptions?: Record<string, unknown>;
   literateJavaOutputPaths?: Set<string>;
   sourceUrlPath?: string;
+  validTargets?: Set<string>;
 }
 
 function capitalize(str: string): string {
@@ -43,6 +44,7 @@ export function createMarkdown(
     validatorOptions = {},
     literateJavaOutputPaths,
     sourceUrlPath,
+    validTargets,
   } = options;
   const markdown = new MarkdownIt({ html: true, typographer: true })
     .use(headingSubtitlePlugin)
@@ -55,6 +57,7 @@ export function createMarkdown(
     .use(applyBasePathPlugin, siteVariables, {
       literateJavaOutputPaths,
       sourceUrlPath,
+      validTargets,
     })
     .use(tocPlugin)
     .use(columnsPlugin)

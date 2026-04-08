@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from conftest import run_tada
+from conftest import run_tada, set_site_config
 
 
 class TestBrokenNavLink:
@@ -122,6 +122,37 @@ class TestLinkToPublicIndexHtml:
         )
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
+
+
+class TestLinkToPublicCodeFile:
+    """A link to a code-extension file in public/ is valid when features.code is on."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        set_site_config(site, {"features": {"code": True}})
+
+        (site / "public" / "Test.java").write_text("public class Test {}\n")
+        (site / "content" / "page.md").write_text(
+            "title: Page\n\nDownload [the code](/Test.java).\n"
+        )
+
+        yield site
+
+    def test_build_succeeds(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"build failed: {result.stderr}"
+
+    def test_link_not_rewritten_to_html(self, site_dir):
+        """The rendered HTML should link to Test.java, not Test.java.html."""
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"build failed: {result.stderr}"
+        html = (site_dir / "dist" / "page.html").read_text()
+        assert "/Test.java" in html
+        assert "/Test.java.html" not in html
 
 
 class TestDisabledNavLinkSkipped:
