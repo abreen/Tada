@@ -67,10 +67,12 @@ export function tocPlugin(md: MarkdownIt): void {
         const parentIsSection = depth === 1 && containerStack[0] === 'section';
 
         if (depth === 0 || parentIsSection) {
-          const match = token.info.trim().match(/^(note|warning)\s*"?(.+)?"?$/);
+          const match = token.info
+            .trim()
+            .match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
           if (match) {
             const type = match[1];
-            let title = match[2]?.trim();
+            let title = (match[2] || match[3])?.trim();
             if (title) {
               title = md.utils.escapeHtml(curlyQuote(title));
             } else {
