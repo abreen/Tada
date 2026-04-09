@@ -26,6 +26,7 @@ declare const __WEBSOCKET_PORT__: number;
       document.body.classList.add('loading-cursor');
     } else if (event.data === 'reload') {
       console.log('[watch-reload] Reloading page...');
+      window.history.scrollRestoration = 'auto';
       window.location.reload();
     }
   };
