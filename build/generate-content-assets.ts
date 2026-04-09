@@ -24,7 +24,7 @@ import type {
   WatchState,
 } from './types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 export class ContentRenderer {
   private siteVariables: SiteVariables;
@@ -34,7 +34,12 @@ export class ContentRenderer {
   private javacAvailable: boolean | undefined;
   private traceCache: Map<
     string,
-    { manifestUrl: string; highlightedSource: string; totalSteps: number }
+    {
+      manifestUrl: string;
+      highlightedSource: string;
+      totalSteps: number;
+      mtime: number;
+    }
   > = new Map();
 
   constructor(siteVariables: SiteVariables) {
@@ -65,6 +70,15 @@ export class ContentRenderer {
       jsonDataChanged ||
       partialsChanged
     ) {
+      return new Set(buildContentFiles);
+    }
+
+    // If any .java file changed, the trace cache will be stale, so rebuild
+    // all content pages to pick up the new trace output.
+    const javaFileChanged = [...changedContentFiles].some(f =>
+      f.endsWith('.java'),
+    );
+    if (javaFileChanged) {
       return new Set(buildContentFiles);
     }
 
@@ -144,6 +158,7 @@ export class ContentRenderer {
           assetFiles,
           literateJavaOutputPaths,
           traceCache: this.traceCache,
+          javacAvailable: this.javacAvailable,
         }),
       );
       return assets;
@@ -302,8 +317,7 @@ export class ContentRenderer {
       log.info`Processing ${dirtySourceFiles.size} content ${noun}`;
     }
 
-    const hasLiterateJava = [...dirtySourceFiles].some(isLiterateJava);
-    if (hasLiterateJava && this.javacAvailable === undefined) {
+    if (this.javacAvailable === undefined && dirtySourceFiles.size > 0) {
       this.javacAvailable = checkJavac();
       if (!this.javacAvailable) {
         log.warn`javac was not found; literate Java pages will not include execution output`;

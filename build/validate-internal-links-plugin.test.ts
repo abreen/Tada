@@ -131,4 +131,11 @@ describe('validateInternalLinks', () => {
     const md = createMd(['/src/Rectangle.java'], { codeExtensions: [] });
     expect(() => md.render('[Rect](/src/Rectangle.java)')).not.toThrow();
   });
+
+  test('allows .java link to public file when code feature is enabled', () => {
+    // Public files with code extensions are copied as-is; only the raw
+    // path exists in valid targets, not the .html version.
+    const md = createMd(['/Test.java'], { codeExtensions: ['java'] });
+    expect(() => md.render('[Test](/Test.java)')).not.toThrow();
+  });
 });

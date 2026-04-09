@@ -34,7 +34,7 @@ interface CodeSegment {
   startLine: number;
 }
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 const PROSE_LINE = /^\s*\/\/\/(\s|$)/;
 

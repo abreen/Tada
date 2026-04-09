@@ -1,0 +1,5 @@
+[test]
+pathIgnorePatterns = ["playwright/**"]
+coverageReporter = ["text", "lcov"]
+coverageDir = "coverage/unit"
+coverageSkipTestFiles = true

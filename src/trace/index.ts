@@ -1,16 +1,9 @@
-import type { TraceManifest, TraceStep } from './types';
-import {
-  updateSourceHighlight,
-  renderMemoryDiagram,
-  updateStepControls,
-} from './renderer';
+import type { TraceManifest, TraceChunkEntry } from './types';
 
 interface WidgetState {
   manifest: TraceManifest;
-  chunks: Map<number, TraceStep[]>;
+  chunks: Map<number, TraceChunkEntry[]>;
   currentStep: number;
-  prevDiagramW: number;
-  prevDiagramH: number;
 }
 
 interface WidgetElements {
@@ -21,7 +14,7 @@ interface WidgetElements {
   diagram: HTMLElement;
 }
 
-function getStep(state: WidgetState): TraceStep {
+function getStep(state: WidgetState): TraceChunkEntry {
   const chunkIndex = Math.floor(state.currentStep / state.manifest.chunkSize);
   const offset = state.currentStep % state.manifest.chunkSize;
   return state.chunks.get(chunkIndex)![offset];
@@ -41,7 +34,7 @@ async function loadChunk(
   }
   const url = chunkUrlFromManifest(manifestUrl, chunkIndex);
   const res = await fetch(url);
-  const chunk: TraceStep[] = await res.json();
+  const chunk: TraceChunkEntry[] = await res.json();
   state.chunks.set(chunkIndex, chunk);
 }
 
@@ -50,6 +43,7 @@ async function goToStep(
   elements: WidgetElements,
   manifestUrl: string,
   stepIndex: number,
+  doc: Document,
 ): Promise<void> {
   stepIndex = Math.max(0, Math.min(stepIndex, state.manifest.totalSteps - 1));
   const lastChunk = Math.floor(stepIndex / state.manifest.chunkSize);
@@ -59,16 +53,100 @@ async function goToStep(
   }
   await Promise.all(loads);
   state.currentStep = stepIndex;
-  renderWidgetState(state, elements);
+  renderWidgetState(state, elements, doc);
 }
 
-function renderWidgetState(state: WidgetState, elements: WidgetElements): void {
-  const step = getStep(state);
-  updateSourceHighlight(elements.source, step.line);
+function updateSourceHighlight(panel: HTMLElement, currentLine: number): void {
+  panel.querySelectorAll('.line-number').forEach(ln => {
+    ln.classList.remove('trace-line-active');
+  });
+  const el = panel.querySelector(`.line-number[data-line="${currentLine}"]`);
+  if (el) {
+    el.classList.add('trace-line-active');
+    const elRect = el.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    panel.scrollTop += elRect.top - panelRect.top - panel.clientHeight / 2;
+  }
+}
+
+function updateStepControls(
+  container: HTMLElement,
+  currentStep: number,
+  totalSteps: number,
+  doc: Document,
+): void {
+  const counter = container.querySelector(
+    '.trace-step-counter',
+  ) as HTMLElement | null;
+  if (counter) {
+    counter.textContent = `${currentStep + 1}/${totalSteps}`;
+    const digits = String(totalSteps).length;
+    counter.style.minWidth = `${digits * 2 + 1}ch`;
+  }
+  const first = container.querySelector('.trace-first') as HTMLButtonElement;
+  const prev = container.querySelector('.trace-prev') as HTMLButtonElement;
+  const next = container.querySelector('.trace-next') as HTMLButtonElement;
+  const last = container.querySelector('.trace-last') as HTMLButtonElement;
+  const btns = [first, prev, next, last];
+
+  const focused = doc.activeElement;
+
+  if (first) {
+    first.disabled = currentStep === 0;
+  }
+  if (prev) {
+    prev.disabled = currentStep === 0;
+  }
+  if (next) {
+    next.disabled = currentStep >= totalSteps - 1;
+  }
+  if (last) {
+    last.disabled = currentStep >= totalSteps - 1;
+  }
+
+  // When a clicked button becomes disabled, the browser removes focus.
+  // Move focus to a sensible sibling so the outline stays visible.
+  if (
+    focused &&
+    'disabled' in focused &&
+    (focused as HTMLButtonElement).disabled
+  ) {
+    if (focused === first || focused === prev) {
+      next?.focus();
+    } else if (focused === next || focused === last) {
+      prev?.focus();
+    }
+  }
+
+  // Roving tabindex: the focused button is the Tab stop.
+  const currentFocus = doc.activeElement;
+  const enabled = btns.filter(b => b && !b.disabled);
+  const focusedBtn = enabled.find(b => b === currentFocus);
+  for (const b of enabled) {
+    b.tabIndex = b === focusedBtn ? 0 : -1;
+  }
+  if (!focusedBtn && enabled.length > 0) {
+    enabled[0].tabIndex = 0;
+  }
+  for (const b of btns) {
+    if (b && b.disabled) {
+      b.tabIndex = -1;
+    }
+  }
+}
+
+function renderWidgetState(
+  state: WidgetState,
+  elements: WidgetElements,
+  doc: Document,
+): void {
+  const entry = getStep(state);
+  updateSourceHighlight(elements.source, entry.line);
   updateStepControls(
     elements.controls,
     state.currentStep,
     state.manifest.totalSteps,
+    doc,
   );
   let output = '';
   for (let i = 0; i <= state.currentStep; i++) {
@@ -81,48 +159,43 @@ function renderWidgetState(state: WidgetState, elements: WidgetElements): void {
   }
   elements.output.textContent = output;
 
-  const result = renderMemoryDiagram(elements.diagram, step);
-  if (result) {
-    const { width: newW, height: newH } = result;
-    if (newW > state.prevDiagramW || newH > state.prevDiagramH) {
-      elements.diagram.scrollTo({
-        left: newH > state.prevDiagramH ? 0 : newW,
-        top: newH > state.prevDiagramH ? newH : elements.diagram.scrollTop,
-        behavior: 'smooth',
-      });
-    }
-    state.prevDiagramW = newW;
-    state.prevDiagramH = newH;
+  const prevHeight = elements.diagram.scrollHeight;
+  elements.diagram.innerHTML = entry.svg;
+
+  // If the diagram grew past the visible area, scroll to show the new content
+  if (elements.diagram.scrollHeight > prevHeight) {
+    elements.diagram.scrollTop =
+      elements.diagram.scrollHeight - elements.diagram.clientHeight;
   }
 }
 
-const activeWidgets: { state: WidgetState; elements: WidgetElements }[] = [];
-
-async function initWidget(root: HTMLElement): Promise<void> {
+async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
   const manifestUrl = root.dataset.traceManifest;
   if (!manifestUrl) {
     return;
   }
 
-  const res = await fetch(manifestUrl);
+  let res: Response;
+  try {
+    res = await fetch(manifestUrl);
+  } catch {
+    return;
+  }
+  if (!res.ok) {
+    return;
+  }
   const manifest: TraceManifest = await res.json();
 
-  const state: WidgetState = {
-    manifest,
-    chunks: new Map(),
-    currentStep: 0,
-    prevDiagramW: 0,
-    prevDiagramH: 0,
-  };
+  const state: WidgetState = { manifest, chunks: new Map(), currentStep: 0 };
 
   await loadChunk(state, manifestUrl, 0);
 
-  const step = getStep(state);
+  const entry = getStep(state);
 
   const source = root.querySelector('.trace-source') as HTMLElement;
   const diagram = root.querySelector('.trace-diagram') as HTMLElement;
   const output = root.querySelector('.trace-output') as HTMLPreElement;
-  output.textContent = step.stdout || '';
+  output.textContent = entry.stdout || '';
 
   const controls = root.querySelector('.trace-controls') as HTMLElement;
   const firstBtn = controls.querySelector('.trace-first') as HTMLButtonElement;
@@ -130,16 +203,16 @@ async function initWidget(root: HTMLElement): Promise<void> {
   const nextBtn = controls.querySelector('.trace-next') as HTMLButtonElement;
   const lastBtn = controls.querySelector('.trace-last') as HTMLButtonElement;
   firstBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, 0),
+    goToStep(state, elements, manifestUrl, 0, doc),
   );
   prevBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, state.currentStep - 1),
+    goToStep(state, elements, manifestUrl, state.currentStep - 1, doc),
   );
   nextBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, state.currentStep + 1),
+    goToStep(state, elements, manifestUrl, state.currentStep + 1, doc),
   );
   lastBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, manifest.totalSteps - 1),
+    goToStep(state, elements, manifestUrl, manifest.totalSteps - 1, doc),
   );
 
   const btns = [firstBtn, prevBtn, nextBtn, lastBtn];
@@ -148,7 +221,7 @@ async function initWidget(root: HTMLElement): Promise<void> {
       return;
     }
     const enabled = btns.filter(b => !b.disabled);
-    const idx = enabled.indexOf(document.activeElement as HTMLButtonElement);
+    const idx = enabled.indexOf(doc.activeElement as HTMLButtonElement);
     if (idx < 0) {
       return;
     }
@@ -166,16 +239,10 @@ async function initWidget(root: HTMLElement): Promise<void> {
 
   const elements: WidgetElements = { root, source, controls, output, diagram };
 
-  updateStepControls(controls, state.currentStep, manifest.totalSteps);
+  updateStepControls(controls, state.currentStep, manifest.totalSteps, doc);
 
-  const initResult = renderMemoryDiagram(diagram, step);
-  if (initResult) {
-    state.prevDiagramW = initResult.width;
-    state.prevDiagramH = initResult.height;
-  }
-  updateSourceHighlight(source, step.line);
-
-  activeWidgets.push({ state, elements });
+  diagram.innerHTML = entry.svg;
+  updateSourceHighlight(source, entry.line);
 }
 
 export default function mountTrace(window: Window): void {
@@ -186,14 +253,6 @@ export default function mountTrace(window: Window): void {
   }
 
   for (const widget of widgets) {
-    initWidget(widget as HTMLElement);
+    initWidget(widget as HTMLElement, window.document);
   }
-
-  window
-    .matchMedia('(prefers-color-scheme: dark)')
-    .addEventListener('change', () => {
-      for (const { state, elements } of activeWidgets) {
-        renderMemoryDiagram(elements.diagram, getStep(state));
-      }
-    });
 }

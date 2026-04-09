@@ -10,7 +10,7 @@ export default (window: Window) => {
   const mountParent =
     (window.document.getElementById(
       'to-top-container',
-    ) as HTMLElement | null) ?? document.body;
+    ) as HTMLElement | null) ?? window.document.body;
 
   function createLink(parent: HTMLElement): HTMLAnchorElement {
     const link = window.document.createElement('a');
@@ -30,11 +30,11 @@ export default (window: Window) => {
     e.preventDefault();
     const cleanUrl = window.location.pathname + window.location.search;
     if (window.location.hash) {
-      history.pushState(null, '', cleanUrl);
+      window.history.pushState(null, '', cleanUrl);
     } else {
-      history.replaceState(null, '', cleanUrl);
+      window.history.replaceState(null, '', cleanUrl);
     }
-    window.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     const toc = window.document.querySelector('nav.toc') as HTMLElement | null;
     if (toc) {
       toc.scrollTop = 0;
@@ -65,7 +65,7 @@ export default (window: Window) => {
     }
   }
 
-  const debounced = debounce(updateVisibility, LATENCY_MS);
+  const debounced = debounce(window, updateVisibility, LATENCY_MS);
   window.addEventListener('scroll', debounced, { passive: true });
   updateVisibility();
 

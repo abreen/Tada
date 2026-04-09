@@ -8,6 +8,7 @@
           <a
             class="<%= cx({disabled: link.disabled, external: link.external}) %>"
             <% if (!link.disabled) { %>href="<%= link.internal ? applyBasePath(link.internal) : link.external %>"<% } %>
+            <% if (link.external) { %>target="_blank"<% } %>
           >
             <%= link.text %></a>
         </li>

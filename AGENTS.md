@@ -11,8 +11,21 @@ This codebase is a static site generator written in TypeScript and uses Bun.
 ## Feature specifications (specs)
 
 Each feature is documented separately in `spec/`. Consult the documentation
-to answer questions about functionality. When implementing new features or
-modifying existing ones, update the documentation in `spec/`.
+to answer questions about functionality. When adding new features, first
+create an appropriately named Markdown file in `spec/` describing it.
+
+### Keeping specs in sync
+
+After changing code, check whether the relevant spec still matches. Look at
+the claims the spec makes (default values, descriptions of frontend styles
+or layout, configuration options, technology choices/third-party dependencies)
+and verify them against the current code.
+
+For a broader audit across all specs, use `git log` to compare each spec's
+last modification date against changes to the code it describes. Specs that
+have not been touched since older commits are the most likely to be stale.
+Verify findings against the actual code before making changes in `spec/`,
+and avoid cursory or surface-level reads which may produce false specs.
 
 ## Style
 

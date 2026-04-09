@@ -3,7 +3,7 @@ import type Token from 'markdown-it/lib/token.mjs';
 import { makeLogger } from './log';
 import type { SiteVariables } from './types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 export default function externalLinks(
   md: MarkdownIt,

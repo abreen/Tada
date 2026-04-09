@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from conftest import run_tada
+from conftest import run_tada, set_site_config
 
 
 class TestBrokenNavLink:
@@ -24,13 +24,7 @@ class TestBrokenNavLink:
     def test_build_fails(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
-
-    def test_error_mentions_nav_json(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "nav.json" in result.stdout
-
-    def test_error_mentions_broken_path(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "/nonexistent.html" in result.stdout
 
 
@@ -52,13 +46,7 @@ class TestBrokenParentLink:
     def test_build_fails(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
-
-    def test_error_mentions_parent(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "parent" in result.stdout.lower()
-
-    def test_error_mentions_broken_path(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "/nonexistent.html" in result.stdout
 
 
@@ -81,10 +69,90 @@ class TestLinkToPartialBroken:
     def test_build_fails(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
-
-    def test_error_mentions_broken_path(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
         assert "/_partial.html" in result.stdout
+
+
+class TestLinkToPublicFile:
+    """A link to a file in public/ is valid."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        (site / "public" / "data.csv").write_text("a,b\n1,2\n")
+        (site / "content" / "page.md").write_text(
+            "title: Page\n\nDownload [the data](/data.csv).\n"
+        )
+
+        yield site
+
+    def test_build_succeeds(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"build failed: {result.stderr}"
+
+
+class TestLinkToPublicIndexHtml:
+    """A link to index.html inside a public/ subdirectory is valid."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        report_dir = site / "public" / "report"
+        report_dir.mkdir(parents=True)
+        (report_dir / "index.html").write_text("<html><body>Report</body></html>")
+        (site / "content" / "page.md").write_text(
+            "title: Page\n\nSee [the report](/report/index.html).\n"
+        )
+
+        yield site
+
+    def test_build_succeeds(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"build failed: {result.stderr}"
+
+    def test_directory_link_rejected(self, site_dir):
+        """Linking to /report/ instead of /report/index.html is an error."""
+        (site_dir / "content" / "page.md").write_text(
+            "title: Page\n\nSee [the report](/report/).\n"
+        )
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode != 0
+
+
+class TestLinkToPublicCodeFile:
+    """A link to a code-extension file in public/ is valid when features.code is on."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+
+        set_site_config(site, {"features": {"code": True}})
+
+        (site / "public" / "Test.java").write_text("public class Test {}\n")
+        (site / "content" / "page.md").write_text(
+            "title: Page\n\nDownload [the code](/Test.java).\n"
+        )
+
+        yield site
+
+    def test_build_succeeds(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"build failed: {result.stderr}"
+
+    def test_link_not_rewritten_to_html(self, site_dir):
+        """The rendered HTML should link to Test.java, not Test.java.html."""
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"build failed: {result.stderr}"
+        html = (site_dir / "dist" / "page.html").read_text()
+        assert "/Test.java" in html
+        assert "/Test.java.html" not in html
 
 
 class TestDisabledNavLinkSkipped:
@@ -108,10 +176,7 @@ class TestDisabledNavLinkSkipped:
     def test_build_succeeds(self, site_dir):
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode == 0, f"build failed: {result.stderr}"
-
-    def test_nonexistent_link_not_in_html(self, site_dir):
-        run_tada("dev", cwd=str(site_dir))
-        build_dir = site_dir / "_build"
+        build_dir = site_dir / "dist"
         for html_file in build_dir.rglob("*.html"):
             content = html_file.read_text()
             assert "/nonexistent.html" not in content, (

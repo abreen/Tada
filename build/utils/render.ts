@@ -37,7 +37,7 @@ import type {
   RenderCopiedContentOptions,
 } from '../types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 
@@ -98,7 +98,7 @@ function createTemplateParameters({
   subPath,
 }: TemplateParametersInput): Record<string, unknown> {
   return {
-    ...(siteVariables.vars || {}),
+    vars: siteVariables.vars || {},
     ...createGlobals(pageVariables, siteVariables, subPath),
     site: siteVariables,
     base: siteVariables.base,
@@ -179,13 +179,14 @@ export function renderPlainTextPageAsset({
   assetFiles,
   literateJavaOutputPaths,
   traceCache,
+  javacAvailable,
 }: RenderPlainTextOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = path.relative(contentDir, path.join(dir, name));
   const applyBasePath = createApplyBasePath(siteVariables);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
-  const { content, pageVariables, tocItems } = renderPlainTextContent(
+  const { content, pageVariables, tocItems, alertIds } = renderPlainTextContent(
     filePath,
     subPath,
     siteVariables,
@@ -197,6 +198,7 @@ export function renderPlainTextPageAsset({
       contentDir,
       distDir,
       literateJavaOutputPaths,
+      javacAvailable,
     },
   );
 
@@ -209,6 +211,7 @@ export function renderPlainTextPageAsset({
   if (pageVariables.toc && tocItems) {
     pageVariables.tocHtml = generateTocHtml(
       tocItems as Parameters<typeof generateTocHtml>[0],
+      alertIds,
     );
   }
 
@@ -338,20 +341,28 @@ function renderPlainTextContent(
     contentDir,
     distDir,
     literateJavaOutputPaths,
+    javacAvailable,
   }: {
     validateInternalLinks?: boolean;
     traceCache?: Map<
       string,
-      { manifestUrl: string; highlightedSource: string; totalSteps: number }
+      {
+        manifestUrl: string;
+        highlightedSource: string;
+        totalSteps: number;
+        mtime: number;
+      }
     >;
     contentDir?: string;
     distDir?: string;
     literateJavaOutputPaths?: Set<string>;
+    javacAvailable?: boolean;
   } = {},
 ): {
   content: string | null;
   pageVariables: Record<string, unknown>;
   tocItems: unknown[] | null;
+  alertIds: string[];
 } {
   const sourceUrlPath = `/${subPath}.html`;
   const md = createMarkdown(siteVariables, {
@@ -366,6 +377,7 @@ function renderPlainTextContent(
     },
     literateJavaOutputPaths,
     sourceUrlPath,
+    validTargets: validInternalTargets,
   });
 
   const ext = path.extname(filePath);
@@ -439,6 +451,7 @@ function renderPlainTextContent(
       distDir,
       applyBasePath,
       cache: traceCache,
+      javacAvailable,
     });
     params.renderTrace = helpers.renderTrace;
   }
@@ -456,16 +469,19 @@ function renderPlainTextContent(
   }
 
   let tocItems: unknown[] | null = null;
+  let alertIds: string[] = [];
   if (extensionIsMarkdown(ext)) {
-    const env: Record<string, unknown> = {};
+    const env: Record<string, unknown> = { alertIds: [] as string[] };
     html = md.render(html!, env);
     tocItems = (env.tocItems as unknown[] | undefined) || null;
+    alertIds = env.alertIds as string[];
   }
 
   return {
     content: html,
     pageVariables: params.page as Record<string, unknown>,
     tocItems,
+    alertIds,
   };
 }
 
@@ -544,6 +560,7 @@ export function renderLiterateJavaPageAsset({
     },
     literateJavaOutputPaths,
     sourceUrlPath,
+    validTargets: validInternalTargets,
   });
   let fenceIndex = 0;
   const defaultFence = md.renderer.rules.fence!;
@@ -595,7 +612,7 @@ export function renderLiterateJavaPageAsset({
     return codeHtml;
   };
 
-  const env: Record<string, unknown> = {};
+  const env: Record<string, unknown> = { alertIds: [] as string[] };
   const contentHtml = md.render(stripHtmlComments(content), env);
 
   // Build page variables
@@ -616,6 +633,7 @@ export function renderLiterateJavaPageAsset({
   if (pageVariables.toc && env.tocItems) {
     pageVariables.tocHtml = generateTocHtml(
       env.tocItems as Parameters<typeof generateTocHtml>[0],
+      env.alertIds as string[],
     );
   }
 

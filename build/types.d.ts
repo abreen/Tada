@@ -82,8 +82,14 @@ export interface RenderPlainTextOptions {
   literateJavaOutputPaths?: Set<string>;
   traceCache?: Map<
     string,
-    { manifestUrl: string; highlightedSource: string; totalSteps: number }
+    {
+      manifestUrl: string;
+      highlightedSource: string;
+      totalSteps: number;
+      mtime: number;
+    }
   >;
+  javacAvailable?: boolean;
 }
 
 /** Options for code page asset rendering */
@@ -187,6 +193,7 @@ export interface TraceStep {
 export interface TraceStackFrame {
   method: string;
   class: string;
+  line?: number;
   locals: Record<string, TraceValue>;
 }
 
@@ -215,6 +222,35 @@ export interface TraceManifest {
   sourceFile: string;
   source: string;
   lineToSteps: Record<number, number[]>;
+}
+
+/** Position and size of a heap object in the precomputed layout. */
+export interface TraceObjectLayout {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** For field objects, x-offset where value boxes start. */
+  valueX?: number;
+  /** For arrays, width of each cell. */
+  cellWidth?: number;
+  /** Field names that are structural children in the tree layout. */
+  childFields?: string[];
+}
+
+/** A precomputed layout for the entire trace (all steps). */
+export interface TraceLayout {
+  /** Stable position for every heap object that ever exists. */
+  objects: Record<string, TraceObjectLayout>;
+  /** Fields to ignore for layout on each class (from @trace-ignore). */
+  ignoreFields: Record<string, string[]>;
+}
+
+/** A single entry in a chunk file (new format with precomputed SVG). */
+export interface TraceChunkEntry {
+  line: number;
+  stdout: string;
+  svg: string;
 }
 
 /** Site config creation input (used by bin/validators) */

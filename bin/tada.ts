@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import fs from 'fs';
 import path from 'path';
-import { execFileSync } from 'child_process';
+
 import { parseArgs } from 'util';
 import packageJson from '../package.json' with { type: 'json' };
 import {
@@ -24,7 +24,7 @@ const { version } = packageJson;
 
 const SYSTEM_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-const packageDir = path.resolve(__dirname, '..');
+const packageDir = path.resolve(import.meta.dir, '..');
 
 function requireSiteConfig(env: string): void {
   const configPath = path.resolve(process.cwd(), `site.${env}.json`);
@@ -32,6 +32,17 @@ function requireSiteConfig(env: string): void {
     console.error(`Error: Missing config file: site.${env}.json`);
     process.exit(1);
   }
+}
+
+function parsePortArg(name: string): number | undefined {
+  const idx = process.argv.indexOf(name);
+  if (idx !== -1 && process.argv[idx + 1]) {
+    const val = parseInt(process.argv[idx + 1], 10);
+    if (val > 0 && val < 65536) {
+      return val;
+    }
+  }
+  return undefined;
 }
 
 const COMMANDS = {
@@ -148,21 +159,6 @@ function printUsage() {
       continue;
     }
     console.log(`  ${cmd.padEnd(18)} ${desc}`);
-  }
-}
-
-function run(args: string[]): void {
-  try {
-    execFileSync('bun', args, { cwd: process.cwd(), stdio: 'inherit' });
-  } catch (err: unknown) {
-    const code = (err as { status?: number }).status;
-    if (code != null) {
-      console.error(`tada ${command} failed with exit code ${code}`);
-      process.exit(code);
-    } else {
-      console.error(`tada ${command} failed`);
-      process.exit(1);
-    }
   }
 }
 
@@ -605,49 +601,77 @@ function diffCommand(args: string[]): void {
 
 const command = process.argv[2];
 
-switch (command) {
-  case 'init':
-    initCommand(process.argv.slice(3));
-    break;
+try {
+  switch (command) {
+    case 'init':
+      await initCommand(process.argv.slice(3));
+      break;
 
-  case 'dev':
-    requireSiteConfig('dev');
-    run([path.join(packageDir, 'build/pipeline.ts'), 'dev']);
-    break;
-
-  case 'prod':
-    requireSiteConfig('prod');
-    run([path.join(packageDir, 'build/pipeline.ts'), 'prod']);
-    break;
-
-  case 'watch': {
-    requireSiteConfig('dev');
-    run([path.join(packageDir, 'build/watch.ts'), ...process.argv.slice(3)]);
-    break;
-  }
-
-  case 'serve': {
-    run([path.join(packageDir, 'build/serve.ts'), ...process.argv.slice(3)]);
-    break;
-  }
-
-  case 'clean':
-    cleanCommand(process.argv.slice(3));
-    break;
-
-  case 'diff':
-    diffCommand(process.argv.slice(3));
-    break;
-
-  case '--version':
-  case '-v':
-    console.log(`tada v${version}`);
-    break;
-
-  default:
-    printUsage();
-    if (command && command !== '--help' && command !== '-h') {
-      process.exit(1);
+    case 'dev': {
+      requireSiteConfig('dev');
+      const { runPipeline } = await import(
+        path.join(packageDir, 'build/pipeline.ts')
+      );
+      await runPipeline('development');
+      break;
     }
-    break;
+
+    case 'prod': {
+      requireSiteConfig('prod');
+      const { runPipeline } = await import(
+        path.join(packageDir, 'build/pipeline.ts')
+      );
+      await runPipeline('production');
+      break;
+    }
+
+    case 'watch': {
+      requireSiteConfig('dev');
+      const { runWatch } = await import(
+        path.join(packageDir, 'build/watch.ts')
+      );
+      await runWatch({
+        httpPort: parsePortArg('--port'),
+        wsPort: parsePortArg('--ws-port'),
+      });
+      break;
+    }
+
+    case 'serve': {
+      const { startServer } = await import(
+        path.join(packageDir, 'build/serve.ts')
+      );
+      const { getDistDir } = await import(
+        path.join(packageDir, 'build/util.ts')
+      );
+      startServer({
+        port: parsePortArg('--port') ?? 8080,
+        distDir: getDistDir(),
+      });
+      break;
+    }
+
+    case 'clean':
+      cleanCommand(process.argv.slice(3));
+      break;
+
+    case 'diff':
+      diffCommand(process.argv.slice(3));
+      break;
+
+    case '--version':
+    case '-v':
+      console.log(`tada v${version}`);
+      break;
+
+    default:
+      printUsage();
+      if (command && command !== '--help' && command !== '-h') {
+        process.exit(1);
+      }
+      break;
+  }
+} catch (err) {
+  console.error(`tada ${command} failed: ${(err as Error).message}`);
+  process.exit(1);
 }

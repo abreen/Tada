@@ -6,7 +6,7 @@ import { getProjectDir } from './utils/paths';
 import { B } from './colors';
 import { makeLogger } from './log';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 interface ChangeDetectionResult {
   templateError: Error | null;
@@ -88,6 +88,13 @@ export class ContentChangeDetector {
       for (const filePath of changedPartials) {
         log.event`Partial ${B`${path.basename(filePath)}`} changed, rebuilding`;
       }
+    }
+
+    const changedJavaFiles = [...changedContentFiles].filter(f =>
+      f.endsWith('.java'),
+    );
+    for (const filePath of changedJavaFiles) {
+      log.event`${B`${path.basename(filePath)}`} changed, re-running traces`;
     }
 
     // Check if site config changed

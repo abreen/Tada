@@ -48,6 +48,7 @@ class TestDiffWithChanges:
         assert result.returncode == 0
         assert "Changed" in result.stdout
         assert "index.html" in result.stdout
+        assert "differ" in result.stdout
 
     def test_detects_added_page(self, site_dir):
         run_tada("prod", cwd=str(site_dir), check=True)
@@ -61,18 +62,6 @@ class TestDiffWithChanges:
         assert result.returncode == 0
         assert "Added" in result.stdout
         assert "new-page.html" in result.stdout
-
-    def test_shows_total_count(self, site_dir):
-        run_tada("prod", cwd=str(site_dir), check=True)
-
-        index_md = site_dir / "content" / "index.md"
-        index_md.write_text("title: Home\n\nChanged.\n")
-
-        run_tada("prod", cwd=str(site_dir), check=True)
-
-        result = run_tada("diff", cwd=str(site_dir))
-        assert "differ" in result.stdout
-
 
 class TestDiffExplicitVersions:
     def test_compare_specific_versions(self, site_dir):

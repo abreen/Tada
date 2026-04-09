@@ -11,6 +11,24 @@ PACKAGE_DIR = Path(__file__).resolve().parent.parent
 TADA_BIN = PACKAGE_DIR / "bin" / "tada.ts"
 
 
+def pytest_addoption(parser):
+    parser.addoption("--shard", type=int, default=None,
+                     help="1-indexed shard number (requires --num-shards)")
+    parser.addoption("--num-shards", type=int, default=1,
+                     help="Total number of shards to split tests across")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Split collected tests by file across shards using round-robin."""
+    shard = config.getoption("--shard")
+    num_shards = config.getoption("--num-shards")
+    if shard is None or num_shards <= 1:
+        return
+    files = sorted(set(str(item.fspath) for item in items))
+    shard_files = set(f for i, f in enumerate(files) if i % num_shards == shard - 1)
+    items[:] = [item for item in items if str(item.fspath) in shard_files]
+
+
 def pytest_configure(config):
     """When AGENT is set, reduce output verbosity."""
     if os.environ.get("AGENT", ""):
@@ -46,16 +64,30 @@ def set_site_config(site_dir, overrides, config_file="site.dev.json"):
     config_path.write_text(json.dumps(config, indent=2) + "\n")
 
 
-def run_tada(*args, cwd=None, timeout=120, check=False, input=None):
+COVERAGE_PRELOAD = PACKAGE_DIR / "scripts" / "coverage-preload.ts"
+
+
+def _bun_command(*args):
+    """Build the bun command, injecting --preload for coverage if enabled."""
+    cmd = ["bun"]
+    if os.environ.get("TADA_COVERAGE"):
+        cmd.extend(["--preload", str(COVERAGE_PRELOAD)])
+    cmd.append(str(TADA_BIN))
+    cmd.extend(args)
+    return cmd
+
+
+def run_tada(*args, cwd=None, timeout=120, check=False, input=None, env=None):
     """Run a tada CLI command and return the CompletedProcess."""
     return subprocess.run(
-        ["bun", str(TADA_BIN), *args],
+        _bun_command(*args),
         cwd=cwd or os.getcwd(),
         capture_output=True,
         text=True,
         timeout=timeout,
         check=check,
         input=input,
+        env=env,
     )
 
 

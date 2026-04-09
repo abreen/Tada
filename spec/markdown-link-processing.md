@@ -24,8 +24,9 @@ Relative links are not prefixed with the base path.
 ### Links to code
 
 When the code feature is enabled, links to source files (e.g., `.java`, `.py`)
-are rewritten to point to the generated `.html` page. This rewriting applies to
-both absolute and relative links.
+in the content directory are rewritten to point to the generated `.html` page.
+This rewriting applies to both absolute and relative links. Files with code
+extensions in `public/` are copied as-is and their links are not rewritten.
 
 
 ## External link marking
@@ -36,8 +37,9 @@ external. External links open in a new tab.
 
 ## Internal link validation
 
-Internal links are checked against the set of known pages at build time. Broken
-links cause the build to fail.
+Internal links are checked against the set of known output paths at build time.
+This includes generated pages, assets in `content/`, and files in `public/`.
+Broken links cause the build to fail.
 
 This validation covers:
 

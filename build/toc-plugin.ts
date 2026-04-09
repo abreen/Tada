@@ -17,6 +17,7 @@ interface AlertItem {
   kind: 'alert';
   type: string;
   title: string;
+  id?: string;
 }
 
 type TocItem = HeadingItem | DinkusItem | AlertItem;
@@ -66,10 +67,12 @@ export function tocPlugin(md: MarkdownIt): void {
         const parentIsSection = depth === 1 && containerStack[0] === 'section';
 
         if (depth === 0 || parentIsSection) {
-          const match = token.info.trim().match(/^(note|warning)\s*"?(.+)?"?$/);
+          const match = token.info
+            .trim()
+            .match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
           if (match) {
             const type = match[1];
-            let title = match[2]?.trim();
+            let title = (match[2] || match[3])?.trim();
             if (title) {
               title = md.utils.escapeHtml(curlyQuote(title));
             } else {
@@ -103,12 +106,16 @@ export function tocPlugin(md: MarkdownIt): void {
   });
 }
 
-export function generateTocHtml(tocItems: TocItem[]): string {
+export function generateTocHtml(
+  tocItems: TocItem[],
+  alertIds: string[],
+): string {
   if (!tocItems || tocItems.length === 0) {
     return '';
   }
 
   let lastHeadingLevel = 1;
+  let alertIdx = 0;
   const parts = ['<ol>'];
 
   for (const item of tocItems) {
@@ -128,9 +135,11 @@ export function generateTocHtml(tocItems: TocItem[]): string {
 
     if (item.kind === 'alert') {
       const level = lastHeadingLevel + 1;
+      const id = alertIds[alertIdx++];
+      const href = `#${id}`;
       parts.push(
         `<li class="alert-item level${level} ${item.type}">` +
-          `<a href="#">${item.title}</a></li>`,
+          `<a href="${href}">${item.title}</a></li>`,
       );
     }
   }

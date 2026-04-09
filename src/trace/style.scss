@@ -1,7 +1,7 @@
 .trace-body {
   display: flex;
   flex-direction: column;
-  max-height: calc(100dvh - var(--header-collapsed-height) - 3 * var(--gap));
+  height: calc(100dvh - var(--header-collapsed-height) - 3 * var(--gap));
   overflow: hidden;
   gap: var(--gap);
 }
@@ -12,53 +12,37 @@
   flex: 1;
   min-height: 0;
   gap: var(--gap);
-
-  @media (width >= 924px) {
-    flex-direction: row;
-  }
 }
 
-.trace-left {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  flex: 1 100 auto;
-  min-height: 5lh;
-
-  @media (width >= 924px) {
-    flex: 0 100 auto;
-    min-width: 20rem;
-    max-width: 50%;
-  }
-
-  .trace-source {
-    flex: 1;
-    max-height: 5lh;
-
-    @media (width >= 924px) {
-      max-height: none;
-    }
-  }
-}
-
-.trace-right {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  flex: 1 1 auto;
-  min-height: 0;
+.trace-content > .trace-diagram {
+  flex: 1 1 100%;
+  min-height: 8rem;
+  border: 1px solid var(--fg2-color);
+  border-radius: var(--border-radius);
   overflow: auto;
+}
 
-  .trace-diagram {
-    flex: 1;
-    min-height: 12rem;
-    border: 1px solid var(--fg2-color);
-    border-radius: var(--border-radius);
-    overflow: auto;
+.trace-source-wrapper {
+  min-height: calc(
+    3 * var(--font-size-smaller) * var(--mono-line-height) + 1em
+  );
+  max-height: calc(
+    5 * var(--font-size-smaller) * var(--mono-line-height) + 1em
+  );
+  position: relative;
+
+  &:has(:focus-visible)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--theme-color);
+    border-radius: var(--mono-border-radius);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  @media (width >= 924px) {
-    min-width: 20rem;
+  & > .trace-source {
+    height: 100%;
   }
 }
 
@@ -109,7 +93,12 @@
 .trace-source {
   --code-gutter-width: 4rem;
   overflow: auto;
-  overscroll-behavior-x: none;
+  clip-path: inset(0 round var(--mono-border-radius));
+  scroll-behavior: smooth;
+
+  &:focus-visible {
+    outline: none;
+  }
 
   & > pre {
     margin: 0;
@@ -120,34 +109,6 @@
 
     code {
       padding-right: var(--gap);
-    }
-  }
-
-  & > pre:first-child {
-    *:first-child {
-      .line-number {
-        padding-top: 0.5rem;
-        border-top-left-radius: var(--mono-border-radius);
-      }
-
-      code {
-        padding-top: 0.5rem;
-        border-top-right-radius: var(--mono-border-radius);
-      }
-    }
-  }
-
-  & > pre:last-child {
-    *:last-child {
-      .line-number {
-        padding-bottom: 0.5rem;
-        border-bottom-left-radius: var(--mono-border-radius);
-      }
-
-      code {
-        padding-bottom: 0.5rem;
-        border-bottom-right-radius: var(--mono-border-radius);
-      }
     }
   }
 
@@ -166,9 +127,8 @@
 }
 
 .trace-output {
-  font-size: var(--font-size-smaller);
-  line-height: var(--line-height);
-  min-height: calc(var(--font-size-small) * var(--line-height) + 1lh);
+  flex-shrink: 0;
+  min-height: calc(var(--font-size-smaller) * var(--mono-line-height) + 1em);
   margin: 0;
 }
 
@@ -178,4 +138,73 @@
   font-size: var(--font-size-small);
   font-style: italic;
   color: var(--fg2-color);
+}
+
+.trace-memory {
+  font-family: var(--mono-font, monospace);
+  font-size: var(--font-size-smaller, 15px);
+  max-width: 100%;
+  height: auto;
+
+  .trace-separator {
+    stroke: var(--fg2-color);
+    stroke-width: 1;
+  }
+
+  .trace-frame-title {
+    font-weight: bold;
+    fill: var(--fg-color);
+  }
+
+  .trace-var-name,
+  .trace-field-name {
+    fill: var(--fg-color);
+  }
+
+  .trace-var-box {
+    fill: none;
+    stroke: var(--fg2-color);
+    stroke-width: 1;
+  }
+
+  .trace-obj-border {
+    fill: none;
+    stroke: var(--fg2-color);
+    stroke-width: 1;
+  }
+
+  .trace-val {
+    fill: var(--fg-color);
+  }
+
+  .trace-null {
+    fill: var(--fg2-color);
+  }
+
+  .trace-arrow {
+    fill: none;
+    stroke: var(--fg-color);
+    stroke-width: 1.5;
+  }
+
+  .trace-arrow-dim {
+    fill: none;
+    stroke: var(--fg2-color);
+    stroke-width: 1.5;
+  }
+
+  .trace-arrow-heap {
+    fill: none;
+    stroke: var(--fg2-color);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+  }
+
+  .trace-arrowhead {
+    fill: var(--fg-color);
+  }
+
+  .trace-arrowhead-dim {
+    fill: var(--fg2-color);
+  }
 }

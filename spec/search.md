@@ -11,8 +11,10 @@ If a page is not reachable from `index.html`, it is not included in search
 results.
 
 PDF files linked from reachable pages are also indexed. Text is extracted from
-each PDF page individually, producing per-page search records. If text extraction
-is unavailable, a fallback record with just the filename is created.
+each PDF page individually using `mutool`, producing per-page search records.
+If `mutool` is not installed, PDFs are not indexed (a warning is logged). If a
+PDF yields no extractable text, a fallback record with just the filename is
+created.
 
 The search index is written to a `pagefind/` subdirectory of the output. It is
 excluded from production build manifests

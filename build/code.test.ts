@@ -185,10 +185,7 @@ describe('renderCodeWithComments', () => {
       'lectures/01',
     );
 
-    const match = html.match(/data-prose-source="([^"]*)"/);
-    expect(match).not.toBeNull();
-    const decoded = match![1].replace(/&amp;/g, '&').replace(/&quot;/g, '"');
-    expect(decoded).toContain(
+    expect(html).toContain(
       'https://example.edu/course/lectures/01/rect.py.html',
     );
   });

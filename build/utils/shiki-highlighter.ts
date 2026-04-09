@@ -1,7 +1,7 @@
 import type { HighlighterGeneric, BundledLanguage, BundledTheme } from 'shiki';
 import { makeLogger } from '../log';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 let highlighter: HighlighterGeneric<BundledLanguage, BundledTheme> | null =
   null;

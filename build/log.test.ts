@@ -88,8 +88,14 @@ describe('makeLogger', () => {
     expect(log.minLogLevel).toBe('info');
   });
 
-  test('handles __filename-style name', () => {
+  test('handles path-style name', () => {
     const log = makeLogger('/path/to/module.ts');
+    const { stdout } = captureOutput(() => log.info`test`);
+    expect(stdout).toContain('test');
+  });
+
+  test('handles file:// URL name', () => {
+    const log = makeLogger('file:///path/to/module.ts');
     const { stdout } = captureOutput(() => log.info`test`);
     expect(stdout).toContain('test');
   });

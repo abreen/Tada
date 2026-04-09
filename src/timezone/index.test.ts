@@ -1,5 +1,45 @@
+// Set globals before importing the module, since it captures
+// __SITE_TIMEZONES__ at load time.
+const TIMEZONES: TimeZone[] = [
+  { value: 'America/New_York', label: 'US Eastern', abbreviation: 'ET' },
+  { value: 'America/Chicago', label: 'US Central', abbreviation: 'CT' },
+  { value: 'America/Los_Angeles', label: 'US Pacific', abbreviation: 'PT' },
+];
+(globalThis as Record<string, unknown>).__SITE_TIMEZONES__ = TIMEZONES;
+(globalThis as Record<string, unknown>).__SITE_DEFAULT_TIMEZONE__ =
+  'America/New_York';
+
 import { describe, expect, test } from 'bun:test';
-import { detectPeriodStyle, to12Hour, normalizeHM } from './index';
+import { JSDOM } from 'jsdom';
+import mount, { detectPeriodStyle, to12Hour, normalizeHM } from './index';
+
+function dom(bodyHtml: string) {
+  return new JSDOM(`<body>${bodyHtml}</body>`, { url: 'http://localhost/' });
+}
+
+function createPage(times: string[], selectedTz?: string) {
+  const options = TIMEZONES.map(
+    tz => `<option value="${tz.value}">${tz.label}</option>`,
+  ).join('');
+  const timeEls = times
+    .map(t => `<time datetime="${t}">${to12Hour(...parseHM(t))}</time>`)
+    .join('\n');
+  const html = `<select class="time-zone">${options}</select>${timeEls}`;
+  const jsdom = dom(html);
+  if (selectedTz) {
+    try {
+      jsdom.window.localStorage.setItem('timezoneSelection', selectedTz);
+    } catch {
+      // ignored
+    }
+  }
+  return jsdom.window;
+}
+
+function parseHM(hhmm: string): [number, number] {
+  const [h, m] = hhmm.split(':').map(Number);
+  return [h, m];
+}
 
 describe('detectPeriodStyle', () => {
   test('detects uppercase "PM"', () => {
@@ -75,6 +115,10 @@ describe('to12Hour', () => {
   test('formats 23:59', () => {
     expect(to12Hour(23, 59)).toBe('11:59 p.m.');
   });
+
+  test('omits period when style is null', () => {
+    expect(to12Hour(14, 0, null)).toBe('2:00');
+  });
 });
 
 describe('normalizeHM', () => {
@@ -96,5 +140,261 @@ describe('normalizeHM', () => {
 
   test('handles normal value', () => {
     expect(normalizeHM(750)).toEqual([12, 30]);
+  });
+});
+
+describe('timezone mount', () => {
+  test('unhides and enables the select element', () => {
+    const win = createPage(['09:00']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    expect(sel.hidden).toBe(false);
+    expect(sel.disabled).toBe(false);
+  });
+
+  test('sets select value to default timezone', () => {
+    const win = createPage(['09:00']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    expect(sel.value).toBe('America/New_York');
+  });
+
+  test('wraps select in a timezone-wrapper div', () => {
+    const win = createPage(['09:00']);
+    mount(win);
+
+    const wrapper = win.document.querySelector('.timezone-wrapper');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper!.querySelector('select.time-zone')).not.toBeNull();
+  });
+
+  test('adds a reset button inside the wrapper', () => {
+    const win = createPage(['09:00']);
+    mount(win);
+
+    const btn = win.document.querySelector('.timezone-wrapper button');
+    expect(btn).not.toBeNull();
+    expect(btn!.className).toBe('icon-button');
+  });
+
+  test('reset button is initially invisible for default timezone', () => {
+    const win = createPage(['09:00']);
+    mount(win);
+
+    const btn = win.document.querySelector(
+      '.timezone-wrapper button',
+    ) as HTMLButtonElement;
+    expect(btn.style.opacity).toBe('0');
+    expect(btn.style.pointerEvents).toBe('none');
+  });
+
+  test('restores timezone from localStorage', () => {
+    const win = createPage(['09:00'], 'America/Chicago');
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    expect(sel.value).toBe('America/Chicago');
+  });
+
+  test('reset button is visible when non-default timezone is stored', () => {
+    const win = createPage(['09:00'], 'America/Chicago');
+    mount(win);
+
+    const btn = win.document.querySelector(
+      '.timezone-wrapper button',
+    ) as HTMLButtonElement;
+    expect(btn.style.opacity).toBe('1');
+  });
+
+  test('changing select updates time elements', () => {
+    const win = createPage(['12:00']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    const time = win.document.querySelector('time') as HTMLTimeElement;
+
+    const before = time.innerHTML;
+
+    sel.value = 'America/Los_Angeles';
+    sel.dispatchEvent(new win.Event('change'));
+
+    // The time text should have changed
+    expect(time.innerHTML).not.toBe(before);
+  });
+
+  test('changing to non-default timezone adds is-modified class', () => {
+    const win = createPage(['12:00']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    const time = win.document.querySelector('time') as HTMLTimeElement;
+
+    sel.value = 'America/Los_Angeles';
+    sel.dispatchEvent(new win.Event('change'));
+
+    expect(time.classList.contains('is-modified')).toBe(true);
+  });
+
+  test('changing back to default removes is-modified class', () => {
+    const win = createPage(['12:00']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    const time = win.document.querySelector('time') as HTMLTimeElement;
+
+    sel.value = 'America/Los_Angeles';
+    sel.dispatchEvent(new win.Event('change'));
+    expect(time.classList.contains('is-modified')).toBe(true);
+
+    sel.value = 'America/New_York';
+    sel.dispatchEvent(new win.Event('change'));
+    expect(time.classList.contains('is-modified')).toBe(false);
+  });
+
+  test('reset button restores default timezone', () => {
+    const win = createPage(['12:00'], 'America/Chicago');
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    const btn = win.document.querySelector(
+      '.timezone-wrapper button',
+    ) as HTMLButtonElement;
+
+    expect(sel.value).toBe('America/Chicago');
+
+    btn.click();
+
+    expect(sel.value).toBe('America/New_York');
+  });
+
+  test('reset button removes localStorage entry', () => {
+    const win = createPage(['12:00'], 'America/Chicago');
+    mount(win);
+
+    const btn = win.document.querySelector(
+      '.timezone-wrapper button',
+    ) as HTMLButtonElement;
+    btn.click();
+
+    expect(win.localStorage.getItem('timezoneSelection')).toBeNull();
+  });
+
+  test('changing timezone saves to localStorage', () => {
+    const win = createPage(['12:00']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    sel.value = 'America/Chicago';
+    sel.dispatchEvent(new win.Event('change'));
+
+    expect(win.localStorage.getItem('timezoneSelection')).toBe(
+      'America/Chicago',
+    );
+  });
+
+  test('selecting default timezone removes localStorage entry', () => {
+    const win = createPage(['12:00'], 'America/Chicago');
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    sel.value = 'America/New_York';
+    sel.dispatchEvent(new win.Event('change'));
+
+    expect(win.localStorage.getItem('timezoneSelection')).toBeNull();
+  });
+
+  test('time element gets title with original time on change', () => {
+    const win = createPage(['14:00']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    const time = win.document.querySelector('time') as HTMLTimeElement;
+
+    sel.value = 'America/Chicago';
+    sel.dispatchEvent(new win.Event('change'));
+
+    expect(time.title).toContain('ET');
+  });
+
+  test('time element title is cleared when returning to default', () => {
+    const win = createPage(['14:00']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    const time = win.document.querySelector('time') as HTMLTimeElement;
+
+    sel.value = 'America/Chicago';
+    sel.dispatchEvent(new win.Event('change'));
+    expect(time.title).not.toBe('');
+
+    sel.value = 'America/New_York';
+    sel.dispatchEvent(new win.Event('change'));
+    expect(time.title).toBe('');
+  });
+
+  test('ignores stored timezone not in the timezone list', () => {
+    const win = createPage(['09:00']);
+    try {
+      win.localStorage.setItem('timezoneSelection', 'Mars/Olympus_Mons');
+    } catch {
+      // ignored
+    }
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    expect(sel.value).toBe('America/New_York');
+  });
+
+  test('returns a cleanup function', () => {
+    const win = createPage(['09:00']);
+    const cleanup = mount(win);
+    expect(typeof cleanup).toBe('function');
+  });
+
+  test('multiple select elements stay in sync', () => {
+    const options = TIMEZONES.map(
+      tz => `<option value="${tz.value}">${tz.label}</option>`,
+    ).join('');
+    const html =
+      `<select class="time-zone">${options}</select>` +
+      `<select class="time-zone">${options}</select>` +
+      '<time datetime="12:00">12:00 p.m.</time>';
+    const win = dom(html).window;
+    mount(win);
+
+    const selects = win.document.querySelectorAll(
+      'select.time-zone',
+    ) as NodeListOf<HTMLSelectElement>;
+
+    selects[0].value = 'America/Chicago';
+    selects[0].dispatchEvent(new win.Event('change'));
+
+    expect(selects[1].value).toBe('America/Chicago');
   });
 });

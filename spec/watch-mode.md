@@ -6,7 +6,9 @@ with live reload.
 Changes are debounced (300 ms) and classified into categories: content, public
 files, and config. The rebuild scope depends on the category:
 
-- **Content change**: only the affected pages are re-rendered
+- **Content change**: only the affected pages are re-rendered. If any `.java`
+  file changed, all content pages are re-rendered so that pages calling
+  `renderTrace()` pick up the new trace output.
 - **Public file change**: only the changed file is copied
 - **Config or data file change**: full restart (site config, `nav.json`,
   `authors.json`)

@@ -51,7 +51,10 @@ export function makeLogger(name: string, logLevel: string = 'info'): Logger {
   if (!name) {
     name = '';
   } else {
-    // Allow for passing __filename
+    // Allow for passing import.meta.url (file:// URL) or a plain path
+    if (name.startsWith('file://')) {
+      name = new URL(name).pathname;
+    }
     name = path.basename(name, path.extname(name));
   }
 

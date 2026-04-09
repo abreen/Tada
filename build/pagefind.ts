@@ -9,7 +9,7 @@ import {
 import { assertMutoolAvailable, extractPdfPages } from './pdf-text';
 import type { SiteVariables } from './types';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 const PAGEFIND_VERBOSE = process.env.TADA_LOG_LEVEL === 'debug';
 const PAGEFIND_OUTPUT_SUBDIR = 'pagefind';
 

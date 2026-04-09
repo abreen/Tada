@@ -3,7 +3,7 @@ import path from 'path';
 import * as sass from 'sass';
 import { makeLogger } from './log';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 export function copyKatexAssets(distDir: string): void {
   log.info`Copying KaTeX assets`;

@@ -3,7 +3,7 @@ import path from 'path';
 import { getPackageDir } from './utils/paths';
 import { makeLogger } from './log';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 const FONTS_DIR = path.join(getPackageDir(), 'fonts');
 
 export function copyFonts(distDir: string): void {

@@ -3,7 +3,7 @@ import type Token from 'markdown-it/lib/token.mjs';
 import path from 'path';
 import { makeLogger } from './log';
 
-const log = makeLogger(__filename);
+const log = makeLogger(import.meta.url);
 
 interface ValidateInternalLinksOptions {
   enabled?: boolean;
@@ -150,6 +150,15 @@ export default function validateInternalLinks(
     }
 
     if (!validTargets!.has(resolvedPath)) {
+      // If code extension rewriting changed the path, check the original
+      // path too. Public files with code extensions are copied as-is and
+      // do not produce .html versions.
+      if (codeExtPattern) {
+        const unrewritten = resolveLinkPath(sourceUrlPath!, href, null);
+        if (unrewritten && validTargets!.has(unrewritten)) {
+          return;
+        }
+      }
       reportBrokenLink(rawHref, resolvedPath);
     }
   }

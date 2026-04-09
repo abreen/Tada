@@ -85,7 +85,7 @@ function readableDate(date: string | Date | null | undefined): string {
   return `${months[month]} ${day}, ${year}`;
 }
 
-function classNames(obj: Record<string, unknown>): string {
+export function classNames(obj: Record<string, unknown>): string {
   const names: string[] = [];
   for (const key in obj) {
     if (obj[key]) {

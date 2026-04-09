@@ -2,12 +2,12 @@ import { debounce } from '../util';
 
 const LATENCY_MS = 50;
 
-type HeadingLevel = '1' | '2' | '3' | '4' | '5' | '6';
-type AlertType = 'warning' | 'note';
+export type HeadingLevel = '1' | '2' | '3' | '4' | '5' | '6';
+export type AlertType = 'warning' | 'note';
 
-type Alert = { type: AlertType; title: string };
-type Heading = { level: HeadingLevel; innerHtml: string; id: string };
-type Dinkus = { type: 'dinkus' };
+export type Alert = { type: AlertType; title: string };
+export type Heading = { level: HeadingLevel; innerHtml: string; id: string };
+export type Dinkus = { type: 'dinkus' };
 
 function getContainer(parent: HTMLElement): HTMLElement | null {
   return parent.querySelector('nav.toc');
@@ -17,8 +17,8 @@ function getCurrentListItem(parent: HTMLElement): HTMLLIElement | null {
   return parent.querySelector('nav.toc .current');
 }
 
-function scrollIfNeeded(element: HTMLElement) {
-  const container = getContainer(document.body);
+function scrollIfNeeded(element: HTMLElement, doc: Document) {
+  const container = getContainer(doc.body as HTMLElement);
   if (container == null) {
     return;
   }
@@ -37,10 +37,10 @@ function scrollIfNeeded(element: HTMLElement) {
     elementRect.height / 2;
   const desiredScrollTop = elementCenter - container.clientHeight / 2;
 
-  container.scrollTop = desiredScrollTop;
+  container.scrollTo({ top: desiredScrollTop, behavior: 'smooth' });
 }
 
-function getHighlightIndexes(items: (Heading | Alert | Dinkus)[]) {
+export function getHighlightIndexes(items: (Heading | Alert | Dinkus)[]) {
   const indexes: (number | null)[] = [];
   let currentHeadingIndex: number | null = null;
   let tocIndex = 0;
@@ -82,8 +82,8 @@ function getTocElements(
 }
 
 /* Calculate how much to offset scroll calculations based on floating header */
-function getHeaderOffset() {
-  const element = document.querySelector('header details summary');
+function getHeaderOffset(doc: Document) {
+  const element = doc.querySelector('header details summary');
   if (!element) {
     return 0;
   }
@@ -91,13 +91,13 @@ function getHeaderOffset() {
   return element.getBoundingClientRect().height;
 }
 
-function getViewportActivationPoint() {
-  const headerOffset = getHeaderOffset();
+function getViewportActivationPoint(win: Window, doc: Document) {
+  const headerOffset = getHeaderOffset(doc);
 
-  return headerOffset + (window.innerHeight - headerOffset) / 3;
+  return headerOffset + (win.innerHeight - headerOffset) / 3;
 }
 
-function headingToTableItem(el: HTMLHeadingElement): Heading {
+export function headingToTableItem(el: HTMLHeadingElement): Heading {
   const level = el.tagName[1] as HeadingLevel;
 
   const subtitle = el.querySelector('.heading-subtitle');
@@ -115,7 +115,7 @@ function headingToTableItem(el: HTMLHeadingElement): Heading {
   return { level, id: el.id, innerHtml: el.innerHTML };
 }
 
-function alertToTableItem(el: HTMLElement): Alert | null {
+export function alertToTableItem(el: HTMLElement): Alert | null {
   const classes = el.className
     .split(' ')
     .map(cl => cl.trim())
@@ -138,7 +138,7 @@ function alertToTableItem(el: HTMLElement): Alert | null {
   return null;
 }
 
-function switchCurrent(
+export function switchCurrent(
   oldCurrent: HTMLElement | null,
   newCurrent: HTMLElement,
 ) {
@@ -146,50 +146,6 @@ function switchCurrent(
     oldCurrent.classList.remove('current');
   }
   newCurrent.classList.add('current');
-}
-
-function wireAlertClickHandlers(
-  toc: HTMLElement,
-  headingsAndAlerts: (HTMLHeadingElement | HTMLDivElement)[],
-  items: (Heading | Alert | Dinkus)[],
-) {
-  const alertLinks = toc.querySelectorAll('li.alert-item a');
-  let alertIdx = 0;
-  let scrollIdx = 0;
-
-  items.forEach(item => {
-    if (!('level' in item) && (item as Alert | Dinkus).type === 'dinkus') {
-      return;
-    }
-
-    if (!('level' in item)) {
-      // This is an alert item
-      const scrollEl = headingsAndAlerts[scrollIdx];
-      const link = alertLinks[alertIdx] as HTMLAnchorElement | undefined;
-      if (link && scrollEl) {
-        link.onclick = (e: MouseEvent) => {
-          e.preventDefault();
-
-          const titleElement = scrollEl.querySelector('.title');
-          const titleId = titleElement?.id || null;
-
-          if (titleId) {
-            history.replaceState(
-              null,
-              document.title,
-              `${window.location.pathname}#${titleId}`,
-            );
-          }
-
-          scrollEl.scrollIntoView();
-          scrollEl.focus();
-        };
-      }
-      alertIdx++;
-    }
-
-    scrollIdx++;
-  });
 }
 
 export default (window: Window) => {
@@ -227,7 +183,9 @@ export default (window: Window) => {
 
     const updateFromHash = () => {
       const line = parseHash(window.location.hash);
-      const existingItem = getCurrentListItem(document.body);
+      const existingItem = getCurrentListItem(
+        window.document.body as HTMLElement,
+      );
 
       if (line == null) {
         if (existingItem) {
@@ -248,7 +206,7 @@ export default (window: Window) => {
       const nextItem = elements[best]?.parentElement ?? null;
       if (nextItem != null && nextItem !== existingItem) {
         switchCurrent(existingItem, nextItem);
-        scrollIfNeeded(nextItem);
+        scrollIfNeeded(nextItem, window.document);
       }
     };
 
@@ -284,11 +242,11 @@ export default (window: Window) => {
 
   const highlightIndexes = getHighlightIndexes(items);
 
-  // Wire up click handlers for alert items
-  wireAlertClickHandlers(toc, headingsAndAlerts, items);
-
   function handleScroll() {
-    const viewportActivationPoint = getViewportActivationPoint();
+    const viewportActivationPoint = getViewportActivationPoint(
+      window,
+      window.document,
+    );
 
     let i = 0;
     for (let idx = 0; idx < headingsAndAlerts.length; idx++) {
@@ -300,17 +258,19 @@ export default (window: Window) => {
       }
     }
 
-    const existingItem = getCurrentListItem(document.body);
+    const existingItem = getCurrentListItem(
+      window.document.body as HTMLElement,
+    );
     const highlightIndex = highlightIndexes[i];
     const nextItem =
       highlightIndex == null ? null : elements[highlightIndex]?.parentElement;
 
     if (nextItem != null && nextItem !== existingItem) {
       switchCurrent(existingItem, nextItem);
-      scrollIfNeeded(nextItem);
+      scrollIfNeeded(nextItem, window.document);
     }
   }
-  const debounced = debounce(handleScroll, LATENCY_MS);
+  const debounced = debounce(window, handleScroll, LATENCY_MS);
   window.addEventListener('scroll', debounced, { passive: true });
 
   // Call after load to set current item

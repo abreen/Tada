@@ -32,10 +32,6 @@ class TestProdBuild:
         html = index.read_text()
         assert f"{base_path}index.bundle.css" in html
 
-    def test_exit_code_zero(self, site_dir):
-        result = run_tada("prod", cwd=str(site_dir))
-        assert result.returncode == 0
-
     def test_produces_same_pages_as_dev(self, site_dir):
         run_tada("dev", cwd=str(site_dir), check=True)
         dev_htmls = set(

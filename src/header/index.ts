@@ -27,7 +27,7 @@ export default (window: Window) => {
     if (
       e.key === 'Escape' &&
       details.open &&
-      details.contains(document.activeElement)
+      details.contains(window.document.activeElement)
     ) {
       close();
       summary.focus();

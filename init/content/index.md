@@ -18,9 +18,14 @@ if you won't use the `author` front matter field.
 See the [Markdown examples page](/markdown.html) for syntax examples.
 
 !!! note
-For more documentation, see the [GitHub page][github].
+For more documentation, see the [GitHub page](https://github.com/abreen/Tada).
+<% if (vars.testCoveragePercent) { %>
+- <%= vars.testCoveragePercent %>% of <%= page.toolName %>'s code is covered by
+  automated tests (unit tests, [Playwright](https://playwright.dev/) browser
+  tests, and functional, black-box tests which exercise functionality using the
+  CLI). See [the test coverage metrics](<%= vars.testCoverageUrl %>).
+- <%= page.toolName %>'s features and behavior are
+  [documented in Markdown](https://github.com/abreen/Tada/tree/main/spec) for
+  easy reading by people and LLMs.
+<% } %>
 !!!
-
-
-
-[github]: https://github.com/abreen/Tada

@@ -25,6 +25,7 @@ interface CreateMarkdownOptions {
   validatorOptions?: Record<string, unknown>;
   literateJavaOutputPaths?: Set<string>;
   sourceUrlPath?: string;
+  validTargets?: Set<string>;
 }
 
 function capitalize(str: string): string {
@@ -43,6 +44,7 @@ export function createMarkdown(
     validatorOptions = {},
     literateJavaOutputPaths,
     sourceUrlPath,
+    validTargets,
   } = options;
   const markdown = new MarkdownIt({ html: true, typographer: true })
     .use(headingSubtitlePlugin)
@@ -55,6 +57,7 @@ export function createMarkdown(
     .use(applyBasePathPlugin, siteVariables, {
       literateJavaOutputPaths,
       sourceUrlPath,
+      validTargets,
     })
     .use(tocPlugin)
     .use(columnsPlugin)
@@ -125,12 +128,17 @@ export function createMarkdown(
   markdown.use(markdownItContainer, 'alert', {
     marker: '!',
     validate: function (params: string) {
-      return !!params.trim().match(/^(note|warning)\s*"?(.+)?"?$/);
+      return !!params.trim().match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
     },
-    render: function (tokens: Token[], idx: number) {
+    render: function (
+      tokens: Token[],
+      idx: number,
+      _options: unknown,
+      env: Record<string, unknown>,
+    ) {
       const matches = tokens[idx].info
         .trim()
-        .match(/^(note|warning)\s*"?(.+)?"?$/);
+        .match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
 
       if (tokens[idx].nesting === 1) {
         const classNames = ['alert'];
@@ -139,20 +147,22 @@ export function createMarkdown(
           classNames.push(type);
         }
 
-        const title = matches && matches[2]?.trim();
+        const title = matches && (matches[2] || matches[3])?.trim();
+        const displayTitle = title
+          ? markdown.utils.escapeHtml(curlyQuote(title))
+          : capitalize(type || '');
+        const baseId = textToId(title || type || '');
+        const count = (usedIds.get(baseId) ?? 0) + 1;
+        usedIds.set(baseId, count);
+        const titleId = count === 1 ? baseId : `${baseId}-${count}`;
+
+        if (!env.alertIds) {
+          env.alertIds = [];
+        }
+        (env.alertIds as string[]).push(titleId);
 
         let html = `<div class="${classNames.join(' ')}">`;
-        if (title) {
-          const baseId = textToId(title);
-          const count = (usedIds.get(baseId) ?? 0) + 1;
-          usedIds.set(baseId, count);
-          const titleId = count === 1 ? baseId : `${baseId}-${count}`;
-          const renderedTitle = markdown.utils.escapeHtml(curlyQuote(title));
-          html += `<p class="title" id="${titleId}">${renderedTitle}</p>\n`;
-        } else {
-          const defaultTitle = capitalize(type || '');
-          html += `<p class="title">${defaultTitle}</p>\n`;
-        }
+        html += `<p class="title" id="${titleId}">${displayTitle}</p>\n`;
         html += '<div class="content">\n';
         return html;
       } else {

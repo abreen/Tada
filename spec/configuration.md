@@ -23,8 +23,9 @@ Tada reads one of two JSON config files depending on the build mode:
 - **tintHue**: background tint hue, 0 to 360 degrees (default: 20)
 - **tintAmount**: background tint intensity, 0 to 100% (default: 100)
 - **internalDomains**: list of domains treated as internal for link styling
-- **codeLanguages**: maps file extensions to language names (default: Java, Python)
-- **vars**: arbitrary key-value pairs accessible in templates
+- **codeLanguages**: maps file extensions to language names (no runtime default;
+  `tada init` sets Java and Python)
+- **vars**: arbitrary key-value pairs accessible in templates as `vars.*`
 
 ## Feature flags
 
@@ -32,4 +33,4 @@ The `features` object toggles optional capabilities:
 
 - **search**: enable Pagefind search indexing (default: true)
 - **code**: enable source code page generation (default: true)
-- **favicon**: generate favicon assets and web manifest (default: false)
+- **favicon**: generate favicon assets and web manifest (default: true)
