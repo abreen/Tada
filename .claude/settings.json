@@ -1,4 +1,17 @@
 {
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/install_pkgs.sh"
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "deny": [
       "Bash(git push --force*)",

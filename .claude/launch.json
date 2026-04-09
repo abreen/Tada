@@ -2,16 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "tada dev",
-      "runtimeExecutable": "../bin/tada.ts",
-      "runtimeArgs": ["dev"],
-      "cwd": "example"
-    },
-    {
-      "name": "tada serve",
-      "runtimeExecutable": "../bin/tada.ts",
-      "runtimeArgs": ["serve"],
-      "cwd": "example",
+      "name": "tada",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "iew"],
       "port": 8080
     }
   ]
