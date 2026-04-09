@@ -1,5 +1,11 @@
 {
   "permissions": {
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push * --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git checkout .)"
+    ],
     "allow": [
       "Bash(git status)",
       "Bash(git diff *)",
