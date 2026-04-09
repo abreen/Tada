@@ -117,6 +117,10 @@ details .content > *:first-child {
   margin-top: 0;
 }
 
+dd > *:first-child {
+  margin-top: 0;
+}
+
 details .content > *:last-child {
   margin-bottom: 0;
 }
