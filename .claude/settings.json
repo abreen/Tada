@@ -3,8 +3,7 @@
     "deny": [
       "Bash(git push --force*)",
       "Bash(git push * --force*)",
-      "Bash(git reset --hard*)",
-      "Bash(git checkout .)"
+      "Bash(git reset --hard*)"
     ],
     "allow": [
       "Bash(git status)",
