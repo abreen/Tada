@@ -1,4 +1,4 @@
-# AGENTS.md
+# CLAUDE.md
 
 This codebase is a static site generator written in TypeScript and uses Bun.
 
@@ -61,6 +61,11 @@ or `tada prod` in this directory, there is no site here. To test:
 
 The `init/` directory contains the default content and public files copied into
 new projects by `tada init`. It is not a buildable site on its own.
+
+## Preview server
+
+After starting the preview server, navigate to `/index.html` with `preview_eval`
+since the dev server emulates S3 and does not serve directory indexes.
 
 ## Formatting
 
