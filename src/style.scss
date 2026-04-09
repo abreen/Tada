@@ -396,8 +396,8 @@ dl {
     }
   }
 
-  dd {
-    margin-bottom: var(--gap);
+  dd > *:first-child {
+    margin-top: 0;
   }
 }
 
