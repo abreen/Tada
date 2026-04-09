@@ -27,8 +27,9 @@ chosen at bundle time via `__WEBSOCKET_PORT__`. It handles two message types:
 - **`rebuilding`**: adds a shimmer animation to the page header and sets a
   `wait` cursor on the body, giving visual feedback that a rebuild is in
   progress
-- **`reload`**: calls `window.location.reload()` to refresh the page with the
-  new build output
+- **`reload`**: sets `scrollRestoration` to `auto` so the browser preserves the
+  scroll position, then calls `window.location.reload()` to refresh the page
+  with the new build output
 
 The server also sends `error` when a build fails and `ready` when the watcher is
 initialized (used only by functional tests).
