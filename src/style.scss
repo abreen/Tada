@@ -65,7 +65,6 @@ a.external::after {
   display: inline-block;
   width: 1em;
   height: 1em;
-  margin-left: 4px;
   vertical-align: middle;
   @include contained-mask(var(--icon-external-link));
 }
