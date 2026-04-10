@@ -1,40 +1,32 @@
-.heading-anchor {
+@use '../mixins' as *;
+
+a.heading-anchor {
   position: relative;
   display: inline-block;
-  color: var(--fg-color);
-  text-decoration: none;
+  @include subdued-link;
 }
 
-.heading-anchor::after {
-  content: var(--icon-anchor);
+a.heading-anchor::after {
+  content: '';
   display: inline-block;
   height: 0.75em;
   width: 0.75em;
   margin-left: 4px;
   opacity: 0;
+  @include contained-mask(var(--icon-anchor));
 }
 
-.heading-anchor:focus::after,
-.heading-anchor:focus-visible::after {
+a.heading-anchor:focus-visible::after {
   opacity: 1;
 }
 
 @media (hover: hover) {
-  h1:hover .heading-anchor::after,
-  h2:hover .heading-anchor::after,
-  h3:hover .heading-anchor::after,
-  h4:hover .heading-anchor::after,
-  h5:hover .heading-anchor::after,
-  h6:hover .heading-anchor::after {
+  h1:hover a.heading-anchor::after,
+  h2:hover a.heading-anchor::after,
+  h3:hover a.heading-anchor::after,
+  h4:hover a.heading-anchor::after,
+  h5:hover a.heading-anchor::after,
+  h6:hover a.heading-anchor::after {
     opacity: 1;
-  }
-
-  h1:hover .heading-anchor,
-  h2:hover .heading-anchor,
-  h3:hover .heading-anchor,
-  h4:hover .heading-anchor,
-  h5:hover .heading-anchor,
-  h6:hover .heading-anchor {
-    color: var(--fg-color);
   }
 }

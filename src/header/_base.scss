@@ -1,3 +1,5 @@
+@use '../mixins' as *;
+
 :root {
   --header-collapsed-height: 45px;
 }
@@ -31,6 +33,12 @@ header details summary {
   @media (hover: hover) {
     &:hover {
       color: inherit;
+      text-decoration-line: none;
+      background: var(--bg2-color);
+    }
+
+    &:hover .site-title {
+      @include link-underline;
     }
   }
 

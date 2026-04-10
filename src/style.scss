@@ -55,42 +55,19 @@ a.disabled {
   @media (hover: hover) {
     &:hover {
       color: var(--fg-color-translucent);
+      text-decoration-line: none;
     }
   }
 }
 
 a.external::after {
   content: '';
-  background: var(--icon-external-link);
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center center;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
   margin-left: 4px;
-  padding-right: 18px;
-}
-
-@media (hover: hover) {
-  a.external:hover::after {
-    background: var(--icon-external-link-hover);
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center center;
-  }
-}
-
-a.external:active::after {
-  background: var(--icon-external-link-active) !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  background-position: center center !important;
-}
-
-a.external.disabled::after,
-a.external.disabled:active::after {
-  background: var(--icon-external-translucent) !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  background-position: center center !important;
+  vertical-align: middle;
+  @include contained-mask(var(--icon-external-link));
 }
 
 .footnotes {
@@ -384,12 +361,6 @@ dl {
       color: var(--theme-color-text);
       text-decoration-color: var(--theme-color-text);
 
-      @media (hover: hover) {
-        &:hover {
-          text-decoration-color: var(--fg2-color);
-        }
-      }
-
       &:active {
         text-decoration-color: var(--link-active-color);
       }
@@ -407,12 +378,17 @@ dfn {
   font-style: italic;
 }
 
-.breadcrumb {
+a.breadcrumb {
   @include user-select(none);
+  @include subdued-link;
 
   &::after {
-    content: var(--icon-breadcrumb);
+    content: '';
+    display: inline-block;
+    width: 1em;
+    height: 1em;
     vertical-align: middle;
+    @include contained-mask(var(--icon-breadcrumb));
   }
 }
 

@@ -2,3 +2,44 @@
   -webkit-user-select: $val;
   user-select: $val;
 }
+
+@mixin link-underline {
+  text-decoration-line: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.11rem;
+}
+
+@mixin subdued-link {
+  color: var(--fg-color);
+  text-decoration-line: none;
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--fg2-color);
+      @include link-underline;
+    }
+  }
+
+  &:active {
+    color: var(--link-active-color);
+  }
+}
+
+@mixin contained-icon {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+@mixin contained-mask($url) {
+  -webkit-mask-image: $url;
+  mask-image: $url;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center center;
+  mask-position: center center;
+  background-color: currentColor;
+}

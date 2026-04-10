@@ -40,27 +40,13 @@
 
   a {
     color: var(--fg-color);
-    text-decoration-color: var(--fg-color);
 
     &:hover {
       color: var(--fg2-color);
-      text-decoration-color: inherit;
     }
-  }
 
-  a.external::after {
-    background: var(--icon-external-link-fg);
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center center;
-  }
-
-  @media (hover: hover) {
-    a.external:hover::after {
-      background: var(--icon-external-link-fg-hover);
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center center;
+    &:active {
+      color: var(--link-active-color);
     }
   }
 

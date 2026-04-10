@@ -160,6 +160,11 @@ body.literate main table {
         text-decoration-thickness: 1px;
         text-underline-offset: 3px;
       }
+
+      &:active .text {
+        color: var(--link-active-color);
+        text-decoration-color: var(--link-active-color);
+      }
     }
 
     .avatar {

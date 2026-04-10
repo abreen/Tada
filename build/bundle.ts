@@ -27,15 +27,11 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const iconColorHoverDark = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 60%)`;
   const iconColorTranslucentDark = `hsl(${tintHue}deg ${(85 * tintAmount) / 100}% 90%)`;
 
-  // Link color, anchored at GitHub-style blue (hue 212) and pulled slightly
-  // toward the tint hue. Saturation scales with tintAmount but never falls
-  // to zero, so links stay visibly blue even on monochrome (tintAmount=0)
-  // sites. The default settings render --link-color as #466bb6.
   const linkHue = deriveLinkHue(tintHue);
-  const linkColor = `hsl(${linkHue}deg ${20 + 0.244 * tintAmount}% 49.4%)`;
-  const linkColorHover = `hsl(${linkHue}deg ${15 + 0.19 * tintAmount}% 60%)`;
-  const linkColorDark = `hsl(${linkHue}deg ${20 + 0.2 * tintAmount}% 72%)`;
-  const linkColorHoverDark = `hsl(${linkHue}deg ${15 + 0.15 * tintAmount}% 80%)`;
+  const linkColor = `hsl(${linkHue}deg 44.4% 49.4%)`;
+  const linkColorHover = `hsl(${linkHue}deg 34% 60%)`;
+  const linkColorDark = `hsl(${linkHue}deg 40% 72%)`;
+  const linkColorHoverDark = `hsl(${linkHue}deg 30% 80%)`;
 
   const rendered = _.template(template)({
     ...theme,

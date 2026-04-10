@@ -26,20 +26,7 @@ header nav ul li {
 header nav a {
   border: none;
   display: inline;
-  color: var(--fg-color);
-  text-decoration: none;
-}
-
-@media (hover: hover) {
-  header nav a {
-    &:hover {
-      color: var(--fg2-color);
-    }
-
-    &:active {
-      color: var(--link-active-color);
-    }
-  }
+  @include subdued-link;
 }
 
 header nav a.external {
@@ -60,10 +47,6 @@ header nav div > p {
 }
 
 @media (hover: hover) {
-  header details summary:hover {
-    background: var(--bg2-color);
-  }
-
   header:has(details[open]):hover {
     background: var(--bg-color-translucent);
   }
