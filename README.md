@@ -1,5 +1,8 @@
 # Tada :tada:
 
+[![CI/CD](https://github.com/abreen/Tada/actions/workflows/ci.yml/badge.svg)](https://github.com/abreen/Tada/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/%40abreen%2Ftada)](https://www.npmjs.com/package/@abreen/tada)
+
 A static site generator. The successor to Presto.
 
 ## Features

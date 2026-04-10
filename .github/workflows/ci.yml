@@ -195,7 +195,7 @@ jobs:
         path: coverage/report/
 
   build:
-    needs: [coverage, playwright]
+    needs: [coverage, playwright, unit-test-windows, functional-test-windows]
     runs-on: ubuntu-latest
 
     steps:
