@@ -9,6 +9,7 @@ import {
   getConfigDir,
   createApplyBasePath,
   normalizeOutputPath,
+  toUrlPath,
 } from './paths';
 import type { SiteVariables } from '../types';
 
@@ -87,5 +88,34 @@ describe('normalizeOutputPath', () => {
   test('returns / for empty or dot path', () => {
     expect(normalizeOutputPath('')).toBe('/');
     expect(normalizeOutputPath('.')).toBe('/');
+  });
+});
+
+describe('toUrlPath', () => {
+  test('passes plain ASCII paths through unchanged', () => {
+    expect(toUrlPath('guides/intro.html')).toBe('guides/intro.html');
+    expect(toUrlPath('a/b/c.md')).toBe('a/b/c.md');
+  });
+
+  test('percent-encodes spaces', () => {
+    expect(toUrlPath('my notes.html')).toBe('my%20notes.html');
+    expect(toUrlPath('guides/my notes.html')).toBe('guides/my%20notes.html');
+  });
+
+  test('percent-encodes ? and # in filenames', () => {
+    expect(toUrlPath('faq?.md')).toBe('faq%3F.md');
+    expect(toUrlPath('topic#1.md')).toBe('topic%231.md');
+  });
+
+  test('percent-encodes non-ASCII', () => {
+    expect(toUrlPath('café.html')).toBe('caf%C3%A9.html');
+  });
+
+  test('preserves leading slash and segment boundaries', () => {
+    expect(toUrlPath('/a b/c d.html')).toBe('/a%20b/c%20d.html');
+  });
+
+  test('preserves forward slashes as segment separators', () => {
+    expect(toUrlPath('a/b/c/d.html')).toBe('a/b/c/d.html');
   });
 });

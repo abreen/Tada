@@ -69,7 +69,18 @@ function resolveLinkPath(
     ? normalizePathname(hrefPath)
     : normalizePathname(path.posix.join(sourceDir, hrefPath));
 
-  return rewriteCodeLink(resolved, codeExtPattern);
+  // Decode percent-encoded characters so the resolved path can be matched
+  // against `validTargets`, which contains raw filesystem-derived paths.
+  // markdown-it's normalizeLink percent-encodes hrefs, so a link like
+  // `[x](/my notes.md)` arrives here as `/my%20notes.md`.
+  let decoded: string;
+  try {
+    decoded = normalizePathname(decodeURIComponent(resolved));
+  } catch {
+    decoded = resolved;
+  }
+
+  return rewriteCodeLink(decoded, codeExtPattern);
 }
 
 function getDirectoryIndexPath(pathname: string): string {

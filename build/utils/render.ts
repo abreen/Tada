@@ -17,7 +17,12 @@ import {
 import { extensionIsMarkdown } from './file-types';
 import { createTraceHelpers } from './trace';
 import { createIncludeFunction } from './include';
-import { createApplyBasePath, normalizeOutputPath, toPosix } from './paths';
+import {
+  createApplyBasePath,
+  normalizeOutputPath,
+  toPosix,
+  toUrlPath,
+} from './paths';
 import { parseFrontMatterAndContent } from './front-matter';
 import { createMarkdown } from './markdown';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
@@ -259,7 +264,7 @@ export function renderCodePageAsset({
     pageDirPath,
   );
   const codeFilePath = applyBasePath(
-    normalizeOutputPath(`/${toContentAssetPath(contentDir, filePath)}`),
+    normalizeOutputPath(`/${toUrlPath(path.relative(contentDir, filePath))}`),
   );
   const titleHtml = `<tt>${name + ext}</tt>`;
   const tocItems = lang === 'java' ? extractJavaMethodToc(sourceCode) : [];
@@ -618,7 +623,7 @@ export function renderLiterateJavaPageAsset({
   const javaFileName = `${className}.java`;
   const codeFilePath = applyBasePath(
     normalizeOutputPath(
-      `/${toContentAssetPath(contentDir, path.join(dir, javaFileName))}`,
+      `/${toUrlPath(path.relative(contentDir, path.join(dir, javaFileName)))}`,
     ),
   );
 

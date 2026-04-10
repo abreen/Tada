@@ -47,3 +47,10 @@ This validation covers:
 - `internal` links in `nav.json` (but disabled links are skipped)
 - `url` and `avatar` paths in `authors.json`
 - `parent` breadcrumb links in front matter
+
+Hrefs are percent-decoded before being matched against the set of known output
+paths, which means a link to a file with a space in its name works when written
+as either `[x](</my notes.md>)` (angle-bracket form) or `[x](/my%20notes.md)`
+(percent-encoded form). The bare form `[x](/my notes.md)` is rejected by
+markdown-it's own parser before reaching the validator, per the CommonMark
+link-destination grammar.
