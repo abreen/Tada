@@ -1,6 +1,4 @@
 import json
-import os
-import signal
 import subprocess
 import threading
 import time
@@ -9,7 +7,15 @@ from pathlib import Path
 import pytest
 import websocket
 
-from conftest import TADA_BIN, get_free_ports, run_tada, set_site_config, _bun_command
+from conftest import (
+    TADA_BIN,
+    _bun_command,
+    get_free_ports,
+    process_group_popen_kwargs,
+    run_tada,
+    set_site_config,
+    terminate_process_group,
+)
 
 REBUILD_TIMEOUT_SEC = 30
 INITIAL_BUILD_TIMEOUT_SEC = 60
@@ -37,7 +43,7 @@ class WatchProcess:
             cwd=str(site_dir),
             stdout=self._stdout_file,
             stderr=self._stderr_file,
-            start_new_session=True,
+            **process_group_popen_kwargs(),
         )
 
         # WebSocket state for detecting rebuilds and readiness
@@ -162,14 +168,7 @@ class WatchProcess:
             self._ws.close()
             self._ws = None
 
-        if self.proc.poll() is None:
-            pgid = os.getpgid(self.proc.pid)
-            os.killpg(pgid, signal.SIGTERM)
-            try:
-                self.proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                os.killpg(pgid, signal.SIGKILL)
-                self.proc.wait(timeout=5)
+        terminate_process_group(self.proc)
         self._stdout_file.close()
         self._stderr_file.close()
 

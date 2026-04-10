@@ -45,8 +45,23 @@ export function createApplyBasePath(
   };
 }
 
+export function toPosix(p: string): string {
+  return p.split(path.sep).join(path.posix.sep);
+}
+
+/**
+ * Convert an OS-native relative filesystem path to a URL path: convert
+ * separators to '/', then percent-encode each segment so characters that
+ * are unsafe in URLs (space, ?, #, non-ASCII, etc.) are encoded. Use this
+ * anywhere a filesystem-derived path is emitted as an href or looked up
+ * against a URL-encoded href.
+ */
+export function toUrlPath(p: string): string {
+  return toPosix(p).split('/').map(encodeURIComponent).join('/');
+}
+
 export function normalizeOutputPath(outputPath: string): string {
-  const normalized = path.posix.normalize(outputPath);
+  const normalized = path.posix.normalize(toPosix(outputPath));
   if (normalized === '.' || normalized === '') {
     return '/';
   }

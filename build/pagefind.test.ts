@@ -122,7 +122,10 @@ describe('PagefindPlugin', () => {
         meta: { title: 'guide.pdf', page: '5' },
       },
     ]);
-    expect(calls.outputPath).toBe('/tmp/dist/pagefind');
+    // pagefind.ts builds the output path with path.join, which uses
+    // OS-native separators. Construct the expectation the same way so the
+    // test matches on both POSIX and Windows.
+    expect(calls.outputPath).toBe(path.join('/tmp/dist', 'pagefind'));
     expect(calls.deleted).toBe(1);
   });
 

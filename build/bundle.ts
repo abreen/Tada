@@ -3,7 +3,12 @@ import os from 'os';
 import path from 'path';
 import _ from 'lodash';
 import * as sass from 'sass';
-import { getPackageDir, getProjectDir, getDistDir } from './utils/paths';
+import {
+  getPackageDir,
+  getProjectDir,
+  getDistDir,
+  toPosix,
+} from './utils/paths';
 import { deriveTheme } from './utils/derive-theme';
 import type { PluginBuilder } from 'bun';
 import type { SiteVariables } from './types';
@@ -104,10 +109,7 @@ export async function bundle(
 
   // Return the output filenames for asset tag injection
   const assetFiles = result.outputs.map(output =>
-    path
-      .relative(resolvedDistDir, output.path)
-      .split(path.sep)
-      .join(path.posix.sep),
+    toPosix(path.relative(resolvedDistDir, output.path)),
   );
 
   return assetFiles;

@@ -138,4 +138,29 @@ describe('validateInternalLinks', () => {
     const md = createMd(['/Test.java'], { codeExtensions: ['java'] });
     expect(() => md.render('[Test](/Test.java)')).not.toThrow();
   });
+
+  test('resolves percent-encoded href to target containing a space', () => {
+    // markdown-it normalizes `[x](/my notes.html)` to `/my%20notes.html`
+    // before this plugin sees it. The resolver must decode the href so it
+    // matches the raw filesystem-derived entry in validTargets.
+    const md = createMd(['/my notes.html']);
+    expect(() => md.render('[Notes](/my notes.html)')).not.toThrow();
+  });
+
+  test('resolves percent-encoded href to nested target with spaces', () => {
+    const md = createMd(['/guides/my notes.html']);
+    expect(() => md.render('[Notes](/guides/my notes.html)')).not.toThrow();
+  });
+
+  test('resolves relative percent-encoded href', () => {
+    const md = createMd(['/docs/my notes.html'], {
+      sourceUrlPath: '/docs/index.html',
+    });
+    expect(() => md.render('[Notes](my notes.html)')).not.toThrow();
+  });
+
+  test('resolves percent-encoded href to target with non-ASCII name', () => {
+    const md = createMd(['/café.html']);
+    expect(() => md.render('[Cafe](/café.html)')).not.toThrow();
+  });
 });

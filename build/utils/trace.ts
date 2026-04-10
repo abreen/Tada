@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { makeLogger } from '../log';
 import { B } from '../colors';
-import { normalizeOutputPath } from './paths';
+import { normalizeOutputPath, toPosix } from './paths';
 import { hasMainMethod } from './literate-java';
 import { renderCodeSegment } from './code';
 import { computeLayout } from './trace-layout';
@@ -324,10 +324,7 @@ export function createTraceHelpers(context: TraceContext): {
 
       const highlightedSource = highlightSource(javaFile, source);
 
-      const relDir = path
-        .relative(contentDir, pageDir)
-        .split(path.sep)
-        .join(path.posix.sep);
+      const relDir = toPosix(path.relative(contentDir, pageDir));
       const traceOutputDir = path.join(distDir, relDir, '_traces', className);
 
       const manifest = chunkTraceOutput(

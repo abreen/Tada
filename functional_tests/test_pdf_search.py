@@ -1,11 +1,10 @@
 import gzip
 import json
 import os
-import stat
 
 import pytest
 
-from conftest import run_tada
+from conftest import make_fake_failing_command, run_tada
 
 
 def _pagefind_has_pdf_ref(pagefind_dir, filename):
@@ -99,11 +98,8 @@ class TestPdfSearchWithBasePath:
 
 
 def make_fake_mutool(directory):
-    """Create a fake mutool script that always fails."""
-    fake = directory / "mutool"
-    fake.write_text("#!/bin/sh\nexit 1\n")
-    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
-    return fake
+    """Create a fake mutool that always fails. Cross-platform."""
+    return make_fake_failing_command(directory, "mutool")
 
 
 def env_without_mutool(fake_dir):

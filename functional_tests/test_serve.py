@@ -1,5 +1,3 @@
-import os
-import signal
 import subprocess
 import time
 from pathlib import Path
@@ -8,7 +6,14 @@ import pytest
 import urllib.request
 import urllib.error
 
-from conftest import run_tada, get_free_ports, _bun_command, PACKAGE_DIR
+from conftest import (
+    PACKAGE_DIR,
+    _bun_command,
+    get_free_ports,
+    process_group_popen_kwargs,
+    run_tada,
+    terminate_process_group,
+)
 
 
 TADA_BIN = PACKAGE_DIR / "bin" / "tada.ts"
@@ -41,7 +46,7 @@ class TestServe:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            preexec_fn=os.setsid,
+            **process_group_popen_kwargs(),
         )
 
         # Wait for server to be ready (poll with short requests)
@@ -60,8 +65,7 @@ class TestServe:
 
         yield site_dir, port
 
-        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-        proc.wait(timeout=5)
+        terminate_process_group(proc)
 
     def test_serves_index_html(self, server):
         site_dir, port = server

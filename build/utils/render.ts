@@ -17,7 +17,12 @@ import {
 import { extensionIsMarkdown } from './file-types';
 import { createTraceHelpers } from './trace';
 import { createIncludeFunction } from './include';
-import { createApplyBasePath, normalizeOutputPath } from './paths';
+import {
+  createApplyBasePath,
+  normalizeOutputPath,
+  toPosix,
+  toUrlPath,
+} from './paths';
 import { parseFrontMatterAndContent } from './front-matter';
 import { createMarkdown } from './markdown';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
@@ -164,10 +169,7 @@ export function injectKatexStylesheet(
 }
 
 function toContentAssetPath(contentDir: string, filePath: string): string {
-  return path
-    .relative(contentDir, filePath)
-    .split(path.sep)
-    .join(path.posix.sep);
+  return toPosix(path.relative(contentDir, filePath));
 }
 
 export function renderPlainTextPageAsset({
@@ -182,7 +184,7 @@ export function renderPlainTextPageAsset({
   javacAvailable,
 }: RenderPlainTextOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
-  const subPath = path.relative(contentDir, path.join(dir, name));
+  const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
   const applyBasePath = createApplyBasePath(siteVariables);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
@@ -248,11 +250,11 @@ export function renderCodePageAsset({
   assetFiles,
 }: RenderCodePageOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
-  const subPath = path.relative(contentDir, path.join(dir, name));
+  const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
   const applyBasePath = createApplyBasePath(siteVariables);
   const lang = siteVariables.codeLanguages![ext.slice(1).toLowerCase()];
   const sourceCode = fs.readFileSync(filePath, 'utf-8');
-  const pageDirPath = path.relative(contentDir, dir);
+  const pageDirPath = toPosix(path.relative(contentDir, dir));
 
   log.info`Rendering code page ${B`${subPath + ext}`}`;
   const content = renderCodeWithComments(
@@ -262,7 +264,7 @@ export function renderCodePageAsset({
     pageDirPath,
   );
   const codeFilePath = applyBasePath(
-    normalizeOutputPath(`/${toContentAssetPath(contentDir, filePath)}`),
+    normalizeOutputPath(`/${toUrlPath(path.relative(contentDir, filePath))}`),
   );
   const titleHtml = `<tt>${name + ext}</tt>`;
   const tocItems = lang === 'java' ? extractJavaMethodToc(sourceCode) : [];
@@ -316,7 +318,9 @@ export function renderCopiedContentAsset({
 
   if (filePath.endsWith('.java') && isFeatureEnabled(siteVariables, 'code')) {
     const sourceCode = fs.readFileSync(filePath, 'utf-8');
-    const pageDirPath = path.relative(contentDir, path.dirname(filePath));
+    const pageDirPath = toPosix(
+      path.relative(contentDir, path.dirname(filePath)),
+    );
     const rewrittenLines = rewriteProseLinks(
       sourceCode.split('\n'),
       siteVariables,
@@ -501,7 +505,7 @@ export function renderLiterateJavaPageAsset({
 }: RenderLiterateJavaOptions): Asset[] {
   const { dir, name } = path.parse(filePath);
   const className = deriveClassName(filePath);
-  const subPath = path.relative(contentDir, path.join(dir, className));
+  const subPath = toPosix(path.relative(contentDir, path.join(dir, className)));
   const applyBasePath = createApplyBasePath(siteVariables);
 
   log.info`Rendering literate Java page ${B`${name}`}`;
@@ -619,7 +623,7 @@ export function renderLiterateJavaPageAsset({
   const javaFileName = `${className}.java`;
   const codeFilePath = applyBasePath(
     normalizeOutputPath(
-      `/${toContentAssetPath(contentDir, path.join(dir, javaFileName))}`,
+      `/${toUrlPath(path.relative(contentDir, path.join(dir, javaFileName)))}`,
     ),
   );
 

@@ -1,12 +1,13 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { resolvePathname } from './serve';
 
 let tmpDir: string;
 
 beforeAll(() => {
-  tmpDir = fs.mkdtempSync('/tmp/serve-test-');
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'serve-test-'));
   fs.writeFileSync(path.join(tmpDir, 'index.html'), '<h1>hello</h1>');
   fs.mkdirSync(path.join(tmpDir, 'sub'));
   fs.writeFileSync(path.join(tmpDir, 'sub', 'page.html'), '<p>page</p>');

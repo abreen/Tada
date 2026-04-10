@@ -16,6 +16,7 @@ import {
 } from './util';
 import { isLiterateJava } from './utils/file-types';
 import { checkJavac } from './utils/literate-java';
+import { toPosix } from './utils/paths';
 import type {
   SiteVariables,
   Asset,
@@ -291,10 +292,7 @@ export class ContentRenderer {
     for (const filePath of buildContentFiles) {
       if (isLiterateJava(filePath)) {
         const parsed = path.parse(path.relative(contentDir, filePath));
-        const javaPath = path
-          .join(parsed.dir, parsed.name)
-          .split(path.sep)
-          .join(path.posix.sep);
+        const javaPath = toPosix(path.join(parsed.dir, parsed.name));
         literateJavaOutputPaths.add(`/${javaPath}`);
       }
     }
