@@ -9,6 +9,12 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# Cancel stale in-progress runs when new commits arrive on the same branch or
+# PR. Main branch runs are not cancelled so deploys can finish cleanly.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   unit-test:
     runs-on: ubuntu-latest
