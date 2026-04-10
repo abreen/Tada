@@ -1,7 +1,10 @@
 import json
 import os
+import signal
 import socket
+import stat
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -89,6 +92,68 @@ def run_tada(*args, cwd=None, timeout=120, check=False, input=None, env=None):
         input=input,
         env=env,
     )
+
+
+def process_group_popen_kwargs():
+    """subprocess.Popen kwargs that put the child in its own process group
+    so it can be terminated as a tree. Cross-platform: uses
+    CREATE_NEW_PROCESS_GROUP on Windows and start_new_session on POSIX.
+    """
+    if sys.platform == "win32":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"start_new_session": True}
+
+
+def terminate_process_group(proc, timeout=5):
+    """Terminate a child process started with process_group_popen_kwargs()
+    and wait for it to exit. Force-kill on timeout.
+
+    On POSIX this sends SIGTERM to the whole process group. On Windows it
+    sends CTRL_BREAK_EVENT to the new process group, then falls back to a
+    hard kill on timeout.
+    """
+    if proc.poll() is not None:
+        return
+    if sys.platform == "win32":
+        try:
+            proc.send_signal(signal.CTRL_BREAK_EVENT)
+        except (OSError, ValueError):
+            proc.kill()
+    else:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        if sys.platform == "win32":
+            proc.kill()
+        else:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        proc.wait(timeout=timeout)
+
+
+def make_fake_failing_command(directory, name):
+    """Create a fake executable named `name` in `directory` that always
+    exits with code 1. Cross-platform.
+
+    On POSIX writes a `name` shell script with a shebang and sets +x.
+    On Windows writes both `name.cmd` (for spawn implementations that
+    search PATHEXT or go through cmd.exe) and an empty `name.exe` (so
+    direct CreateProcess lookups find a file that fails with
+    ERROR_BAD_EXE_FORMAT). Either path causes Tada's checkJavac /
+    assertMutoolAvailable to throw and conclude the tool is not present.
+
+    Returns the primary fake path.
+    """
+    if sys.platform == "win32":
+        fake_cmd = directory / f"{name}.cmd"
+        fake_cmd.write_text("@exit 1\r\n")
+        fake_exe = directory / f"{name}.exe"
+        fake_exe.write_bytes(b"")
+        return fake_cmd
+    fake = directory / name
+    fake.write_text("#!/bin/sh\nexit 1\n")
+    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+    return fake
 
 
 @pytest.fixture

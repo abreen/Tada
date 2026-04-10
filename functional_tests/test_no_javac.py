@@ -1,17 +1,13 @@
 import os
-import stat
 
 import pytest
 
-from conftest import run_tada
+from conftest import make_fake_failing_command, run_tada
 
 
 def make_fake_javac(directory):
-    """Create a fake javac script that always fails."""
-    fake = directory / "javac"
-    fake.write_text("#!/bin/sh\nexit 1\n")
-    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
-    return fake
+    """Create a fake javac that always fails. Cross-platform."""
+    return make_fake_failing_command(directory, "javac")
 
 
 def env_without_javac(fake_dir):
