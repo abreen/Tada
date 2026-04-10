@@ -14,6 +14,13 @@ const LIGHT_TEXT_L_MAX = 0.5;
 const DARK_TEXT_L_MIN = 0.7;
 const DARK_TEXT_L_MAX = 0.82;
 
+// Canonical blue HSL hue used as the anchor for the link color, before
+// blending toward the site's tint hue.
+const LINK_ANCHOR_HUE = 220;
+// Fraction of the shortest hue arc between LINK_ANCHOR_HUE and tintHue to
+// blend, so the link color is recognizably blue but biased toward the tint.
+const LINK_TINT_BLEND = 0.15;
+
 function clamp(v: number, min: number, max: number): number {
   return Math.min(Math.max(v, min), max);
 }
@@ -73,6 +80,14 @@ export function deriveTheme(cssColor: string): DerivedTheme {
     textOnThemeLight: pickTextColor(themeColorLight),
     textOnThemeDark: pickTextColor(themeColorDark),
   };
+}
+
+// Derive the link color hue from the site's tint hue. Returns a hue in
+// degrees in the range [0, 360). The result is anchored at blue and pulled
+// LINK_TINT_BLEND of the way toward tintHue along the shortest hue arc.
+export function deriveLinkHue(tintHue: number): number {
+  const diff = ((tintHue - LINK_ANCHOR_HUE + 540) % 360) - 180;
+  return (LINK_ANCHOR_HUE + diff * LINK_TINT_BLEND + 360) % 360;
 }
 
 export function getTextOnColor(cssColor: string): '#fff' | '#000' {

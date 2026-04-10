@@ -21,6 +21,10 @@
   // Secondary foreground color (lighter)
   --fg2-color: hsl(var(--tint-hue) calc(6% * var(--tint-amount)) 45%);
 
+  // Link color, derived from tint hue and modulated by tint amount
+  --link-color: <%= linkColor %>;
+  --link-color-hover: <%= linkColorHover %>;
+
   // Main background color (the color of the page background)
   --bg-color: hsl(var(--tint-hue) calc(5% * var(--tint-amount)) 97%);
   --bg-color-translucent: hsl(
@@ -56,8 +60,12 @@
   --mono-border-radius: 0.375em;
 
   // SVG icons
-  --icon-external-link: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= iconColor %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= iconColor %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= iconColor %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
-  --icon-external-link-hover: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= iconColorHover %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= iconColorHover %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= iconColorHover %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+  --icon-external-link: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= linkColor %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= linkColor %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= linkColor %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+  --icon-external-link-hover: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= linkColorHover %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= linkColorHover %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= linkColorHover %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+  // Foreground-colored variants used inside alert boxes where links revert
+  // to the foreground color and the icon needs to match.
+  --icon-external-link-fg: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= iconColor %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= iconColor %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= iconColor %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+  --icon-external-link-fg-hover: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= iconColorHover %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= iconColorHover %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= iconColorHover %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
   --icon-external-link-active: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='black' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
   --icon-external-translucent: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><g opacity='0.3' stroke='<%= iconColor %>' stroke-width='2' stroke-linecap='round' fill='none'><rect x='3' y='3' width='18' height='18' rx='2'/><path d='M9 15 L15 9' stroke-linecap='round'/><path d='M9 9 H15 V15' stroke-linecap='round'/></g></svg>");
   --icon-warning: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24'><polygon points='12,2 22,20 2,20' fill='none' stroke='<%= iconColor %>' stroke-width='2' stroke-linejoin='round'/><line x1='12' y1='9' x2='12' y2='13' stroke='<%= iconColor %>' stroke-width='2' stroke-linecap='round'/><line x1='12' y1='16' x2='12' y2='16' stroke='<%= iconColor %>' stroke-width='2' stroke-linecap='round'/></svg>");
@@ -85,6 +93,8 @@
       var(--tint-hue) calc(85% * var(--tint-amount)) 90% / 33%
     );
     --fg2-color: hsl(var(--tint-hue) calc(6% * var(--tint-amount)) 60%);
+    --link-color: <%= linkColorDark %>;
+    --link-color-hover: <%= linkColorHoverDark %>;
     --bg-color: hsl(var(--tint-hue) calc(3% * var(--tint-amount)) 5%);
     --bg-color-translucent: hsl(
       var(--tint-hue) calc(15% * var(--tint-amount)) 10% / 66%
@@ -103,8 +113,10 @@
     --note-bg-color: hsl(209 90% 25%);
 
     // SVG icons (dark overrides)
-    --icon-external-link: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= iconColorDark %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= iconColorDark %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= iconColorDark %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
-    --icon-external-link-hover: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= iconColorHoverDark %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= iconColorHoverDark %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= iconColorHoverDark %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+    --icon-external-link: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= linkColorDark %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= linkColorDark %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= linkColorDark %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+    --icon-external-link-hover: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= linkColorHoverDark %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= linkColorHoverDark %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= linkColorHoverDark %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+    --icon-external-link-fg: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= iconColorDark %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= iconColorDark %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= iconColorDark %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+    --icon-external-link-fg-hover: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='<%= iconColorHoverDark %>' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='<%= iconColorHoverDark %>' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='<%= iconColorHoverDark %>' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
     --icon-external-link-active: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' stroke='white' stroke-width='2' fill='none' rx='2'/><path d='M9 15 L15 9' stroke='white' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M9 9 H15 V15' stroke='white' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
     --icon-external-translucent: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><g opacity='0.3' stroke='<%= iconColorTranslucentDark %>' stroke-width='2' stroke-linecap='round' fill='none'><rect x='3' y='3' width='18' height='18' rx='2'/><path d='M9 15 L15 9' stroke-linecap='round'/><path d='M9 9 H15 V15' stroke-linecap='round'/></g></svg>");
     --icon-warning: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24'><polygon points='12,2 22,20 2,20' fill='none' stroke='<%= iconColorDark %>' stroke-width='2' stroke-linejoin='round'/><line x1='12' y1='9' x2='12' y2='13' stroke='<%= iconColorDark %>' stroke-width='2' stroke-linecap='round'/><line x1='12' y1='16' x2='12' y2='16' stroke='<%= iconColorDark %>' stroke-width='2' stroke-linecap='round'/></svg>");
