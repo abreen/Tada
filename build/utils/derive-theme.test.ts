@@ -96,7 +96,7 @@ describe('deriveTheme', () => {
 
 describe('deriveLinkHue', () => {
   test('returns the anchor hue when tintHue equals the anchor', () => {
-    expect(deriveLinkHue(220)).toBe(220);
+    expect(deriveLinkHue(212)).toBe(212);
   });
 
   test('default tint (20) lands in the blue range', () => {

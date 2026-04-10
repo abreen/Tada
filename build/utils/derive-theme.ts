@@ -15,11 +15,14 @@ const DARK_TEXT_L_MIN = 0.7;
 const DARK_TEXT_L_MAX = 0.82;
 
 // Canonical blue HSL hue used as the anchor for the link color, before
-// blending toward the site's tint hue.
-const LINK_ANCHOR_HUE = 220;
+// blending toward the site's tint hue. This matches the hue of GitHub's
+// link color (#0969da) so the default link reads as a clean blue rather
+// than a saturated violet.
+const LINK_ANCHOR_HUE = 212;
 // Fraction of the shortest hue arc between LINK_ANCHOR_HUE and tintHue to
-// blend, so the link color is recognizably blue but biased toward the tint.
-const LINK_TINT_BLEND = 0.15;
+// blend. Kept small so the link color stays recognizably blue and only
+// subtly leans into the site's tint.
+const LINK_TINT_BLEND = 0.05;
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(Math.max(v, min), max);

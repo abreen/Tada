@@ -15,11 +15,12 @@ to ensure readability against the chosen theme color.
 ## Link color
 
 Links use a dedicated `--link-color` CSS variable that is derived from the
-tint settings. The hue is anchored at blue (HSL 220) and pulled 15% of the
-way along the shortest hue arc toward `tintHue`, so the link color reads as
-blue but visibly leans into warm or cool tints. Saturation scales with
-`tintAmount` over a base floor, so links remain recognizably blue even when
-`tintAmount` is 0. The same color is used for the external link SVG icon.
+tint settings. The hue is anchored at GitHub-style blue (HSL 212) and pulled
+5% of the way along the shortest hue arc toward `tintHue`, so the link color
+reads as a clean blue that subtly leans into the site's tint. Saturation
+scales with `tintAmount` over a base floor, so links remain recognizably
+blue even when `tintAmount` is 0. The same color is used for the external
+link SVG icon.
 
 Inside `.alert.warning` and `.alert.note` boxes the link color is overridden
 back to `--fg-color` (and the external link icon falls back to a foreground
