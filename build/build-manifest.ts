@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { toPosix } from './utils/paths';
 
 const EXCLUDED_DIRS = new Set(['pagefind']);
 const EXCLUDED_FILES = new Set(['tada.manifest.json']);
@@ -68,7 +69,7 @@ export async function walkAndHash(
     }
 
     const abs = path.join(entry.parentPath, entry.name);
-    const rel = path.relative(dir, abs).split(path.sep).join(path.posix.sep);
+    const rel = toPosix(path.relative(dir, abs));
 
     const topLevel = rel.split('/')[0];
     if (EXCLUDED_DIRS.has(topLevel)) {

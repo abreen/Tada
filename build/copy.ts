@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { toPosix } from './utils/paths';
 import { makeLogger } from './log';
 import { B } from './colors';
 
@@ -22,7 +23,7 @@ function collectFiles(dir: string): CollectedFile[] {
     .map(entry => {
       const abs = path.join(entry.parentPath, entry.name);
       const rel = path.relative(dir, abs);
-      return { abs, rel: rel.split(path.sep).join(path.posix.sep) };
+      return { abs, rel: toPosix(rel) };
     });
 }
 
@@ -83,10 +84,7 @@ export function copyPublicFile(
   filePath: string,
   contentAssetRelPaths?: Set<string>,
 ): void {
-  const rel = path
-    .relative(publicDir, filePath)
-    .split(path.sep)
-    .join(path.posix.sep);
+  const rel = toPosix(path.relative(publicDir, filePath));
   if (contentAssetRelPaths && contentAssetRelPaths.has(rel)) {
     log.error`public/${B`${rel}`} conflicts with content/${B`${rel}`}`;
     throw new Error(`public/${rel} and content/${rel} have the same path`);
@@ -103,10 +101,7 @@ export function copyContentFile(
   filePath: string,
   publicRelPaths?: Set<string>,
 ): void {
-  const rel = path
-    .relative(contentDir, filePath)
-    .split(path.sep)
-    .join(path.posix.sep);
+  const rel = toPosix(path.relative(contentDir, filePath));
   if (publicRelPaths && publicRelPaths.has(rel)) {
     log.error`content/${B`${rel}`} conflicts with public/${B`${rel}`}`;
     throw new Error(`content/${rel} and public/${rel} have the same path`);

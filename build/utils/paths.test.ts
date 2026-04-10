@@ -31,16 +31,16 @@ describe('getProjectDir', () => {
 });
 
 describe('directory getters', () => {
-  test('getContentDir ends with /content', () => {
-    expect(getContentDir()).toEndWith('/content');
+  test('getContentDir ends with content', () => {
+    expect(getContentDir()).toEndWith(path.sep + 'content');
   });
 
-  test('getDistDir ends with /dist', () => {
-    expect(getDistDir()).toEndWith('/dist');
+  test('getDistDir ends with dist', () => {
+    expect(getDistDir()).toEndWith(path.sep + 'dist');
   });
 
-  test('getPublicDir ends with /public', () => {
-    expect(getPublicDir()).toEndWith('/public');
+  test('getPublicDir ends with public', () => {
+    expect(getPublicDir()).toEndWith(path.sep + 'public');
   });
 
   test('getConfigDir equals getProjectDir', () => {

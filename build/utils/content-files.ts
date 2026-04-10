@@ -7,7 +7,7 @@ import {
   isLiterateJava,
   isPartial,
 } from './file-types';
-import { getPublicDir, normalizeOutputPath } from './paths';
+import { getPublicDir, normalizeOutputPath, toPosix } from './paths';
 
 function walkFiles(dir: string): string[] {
   return fs.readdirSync(dir).flatMap(file => {
@@ -111,18 +111,12 @@ export function getValidInternalTargets(
     const relPath = path.relative(contentDir, filePath);
     const parsed = path.parse(relPath);
     const ext = parsed.ext.toLowerCase();
-    const subPath = path
-      .join(parsed.dir, parsed.name)
-      .split(path.sep)
-      .join(path.posix.sep);
+    const subPath = toPosix(path.join(parsed.dir, parsed.name));
 
     if (isLiterateJava(filePath)) {
       // parsed.name is e.g. "VowelCounter.java"; the output page is
       // VowelCounter.java.html and the source file is VowelCounter.java
-      const javaSubPath = path
-        .join(parsed.dir, parsed.name)
-        .split(path.sep)
-        .join(path.posix.sep);
+      const javaSubPath = toPosix(path.join(parsed.dir, parsed.name));
       addGeneratedRouteAliases(targets, `/${javaSubPath}.html`);
       targets.add(normalizeOutputPath(`/${javaSubPath}`));
     } else if (extensionIsMarkdown(ext) || ext === '.html') {

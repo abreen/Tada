@@ -45,8 +45,12 @@ export function createApplyBasePath(
   };
 }
 
+export function toPosix(p: string): string {
+  return p.split(path.sep).join(path.posix.sep);
+}
+
 export function normalizeOutputPath(outputPath: string): string {
-  const normalized = path.posix.normalize(outputPath);
+  const normalized = path.posix.normalize(toPosix(outputPath));
   if (normalized === '.' || normalized === '') {
     return '/';
   }

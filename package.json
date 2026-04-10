@@ -41,7 +41,8 @@
   },
   "os": [
     "darwin",
-    "linux"
+    "linux",
+    "win32"
   ],
   "dependencies": {
     "@vscode/markdown-it-katex": "^1.1.2",

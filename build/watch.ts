@@ -12,6 +12,7 @@ import {
   getPublicDir,
   getDistDir,
   getPackageDir,
+  toPosix,
 } from './utils/paths';
 import { isFeatureEnabled } from './features';
 import { bundle } from './bundle';
@@ -55,10 +56,7 @@ export async function runWatch(options: {
       define: { __WEBSOCKET_PORT__: String(WEBSOCKET_PORT) },
     });
     return result.outputs.map(output =>
-      path
-        .relative(getDistDir(), output.path)
-        .split(path.sep)
-        .join(path.posix.sep),
+      toPosix(path.relative(getDistDir(), output.path)),
     );
   }
 
@@ -154,10 +152,7 @@ export async function runWatch(options: {
       return null;
     }
 
-    return path
-      .relative(contentDir, normalizedFilePath)
-      .split(path.sep)
-      .join(path.posix.sep);
+    return toPosix(path.relative(contentDir, normalizedFilePath));
   }
 
   function toPublicRelativePath(filePath: string): string | null {
@@ -169,10 +164,7 @@ export async function runWatch(options: {
     if (!normalizedFilePath.startsWith(normalizedPublicDir)) {
       return null;
     }
-    return path
-      .relative(publicDir, normalizedFilePath)
-      .split(path.sep)
-      .join(path.posix.sep);
+    return toPosix(path.relative(publicDir, normalizedFilePath));
   }
 
   // Watch mode
@@ -354,10 +346,7 @@ export async function runWatch(options: {
             const absPath = path.resolve(filePath);
             if (fs.existsSync(absPath)) {
               copyPublicFile(publicDir, distDir, absPath, contentAssetRelPaths);
-              const rel = path
-                .relative(publicDir, absPath)
-                .split(path.sep)
-                .join(path.posix.sep);
+              const rel = toPosix(path.relative(publicDir, absPath));
               publicRelPaths.add(rel);
             }
           }
@@ -397,10 +386,7 @@ export async function runWatch(options: {
             const absPath = path.resolve(filePath);
             if (fs.existsSync(absPath)) {
               copyPublicFile(publicDir, distDir, absPath, contentAssetRelPaths);
-              const rel = path
-                .relative(publicDir, absPath)
-                .split(path.sep)
-                .join(path.posix.sep);
+              const rel = toPosix(path.relative(publicDir, absPath));
               publicRelPaths.add(rel);
             }
           }
@@ -417,10 +403,7 @@ export async function runWatch(options: {
           const ext = path.extname(absPath).slice(1).toLowerCase();
           if (!processedExtSet.has(ext) && fs.existsSync(absPath)) {
             copyContentFile(contentDir, distDir, absPath, publicRelPaths);
-            const rel = path
-              .relative(contentDir, absPath)
-              .split(path.sep)
-              .join(path.posix.sep);
+            const rel = toPosix(path.relative(contentDir, absPath));
             contentAssetRelPaths.add(rel);
           }
         }

@@ -6,6 +6,9 @@ set up your development environment and submit changes.
 
 ## Prerequisites
 
+- A Unix-like environment (macOS or Linux). The test scripts, Git hooks, and
+  functional test harness use shell syntax that is not available on Windows
+  outside of WSL.
 - [Bun](https://bun.sh/)
 - A recent Java JDK (for the literate Java feature)
 - [MuPDF](https://mupdf.com/) (the `mutool` command for PDF text extraction)
