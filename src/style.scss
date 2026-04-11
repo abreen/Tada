@@ -60,7 +60,12 @@ a.disabled {
   }
 }
 
-a.external::after {
+.external-link-tail {
+  white-space: nowrap;
+}
+
+.external-link-tail::after,
+a.external:not(:has(.external-link-tail))::after {
   content: '';
   display: inline-block;
   width: 1em;
