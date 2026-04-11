@@ -30,8 +30,8 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const linkHue = deriveLinkHue(tintHue);
   const linkColor = `hsl(${linkHue}deg 44.4% 49.4%)`;
   const linkColorHover = `hsl(${linkHue}deg 34% 60%)`;
-  const linkColorDark = `hsl(${linkHue}deg 40% 72%)`;
-  const linkColorHoverDark = `hsl(${linkHue}deg 30% 80%)`;
+  const linkColorDark = `hsl(${linkHue}deg 50% 72%)`;
+  const linkColorHoverDark = `hsl(${linkHue}deg 40% 80%)`;
 
   const rendered = _.template(template)({
     ...theme,
