@@ -46,12 +46,17 @@ const log = makeLogger(import.meta.url);
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 
+function isWatchMode(assetFiles: string[]): boolean {
+  return assetFiles.some(f => f.includes('watch-reload-client'));
+}
+
 interface TemplateParametersInput {
   pageVariables: Record<string, unknown>;
   siteVariables: SiteVariables;
   content: string | null;
   applyBasePath: (subPath: string) => string;
   subPath: string;
+  isWatchMode: boolean;
 }
 
 function resolveAuthor(
@@ -101,6 +106,7 @@ function createTemplateParameters({
   content,
   applyBasePath,
   subPath,
+  isWatchMode,
 }: TemplateParametersInput): Record<string, unknown> {
   return {
     vars: siteVariables.vars || {},
@@ -111,6 +117,7 @@ function createTemplateParameters({
     page: pageVariables,
     content,
     applyBasePath,
+    isWatchMode,
   };
 }
 
@@ -188,12 +195,14 @@ export function renderPlainTextPageAsset({
   const applyBasePath = createApplyBasePath(siteVariables);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
+  const watchMode = isWatchMode(assetFiles);
   const { content, pageVariables, tocItems, alertIds } = renderPlainTextContent(
     filePath,
     subPath,
     siteVariables,
     applyBasePath,
     validInternalTargets,
+    watchMode,
     {
       validateInternalLinks: extensionIsMarkdown(ext.toLowerCase()),
       traceCache,
@@ -223,6 +232,7 @@ export function renderPlainTextPageAsset({
     content,
     applyBasePath,
     subPath,
+    isWatchMode: watchMode,
   });
 
   const templateHtml = render(
@@ -286,6 +296,7 @@ export function renderCodePageAsset({
     content,
     applyBasePath,
     subPath,
+    isWatchMode: isWatchMode(assetFiles),
   });
 
   const html = injectAssetTags(
@@ -339,6 +350,7 @@ function renderPlainTextContent(
   siteVariables: SiteVariables,
   applyBasePath: (subPath: string) => string,
   validInternalTargets: Set<string>,
+  isWatchMode: boolean,
   {
     validateInternalLinks = true,
     traceCache,
@@ -396,6 +408,7 @@ function renderPlainTextContent(
     content: null,
     applyBasePath,
     subPath,
+    isWatchMode,
   });
   const pageVariablesProcessed: Record<string, unknown> = Object.entries(
     pageVariables,
@@ -446,6 +459,7 @@ function renderPlainTextContent(
     content: strippedContent,
     applyBasePath,
     subPath,
+    isWatchMode,
   });
 
   if (traceCache && contentDir && distDir) {
@@ -649,6 +663,7 @@ export function renderLiterateJavaPageAsset({
     content: contentHtml,
     applyBasePath,
     subPath,
+    isWatchMode: isWatchMode(assetFiles),
   });
 
   const templateHtml = render('literate.html', templateParameters) as string;

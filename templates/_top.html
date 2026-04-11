@@ -33,6 +33,7 @@
     <meta property="og:author" content="<%= page.author.name %>" />
     <% } %>
     <title><%= page.title %><%= site.titlePostfix %></title>
+    <% if (!isWatchMode) { %>
     <script type="speculationrules">
     {
       "prerender": [{
@@ -43,6 +44,7 @@
       }]
     }
   </script>
+    <% } %>
   <script>document.head.appendChild(document.createElement('style')).textContent='.time-zone-label[hidden],select.time-zone[hidden]{display:revert}'</script>
   <noscript><style>
     .question-a-body:not([data-revealed]) > * { color: unset; background-color: unset; }
