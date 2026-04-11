@@ -94,4 +94,29 @@ test.describe('history navigation', () => {
     const scrollAfter = await page.evaluate(() => window.scrollY);
     expect(scrollAfter).toBeGreaterThan(300);
   });
+
+  test('scroll position restored on forward navigation', async ({ page }) => {
+    await page.goto('/index.html');
+
+    // Navigate to markdown via SPA click
+    await page.locator('main.body a[href="/markdown.html"]').click();
+    await expect(page).toHaveURL(/markdown\.html/);
+
+    // Scroll down on markdown
+    await page.evaluate(() => window.scrollTo({ top: 500 }));
+    await page.waitForTimeout(100);
+
+    // Go back to index
+    await page.goBack();
+    await expect(page).toHaveURL(/index\.html/);
+
+    // Go forward to markdown
+    await page.goForward();
+    await expect(page).toHaveURL(/markdown\.html/);
+
+    // Scroll should be restored to where the user was
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY), { timeout: 2000 })
+      .toBeGreaterThan(300);
+  });
 });

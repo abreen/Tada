@@ -1,67 +1,45 @@
 # Client-Side Navigation
 
-Tada includes a client-side navigation component that intercepts clicks on
-internal links and swaps page content without a full page reload. This
-preserves the header and search UI state across navigations and eliminates the
-white flash of full-page loads.
+Clicks on internal links swap the page content in place instead of doing a
+full reload. The header, search box, and back-to-top button stay mounted
+across navigations. With JavaScript disabled, every link is a normal
+`<a href>` and the browser handles it.
 
-The feature is always active and requires no configuration. It degrades
-gracefully when JavaScript is disabled: all links are standard `<a>` elements
-pointing to real HTML files.
+## What gets intercepted
 
-## How it works
+Same-origin internal links, with no modifier keys held, no `target`
+attribute, and not pointing to a non-HTML file (`.pdf`, `.java`, `.png`,
+etc.). Everything else is left to the browser.
 
-When a user clicks an eligible internal link, the navigator fetches the target
-page, parses the HTML, and replaces the content inside the `.container`
-element. The `<header>` (which contains the navigation sidebar, search input,
-and back-to-top button) is never touched.
+## What happens on a click
 
-After swapping, the navigator updates the document title, meta tags, and body
-class, then re-mounts per-page components (table of contents, anchor links,
-question toggles, etc.).
+The navigator fetches the target page, parses it, and replaces the
+`.container` element with the new one. It then updates the document
+title, meta tags, and body class, and re-mounts per-page components
+(TOC, anchors, code enhancements, etc.). The swap is wrapped in a
+View Transition for a crossfade where supported.
 
-## Link eligibility
+Persistent components (header, search, back-to-top, navigate) mount
+once at startup. Per-page components are torn down and re-mounted on
+every navigation.
 
-A link is intercepted only if all of these are true:
+## Scroll and `:target`
 
-- Same origin as the current page
-- Not a hash-only link on the current page
-- No `target` attribute
-- No modifier keys held (Ctrl, Meta, Shift, Alt)
-- The URL path does not end with a non-HTML file extension (e.g., `.pdf`,
-  `.java`, `.py`, `.png`, `.zip`)
+All scrolling is instant. On a forward navigation the page jumps to the
+top, or to the URL's hash element if there is one. On back/forward the
+page returns to the scroll position the user was last at for that entry.
 
-## Scroll behavior
+Hash links use real fragment navigation (`location.hash` for same-page,
+`location.replace` for cross-page) so `:target` CSS and `hashchange`
+listeners keep working. On reload the navigator manually scrolls to the
+URL hash once per-page components have mounted.
 
-On forward navigation (link click), the page scrolls to the top, or to the
-element matching the URL hash if present. On back/forward navigation
-(popstate), the scroll position is restored to where the user was when they
-left the page.
+## When it falls back
 
-## View Transitions
-
-The content swap is wrapped in a view transition using
-`document.startViewTransition`, producing a crossfade. The API is supported
-in all major browsers (Chrome 111+, Firefox 126+, Safari 18+). If a browser
-does not support it, the swap happens instantly.
-
-## Component lifecycle
-
-Components are split into two groups:
-
-**Persistent** (mounted once, never torn down): header, search, back-to-top,
-navigate.
-
-**Per-page** (torn down and re-mounted on each navigation): table of contents,
-anchor links, question toggles, timezone chooser, code enhancements, trace
-widgets, print handler.
-
-## Error handling
-
-If the page fetch fails or returns a non-OK status, the navigator falls back
-to a normal full-page navigation.
+If the fetch fails or returns a non-OK response, the navigator gives up
+and does a normal full-page navigation to the target URL.
 
 ## Search dismissal
 
-When a client-side navigation occurs, the search input is cleared and results
-are dismissed.
+Any client-side navigation clears the search input and dismisses any
+open results.

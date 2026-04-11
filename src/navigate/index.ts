@@ -5,6 +5,11 @@ let currentAbortController: AbortController | null = null;
 let historyIndex = 0;
 let currentPath = '';
 
+// In-memory scroll positions keyed by navIndex. Populated on scroll and
+// consulted by handlePopState so returning to a previous entry via
+// back/forward restores the user's scroll, not just scroll 0.
+const scrollByIndex = new Map<number, number>();
+
 type Direction = 'forward' | 'back';
 
 function findAnchor(event: MouseEvent): HTMLAnchorElement | null {
@@ -145,27 +150,35 @@ async function performNavigation(
     teardownPerPageComponents();
     swapContent(newDoc);
     updateHead(newDoc);
-    if (isPush) {
-      historyIndex++;
-      window.history.pushState({ navIndex: historyIndex }, '', url);
-    }
     const parsed = new URL(url);
     currentPath = parsed.pathname + parsed.search;
 
+    if (isPush) {
+      historyIndex++;
+      // Push without the hash; we add it back below via location.replace
+      // so the browser performs a real fragment navigation that updates
+      // :target and fires hashchange. pushState alone would not do
+      // either of those things.
+      const urlWithoutHash = parsed.origin + parsed.pathname + parsed.search;
+      window.history.pushState({ navIndex: historyIndex }, '', urlWithoutHash);
+    }
+
     if (typeof scrollTarget === 'string') {
-      // Hash target
-      const el = document.getElementById(scrollTarget);
-      if (el) {
-        el.scrollIntoView();
-      } else {
-        window.scrollTo({ top: 0 });
-      }
+      // Trigger a real fragment navigation. location.replace overwrites
+      // the current entry's URL in place and runs fragment navigation
+      // (updating :target, firing hashchange, scrolling to the element).
+      // It wipes the entry's state object, so reapply it via
+      // replaceState.
+      const urlWithHash = parsed.pathname + parsed.search + '#' + scrollTarget;
+      window.location.replace(urlWithHash);
+      window.history.replaceState({ navIndex: historyIndex }, '', urlWithHash);
     } else if (typeof scrollTarget === 'number') {
       // Restore scroll position (popstate)
       window.scrollTo({ top: scrollTarget });
     } else {
       window.scrollTo({ top: 0 });
     }
+    scrollByIndex.set(historyIndex, window.scrollY);
   };
 
   const doc = document as Document & {
@@ -261,6 +274,16 @@ async function performNavigation(
 export default function mountNavigate(window: Window): () => void {
   window.history.scrollRestoration = 'manual';
   currentPath = window.location.pathname + window.location.search;
+  scrollByIndex.set(historyIndex, window.scrollY);
+
+  // Track scroll position on every scroll event. We keep the latest
+  // scrollY per navIndex so that back/forward navigation can restore
+  // where the user was, not just scroll 0. Map writes are cheap; no
+  // need to debounce.
+  const saveScroll = () => {
+    scrollByIndex.set(historyIndex, window.scrollY);
+  };
+  window.addEventListener('scroll', saveScroll, { passive: true });
 
   function handleClick(event: MouseEvent) {
     const anchor = findAnchor(event);
@@ -278,7 +301,8 @@ export default function mountNavigate(window: Window): () => void {
       return;
     }
 
-    // Same-page hash links: smooth scroll instead of letting the browser jump
+    // Same-page hash links: handle locally so we can clear search and
+    // close the header without a full SPA fetch.
     const url = new URL(anchor.href);
     if (
       url.pathname === window.location.pathname &&
@@ -293,11 +317,11 @@ export default function mountNavigate(window: Window): () => void {
         details.open = false;
       }
       if (url.hash) {
-        window.history.pushState(null, '', url.hash);
-        const el = window.document.getElementById(url.hash.slice(1));
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
+        // location.hash assignment performs a real fragment navigation:
+        // updates :target, fires hashchange (which the TOC listens for),
+        // creates a new history entry, and scrolls to the element.
+        // pushState would do none of those things.
+        window.location.hash = url.hash.slice(1);
       }
       return;
     }
@@ -314,15 +338,8 @@ export default function mountNavigate(window: Window): () => void {
       details.open = false;
     }
 
-    // Save current scroll position and history index
-    window.history.replaceState(
-      {
-        ...window.history.state,
-        scrollY: window.scrollY,
-        navIndex: historyIndex,
-      },
-      '',
-    );
+    // Save current scroll position for the entry we're leaving
+    scrollByIndex.set(historyIndex, window.scrollY);
 
     const hash = url.hash ? url.hash.slice(1) : null;
 
@@ -337,23 +354,23 @@ export default function mountNavigate(window: Window): () => void {
       if (hash) {
         const el = window.document.getElementById(hash);
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
+          el.scrollIntoView();
         }
       } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0 });
       }
       return;
     }
     currentPath = newPath;
 
-    const scrollY = event.state?.scrollY ?? null;
     const targetIndex = event.state?.navIndex ?? 0;
     const direction: Direction =
       targetIndex >= historyIndex ? 'forward' : 'back';
     historyIndex = targetIndex;
+    const savedY = scrollByIndex.get(targetIndex);
     performNavigation(
       window.location.href,
-      typeof scrollY === 'number' ? scrollY : null,
+      typeof savedY === 'number' ? savedY : null,
       direction,
       false,
     );
@@ -367,5 +384,6 @@ export default function mountNavigate(window: Window): () => void {
   return () => {
     window.document.removeEventListener('click', handleClick, true);
     window.removeEventListener('popstate', handlePopState);
+    window.removeEventListener('scroll', saveScroll);
   };
 }

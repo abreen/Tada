@@ -37,7 +37,7 @@ function scrollIfNeeded(element: HTMLElement, doc: Document) {
     elementRect.height / 2;
   const desiredScrollTop = elementCenter - container.clientHeight / 2;
 
-  container.scrollTo({ top: desiredScrollTop, behavior: 'smooth' });
+  container.scrollTo({ top: desiredScrollTop });
 }
 
 export function getHighlightIndexes(items: (Heading | Alert | Dinkus)[]) {

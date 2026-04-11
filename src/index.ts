@@ -59,6 +59,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Mount per-page components
   await mountPerPageComponents(window);
 
+  // On reload with manual scrollRestoration, browsers skip the initial
+  // fragment scroll. Do it ourselves once per-page components have
+  // finished mutating the DOM. On a fresh cold load the browser already
+  // scrolled, so this is a harmless re-align.
+  if (window.location.hash) {
+    const id = window.location.hash.slice(1);
+    const el = window.document.getElementById(id);
+    if (el) {
+      el.scrollIntoView();
+    }
+  }
+
   for (const [name, reason] of Object.entries(failed)) {
     console.error(`Failed to mount ${name} component:`, reason);
   }

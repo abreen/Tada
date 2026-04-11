@@ -30,11 +30,15 @@ export default (window: Window) => {
     e.preventDefault();
     const cleanUrl = window.location.pathname + window.location.search;
     if (window.location.hash) {
-      window.history.pushState(null, '', cleanUrl);
+      // Clear the hash via fragment navigation so :target clears and
+      // hashchange fires. location.hash = '' may leave a trailing '#';
+      // strip it with replaceState.
+      window.location.hash = '';
+      window.history.replaceState(null, '', cleanUrl);
     } else {
       window.history.replaceState(null, '', cleanUrl);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0 });
     const toc = window.document.querySelector('nav.toc') as HTMLElement | null;
     if (toc) {
       toc.scrollTop = 0;

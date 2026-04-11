@@ -88,6 +88,156 @@ test.describe('scroll and hash behavior', () => {
     await expect(page.locator('h1')).toContainText('Markdown Examples');
   });
 
+  test(':target moves between line-number clicks on the same page', async ({
+    page,
+  }) => {
+    await page.goto('/lectures/01/Rectangle.java.html');
+
+    // Click line 7
+    await page.locator('a.line-number#L7').click();
+    await expect(page).toHaveURL(/#L7$/);
+
+    let matches = await page.evaluate(() => ({
+      l7: document.getElementById('L7')?.matches(':target') ?? false,
+      l40: document.getElementById('L40')?.matches(':target') ?? false,
+    }));
+    expect(matches.l7).toBe(true);
+    expect(matches.l40).toBe(false);
+
+    // Click line 40
+    await page.locator('a.line-number#L40').click();
+    await expect(page).toHaveURL(/#L40$/);
+
+    matches = await page.evaluate(() => ({
+      l7: document.getElementById('L7')?.matches(':target') ?? false,
+      l40: document.getElementById('L40')?.matches(':target') ?? false,
+    }));
+    expect(matches.l7).toBe(false);
+    expect(matches.l40).toBe(true);
+  });
+
+  test('cross-page hash navigation sets :target on the new page', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    await page.evaluate(() => {
+      (window as any).__navMarker = 'alive';
+    });
+
+    // Inject a link to a code page with a hash and click it
+    await page.evaluate(() => {
+      const a = document.createElement('a');
+      a.href = '/lectures/01/Rectangle.java.html#L20';
+      a.textContent = 'jump to L20';
+      a.id = 'test-cross-hash-link';
+      document.querySelector('main.body')!.appendChild(a);
+    });
+
+    await page.locator('#test-cross-hash-link').click();
+    await expect(page).toHaveURL(/Rectangle\.java\.html#L20$/);
+
+    // Should have been SPA navigation
+    const marker = await page.evaluate(() => (window as any).__navMarker);
+    expect(marker).toBe('alive');
+
+    // L20 should match :target
+    const isTarget = await page.evaluate(
+      () => document.getElementById('L20')?.matches(':target') ?? false,
+    );
+    expect(isTarget).toBe(true);
+  });
+
+  test('refresh preserves scroll position to hash target', async ({ page }) => {
+    await page.goto('/lectures/01/Rectangle.java.html');
+
+    // Click a line far down the page
+    await page.locator('a.line-number#L40').click();
+    await expect(page).toHaveURL(/#L40$/);
+
+    // Refresh
+    await page.reload();
+
+    // Wait for the manual scroll-to-hash that runs after per-page
+    // components mount.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            () =>
+              document.getElementById('L40')?.getBoundingClientRect().top ??
+              Infinity,
+          ),
+        { timeout: 5000 },
+      )
+      .toBeLessThan(await page.evaluate(() => window.innerHeight));
+
+    const targetTop = await page.evaluate(
+      () => document.getElementById('L40')?.getBoundingClientRect().top ?? -1,
+    );
+    expect(targetTop).toBeGreaterThanOrEqual(-50);
+
+    // :target should still match after reload
+    const isTarget = await page.evaluate(
+      () => document.getElementById('L40')?.matches(':target') ?? false,
+    );
+    expect(isTarget).toBe(true);
+  });
+
+  test('TOC current-line indicator follows hash clicks', async ({ page }) => {
+    await page.goto('/lectures/01/Rectangle.java.html');
+
+    // Click line 20
+    await page.locator('a.line-number#L20').click();
+    await expect(page).toHaveURL(/#L20$/);
+
+    // Wait for the TOC current-line indicator to appear (TOC mount is
+    // asynchronous and may settle after the initial click).
+    await expect(page.locator('nav.toc li.current')).toHaveCount(1, {
+      timeout: 5000,
+    });
+    const currentText1 = await page
+      .locator('nav.toc li.current')
+      .first()
+      .textContent();
+
+    // Click a different line and verify the current item moves
+    await page.locator('a.line-number#L40').click();
+    await expect(page).toHaveURL(/#L40$/);
+
+    await expect
+      .poll(() => page.locator('nav.toc li.current').first().textContent(), {
+        timeout: 5000,
+      })
+      .not.toBe(currentText1);
+  });
+
+  test('back-to-top clears :target and scrolls to top', async ({ page }) => {
+    await page.goto('/lectures/01/Rectangle.java.html');
+
+    await page.locator('a.line-number#L40').click();
+    await expect(page).toHaveURL(/#L40$/);
+
+    // The back-to-top button only shows past a scroll threshold
+    await page.waitForFunction(() => window.scrollY > 250);
+
+    await page
+      .locator('a.button.is-visible', { hasText: 'Back to top' })
+      .click();
+
+    // URL should have no fragment
+    await expect(page).toHaveURL(/Rectangle\.java\.html$/);
+
+    // No element should match :target
+    const anyTarget = await page.evaluate(
+      () => document.querySelector(':target') !== null,
+    );
+    expect(anyTarget).toBe(false);
+
+    // Scroll position should be at the top
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBe(0);
+  });
+
   test('per-page components re-mount after navigation', async ({ page }) => {
     await page.goto('/markdown.html');
     await expect(page.locator('nav.toc')).toBeVisible();

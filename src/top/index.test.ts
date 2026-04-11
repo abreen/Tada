@@ -99,16 +99,20 @@ describe('top', () => {
     expect(called).toBe(true);
   });
 
-  test('onclick uses pushState when hash is present', () => {
+  test('onclick clears hash via fragment navigation when hash is present', () => {
     const win = create('', 'http://localhost/page#section');
     mount(win);
 
     const link = win.document.querySelector('a.button') as HTMLAnchorElement;
     win.scrollTo = (() => {}) as typeof win.scrollTo;
 
-    const pushed: string[] = [];
-    win.history.pushState = (_data: unknown, _title: string, url?: string) => {
-      pushed.push(url!);
+    const replaced: string[] = [];
+    win.history.replaceState = (
+      _data: unknown,
+      _title: string,
+      url?: string,
+    ) => {
+      replaced.push(url!);
     };
 
     const event = new win.MouseEvent('click', {
@@ -117,7 +121,10 @@ describe('top', () => {
     });
     link.dispatchEvent(event);
 
-    expect(pushed).toEqual(['/page']);
+    // location.hash assignment clears the fragment so :target updates,
+    // then replaceState strips any trailing '#' from the URL.
+    expect(win.location.hash).toBe('');
+    expect(replaced).toEqual(['/page']);
   });
 
   test('onclick uses replaceState when no hash', () => {
