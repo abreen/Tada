@@ -66,18 +66,19 @@ html {
 }
 
 a {
-  @include link-underline;
   color: var(--link-color);
+  text-decoration-line: none;
 
   @media (hover: hover) {
     &:hover {
       color: var(--link-color-hover);
+      @include link-underline;
     }
   }
-}
 
-a:active {
-  color: var(--link-active-color);
+  &:active {
+    color: var(--link-active-color);
+  }
 }
 
 pre,

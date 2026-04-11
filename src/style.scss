@@ -362,12 +362,8 @@ dl {
     color: var(--theme-color-text);
 
     a {
+      @include link-underline;
       color: var(--theme-color-text);
-      text-decoration-color: var(--theme-color-text);
-
-      &:active {
-        text-decoration-color: var(--link-active-color);
-      }
     }
   }
 

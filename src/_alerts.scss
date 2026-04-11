@@ -39,6 +39,7 @@
   }
 
   a {
+    @include link-underline;
     color: var(--fg-color);
 
     &:hover {
