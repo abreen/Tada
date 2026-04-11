@@ -61,10 +61,11 @@ body.code .toc ol a {
   .toc ol li:has(a):hover a {
     color: var(--fg2-color);
   }
+}
 
-  .toc ol li a:active {
-    color: var(--link-active-color);
-  }
+.toc ol li:has(a):active,
+.toc ol li:has(a):active a {
+  color: var(--link-active-color);
 }
 
 @media (min-width: 900px) {

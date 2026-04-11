@@ -139,16 +139,14 @@ details .content {
 }
 
 @media (hover: hover) {
-  details summary {
-    &:hover {
-      color: var(--fg2-color);
-      @include link-underline;
-    }
-
-    &:active {
-      color: var(--link-active-color);
-    }
+  details summary:hover {
+    color: var(--fg2-color);
+    @include link-underline;
   }
+}
+
+details summary:active {
+  color: var(--link-active-color);
 }
 
 main details {
