@@ -65,6 +65,7 @@
 }
 
 .alert .title::before {
+  content: '';
   left: 8px;
   top: 8px;
   position: absolute;
@@ -73,12 +74,11 @@
 }
 
 .alert.warning .title::before {
-  content: var(--icon-warning);
+  @include contained-mask(var(--icon-warning));
 }
 
 i.warning {
-  background: var(--icon-warning);
-  background-size: contain;
+  @include contained-mask(var(--icon-warning));
   display: inline-block;
   height: 1em;
   width: 1em;
@@ -86,7 +86,7 @@ i.warning {
 }
 
 .alert.note .title::before {
-  content: var(--icon-note);
+  @include contained-mask(var(--icon-note));
 }
 
 .alert .title {
