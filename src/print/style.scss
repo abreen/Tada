@@ -1,13 +1,10 @@
-:root {
-  --print-font-size: 15px;
-}
+@use '../mixins' as *;
 
 @media print {
   html,
-  body,
-  main,
-  section {
+  body {
     background: none !important;
+    color: #000;
   }
 
   hr {
@@ -27,15 +24,22 @@
     margin-top: 0;
   }
 
-  body {
-    font-size: var(--print-font-size);
-    color: #000;
+  main a:not(.heading-anchor):not(.footnote-ref):not(.line-number) {
+    @include link-underline;
   }
 
-  pre {
-    font-size: var(--print-font-size);
-    border: none;
-    padding: 0;
+  pre,
+  tt,
+  :not(pre) > code {
+    border: 1px solid #ccc;
+  }
+
+  // .alert strips the default padding from inline code (since it also
+  // strips the background). In print we add a border, so restore the
+  // padding so the border doesn't hug the text.
+  .alert .content tt,
+  .alert .content code {
+    padding: var(--mono-padding);
   }
 
   .footnotes {
@@ -50,13 +54,9 @@
     display: none !important;
   }
 
-  main details {
-    border: 2px solid #000;
-  }
-
-  main details .alert {
-    border: none;
-    padding: 0;
+  details,
+  .alert {
+    border-color: #000 !important;
   }
 
   section {
@@ -69,7 +69,8 @@
     display: none;
   }
 
-  a.external::after {
-    display: none;
+  .external-link-tail::after,
+  a.external:not(:has(.external-link-tail))::after {
+    content: none;
   }
 }

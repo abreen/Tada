@@ -1,7 +1,7 @@
 @use 'mixins' as *;
 
 .alert {
-  border: 3px solid var(--bg2-color);
+  border: 2px solid var(--bg2-color);
   position: relative;
   margin: 1rem 0;
 }
