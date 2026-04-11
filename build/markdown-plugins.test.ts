@@ -6,7 +6,7 @@ import deflistIdPlugin from './deflist-id-plugin';
 import externalLinksPlugin from './external-links-plugin';
 import headingSubtitlePlugin from './heading-subtitle-plugin';
 import columnsPlugin from './columns-plugin';
-import { createMarkdown } from './utils/markdown';
+import { createMarkdown, footnoteLabel } from './utils/markdown';
 import { stripHtmlComments, injectKatexStylesheet } from './utils/render';
 import type { SiteVariables } from './types';
 
@@ -598,5 +598,112 @@ describe('injectKatexStylesheet', () => {
     const result = injectKatexStylesheet(html, p => '/course' + p);
 
     expect(result).toContain('href="/course/katex/katex.min.css"');
+  });
+});
+
+describe('footnoteLabel', () => {
+  test('returns digits for 1-9', () => {
+    expect(footnoteLabel(1)).toBe('1');
+    expect(footnoteLabel(5)).toBe('5');
+    expect(footnoteLabel(9)).toBe('9');
+  });
+
+  test('returns capital letters for 10-35', () => {
+    expect(footnoteLabel(10)).toBe('A');
+    expect(footnoteLabel(11)).toBe('B');
+    expect(footnoteLabel(35)).toBe('Z');
+  });
+
+  test('throws for index <= 0 or > 35', () => {
+    expect(() => footnoteLabel(0)).toThrow();
+    expect(() => footnoteLabel(-1)).toThrow();
+    expect(() => footnoteLabel(36)).toThrow(/at most 35 footnotes/);
+  });
+});
+
+describe('footnote rendering', () => {
+  function createProjectMarkdown() {
+    return createMarkdown(
+      {
+        base: '',
+        basePath: '/',
+        internalDomains: [],
+        codeLanguages: {},
+        features: { search: true, code: true, favicon: false },
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+        defaultTimeZone: 'America/New_York',
+      } as SiteVariables,
+      { validatorOptions: { enabled: false } },
+    );
+  }
+
+  test('uses digit labels for the first nine footnotes', () => {
+    const md = createProjectMarkdown();
+    const refs = Array.from({ length: 9 }, (_, i) => `[^${i + 1}]`).join(' ');
+    const defs = Array.from(
+      { length: 9 },
+      (_, i) => `[^${i + 1}]: note ${i + 1}`,
+    ).join('\n');
+    const html = md.render(`Refs: ${refs}\n\n${defs}\n`);
+
+    expect(html).toContain(
+      'class="footnote-ref" href="#fn1" id="fnref1">1</a>',
+    );
+    expect(html).toContain(
+      'class="footnote-ref" href="#fn9" id="fnref9">9</a>',
+    );
+    expect(html).toContain(
+      '<li id="fn1" class="footnote-item"><span class="footnote-marker" aria-hidden="true">1</span>',
+    );
+    expect(html).toContain(
+      '<li id="fn9" class="footnote-item"><span class="footnote-marker" aria-hidden="true">9</span>',
+    );
+  });
+
+  test('switches to letters from the tenth footnote', () => {
+    const md = createProjectMarkdown();
+    const refs = Array.from({ length: 11 }, (_, i) => `[^${i + 1}]`).join(' ');
+    const defs = Array.from(
+      { length: 11 },
+      (_, i) => `[^${i + 1}]: note ${i + 1}`,
+    ).join('\n');
+    const html = md.render(`Refs: ${refs}\n\n${defs}\n`);
+
+    expect(html).toContain(
+      'class="footnote-ref" href="#fn10" id="fnref10">A</a>',
+    );
+    expect(html).toContain(
+      'class="footnote-ref" href="#fn11" id="fnref11">B</a>',
+    );
+    expect(html).toContain(
+      '<li id="fn10" class="footnote-item"><span class="footnote-marker" aria-hidden="true">A</span>',
+    );
+    expect(html).toContain(
+      '<li id="fn11" class="footnote-item"><span class="footnote-marker" aria-hidden="true">B</span>',
+    );
+  });
+
+  test('wraps the list in <ol> with no default marker styling', () => {
+    const md = createProjectMarkdown();
+    const html = md.render('Para.[^1]\n\n[^1]: note\n');
+
+    expect(html).toContain(
+      '<div class="footnotes"><p class="title">Footnotes</p><ol>',
+    );
+    expect(html).toContain('</ol></div>');
+  });
+
+  test('throws when a page has more than 35 footnotes', () => {
+    const md = createProjectMarkdown();
+    const refs = Array.from({ length: 36 }, (_, i) => `[^${i + 1}]`).join(' ');
+    const defs = Array.from(
+      { length: 36 },
+      (_, i) => `[^${i + 1}]: note ${i + 1}`,
+    ).join('\n');
+    expect(() => md.render(`${refs}\n\n${defs}\n`)).toThrow(
+      /at most 35 footnotes/,
+    );
   });
 });

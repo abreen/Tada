@@ -182,10 +182,10 @@ footnote.[^example-footnote]
 Definition lists are supported using the same syntax as Presto:
 
 Stack
-: Last-in first-out collection.
+: Last-in first-out collection.[^footnote-2]
 
 Queue
-: First-in first-out collection.
+: First-in first-out collection.[^footnote-3]
 
 Binary tree
 : Hierarchical structure where each node has up to two children.
@@ -417,7 +417,15 @@ Here's a time range:
 
 
 [^example-footnote]: Footnotes render inside a numbered list at the bottom of
-the page.
+                     the page.
+
+    Here's a second paragraph.
+
+    Here's a third paragraph.
+
+[^footnote-2]: Also known as "LIFO".
+
+[^footnote-3]: Also known as "FIFO".
 
 [front-matter]: https://www.npmjs.com/package/front-matter
 [markdown-it]: https://markdown-it.github.io/

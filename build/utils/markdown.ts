@@ -36,6 +36,22 @@ function capitalize(str: string): string {
   return str[0].toUpperCase() + str.slice(1);
 }
 
+const MAX_FOOTNOTES = 35;
+
+export function footnoteLabel(oneBasedIndex: number): string {
+  if (oneBasedIndex < 1 || oneBasedIndex > MAX_FOOTNOTES) {
+    throw new Error(
+      `Tada supports at most ${MAX_FOOTNOTES} footnotes per page ` +
+        `(9 digits + 26 capital letters), but footnote ${oneBasedIndex} ` +
+        `was requested. Reduce the number of footnotes on this page.`,
+    );
+  }
+  if (oneBasedIndex <= 9) {
+    return String(oneBasedIndex);
+  }
+  return String.fromCharCode('A'.charCodeAt(0) + (oneBasedIndex - 10));
+}
+
 export function createMarkdown(
   siteVariables: SiteVariables,
   options: CreateMarkdownOptions = {},
@@ -196,24 +212,22 @@ export function createMarkdown(
   });
 
   /*
-   * Customize markdown-it-footnote renderer
+   * Customize markdown-it-footnote renderer.
+   *
+   * Footnotes are labeled with single characters from Inter's ss06
+   * stylistic set: 1-9 for the first nine footnotes, then A-Z. The
+   * default <ol> numbering is suppressed via CSS and we inject a
+   * marker span per item so the label sequence can mix digits and
+   * letters.
    */
   markdown.renderer.rules.footnote_block_open = () =>
     '<div class="footnotes"><p class="title">Footnotes</p><ol>';
 
   markdown.renderer.rules.footnote_block_close = () => '</ol></div>';
 
-  // Change appearance of reference
-  const caption = markdown.renderer.rules.footnote_caption!;
-  markdown.renderer.rules.footnote_caption = (
-    tokens: Token[],
-    idx: number,
-    options: Options,
-    env: unknown,
-    self: Renderer,
-  ) => {
-    const str = caption(tokens, idx, options, env, self);
-    return str.slice(1, str.length - 1);
+  markdown.renderer.rules.footnote_caption = (tokens: Token[], idx: number) => {
+    const id = tokens[idx].meta!.id as number;
+    return footnoteLabel(id + 1);
   };
 
   const footnoteRef = markdown.renderer.rules.footnote_ref!;
@@ -224,10 +238,25 @@ export function createMarkdown(
     env: unknown,
     self: Renderer,
   ) =>
+    // Prepend a non-breaking space so the reference link cannot wrap
+    // away from the word it follows.
+    '\u00a0' +
     footnoteRef(tokens, idx, options, env, self)
       .replace('<sup class="footnote-ref">', '')
       .replace('</sup>', '')
       .replace('<a href="', '<a class="footnote-ref" href="');
+
+  markdown.renderer.rules.footnote_open = (tokens: Token[], idx: number) => {
+    const id = tokens[idx].meta!.id as number;
+    const label = footnoteLabel(id + 1);
+    const refid = id + 1;
+    return (
+      `<li id="fn${refid}" class="footnote-item">` +
+      `<span class="footnote-marker" aria-hidden="true">${label}</span> `
+    );
+  };
+
+  markdown.renderer.rules.footnote_close = () => '</li>\n';
 
   const footnoteAnchor = markdown.renderer.rules.footnote_anchor!;
   markdown.renderer.rules.footnote_anchor = (
