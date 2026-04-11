@@ -127,51 +127,22 @@ body.code .toc ol a {
   position: relative;
 }
 
-// Preload hover icon variants so the browser decodes them before first hover
-.toc ol li.alert-item.warning::after {
-  content: var(--icon-warning-sm-hover);
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
-.toc ol li.alert-item.note::after {
-  content: var(--icon-note-sm-hover);
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
 .toc ol li.alert-item.warning a::before,
 .toc ol li.alert-item.note a::before {
+  content: '';
   display: inline-block;
+  width: 20px;
   height: 20px;
   vertical-align: bottom;
   margin-right: 4px;
 }
 
 .toc ol li.alert-item.warning a::before {
-  content: var(--icon-warning-sm);
-}
-
-@media (hover: hover) {
-  .toc ol li.alert-item.warning:hover a::before,
-  .toc ol li.alert-item.warning a:hover::before {
-    content: var(--icon-warning-sm-hover);
-  }
+  @include contained-mask(var(--icon-warning));
 }
 
 .toc ol li.alert-item.note a::before {
-  content: var(--icon-note-sm);
-}
-
-@media (hover: hover) {
-  .toc ol li.alert-item.note:hover a::before,
-  .toc ol li.alert-item.note a:hover::before {
-    content: var(--icon-note-sm-hover);
-  }
+  @include contained-mask(var(--icon-note));
 }
 
 .toc ol li.label {

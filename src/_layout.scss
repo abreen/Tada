@@ -156,9 +156,30 @@ body.literate main table {
       .text {
         color: var(--fg2-color);
         text-decoration: underline;
-        text-decoration-color: var(--fg2-color);
         text-decoration-thickness: 1px;
         text-underline-offset: 3px;
+      }
+
+      &:hover .text {
+        color: var(--link-color-hover);
+      }
+
+      &:active .text {
+        color: var(--link-active-color);
+      }
+
+      &:active .avatar {
+        border-color: var(--link-active-color);
+      }
+
+      &:focus-visible {
+        outline: none;
+      }
+
+      &:focus-visible .text,
+      &:focus-visible .avatar {
+        outline: 2px solid var(--theme-color);
+        outline-offset: 2px;
       }
     }
 
@@ -167,6 +188,7 @@ body.literate main table {
       height: 24px;
       vertical-align: middle;
       margin-left: 4px;
+      border: 1px solid transparent;
     }
   }
 }

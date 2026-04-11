@@ -100,10 +100,156 @@ describe('external-links-plugin', () => {
     );
 
     expect(html).toContain(
-      '<a href="https://outside.example/docs" class="external" target="_blank">External</a>',
+      '<a href="https://outside.example/docs" class="external" target="_blank">',
     );
     expect(html).toContain('<a href="https://example.com/docs">Internal</a>');
     expect(html).toContain('<a href="mailto:test@example.com">Mail</a>');
+  });
+
+  test('wraps the last word of an external link in a tail span', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[Markdown examples page](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank">Markdown examples <span class="external-link-tail">page</span></a>',
+    );
+  });
+
+  test('wraps the entire link content when it is a single word', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[click](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank"><span class="external-link-tail">click</span></a>',
+    );
+  });
+
+  test('does not wrap the tail of internal links', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, { internalDomains: ['example.com'] });
+
+    const html = md.render('[my internal link](https://example.com/docs)');
+
+    expect(html).not.toContain('external-link-tail');
+    expect(html).toContain(
+      '<a href="https://example.com/docs">my internal link</a>',
+    );
+  });
+
+  test('puts the tail span inside a surrounding strong element', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[**bold link**](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank"><strong>bold <span class="external-link-tail">link</span></strong></a>',
+    );
+  });
+
+  test('wraps the entire content when the link is a single bold word', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[**bold**](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank"><span class="external-link-tail"><strong>bold</strong></span></a>',
+    );
+  });
+
+  test('handles multiple spaces and trailing whitespace correctly', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[hello   world](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank">hello   <span class="external-link-tail">world</span></a>',
+    );
+  });
+
+  test('puts a trailing inline-formatted word inside the tail span', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[click *here*](https://example.com)');
+
+    // The space at the end of "click " is the split point; everything
+    // after it (including the em_open/text/em_close) goes inside the span.
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank">click <span class="external-link-tail"><em>here</em></span></a>',
+    );
+  });
+
+  test('keeps trailing inline code inside the tail span', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[install `tada`](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank">install <span class="external-link-tail"><code>tada</code></span></a>',
+    );
+  });
+
+  test('splits at the last hyphen when there is no space', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[my-long-link](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank">my-long-<span class="external-link-tail">link</span></a>',
+    );
+  });
+
+  test('prefers a later hyphen over an earlier space', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[hello world-bound](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank">hello world-<span class="external-link-tail">bound</span></a>',
+    );
+  });
+
+  test('skips a trailing hyphen and uses an earlier one', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[my-link-](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank">my-<span class="external-link-tail">link-</span></a>',
+    );
+  });
+
+  test('wraps the whole link when the only split char is at the end', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[a-](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank"><span class="external-link-tail">a-</span></a>',
+    );
+  });
+
+  test('puts the tail span inside nested inline formatting', () => {
+    const md = new MarkdownIt();
+    md.use(externalLinksPlugin, {});
+
+    const html = md.render('[**bold *and italic***](https://example.com)');
+
+    expect(html).toContain(
+      '<a href="https://example.com" class="external" target="_blank"><strong>bold <em>and <span class="external-link-tail">italic</span></em></strong></a>',
+    );
   });
 });
 
