@@ -35,9 +35,21 @@ export default (window: Window) => {
   }
   window.addEventListener('keydown', handleWindowKeyDown);
 
+  function handleDetailsFocusOut(e: FocusEvent) {
+    if (!details.open) {
+      return;
+    }
+    const next = e.relatedTarget as Node | null;
+    if (!next || !details.contains(next)) {
+      close();
+    }
+  }
+  details.addEventListener('focusout', handleDetailsFocusOut);
+
   return () => {
     window.removeEventListener('keydown', handleWindowKeyDown);
     window.removeEventListener('click', handleWindowClick);
     details.removeEventListener('click', handleDetailsClick);
+    details.removeEventListener('focusout', handleDetailsFocusOut);
   };
 };
