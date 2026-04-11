@@ -360,11 +360,6 @@ dl {
   dt {
     font-weight: 600;
     color: var(--theme-color-text);
-
-    a {
-      @include link-underline;
-      color: var(--theme-color-text);
-    }
   }
 
   dd > *:first-child {
