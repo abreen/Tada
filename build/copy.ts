@@ -81,21 +81,41 @@ export function copyContentAssets(
   return contentAssetRelPaths;
 }
 
+function copySingleFile(
+  sourceDir: string,
+  distDir: string,
+  filePath: string,
+  sourceLabel: string,
+  conflictLabel: string,
+  conflictSet?: Set<string>,
+): void {
+  const rel = toPosix(path.relative(sourceDir, filePath));
+  if (conflictSet?.has(rel)) {
+    log.error`${sourceLabel}/${B`${rel}`} conflicts with ${conflictLabel}/${B`${rel}`}`;
+    throw new Error(
+      `${sourceLabel}/${rel} and ${conflictLabel}/${rel} have the same path`,
+    );
+  }
+  const dest = path.join(distDir, rel);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(filePath, dest);
+  log.info`Copying ${sourceLabel} file ${B`${rel}`}`;
+}
+
 export function copyPublicFile(
   publicDir: string,
   distDir: string,
   filePath: string,
   contentAssetRelPaths?: Set<string>,
 ): void {
-  const rel = toPosix(path.relative(publicDir, filePath));
-  if (contentAssetRelPaths && contentAssetRelPaths.has(rel)) {
-    log.error`public/${B`${rel}`} conflicts with content/${B`${rel}`}`;
-    throw new Error(`public/${rel} and content/${rel} have the same path`);
-  }
-  const dest = path.join(distDir, rel);
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.copyFileSync(filePath, dest);
-  log.info`Copying public file ${B`${rel}`}`;
+  copySingleFile(
+    publicDir,
+    distDir,
+    filePath,
+    'public',
+    'content',
+    contentAssetRelPaths,
+  );
 }
 
 export function copyContentFile(
@@ -104,13 +124,12 @@ export function copyContentFile(
   filePath: string,
   publicRelPaths?: Set<string>,
 ): void {
-  const rel = toPosix(path.relative(contentDir, filePath));
-  if (publicRelPaths && publicRelPaths.has(rel)) {
-    log.error`content/${B`${rel}`} conflicts with public/${B`${rel}`}`;
-    throw new Error(`content/${rel} and public/${rel} have the same path`);
-  }
-  const dest = path.join(distDir, rel);
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.copyFileSync(filePath, dest);
-  log.info`Copying content file ${B`${rel}`}`;
+  copySingleFile(
+    contentDir,
+    distDir,
+    filePath,
+    'content',
+    'public',
+    publicRelPaths,
+  );
 }

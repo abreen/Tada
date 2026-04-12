@@ -7,6 +7,7 @@ import { getHighlighter } from './shiki-highlighter';
 import externalLinksPlugin from '../external-links-plugin';
 import applyBasePathPlugin from '../apply-base-path-plugin';
 import { createApplyBasePath } from './paths';
+import { splitLines } from './literate-java';
 import type { JavaTocEntry, SiteVariables } from '../types';
 
 interface CstNode {
@@ -507,10 +508,7 @@ export function renderCodeWithComments(
   pageDirPath?: string,
 ): string {
   const md = createCodeMarkdown(siteVariables);
-  const lines = sourceCode.split('\n');
-  if (lines[lines.length - 1] === '') {
-    lines.pop();
-  }
+  const lines = splitLines(sourceCode);
 
   // Group lines into segments
   const segments: CodeSegment[] = [];

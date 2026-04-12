@@ -50,6 +50,10 @@ export class ContentRenderer {
     this.lastBuildFiles = new Set();
   }
 
+  private getCachedAssets(filePath: string): Asset[] {
+    return this.sourceFileCache.get(filePath) ?? [];
+  }
+
   async initHighlighter(): Promise<void> {
     const langs = [
       ...new Set([
@@ -210,7 +214,7 @@ export class ContentRenderer {
     changedHtmlAssetPaths: Set<string>,
     removedHtmlAssetPaths: Set<string>,
   ): void {
-    const previousAssets = this.sourceFileCache.get(filePath) || [];
+    const previousAssets = this.getCachedAssets(filePath);
     const nextAssetPaths = new Set(assets.map(asset => asset.assetPath));
 
     for (const asset of previousAssets) {
@@ -233,7 +237,7 @@ export class ContentRenderer {
 
   writeCachedAssets(distDir: string, buildContentFiles: string[]): void {
     for (const filePath of buildContentFiles) {
-      const assets = this.sourceFileCache.get(filePath) || [];
+      const assets = this.getCachedAssets(filePath);
       for (const asset of assets) {
         const outPath = path.join(distDir, asset.assetPath);
         fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -251,7 +255,7 @@ export class ContentRenderer {
         continue;
       }
 
-      const previousAssets = this.sourceFileCache.get(filePath) || [];
+      const previousAssets = this.getCachedAssets(filePath);
       for (const asset of previousAssets) {
         if (asset.assetPath.endsWith('.html')) {
           removedHtmlAssetPaths.add(asset.assetPath);
@@ -352,7 +356,7 @@ export class ContentRenderer {
     // Collect HTML asset content for Pagefind
     const htmlAssetsByPath = new Map<string, string>();
     for (const filePath of buildContentFiles) {
-      const assets = this.sourceFileCache.get(filePath) || [];
+      const assets = this.getCachedAssets(filePath);
       for (const asset of assets) {
         if (asset.assetPath.endsWith('.html')) {
           htmlAssetsByPath.set(asset.assetPath, asset.content as string);

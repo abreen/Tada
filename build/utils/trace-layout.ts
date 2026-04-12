@@ -7,10 +7,10 @@ import type {
 } from '../types';
 
 /** Maximum number of array cells to display. */
-const ARRAY_MAX_CELLS = 12;
+export const ARRAY_MAX_CELLS = 12;
 
 /** Default font size in pixels. */
-const DEFAULT_FONT_SIZE = 15;
+export const DEFAULT_FONT_SIZE = 15;
 
 /** Gap between objects in the layout. */
 const OBJ_GAP = 24;

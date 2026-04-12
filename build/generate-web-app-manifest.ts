@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createApplyBasePath } from './util';
+import { FAVICON_SIZES } from './generate-favicon';
 import type { SiteVariables } from './types';
 
 interface ManifestIcon {
@@ -19,6 +20,20 @@ interface WebAppManifest {
 
 function createManifest(siteVariables: SiteVariables): WebAppManifest {
   const applyBasePath = createApplyBasePath(siteVariables);
+  const filenameBase = 'favicon';
+
+  const pngIcons: ManifestIcon[] = [...FAVICON_SIZES]
+    .sort((a, b) => b - a)
+    .map(size => ({
+      src: `${filenameBase}-${size}.png`,
+      sizes: `${size}x${size}`,
+      type: 'image/png',
+      purpose: size >= 128 ? 'any maskable' : 'any',
+    }));
+
+  const icoSizes = FAVICON_SIZES.filter(s => s <= 256)
+    .map(s => `${s}x${s}`)
+    .join(' ');
 
   return {
     name: siteVariables.title,
@@ -26,68 +41,15 @@ function createManifest(siteVariables: SiteVariables): WebAppManifest {
     display: 'minimal-ui',
     icons: [
       {
-        src: 'favicon.svg',
+        src: `${filenameBase}.svg`,
         sizes: 'any',
         type: 'image/svg+xml',
         purpose: 'any maskable',
       },
+      ...pngIcons,
       {
-        src: 'favicon-1024.png',
-        sizes: '1024x1024',
-        type: 'image/png',
-        purpose: 'any maskable',
-      },
-      {
-        src: 'favicon-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any maskable',
-      },
-      {
-        src: 'favicon-256.png',
-        sizes: '256x256',
-        type: 'image/png',
-        purpose: 'any maskable',
-      },
-      {
-        src: 'favicon-192.png',
-        sizes: '192x192',
-        type: 'image/png',
-        purpose: 'any maskable',
-      },
-      {
-        src: 'favicon-128.png',
-        sizes: '128x128',
-        type: 'image/png',
-        purpose: 'any maskable',
-      },
-      {
-        src: 'favicon-64.png',
-        sizes: '64x64',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: 'favicon-48.png',
-        sizes: '48x48',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: 'favicon-32.png',
-        sizes: '32x32',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: 'favicon-16.png',
-        sizes: '16x16',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: 'favicon.ico',
-        sizes: '16x16 32x32 48x48 64x64 128x128 192x192 256x256',
+        src: `${filenameBase}.ico`,
+        sizes: icoSizes,
         type: 'image/x-icon',
         purpose: 'any maskable',
       },

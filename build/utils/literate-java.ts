@@ -14,6 +14,37 @@ import type {
 
 const log = makeLogger(import.meta.url);
 
+export function runJavac(
+  args: string[],
+  opts: { cwd?: string; tempDir: string; label: string },
+): void {
+  try {
+    execFileSync('javac', args, {
+      cwd: opts.cwd,
+      timeout: 30000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+  } catch (err: unknown) {
+    const execErr = err as { stderr?: Buffer; message: string };
+    const stderr = execErr.stderr ? execErr.stderr.toString() : execErr.message;
+    fs.rmSync(opts.tempDir, { recursive: true, force: true });
+    throw new Error(`${opts.label}:\n${stderr}`, { cause: err });
+  }
+}
+
+export function getExecError(err: unknown): string {
+  const execErr = err as { stderr?: Buffer; message: string };
+  return execErr.stderr ? execErr.stderr.toString() : execErr.message;
+}
+
+export function splitLines(source: string): string[] {
+  const lines = source.split('\n');
+  if (lines.length > 0 && lines[lines.length - 1] === '') {
+    lines.pop();
+  }
+  return lines;
+}
+
 let runnerClassDir: string | null = null;
 
 const MAIN_PATTERN = /\bvoid\s+main\s*\(/m;
@@ -95,20 +126,11 @@ export function compileJavaSource(
 
   log.debug`Compiling ${className}.java (${javaSource.split('\n').length} lines) in ${tempDir}`;
 
-  try {
-    execFileSync('javac', [`${className}.java`], {
-      cwd: tempDir,
-      timeout: 30000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-  } catch (err: unknown) {
-    const execErr = err as { stderr?: Buffer; message: string };
-    const stderr = execErr.stderr ? execErr.stderr.toString() : execErr.message;
-    fs.rmSync(tempDir, { recursive: true, force: true });
-    throw new Error(`Compilation failed for ${className}.java:\n${stderr}`, {
-      cause: err,
-    });
-  }
+  runJavac([`${className}.java`], {
+    cwd: tempDir,
+    tempDir,
+    label: `Compilation failed for ${className}.java`,
+  });
 
   return tempDir;
 }
@@ -127,19 +149,10 @@ function ensureRunnerCompiled(): string {
 
   log.debug`Compiling LiterateRunner.java into ${tempDir}`;
 
-  try {
-    execFileSync('javac', ['-d', tempDir, sourceFile], {
-      timeout: 30000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-  } catch (err: unknown) {
-    const execErr = err as { stderr?: Buffer; message: string };
-    const stderr = execErr.stderr ? execErr.stderr.toString() : execErr.message;
-    fs.rmSync(tempDir, { recursive: true, force: true });
-    throw new Error(`Failed to compile LiterateRunner.java:\n${stderr}`, {
-      cause: err,
-    });
-  }
+  runJavac(['-d', tempDir, sourceFile], {
+    tempDir,
+    label: 'Failed to compile LiterateRunner.java',
+  });
 
   runnerClassDir = tempDir;
   return tempDir;
@@ -174,12 +187,8 @@ export function executeLiterateJava(
     log.debug`LiterateRunner returned ${entries.length} output entries`;
     return entries;
   } catch (err: unknown) {
-    const execErr = err as {
-      stderr?: Buffer | string;
-      stdout?: Buffer | string;
-      message: string;
-    };
-    const stderr = execErr.stderr ? execErr.stderr.toString() : '';
+    const execErr = err as { stdout?: Buffer | string; message: string };
+    const stderr = getExecError(err);
     const stdout = execErr.stdout ? execErr.stdout.toString() : '';
     throw new Error(
       `Execution failed for ${className}:\n${stderr || stdout || execErr.message}`,

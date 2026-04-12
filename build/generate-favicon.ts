@@ -10,6 +10,8 @@ import type { SiteVariables } from './types';
 
 const log = makeLogger(import.meta.url);
 
+export const FAVICON_SIZES = [16, 32, 48, 64, 128, 192, 256, 512, 1024];
+
 const FONT_PATH = path.join(
   getPackageDir(),
   'fonts',
@@ -110,23 +112,11 @@ export async function generateFavicons(
   siteVariables: SiteVariables,
   distDir: string,
 ): Promise<void> {
-  const color = siteVariables.faviconColor;
-  const symbol = siteVariables.faviconSymbol;
+  const color = siteVariables.faviconColor!;
+  const symbol = siteVariables.faviconSymbol!;
   const fontWeight = siteVariables.faviconFontWeight || 700;
-  const sizes = [16, 32, 48, 64, 128, 192, 256, 512, 1024];
   const svgSize = 512;
   const filenameBase = 'favicon';
-
-  if (!symbol) {
-    throw new Error(
-      'Favicon generation requires "symbol" in site config (or "faviconSymbol")',
-    );
-  }
-  if (!color) {
-    throw new Error(
-      'Favicon generation requires "themeColor" in site config (or "faviconColor")',
-    );
-  }
 
   const { themeColorLight, textOnThemeLight } = deriveTheme(color);
 
@@ -145,7 +135,7 @@ export async function generateFavicons(
   fs.writeFileSync(path.join(distDir, `${filenameBase}.svg`), svgMarkup);
 
   const pngBuffers = await Promise.all(
-    sizes.map(async size => {
+    FAVICON_SIZES.map(async size => {
       const svgForSize = createFaviconSvg(
         size,
         themeColorLight,

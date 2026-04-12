@@ -7,7 +7,7 @@ import markdownItAnchor from 'markdown-it-anchor';
 import markdownItFootnote from 'markdown-it-footnote';
 import markdownItDeflist from 'markdown-it-deflist';
 import markdownItContainer from 'markdown-it-container';
-import textToId from '../text-to-id';
+import textToId, { deduplicateId } from '../text-to-id';
 import { getHighlighter } from './shiki-highlighter';
 import headingSubtitlePlugin from '../heading-subtitle-plugin';
 import deflistIdPlugin from '../deflist-id-plugin';
@@ -166,9 +166,7 @@ export function createMarkdown(
           ? markdown.utils.escapeHtml(curlyQuote(title))
           : capitalize(type || '');
         const baseId = textToId(title || type || '');
-        const count = (usedIds.get(baseId) ?? 0) + 1;
-        usedIds.set(baseId, count);
-        const titleId = count === 1 ? baseId : `${baseId}-${count}`;
+        const titleId = deduplicateId(usedIds, baseId);
 
         if (!env.alertIds) {
           env.alertIds = [];
