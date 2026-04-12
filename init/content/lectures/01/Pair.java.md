@@ -1,6 +1,8 @@
+---
 title: A generic `Pair` class
 author: alex
 description: An example of a literate Java program.
+---
 
 <!---
 You may hide code from the generated HTML page but still include it in the
