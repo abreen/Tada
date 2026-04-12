@@ -116,6 +116,11 @@ export async function runWatch(options: {
   // Dev server
 
   function serve(): void {
+    webServerTimeout = setTimeout(() => {
+      log.error`Web server failed to report within 10 seconds, exiting`;
+      process.exit(3);
+    }, 10000);
+
     startServer({
       port: httpPort,
       distDir,
@@ -123,11 +128,6 @@ export async function runWatch(options: {
         clearTimeout(webServerTimeout);
       },
     });
-
-    webServerTimeout = setTimeout(() => {
-      log.error`Web server failed to report within 10 seconds, exiting`;
-      process.exit(3);
-    }, 10000);
   }
 
   // Path helpers
