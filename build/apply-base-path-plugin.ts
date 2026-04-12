@@ -120,10 +120,10 @@ export default function applyBasePathPlugin(
         );
     }
 
-    token.children?.map(checkAndApplyBasePath);
+    token.children?.forEach(checkAndApplyBasePath);
   }
 
   md.core.ruler.push('apply_base_path', state => {
-    state.tokens.map(checkAndApplyBasePath);
+    state.tokens.forEach(checkAndApplyBasePath);
   });
 }

@@ -1,6 +1,22 @@
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import type { SiteVariables } from './types';
 
+const MONTHS = [
+  '',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 interface Globals {
   isHomePage: boolean;
   isoDate: (str: string | null | undefined) => string | null;
@@ -58,31 +74,10 @@ function readableDate(date: string | Date | null | undefined): string {
 
   const str = date.toISOString();
   const year = str.slice(0, 4);
-  let month: string = str.slice(5, 7);
-  if (month[0] === '0') {
-    month = month[1];
-  }
-  let day: string = str.slice(8, 10);
-  if (day[0] === '0') {
-    day = day[1];
-  }
+  const month = Number(str.slice(5, 7));
+  const day = Number(str.slice(8, 10));
 
-  const months: Record<string, string> = {
-    1: 'January',
-    2: 'February',
-    3: 'March',
-    4: 'April',
-    5: 'May',
-    6: 'June',
-    7: 'July',
-    8: 'August',
-    9: 'September',
-    10: 'October',
-    11: 'November',
-    12: 'December',
-  };
-
-  return `${months[month]} ${day}, ${year}`;
+  return `${MONTHS[month]} ${day}, ${year}`;
 }
 
 export function classNames(obj: Record<string, unknown>): string {

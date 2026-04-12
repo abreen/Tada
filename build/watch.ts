@@ -500,11 +500,10 @@ export async function runWatch(options: {
       watcher.on('add', onFileChange);
       watcher.on('unlink', onFileChange);
 
-      let configWatcherReady = false;
-      let contentWatcherReady = false;
+      let watchersReady = 0;
 
       function onWatcherReady(): void {
-        if (!configWatcherReady || !contentWatcherReady) {
+        if (++watchersReady < 2) {
           return;
         }
         watcherReady = true;
@@ -515,15 +514,8 @@ export async function runWatch(options: {
         log.info`Watching for changes...`;
       }
 
-      configWatcher.on('ready', () => {
-        configWatcherReady = true;
-        onWatcherReady();
-      });
-
-      watcher.on('ready', () => {
-        contentWatcherReady = true;
-        onWatcherReady();
-      });
+      configWatcher.on('ready', onWatcherReady);
+      watcher.on('ready', onWatcherReady);
     });
 
   // Return a promise that never resolves (watch mode runs until killed)

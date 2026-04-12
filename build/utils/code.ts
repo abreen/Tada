@@ -73,9 +73,7 @@ export function rewriteProseLinks(
 
   function rewriteHref(href: string): string {
     // Separate pathname from query/fragment
-    const match = href.match(/^([^?#]*)(.*)$/);
-    const pathname = match ? match[1] : href;
-    const suffix = match ? match[2] : '';
+    const [, pathname, suffix] = href.match(/^([^?#]*)(.*)$/)!;
 
     // Leave external, protocol-relative, and anchor-only links unchanged
     if (

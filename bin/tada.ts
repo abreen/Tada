@@ -607,21 +607,14 @@ try {
       await initCommand(process.argv.slice(3));
       break;
 
-    case 'dev': {
-      requireSiteConfig('dev');
-      const { runPipeline } = await import(
-        path.join(packageDir, 'build/pipeline.ts')
-      );
-      await runPipeline('development');
-      break;
-    }
-
+    case 'dev':
     case 'prod': {
-      requireSiteConfig('prod');
+      const mode = command === 'dev' ? 'development' : 'production';
+      requireSiteConfig(command);
       const { runPipeline } = await import(
         path.join(packageDir, 'build/pipeline.ts')
       );
-      await runPipeline('production');
+      await runPipeline(mode);
       break;
     }
 
