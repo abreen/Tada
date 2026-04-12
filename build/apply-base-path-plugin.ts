@@ -3,6 +3,7 @@ import type MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import { createApplyBasePath } from './utils/paths';
 import { isFeatureEnabled } from './features';
+import { isInternalLink } from './utils/link';
 import { makeLogger } from './log';
 import type { SiteVariables } from './types';
 
@@ -26,6 +27,11 @@ export default function applyBasePathPlugin(
   const validTargets = pluginOptions.validTargets;
 
   function rewriteInternalHref(href: string): string {
+    const resolveAgainstSource = (p: string): string =>
+      p.startsWith('/')
+        ? p
+        : path.posix.join(path.posix.dirname(sourceUrlPath!), p);
+
     const match = href.match(/^([^?#]*)(.*)$/);
     const pathname = match ? match[1] : href;
     const suffix = match ? match[2] : '';
@@ -35,12 +41,7 @@ export default function applyBasePathPlugin(
       for (const ext of Object.keys(siteVariables.codeLanguages ?? {})) {
         if (modifiedPath.endsWith(`.${ext}`)) {
           if (literateJavaOutputPaths && sourceUrlPath) {
-            const resolved = modifiedPath.startsWith('/')
-              ? modifiedPath
-              : path.posix.join(
-                  path.posix.dirname(sourceUrlPath),
-                  modifiedPath,
-                );
+            const resolved = resolveAgainstSource(modifiedPath);
             if (literateJavaOutputPaths.has(resolved)) {
               break;
             }
@@ -48,12 +49,7 @@ export default function applyBasePathPlugin(
           // Only rewrite if the .html version exists. Public files with
           // code extensions are copied as-is and have no .html page.
           if (validTargets && sourceUrlPath) {
-            const resolved = modifiedPath.startsWith('/')
-              ? modifiedPath
-              : path.posix.join(
-                  path.posix.dirname(sourceUrlPath),
-                  modifiedPath,
-                );
+            const resolved = resolveAgainstSource(modifiedPath);
             if (!validTargets.has(`${resolved}.html`)) {
               break;
             }
@@ -79,11 +75,7 @@ export default function applyBasePathPlugin(
         const afterApply = applyBasePath(modifiedHref);
         log.debug`Applying base path: ${href} -> ${afterApply}`;
         token.attrSet('href', afterApply);
-      } else if (
-        !href.startsWith('#') &&
-        !href.startsWith('//') &&
-        !/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(href)
-      ) {
+      } else if (isInternalLink(href)) {
         // Relative link: only rewrite code extensions, don't apply base path
         const modifiedHref = rewriteInternalHref(href);
         if (modifiedHref !== href) {
@@ -120,10 +112,10 @@ export default function applyBasePathPlugin(
         );
     }
 
-    token.children?.map(checkAndApplyBasePath);
+    token.children?.forEach(checkAndApplyBasePath);
   }
 
   md.core.ruler.push('apply_base_path', state => {
-    state.tokens.map(checkAndApplyBasePath);
+    state.tokens.forEach(checkAndApplyBasePath);
   });
 }

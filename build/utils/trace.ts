@@ -5,7 +5,7 @@ import { execFileSync } from 'child_process';
 import { makeLogger } from '../log';
 import { B } from '../colors';
 import { normalizeOutputPath, toPosix } from './paths';
-import { hasMainMethod } from './literate-java';
+import { hasMainMethod, runJavac, splitLines } from './literate-java';
 import { renderCodeSegment } from './code';
 import { computeLayout } from './trace-layout';
 import { generateStepSvg } from './trace-svg';
@@ -90,19 +90,10 @@ function ensureTracerCompiled(): string {
 
   log.debug`Compiling TraceRunner.java into ${tempDir}`;
 
-  try {
-    execFileSync('javac', ['-d', tempDir, sourceFile], {
-      timeout: 30000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-  } catch (err: unknown) {
-    const execErr = err as { stderr?: Buffer; message: string };
-    const stderr = execErr.stderr ? execErr.stderr.toString() : execErr.message;
-    fs.rmSync(tempDir, { recursive: true, force: true });
-    throw new Error(`Failed to compile TraceRunner.java:\n${stderr}`, {
-      cause: err,
-    });
-  }
+  runJavac(['-d', tempDir, sourceFile], {
+    tempDir,
+    label: 'Failed to compile TraceRunner.java',
+  });
 
   tracerClassDir = tempDir;
   return tempDir;
@@ -111,27 +102,17 @@ function ensureTracerCompiled(): string {
 function compileTargetFile(javaFilePath: string): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-trace-target-'));
 
-  try {
-    execFileSync(
-      'javac',
-      [
-        '-g',
-        '-d',
-        tempDir,
-        '-sourcepath',
-        path.dirname(javaFilePath),
-        javaFilePath,
-      ],
-      { timeout: 30000, stdio: ['pipe', 'pipe', 'pipe'] },
-    );
-  } catch (err: unknown) {
-    const execErr = err as { stderr?: Buffer; message: string };
-    const stderr = execErr.stderr ? execErr.stderr.toString() : execErr.message;
-    fs.rmSync(tempDir, { recursive: true, force: true });
-    throw new Error(`Compilation failed for ${javaFilePath}:\n${stderr}`, {
-      cause: err,
-    });
-  }
+  runJavac(
+    [
+      '-g',
+      '-d',
+      tempDir,
+      '-sourcepath',
+      path.dirname(javaFilePath),
+      javaFilePath,
+    ],
+    { tempDir, label: `Compilation failed for ${javaFilePath}` },
+  );
 
   return tempDir;
 }
@@ -224,14 +205,10 @@ export interface TraceResult {
   mtime: number;
 }
 
-function highlightSource(javaFile: string, source: string): string {
-  const sourceLines = source.split('\n');
-  if (sourceLines[sourceLines.length - 1] === '') {
-    sourceLines.pop();
-  }
-  const ext = path.extname(javaFile).slice(1).toLowerCase();
-  const lang = ext === 'java' ? 'java' : 'text';
-  return renderCodeSegment(sourceLines, 1, lang, { linkLineNumbers: false });
+function highlightSource(source: string): string {
+  return renderCodeSegment(splitLines(source), 1, 'java', {
+    linkLineNumbers: false,
+  });
 }
 
 function renderWidgetHtml({
@@ -322,7 +299,7 @@ export function createTraceHelpers(context: TraceContext): {
         { timeout: 60000, encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 },
       );
 
-      const highlightedSource = highlightSource(javaFile, source);
+      const highlightedSource = highlightSource(source);
 
       const relDir = toPosix(path.relative(contentDir, pageDir));
       const traceOutputDir = path.join(distDir, relDir, '_traces', className);
@@ -367,9 +344,7 @@ export function createTraceHelpers(context: TraceContext): {
           throw new Error(`Trace target not found: ${javaFilePath}`);
         }
         const source = fs.readFileSync(javaFilePath, 'utf-8');
-        return renderWidgetHtml({
-          highlightedSource: highlightSource(javaFile, source),
-        });
+        return renderWidgetHtml({ highlightedSource: highlightSource(source) });
       }
       const { manifestUrl, highlightedSource, totalSteps } =
         getOrRunTrace(javaFile);

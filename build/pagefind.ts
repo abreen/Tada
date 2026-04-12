@@ -101,7 +101,7 @@ function collectIndexTargets(
     htmlAssetsByPath,
     knownPdfPaths: new Set(pdfSourceByOutputPath.keys()),
     rootPath: 'index.html',
-    basePath: siteVariables?.basePath || '/',
+    basePath: siteVariables.basePath || '/',
   });
 }
 
@@ -264,7 +264,7 @@ export class WatchPagefindRunner {
   private htmlCacheByAssetPath: Map<string, string>;
 
   constructor(siteVariables: SiteVariables) {
-    this.siteVariables = siteVariables || {};
+    this.siteVariables = siteVariables;
     this.watchRunInProgress = false;
     this.watchRunQueued = false;
     this.distPath = null;

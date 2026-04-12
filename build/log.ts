@@ -48,64 +48,58 @@ export function makeLogger(name: string, logLevel: string = 'info'): Logger {
     logLevel = ENV_LOG_LEVEL;
   }
 
-  if (!name) {
-    name = '';
-  } else {
-    // Allow for passing import.meta.url (file:// URL) or a plain path
+  if (name) {
     if (name.startsWith('file://')) {
       name = new URL(name).pathname;
     }
     name = path.basename(name, path.extname(name));
   }
 
+  function getArgs(
+    level: string,
+    strings: TemplateStringsArray | string | string[],
+    args: unknown[],
+    labelFn: (strings: TemplateStringsArray, ...args: unknown[]) => string,
+  ): string[] {
+    return [
+      labelFn` ${level} ` + ' ' + (level === 'debug' ? name + ' ' : ''),
+      format(strings, ...args),
+    ];
+  }
+
   const logger: Logger = {
     minLogLevel: logLevel,
-    /** Don't log if the level is < minLogLevel */
     setMinLogLevel(minLogLevel: string) {
       this.minLogLevel = minLogLevel;
     },
-    getArgs(
-      level: string,
-      strings: TemplateStringsArray | string | string[],
-      args: unknown[],
-      labelFn: (strings: TemplateStringsArray, ...args: unknown[]) => string,
-    ): string[] {
-      const params: string[] = [];
-      params.push(
-        labelFn` ${level} ` + ' ' + (level === 'debug' ? name + ' ' : ''),
-      );
-      params.push(format(strings, ...args));
-      return params;
-    },
     debug(strings: TemplateStringsArray, ...args: unknown[]) {
       if (shouldLog(this.minLogLevel, 'debug')) {
-        print(this.getArgs('debug', strings, args, L), 'stderr');
+        print(getArgs('debug', strings, args, L), 'stderr');
       }
     },
     info(strings: TemplateStringsArray, ...args: unknown[]) {
       if (shouldLog(this.minLogLevel, 'info')) {
-        print(this.getArgs('info', strings, args, Li));
+        print(getArgs('info', strings, args, Li));
       }
     },
     warn(strings: TemplateStringsArray, ...args: unknown[]) {
       if (shouldLog(this.minLogLevel, 'warn')) {
-        print(this.getArgs('warn', strings, args, Yi));
+        print(getArgs('warn', strings, args, Yi));
       }
     },
     error(strings: TemplateStringsArray, ...args: unknown[]) {
       if (shouldLog(this.minLogLevel, 'error')) {
-        print(this.getArgs('error', strings, args, Ri));
+        print(getArgs('error', strings, args, Ri));
       }
     },
     event(strings: TemplateStringsArray, ...args: unknown[]) {
-      print(this.getArgs('event', strings, args, Gi));
+      print(getArgs('event', strings, args, Gi));
     },
     followup(strings: string[]) {
       print(strings);
     },
   };
 
-  logger.setMinLogLevel(logLevel);
   return logger;
 }
 
@@ -118,7 +112,7 @@ function format(
     try {
       return String.raw(strings as TemplateStringsArray, ...args.map(toString));
     } catch {
-      // fallback to safe join
+      return '';
     }
   } else {
     if (Array.isArray(strings)) {
@@ -129,35 +123,25 @@ function format(
 
     return args.map(toString).join(' ');
   }
-
-  return '';
 }
 
 function toString(item: unknown): string {
-  if (item === undefined) {
-    return 'undefined';
-  }
-  if (item === null) {
-    return 'null';
+  if (item == null) {
+    return String(item);
   }
   if (typeof item === 'string') {
     return item;
   }
-
-  try {
-    if (typeof item === 'object') {
-      return inspect(item, {
-        compact: true,
-        depth: 2,
-        breakLength: 80,
-        maxStringLength: 250,
-        colors: true,
-      });
-    }
-    throw new Error('not an object');
-  } catch {
-    return String(item);
+  if (typeof item === 'object') {
+    return inspect(item, {
+      compact: true,
+      depth: 2,
+      breakLength: 80,
+      maxStringLength: 250,
+      colors: true,
+    });
   }
+  return String(item);
 }
 
 export function getFlair(): string {

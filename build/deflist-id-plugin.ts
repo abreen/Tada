@@ -1,5 +1,5 @@
 import type MarkdownIt from 'markdown-it';
-import textToId from './text-to-id';
+import textToId, { deduplicateId } from './text-to-id';
 
 export default function deflistIdPlugin(md: MarkdownIt): void {
   md.core.ruler.push('deflist_id_injector', function (state) {
@@ -7,21 +7,8 @@ export default function deflistIdPlugin(md: MarkdownIt): void {
     const used = new Map<string, number>();
 
     function slugify(str: string): string {
-      let slug = textToId(str);
-
-      if (!slug) {
-        slug = 'term';
-      }
-
-      if (used.has(slug)) {
-        const n = (used.get(slug) as number) + 1;
-        used.set(slug, n);
-        slug = `${slug}-${n}`;
-      } else {
-        used.set(slug, 1);
-      }
-
-      return slug;
+      const base = textToId(str) || 'term';
+      return deduplicateId(used, base);
     }
 
     for (let i = 0; i < tokens.length; i++) {

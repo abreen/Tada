@@ -6,12 +6,7 @@ import type {
   TraceLayout,
   TraceObjectLayout,
 } from '../types';
-
-/** Maximum number of array cells to display. */
-const ARRAY_MAX_CELLS = 12;
-
-/** Default font size in pixels. */
-const DEFAULT_FONT_SIZE = 15;
+import { ARRAY_MAX_CELLS, DEFAULT_FONT_SIZE } from './trace-layout';
 
 /** Gap between stack area and heap area. */
 const SECTION_GAP = 60;

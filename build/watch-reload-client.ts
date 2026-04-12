@@ -2,12 +2,10 @@ declare const __WEBSOCKET_PORT__: number;
 
 (function () {
   const style = document.createElement('style');
-  style.textContent = [
-    'body.loading-cursor,',
-    'body.loading-cursor * {',
-    '  cursor: wait !important;',
-    '}',
-  ].join('\n');
+  style.textContent = `body.loading-cursor,
+body.loading-cursor * {
+  cursor: wait !important;
+}`;
   document.head.appendChild(style);
 
   const ws = new WebSocket(`ws://localhost:${__WEBSOCKET_PORT__}`);

@@ -6,7 +6,6 @@ import {
   getContentDir,
   getDistDir,
   getPublicDir,
-  getConfigDir,
   createApplyBasePath,
   normalizeOutputPath,
   toUrlPath,
@@ -42,10 +41,6 @@ describe('directory getters', () => {
 
   test('getPublicDir ends with public', () => {
     expect(getPublicDir()).toEndWith(path.sep + 'public');
-  });
-
-  test('getConfigDir equals getProjectDir', () => {
-    expect(getConfigDir()).toBe(getProjectDir());
   });
 });
 

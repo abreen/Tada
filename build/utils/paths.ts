@@ -25,23 +25,15 @@ export function getPublicDir(): string {
   return path.resolve(getProjectDir(), 'public');
 }
 
-export function getConfigDir(): string {
-  return getProjectDir();
-}
-
 export function createApplyBasePath(
   siteVariables: SiteVariables,
 ): (subPath: string) => string {
+  const base = (siteVariables.basePath || '/').replace(/\/$/, '');
   return function applyBasePath(subPath: string): string {
     if (!subPath.startsWith('/')) {
       throw new Error('invalid internal path, must start with "/": ' + subPath);
     }
-
-    let path = siteVariables.basePath || '/';
-    if (path.endsWith('/')) {
-      path = path.slice(0, -1);
-    }
-    return path + subPath;
+    return base + subPath;
   };
 }
 
@@ -62,7 +54,7 @@ export function toUrlPath(p: string): string {
 
 export function normalizeOutputPath(outputPath: string): string {
   const normalized = path.posix.normalize(toPosix(outputPath));
-  if (normalized === '.' || normalized === '') {
+  if (normalized === '.') {
     return '/';
   }
   return normalized.startsWith('/') ? normalized : `/${normalized}`;

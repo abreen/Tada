@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
+import type MarkdownIt from 'markdown-it';
 import { stripHtml } from 'string-strip-html';
 import { isFeatureEnabled } from '../features';
 import { makeLogger } from '../log';
@@ -48,6 +49,20 @@ const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 
 function isWatchMode(assetFiles: string[]): boolean {
   return assetFiles.some(f => f.includes('watch-reload-client'));
+}
+
+function renderInlineField(
+  md: MarkdownIt,
+  vars: Record<string, unknown>,
+  field: string,
+): void {
+  const raw = vars[field];
+  if (!raw || typeof raw !== 'string') {
+    return;
+  }
+  const html = md.renderInline(raw);
+  vars[`${field}Html`] = html;
+  vars[field] = stripHtml(html).result;
 }
 
 interface TemplateParametersInput {
@@ -410,35 +425,16 @@ function renderPlainTextContent(
     subPath,
     isWatchMode,
   });
-  const pageVariablesProcessed: Record<string, unknown> = Object.entries(
-    pageVariables,
-  )
-    .map(([k, v]) => {
-      const newValue =
-        typeof v === 'string' ? _.template(v)(siteOnlyParams) : v;
-      return [k, newValue] as [string, unknown];
-    })
-    .reduce(
-      (acc, [k, v]) => {
-        acc[k] = v;
-        return acc;
-      },
-      {} as Record<string, unknown>,
-    );
+  const pageVariablesProcessed: Record<string, unknown> = Object.fromEntries(
+    Object.entries(pageVariables).map(([k, v]) => [
+      k,
+      typeof v === 'string' ? _.template(v)(siteOnlyParams) : v,
+    ]),
+  );
 
   // Render title and description as inline Markdown
-  if (pageVariablesProcessed.title) {
-    const titleHtml = md.renderInline(pageVariablesProcessed.title as string);
-    pageVariablesProcessed.titleHtml = titleHtml;
-    pageVariablesProcessed.title = stripHtml(titleHtml).result;
-  }
-  if (pageVariablesProcessed.description) {
-    const descriptionHtml = md.renderInline(
-      pageVariablesProcessed.description as string,
-    );
-    pageVariablesProcessed.descriptionHtml = descriptionHtml;
-    pageVariablesProcessed.description = stripHtml(descriptionHtml).result;
-  }
+  renderInlineField(md, pageVariablesProcessed, 'title');
+  renderInlineField(md, pageVariablesProcessed, 'description');
 
   resolveAuthor(pageVariablesProcessed, filePath);
 
@@ -620,10 +616,7 @@ export function renderLiterateJavaPageAsset({
         : null;
 
     if (output) {
-      const escapedOutput = output
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+      const escapedOutput = md.utils.escapeHtml(output);
       return `<div class="literate-code-output">${codeHtml}<pre>${escapedOutput}</pre></div>`;
     }
 
@@ -641,9 +634,7 @@ export function renderLiterateJavaPageAsset({
     ),
   );
 
-  const titleHtml = md.renderInline(pageVariables.title as string);
-  pageVariables.titleHtml = titleHtml;
-  pageVariables.title = stripHtml(titleHtml).result;
+  renderInlineField(md, pageVariables, 'title');
   pageVariables.template = 'literate';
   pageVariables.codeFilePath = codeFilePath;
   pageVariables.downloadName = javaFileName;

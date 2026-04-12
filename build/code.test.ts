@@ -157,6 +157,7 @@ describe('renderCodeWithComments', () => {
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
       defaultTimeZone: 'America/New_York',
+      features: { search: true, code: true, favicon: true },
     } as SiteVariables);
 
     expect(html).toContain('<span class="code-row">');
@@ -181,6 +182,7 @@ describe('renderCodeWithComments', () => {
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
         defaultTimeZone: 'America/New_York',
+        features: { search: true, code: true, favicon: true },
       } as SiteVariables,
       'lectures/01',
     );
@@ -201,6 +203,7 @@ describe('rewriteProseLinks', () => {
     titlePostfix: ' - Test',
     themeColor: 'steelblue',
     defaultTimeZone: 'America/New_York',
+    features: { search: true, code: true, favicon: true },
   } as SiteVariables;
 
   test('rewrites relative link with base + basePath', () => {

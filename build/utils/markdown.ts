@@ -7,7 +7,7 @@ import markdownItAnchor from 'markdown-it-anchor';
 import markdownItFootnote from 'markdown-it-footnote';
 import markdownItDeflist from 'markdown-it-deflist';
 import markdownItContainer from 'markdown-it-container';
-import textToId from '../text-to-id';
+import textToId, { deduplicateId } from '../text-to-id';
 import { getHighlighter } from './shiki-highlighter';
 import headingSubtitlePlugin from '../heading-subtitle-plugin';
 import deflistIdPlugin from '../deflist-id-plugin';
@@ -21,6 +21,10 @@ import katex from 'katex';
 import renderA11yString from 'katex/contrib/render-a11y-string';
 import type { SiteVariables } from '../types';
 
+const DETAILS_PATTERN = /^details\s+(.*)$/;
+const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
+const QUESTION_PATTERN = /^question\s+(.+)$/;
+
 interface CreateMarkdownOptions {
   validatorOptions?: Record<string, unknown>;
   literateJavaOutputPaths?: Set<string>;
@@ -29,11 +33,7 @@ interface CreateMarkdownOptions {
 }
 
 function capitalize(str: string): string {
-  if (str.length < 2) {
-    return str;
-  }
-
-  return str[0].toUpperCase() + str.slice(1);
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 const MAX_FOOTNOTES = 35;
@@ -81,11 +81,11 @@ export function createMarkdown(
     .use(markdownItContainer, 'details', {
       marker: '<',
       validate: function (params: string) {
-        return !!params.trim().match(/^details\s+(.*)$/);
+        return DETAILS_PATTERN.test(params.trim());
       },
 
       render: function (tokens: Token[], idx: number) {
-        const m = tokens[idx].info.trim().match(/^details\s+(.*)$/);
+        const m = tokens[idx].info.trim().match(DETAILS_PATTERN);
 
         if (tokens[idx].nesting === 1) {
           return (
@@ -144,7 +144,7 @@ export function createMarkdown(
   markdown.use(markdownItContainer, 'alert', {
     marker: '!',
     validate: function (params: string) {
-      return !!params.trim().match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
+      return ALERT_PATTERN.test(params.trim());
     },
     render: function (
       tokens: Token[],
@@ -152,9 +152,7 @@ export function createMarkdown(
       _options: unknown,
       env: Record<string, unknown>,
     ) {
-      const matches = tokens[idx].info
-        .trim()
-        .match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
+      const matches = tokens[idx].info.trim().match(ALERT_PATTERN);
 
       if (tokens[idx].nesting === 1) {
         const classNames = ['alert'];
@@ -168,9 +166,7 @@ export function createMarkdown(
           ? markdown.utils.escapeHtml(curlyQuote(title))
           : capitalize(type || '');
         const baseId = textToId(title || type || '');
-        const count = (usedIds.get(baseId) ?? 0) + 1;
-        usedIds.set(baseId, count);
-        const titleId = count === 1 ? baseId : `${baseId}-${count}`;
+        const titleId = deduplicateId(usedIds, baseId);
 
         if (!env.alertIds) {
           env.alertIds = [];
@@ -190,10 +186,10 @@ export function createMarkdown(
   markdown.use(markdownItContainer, 'question', {
     marker: '?',
     validate: function (params: string) {
-      return !!params.trim().match(/^question\s+(.+)$/);
+      return QUESTION_PATTERN.test(params.trim());
     },
     render: function (tokens: Token[], idx: number) {
-      const m = tokens[idx].info.trim().match(/^question\s+(.+)$/);
+      const m = tokens[idx].info.trim().match(QUESTION_PATTERN);
       if (tokens[idx].nesting === 1) {
         const question = markdown.renderInline(m![1]);
         return (

@@ -1,6 +1,7 @@
 import type MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import path from 'path';
+import { isInternalLink } from './utils/link';
 import { makeLogger } from './log';
 
 const log = makeLogger(import.meta.url);
@@ -15,14 +16,6 @@ interface ValidateInternalLinksOptions {
 
 function stripQueryAndHash(href: string): string {
   return href.split('#')[0].split('?')[0];
-}
-
-function isExternalOrAnchor(href: string): boolean {
-  if (!href || href.startsWith('#') || href.startsWith('//')) {
-    return true;
-  }
-
-  return /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(href);
 }
 
 function normalizePathname(pathname: string): string {
@@ -142,7 +135,7 @@ export default function validateInternalLinks(
     }
 
     const href = rawHref.trim();
-    if (!href || isExternalOrAnchor(href)) {
+    if (!href || !isInternalLink(href)) {
       return;
     }
 

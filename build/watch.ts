@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import chokidar from 'chokidar';
 import WebSocket, { WebSocketServer } from 'ws';
-import type { SiteVariables, WatchState } from './types';
+import type { SiteVariables, WatchState, ContentRenderResult } from './types';
 import { B } from './colors';
 import { makeLogger, printFlair } from './log';
 import { getDevSiteVariables } from './site-variables';
@@ -36,7 +36,7 @@ export async function runWatch(options: {
   httpPort?: number;
   wsPort?: number;
 }): Promise<void> {
-  const httpPort = options.httpPort ?? null;
+  const httpPort = options.httpPort;
   const WEBSOCKET_PORT = options.wsPort ?? 35729;
   const DEBOUNCE_MS = 300;
   const RELOAD_CLIENT_PATH = path.resolve(
@@ -69,7 +69,6 @@ export async function runWatch(options: {
 
   let webSocketsReady = false;
   let watcherReady = false;
-  let webServerReady = false;
   let webServerTimeout: ReturnType<typeof setTimeout> | undefined;
   let serveStarted = false;
 
@@ -118,18 +117,14 @@ export async function runWatch(options: {
 
   function serve(): void {
     startServer({
-      port: httpPort ?? undefined,
+      port: httpPort,
       distDir,
-      onReady: _port => {
-        webServerReady = true;
+      onReady: () => {
         clearTimeout(webServerTimeout);
       },
     });
 
     webServerTimeout = setTimeout(() => {
-      if (webServerReady) {
-        return;
-      }
       log.error`Web server failed to report within 10 seconds, exiting`;
       process.exit(3);
     }, 10000);
@@ -138,9 +133,6 @@ export async function runWatch(options: {
   // Path helpers
 
   function toContentMarkdownPath(filePath: string): string | null {
-    if (!filePath) {
-      return null;
-    }
     const ext = path.extname(filePath).toLowerCase();
     if (!['.md', '.markdown'].includes(ext)) {
       return null;
@@ -156,9 +148,6 @@ export async function runWatch(options: {
   }
 
   function toPublicRelativePath(filePath: string): string | null {
-    if (!filePath) {
-      return null;
-    }
     const normalizedPublicDir = path.resolve(publicDir) + path.sep;
     const normalizedFilePath = path.resolve(filePath);
     if (!normalizedFilePath.startsWith(normalizedPublicDir)) {
@@ -185,14 +174,39 @@ export async function runWatch(options: {
   const pendingChanges = new Set<string>();
   let rebuilding = false;
 
-  async function initialBuild(): Promise<void> {
-    siteVariables = getDevSiteVariables();
+  function onBuildSuccess(result?: ContentRenderResult): void {
+    printFlair();
+    if (!serveStarted) {
+      serveStarted = true;
+      serve();
+    }
+    broadcast('reload');
+    if (pagefindRunner && result) {
+      pagefindRunner.update(distDir, result.htmlAssetsByPath);
+      setImmediate(() => pagefindRunner!.run());
+    }
+  }
+
+  function copyChangedPublicFiles(changes: Set<string>): void {
+    for (const filePath of changes) {
+      if (classifyChange(filePath) !== 'public') {
+        continue;
+      }
+      const absPath = path.resolve(filePath);
+      if (fs.existsSync(absPath)) {
+        copyPublicFile(publicDir, distDir, absPath, contentAssetRelPaths);
+        const rel = toPosix(path.relative(publicDir, absPath));
+        publicRelPaths.add(rel);
+      }
+    }
+  }
+
+  async function buildFromConfig(
+    copyAssets: boolean,
+  ): Promise<ContentRenderResult> {
     processedExtSet = new Set(
       getProcessedExtensions(Object.keys(siteVariables.codeLanguages || {})),
     );
-    fs.mkdirSync(distDir, { recursive: true });
-
-    compileTemplates(siteVariables);
     contentRenderer = new ContentRenderer(siteVariables);
     changeDetector = new ContentChangeDetector(siteVariables);
 
@@ -200,6 +214,7 @@ export async function runWatch(options: {
       pagefindRunner = new WatchPagefindRunner(siteVariables);
     }
 
+    compileTemplates(siteVariables);
     await contentRenderer.initHighlighter();
 
     assetFiles = [
@@ -215,15 +230,24 @@ export async function runWatch(options: {
       generateWebAppManifest(siteVariables, distDir);
     }
 
-    publicRelPaths = copyPublicFiles(publicDir, distDir);
-    contentAssetRelPaths = copyContentAssets(
-      contentDir,
-      distDir,
-      [...processedExtSet],
-      publicRelPaths,
-    );
+    if (copyAssets) {
+      publicRelPaths = copyPublicFiles(publicDir, distDir);
+      contentAssetRelPaths = copyContentAssets(
+        contentDir,
+        distDir,
+        [...processedExtSet],
+        publicRelPaths,
+      );
+    }
 
-    const result = contentRenderer.processContent({ distDir, assetFiles });
+    return contentRenderer.processContent({ distDir, assetFiles });
+  }
+
+  async function initialBuild(): Promise<void> {
+    siteVariables = getDevSiteVariables();
+    fs.mkdirSync(distDir, { recursive: true });
+
+    const result = await buildFromConfig(true);
 
     for (const err of result.errors) {
       log.error`${err.message}`;
@@ -231,12 +255,10 @@ export async function runWatch(options: {
 
     if (result.errors.length === 0) {
       printFlair();
-
       if (pagefindRunner) {
         pagefindRunner.update(distDir, result.htmlAssetsByPath);
         setImmediate(() => pagefindRunner!.run());
       }
-
       if (!serveStarted) {
         serveStarted = true;
         serve();
@@ -293,47 +315,13 @@ export async function runWatch(options: {
       if (categories.has('config')) {
         log.event`Site config changed, restarting`;
         siteVariables = getDevSiteVariables();
-        processedExtSet = new Set(
-          getProcessedExtensions(
-            Object.keys(siteVariables.codeLanguages || {}),
-          ),
-        );
-        contentRenderer = new ContentRenderer(siteVariables);
-        changeDetector = new ContentChangeDetector(siteVariables);
-        if (isFeatureEnabled(siteVariables, 'search')) {
-          pagefindRunner = new WatchPagefindRunner(siteVariables);
-        }
-        compileTemplates(siteVariables);
-        await contentRenderer.initHighlighter();
 
-        assetFiles = [
-          ...(await bundle(siteVariables, { mode: 'development' })),
-          ...(await bundleReloadClient()),
-        ];
-
-        copyFonts(distDir);
-        copyKatexAssets(distDir);
-
-        if (isFeatureEnabled(siteVariables, 'favicon')) {
-          await generateFavicons(siteVariables, distDir);
-          generateWebAppManifest(siteVariables, distDir);
-        }
-
-        const result = contentRenderer.processContent({ distDir, assetFiles });
+        const result = await buildFromConfig(false);
         for (const err of result.errors) {
           log.error`${err.message}`;
         }
         if (result.errors.length === 0) {
-          printFlair();
-          if (!serveStarted) {
-            serveStarted = true;
-            serve();
-          }
-          broadcast('reload');
-          if (pagefindRunner) {
-            pagefindRunner.update(distDir, result.htmlAssetsByPath);
-            setImmediate(() => pagefindRunner!.run());
-          }
+          onBuildSuccess(result);
           succeeded = true;
         }
         return;
@@ -341,18 +329,8 @@ export async function runWatch(options: {
 
       // Public file changed, copy just that file
       if (categories.has('public') && !categories.has('content')) {
-        for (const filePath of changes) {
-          if (classifyChange(filePath) === 'public') {
-            const absPath = path.resolve(filePath);
-            if (fs.existsSync(absPath)) {
-              copyPublicFile(publicDir, distDir, absPath, contentAssetRelPaths);
-              const rel = toPosix(path.relative(publicDir, absPath));
-              publicRelPaths.add(rel);
-            }
-          }
-        }
-        printFlair();
-        broadcast('reload');
+        copyChangedPublicFiles(changes);
+        onBuildSuccess();
         succeeded = true;
         return;
       }
@@ -381,16 +359,7 @@ export async function runWatch(options: {
 
       // Copy any changed public files too
       if (categories.has('public')) {
-        for (const filePath of changes) {
-          if (classifyChange(filePath) === 'public') {
-            const absPath = path.resolve(filePath);
-            if (fs.existsSync(absPath)) {
-              copyPublicFile(publicDir, distDir, absPath, contentAssetRelPaths);
-              const rel = toPosix(path.relative(publicDir, absPath));
-              publicRelPaths.add(rel);
-            }
-          }
-        }
+        copyChangedPublicFiles(changes);
       }
 
       // Copy any changed non-processed content files (images, PDFs, etc.)
@@ -428,17 +397,7 @@ export async function runWatch(options: {
       }
 
       if (result.errors.length === 0) {
-        printFlair();
-        if (!serveStarted) {
-          serveStarted = true;
-          serve();
-        }
-        broadcast('reload');
-
-        if (pagefindRunner) {
-          pagefindRunner.update(distDir, result.htmlAssetsByPath);
-          setImmediate(() => pagefindRunner!.run());
-        }
+        onBuildSuccess(result);
         succeeded = true;
       }
     } catch (err) {
@@ -511,11 +470,10 @@ export async function runWatch(options: {
       watcher.on('add', onFileChange);
       watcher.on('unlink', onFileChange);
 
-      let configWatcherReady = false;
-      let contentWatcherReady = false;
+      let watchersReady = 0;
 
       function onWatcherReady(): void {
-        if (!configWatcherReady || !contentWatcherReady) {
+        if (++watchersReady < 2) {
           return;
         }
         watcherReady = true;
@@ -526,15 +484,8 @@ export async function runWatch(options: {
         log.info`Watching for changes...`;
       }
 
-      configWatcher.on('ready', () => {
-        configWatcherReady = true;
-        onWatcherReady();
-      });
-
-      watcher.on('ready', () => {
-        contentWatcherReady = true;
-        onWatcherReady();
-      });
+      configWatcher.on('ready', onWatcherReady);
+      watcher.on('ready', onWatcherReady);
     });
 
   // Return a promise that never resolves (watch mode runs until killed)

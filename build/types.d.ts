@@ -11,7 +11,7 @@ export interface SiteVariables {
   faviconFontWeight?: number;
   internalDomains?: string[];
   defaultTimeZone: string;
-  features?: FeatureConfig;
+  features: FeatureConfig;
   codeLanguages?: Record<string, string>;
   tintHue?: number;
   tintAmount?: number;
@@ -57,12 +57,6 @@ export interface ContentRenderResult {
 export interface Logger {
   minLogLevel: string;
   setMinLogLevel(level: string): void;
-  getArgs(
-    level: string,
-    strings: TemplateStringsArray | string | string[],
-    args: unknown[],
-    colorFn: (strings: TemplateStringsArray, ...args: unknown[]) => string,
-  ): string[];
   debug(strings: TemplateStringsArray, ...args: unknown[]): void;
   info(strings: TemplateStringsArray, ...args: unknown[]): void;
   warn(strings: TemplateStringsArray, ...args: unknown[]): void;

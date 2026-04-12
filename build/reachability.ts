@@ -24,7 +24,7 @@ function normalizeUrlPath(pathname: string): string {
 
 function stripBasePath(pathname: string, basePath: string): string {
   const normalizedPath = normalizeUrlPath(pathname);
-  const normalizedBasePath = normalizeUrlPath(basePath || '/');
+  const normalizedBasePath = normalizeUrlPath(basePath);
 
   if (normalizedBasePath === '/') {
     return normalizedPath;
