@@ -205,14 +205,14 @@ class TestWatchEditContent:
         html_dir = site_dir / "content" / "test_html"
         html_dir.mkdir()
         html_file = html_dir / "index.html"
-        html_file.write_text("title: Test HTML\n\n<p>Original</p>\n")
+        html_file.write_text("---\ntitle: Test HTML\n---\n\n<p>Original</p>\n")
         dist_html = site_dir / "dist" / "test_html" / "index.html"
 
         watch.wait_for_rebuild(dist_html, "exists")
         assert "Original" in dist_html.read_text()
 
         before_mtime = dist_html.stat().st_mtime
-        html_file.write_text("title: Test HTML\n\n<p>Edited</p>\n")
+        html_file.write_text("---\ntitle: Test HTML\n---\n\n<p>Edited</p>\n")
         watch.wait_for_rebuild(dist_html, "modified", before_mtime=before_mtime)
         assert "Edited" in dist_html.read_text()
 
@@ -222,7 +222,7 @@ class TestWatchAddContent:
 
     def test_adding_new_markdown_file(self, watch, site_dir):
         new_md = site_dir / "content" / "new_page.md"
-        new_md.write_text("title: New Page\n\nHello from new page.\n")
+        new_md.write_text("---\ntitle: New Page\n---\n\nHello from new page.\n")
 
         new_html = site_dir / "dist" / "new_page.html"
         watch.wait_for_rebuild(new_html, "exists")
@@ -243,7 +243,7 @@ class TestWatchRemoveContent:
 
     def test_removing_markdown_triggers_rebuild(self, watch, site_dir):
         md_file = site_dir / "content" / "markdown.md"
-        md_file.write_text("title: Markdown\n\nSome content.\n")
+        md_file.write_text("---\ntitle: Markdown\n---\n\nSome content.\n")
 
         dist_md = site_dir / "dist" / "markdown.html"
         watch.wait_for_rebuild(dist_md, "exists")
@@ -519,7 +519,7 @@ class TestWatchPartials:
         partial.write_text("Hello from partial")
 
         page = site_dir / "content" / "with_partial.md"
-        page.write_text("title: Test Partial\n\n<%= include('_greeting.md') %>\n")
+        page.write_text("---\ntitle: Test Partial\n---\n\n<%= include('_greeting.md') %>\n")
 
         page_html = site_dir / "dist" / "with_partial.html"
         watch.wait_for_rebuild(page_html, "exists")
@@ -544,7 +544,7 @@ class TestWatchPartials:
         outer.write_text("Outer then <%= include('_inner.html') %>")
 
         page = site_dir / "content" / "transitive.md"
-        page.write_text("title: Transitive\n\n<%= include('subdir/_outer.md') %>\n")
+        page.write_text("---\ntitle: Transitive\n---\n\n<%= include('subdir/_outer.md') %>\n")
 
         page_html = site_dir / "dist" / "transitive.html"
         watch.wait_for_rebuild(page_html, "exists")
@@ -628,7 +628,7 @@ class TestWatchLiterateJavaError:
             pair_md = site_dir / "content" / "lectures" / "01" / "Pair.java.md"
             original = pair_md.read_text()
             pair_md.write_text(
-                "title: Pair\n\n"
+                "---\ntitle: Pair\n---\n\n"
                 "```java\n"
                 "public class Pair { this is not valid java }\n"
                 "```\n"

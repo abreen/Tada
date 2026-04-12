@@ -17,7 +17,7 @@ class TestTemplateErrors:
     def test_undefined_variable_fails_build(self, site_dir):
         """A Markdown file referencing an undefined variable should fail."""
         (site_dir / "content" / "index.md").write_text(
-            "title: Home\n\n<%= undefinedVariable.foo %>\n"
+            "---\ntitle: Home\n---\n\n<%= undefinedVariable.foo %>\n"
         )
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
@@ -27,7 +27,7 @@ class TestTemplateErrors:
     def test_undefined_variable_in_html(self, site_dir):
         """An HTML file referencing an undefined variable should fail."""
         (site_dir / "content" / "index.html").write_text(
-            "title: Home\n\n<p><%= undefinedVariable.foo %></p>\n"
+            "---\ntitle: Home\n---\n\n<p><%= undefinedVariable.foo %></p>\n"
         )
         # Remove the default index.md so there's no conflict
         index_md = site_dir / "content" / "index.md"
@@ -40,7 +40,7 @@ class TestTemplateErrors:
     def test_bad_expression_fails_build(self, site_dir):
         """A file containing an invalid template expression should fail."""
         (site_dir / "content" / "index.md").write_text(
-            "title: Home\n\n<%= oops. %>\n"
+            "---\ntitle: Home\n---\n\n<%= oops. %>\n"
         )
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
@@ -72,7 +72,7 @@ class TestMissingFrontMatter:
     def test_empty_title_fails_build(self, site_dir):
         """A page with an empty title should fail the build."""
         (site_dir / "content" / "index.md").write_text(
-            "title:\n\nSome content.\n"
+            "---\ntitle:\n---\n\nSome content.\n"
         )
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0

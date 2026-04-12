@@ -46,9 +46,15 @@ plugin({
   },
 });
 
+let written = false;
+
 function writeCoverage(): void {
+  if (written) {
+    return;
+  }
   const coverage = (globalThis as Record<string, unknown>).__coverage__;
   if (coverage) {
+    written = true;
     const outFile = path.join(
       coverageDir,
       `coverage-${process.pid}-${Date.now()}.json`,

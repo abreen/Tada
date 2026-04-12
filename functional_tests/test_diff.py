@@ -40,7 +40,7 @@ class TestDiffWithChanges:
         run_tada("prod", cwd=str(site_dir), check=True)
 
         index_md = site_dir / "content" / "index.md"
-        index_md.write_text("title: Home\n\nUpdated content.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nUpdated content.\n")
 
         run_tada("prod", cwd=str(site_dir), check=True)
 
@@ -54,7 +54,7 @@ class TestDiffWithChanges:
         run_tada("prod", cwd=str(site_dir), check=True)
 
         new_page = site_dir / "content" / "new-page.md"
-        new_page.write_text("title: New Page\n\nNew page content.\n")
+        new_page.write_text("---\ntitle: New Page\n---\n\nNew page content.\n")
 
         run_tada("prod", cwd=str(site_dir), check=True)
 
@@ -68,10 +68,10 @@ class TestDiffExplicitVersions:
         run_tada("prod", cwd=str(site_dir), check=True)  # v1
 
         index_md = site_dir / "content" / "index.md"
-        index_md.write_text("title: Home\n\nVersion 2.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nVersion 2.\n")
         run_tada("prod", cwd=str(site_dir), check=True)  # v2
 
-        index_md.write_text("title: Home\n\nVersion 3.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nVersion 3.\n")
         run_tada("prod", cwd=str(site_dir), check=True)  # v3
 
         result = run_tada("diff", "1", "3", cwd=str(site_dir))
@@ -84,7 +84,7 @@ class TestDiffExplicitVersions:
         run_tada("prod", cwd=str(site_dir), check=True)
 
         index_md = site_dir / "content" / "index.md"
-        index_md.write_text("title: Home\n\nChanged.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nChanged.\n")
         run_tada("prod", cwd=str(site_dir), check=True)
 
         result_forward = run_tada("diff", "1", "2", cwd=str(site_dir))
@@ -97,7 +97,7 @@ class TestDiffCopy:
         run_tada("prod", cwd=str(site_dir), check=True)
 
         index_md = site_dir / "content" / "index.md"
-        index_md.write_text("title: Home\n\nNew content.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nNew content.\n")
 
         run_tada("prod", cwd=str(site_dir), check=True)
 
@@ -114,7 +114,7 @@ class TestDiffCopy:
         run_tada("prod", cwd=str(site_dir), check=True)
 
         index_md = site_dir / "content" / "index.md"
-        index_md.write_text("title: Home\n\nMinor change.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nMinor change.\n")
 
         run_tada("prod", cwd=str(site_dir), check=True)
 
@@ -143,10 +143,10 @@ class TestDiffCopy:
         run_tada("prod", cwd=str(site_dir), check=True)
 
         index_md = site_dir / "content" / "index.md"
-        index_md.write_text("title: Home\n\nV2.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nV2.\n")
         run_tada("prod", cwd=str(site_dir), check=True)
 
-        index_md.write_text("title: Home\n\nV3.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nV3.\n")
         run_tada("prod", cwd=str(site_dir), check=True)
 
         upload_dir = site_dir / "upload"
@@ -160,7 +160,7 @@ class TestDiffCopy:
         run_tada("prod", cwd=str(site_dir), check=True)
 
         index_md = site_dir / "content" / "index.md"
-        index_md.write_text("title: Home\n\nVersion 2.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nVersion 2.\n")
         run_tada("prod", cwd=str(site_dir), check=True)
 
         upload_dir = site_dir / "upload"
@@ -181,7 +181,7 @@ class TestDiffCopy:
         run_tada("prod", cwd=str(site_dir), check=True)
 
         index_md = site_dir / "content" / "index.md"
-        index_md.write_text("title: Home\n\nChanged.\n")
+        index_md.write_text("---\ntitle: Home\n---\n\nChanged.\n")
         run_tada("prod", cwd=str(site_dir), check=True)
 
         upload_dir = site_dir / "upload"

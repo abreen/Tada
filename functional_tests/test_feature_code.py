@@ -73,7 +73,7 @@ class TestCodeFeatureDisabled:
         content.mkdir(parents=True)
         (content / "Foo.java").write_text("public class Foo {}\n")
         (content / "index.md").write_text(
-            "title: Test\n\n"
+            "---\ntitle: Test\n---\n\n"
             "See [Foo](./Foo.java.html).\n"
         )
 

@@ -45,7 +45,7 @@ class TestLiterateJavaLinkNotRewritten:
 
         # A literate Java file
         (content / "Hello.java.md").write_text(
-            "title: Hello\n\n"
+            "---\ntitle: Hello\n---\n\n"
             "```java\n"
             "public class Hello {\n"
             "    public static void main(String[] args) {\n"
@@ -62,7 +62,7 @@ class TestLiterateJavaLinkNotRewritten:
 
         # A page that links to both
         (content / "index.md").write_text(
-            "title: Test\n\n"
+            "---\ntitle: Test\n---\n\n"
             "* [Hello source](./Hello.java)\n"
             "* [Plain source](./Plain.java)\n"
         )
@@ -100,7 +100,7 @@ class TestLiterateJavaBrokenLink:
         content.mkdir(parents=True)
 
         (content / "Broken.java.md").write_text(
-            "title: Broken\n\n"
+            "---\ntitle: Broken\n---\n\n"
             "See [this page](./nonexistent.html).\n\n"
             "```java\n"
             "public class Broken {}\n"

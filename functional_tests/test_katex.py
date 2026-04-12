@@ -14,7 +14,7 @@ class TestKatexRendering:
 
         # Create a page with math
         (site / "content" / "math.md").write_text(
-            "title: Math\n\nInline $E = mc^2$ and display:\n\n"
+            "---\ntitle: Math\n---\n\nInline $E = mc^2$ and display:\n\n"
             "$$\\int_0^\\infty e^{-x^2} dx$$\n"
         )
 
@@ -65,7 +65,7 @@ class TestKatexErrorHandling:
 
         # Create a page with invalid LaTeX
         (site / "content" / "bad-math.md").write_text(
-            "title: Bad Math\n\n$\\invalidcommand{$\n"
+            "---\ntitle: Bad Math\n---\n\n$\\invalidcommand{$\n"
         )
 
         yield site

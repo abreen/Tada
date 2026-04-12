@@ -43,7 +43,7 @@ class TestAuthorsFeature:
     def test_author_name_appears_in_html(self, site_dir):
         """A page with author: jdoe should resolve to the author's name."""
         (site_dir / "content" / "index.md").write_text(
-            "title: Home\nauthor: jdoe\n\nHello world.\n"
+            "---\ntitle: Home\nauthor: jdoe\n---\n\nHello world.\n"
         )
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode == 0, f"dev build failed: {result.stderr}"
@@ -54,7 +54,7 @@ class TestAuthorsFeature:
     def test_author_avatar_appears_in_html(self, site_dir):
         """The author's avatar path should appear in the rendered page."""
         (site_dir / "content" / "index.md").write_text(
-            "title: Home\nauthor: jdoe\n\nHello world.\n"
+            "---\ntitle: Home\nauthor: jdoe\n---\n\nHello world.\n"
         )
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode == 0, f"dev build failed: {result.stderr}"
@@ -65,7 +65,7 @@ class TestAuthorsFeature:
     def test_unknown_author_fails_build(self, site_dir):
         """Referencing an author not in authors.json should fail the build."""
         (site_dir / "content" / "index.md").write_text(
-            "title: Home\nauthor: nobody\n\nContent.\n"
+            "---\ntitle: Home\nauthor: nobody\n---\n\nContent.\n"
         )
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
@@ -81,7 +81,7 @@ class TestAuthorsFeature:
         site = tmp_path / "testsite"
 
         (site / "content" / "index.md").write_text(
-            "title: Home\nauthor: someone\n\nContent.\n"
+            "---\ntitle: Home\nauthor: someone\n---\n\nContent.\n"
         )
         result = run_tada("dev", cwd=str(site))
         assert result.returncode != 0
@@ -91,7 +91,7 @@ class TestAuthorsFeature:
     def test_page_without_author_still_builds(self, site_dir):
         """Pages without an author field should build fine."""
         (site_dir / "content" / "index.md").write_text(
-            "title: Home\n\nNo author here.\n"
+            "---\ntitle: Home\n---\n\nNo author here.\n"
         )
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode == 0

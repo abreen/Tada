@@ -69,12 +69,12 @@ class TestProdBuildWithBasePath:
         about_dir = site / "content" / "about"
         about_dir.mkdir()
         (about_dir / "index.md").write_text(
-            "title: About\n\nThis is the about page.\n"
+            "---\ntitle: About\n---\n\nThis is the about page.\n"
         )
 
         # Rewrite index.md with links in both Markdown and HTML syntax
         (site / "content" / "index.md").write_text(
-            "title: Home\n\n"
+            "---\ntitle: Home\n---\n\n"
             "[About page](/about/index.html)\n\n"
             '<a href="/about/index.html">HTML link</a>\n\n'
             "![Logo](/images/logo.png)\n\n"

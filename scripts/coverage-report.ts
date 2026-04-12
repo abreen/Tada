@@ -58,6 +58,26 @@ if (fs.existsSync(unitLcovPath)) {
       };
       fc.data.f[idx] = hit ?? 0;
     }
+    for (const detail of record.branches?.details ?? []) {
+      const key = `${detail.line}:${detail.block}:${detail.branch}`;
+      if (!fc.data.branchMap[key]) {
+        fc.data.branchMap[key] = {
+          type: 'branch',
+          loc: {
+            start: { line: detail.line, column: 0 },
+            end: { line: detail.line, column: 0 },
+          },
+          locations: [
+            {
+              start: { line: detail.line, column: 0 },
+              end: { line: detail.line, column: 0 },
+            },
+          ],
+        };
+        fc.data.b[key] = [];
+      }
+      fc.data.b[key].push(detail.taken);
+    }
     map.addFileCoverage(fc);
   }
 }

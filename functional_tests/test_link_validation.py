@@ -38,7 +38,7 @@ class TestBrokenParentLink:
         site = tmp_path / "testsite"
 
         (site / "content" / "page.md").write_text(
-            "title: Page\nparent: /nonexistent.html\nparentLabel: Missing\n\nContent.\n"
+            "---\ntitle: Page\nparent: /nonexistent.html\nparentLabel: Missing\n---\n\nContent.\n"
         )
 
         yield site
@@ -61,7 +61,7 @@ class TestLinkToPartialBroken:
 
         (site / "content" / "_partial.md").write_text("Partial content.\n")
         (site / "content" / "page.md").write_text(
-            "title: Page\n\nSee [the partial](/_partial.html).\n"
+            "---\ntitle: Page\n---\n\nSee [the partial](/_partial.html).\n"
         )
 
         yield site
@@ -83,7 +83,7 @@ class TestLinkToPublicFile:
 
         (site / "public" / "data.csv").write_text("a,b\n1,2\n")
         (site / "content" / "page.md").write_text(
-            "title: Page\n\nDownload [the data](/data.csv).\n"
+            "---\ntitle: Page\n---\n\nDownload [the data](/data.csv).\n"
         )
 
         yield site
@@ -106,7 +106,7 @@ class TestLinkToPublicIndexHtml:
         report_dir.mkdir(parents=True)
         (report_dir / "index.html").write_text("<html><body>Report</body></html>")
         (site / "content" / "page.md").write_text(
-            "title: Page\n\nSee [the report](/report/index.html).\n"
+            "---\ntitle: Page\n---\n\nSee [the report](/report/index.html).\n"
         )
 
         yield site
@@ -118,7 +118,7 @@ class TestLinkToPublicIndexHtml:
     def test_directory_link_rejected(self, site_dir):
         """Linking to /report/ instead of /report/index.html is an error."""
         (site_dir / "content" / "page.md").write_text(
-            "title: Page\n\nSee [the report](/report/).\n"
+            "---\ntitle: Page\n---\n\nSee [the report](/report/).\n"
         )
         result = run_tada("dev", cwd=str(site_dir))
         assert result.returncode != 0
@@ -137,7 +137,7 @@ class TestLinkToPublicCodeFile:
 
         (site / "public" / "Test.java").write_text("public class Test {}\n")
         (site / "content" / "page.md").write_text(
-            "title: Page\n\nDownload [the code](/Test.java).\n"
+            "---\ntitle: Page\n---\n\nDownload [the code](/Test.java).\n"
         )
 
         yield site
