@@ -44,7 +44,7 @@ export class ContentRenderer {
   > = new Map();
 
   constructor(siteVariables: SiteVariables) {
-    this.siteVariables = siteVariables || {};
+    this.siteVariables = siteVariables;
     this.loggedCodeDisabled = false;
     this.sourceFileCache = new Map();
     this.lastBuildFiles = new Set();

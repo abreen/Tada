@@ -3,7 +3,7 @@ import path from 'path';
 import _ from 'lodash';
 import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { makeLogger } from './log';
-import { getPackageDir, getConfigDir } from './utils/paths';
+import { getPackageDir, getProjectDir } from './utils/paths';
 import type { ValidateFunction } from 'ajv';
 import type { Logger, SiteVariables } from './types';
 
@@ -35,7 +35,7 @@ function getHtmlTemplatesDir(): string {
 }
 
 function getJsonDataDir(): string {
-  return getConfigDir();
+  return getProjectDir();
 }
 
 export function json(fileName: string): unknown {

@@ -29,10 +29,6 @@ export function resolvePathname(
     return null;
   }
 
-  if (stat.isDirectory()) {
-    return null;
-  }
-
   if (!stat.isFile()) {
     return null;
   }
@@ -81,7 +77,7 @@ export function startServer(options: StartServerOptions): void {
 
     log.info`Dev server: ${B`http://localhost:${server.port}/index.html`}`;
     if (onReady) {
-      onReady(server.port as number);
+      onReady(server.port!);
     }
   } catch (err) {
     log.error`Failed to start server on port ${port}: ${err}`;

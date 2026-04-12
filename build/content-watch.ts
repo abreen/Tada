@@ -2,7 +2,6 @@ import path from 'path';
 import type { SiteVariables } from './types';
 import { getContentDir, getBuildContentFiles, isPartial } from './util';
 import { compileTemplates, getJsonDataDir, JSON_DATA_FILES } from './templates';
-import { getProjectDir } from './utils/paths';
 import { B } from './colors';
 import { makeLogger } from './log';
 
@@ -18,18 +17,16 @@ interface ChangeDetectionResult {
 
 export class ContentChangeDetector {
   private siteVariables: SiteVariables;
-  private siteConfigPath: string;
   private lastSig: string | null;
 
   constructor(siteVariables: SiteVariables) {
     this.siteVariables = siteVariables;
-    this.siteConfigPath = path.resolve(getProjectDir(), 'site.dev.json');
     this.lastSig = null;
   }
 
   detectChanges(modifiedFiles: Iterable<string>): ChangeDetectionResult {
     const resolvedFiles = new Set(
-      [...(modifiedFiles || [])].map(filePath => path.resolve(filePath)),
+      [...modifiedFiles].map(filePath => path.resolve(filePath)),
     );
 
     const jsonDataDir = getJsonDataDir();
@@ -75,16 +72,14 @@ export class ContentChangeDetector {
       jsonDataPaths.includes(filePath),
     );
     const jsonDataChanged = changedJsonDataPaths.length > 0;
-    const partialsChanged = [...changedContentFiles].some(f => isPartial(f));
+    const changedPartials = [...changedContentFiles].filter(f => isPartial(f));
+    const partialsChanged = changedPartials.length > 0;
 
     for (const filePath of changedJsonDataPaths) {
       log.event`${B`${path.basename(filePath)}`} changed, rebuilding`;
     }
 
     if (partialsChanged) {
-      const changedPartials = [...changedContentFiles].filter(f =>
-        isPartial(f),
-      );
       for (const filePath of changedPartials) {
         log.event`Partial ${B`${path.basename(filePath)}`} changed, rebuilding`;
       }
@@ -95,14 +90,6 @@ export class ContentChangeDetector {
     );
     for (const filePath of changedJavaFiles) {
       log.event`${B`${path.basename(filePath)}`} changed, re-running traces`;
-    }
-
-    // Check if site config changed
-    const siteConfigChanged = resolvedFiles.has(
-      path.resolve(this.siteConfigPath),
-    );
-    if (siteConfigChanged) {
-      needsRestart = true;
     }
 
     return {

@@ -15,8 +15,11 @@ function collectFiles(dir: string): CollectedFile[] {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true, recursive: true });
-  } catch {
-    return [];
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+    throw err;
   }
   return entries
     .filter(entry => entry.isFile())
@@ -59,7 +62,7 @@ export function copyContentAssets(
       continue;
     }
     contentAssetRelPaths.add(rel);
-    if (publicRelPaths && publicRelPaths.has(rel)) {
+    if (publicRelPaths.has(rel)) {
       conflicts.push(rel);
     }
     const dest = path.join(distDir, rel);

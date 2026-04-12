@@ -36,7 +36,7 @@ export async function runWatch(options: {
   httpPort?: number;
   wsPort?: number;
 }): Promise<void> {
-  const httpPort = options.httpPort ?? null;
+  const httpPort = options.httpPort;
   const WEBSOCKET_PORT = options.wsPort ?? 35729;
   const DEBOUNCE_MS = 300;
   const RELOAD_CLIENT_PATH = path.resolve(
@@ -69,7 +69,6 @@ export async function runWatch(options: {
 
   let webSocketsReady = false;
   let watcherReady = false;
-  let webServerReady = false;
   let webServerTimeout: ReturnType<typeof setTimeout> | undefined;
   let serveStarted = false;
 
@@ -118,18 +117,14 @@ export async function runWatch(options: {
 
   function serve(): void {
     startServer({
-      port: httpPort ?? undefined,
+      port: httpPort,
       distDir,
-      onReady: _port => {
-        webServerReady = true;
+      onReady: () => {
         clearTimeout(webServerTimeout);
       },
     });
 
     webServerTimeout = setTimeout(() => {
-      if (webServerReady) {
-        return;
-      }
       log.error`Web server failed to report within 10 seconds, exiting`;
       process.exit(3);
     }, 10000);
@@ -138,9 +133,6 @@ export async function runWatch(options: {
   // Path helpers
 
   function toContentMarkdownPath(filePath: string): string | null {
-    if (!filePath) {
-      return null;
-    }
     const ext = path.extname(filePath).toLowerCase();
     if (!['.md', '.markdown'].includes(ext)) {
       return null;
@@ -156,9 +148,6 @@ export async function runWatch(options: {
   }
 
   function toPublicRelativePath(filePath: string): string | null {
-    if (!filePath) {
-      return null;
-    }
     const normalizedPublicDir = path.resolve(publicDir) + path.sep;
     const normalizedFilePath = path.resolve(filePath);
     if (!normalizedFilePath.startsWith(normalizedPublicDir)) {

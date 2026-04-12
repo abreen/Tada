@@ -39,12 +39,12 @@ function getSiteVariables(env: string): SiteVariables {
   }
 
   // Derive faviconColor from themeColor if not explicitly set
-  if (variables.themeColor && !variables.faviconColor) {
+  if (!variables.faviconColor) {
     variables.faviconColor = variables.themeColor;
   }
 
   // Derive titlePostfix from title if not explicitly set
-  if (variables.title && !variables.titlePostfix) {
+  if (!variables.titlePostfix) {
     variables.titlePostfix = ` - ${variables.title}`;
   }
 
