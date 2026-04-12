@@ -286,6 +286,46 @@ export function getObjectSize(
   return { width, height, valueX };
 }
 
+/** Size info returned by getObjectSize. */
+type ObjSize = {
+  width: number;
+  height: number;
+  valueX?: number;
+  cellWidth?: number;
+};
+
+/** Chain of non-tree objects laid out horizontally to the right of a tree node. */
+interface RefChain {
+  ids: string[];
+  totalWidth: number;
+  maxHeight: number;
+}
+
+/** Construct a TraceObjectLayout, copying optional size and child field info. */
+function makeLayout(
+  x: number,
+  y: number,
+  size: ObjSize,
+  childFields?: Set<string>,
+): TraceObjectLayout {
+  const ol: TraceObjectLayout = {
+    x,
+    y,
+    width: size.width,
+    height: size.height,
+  };
+  if (size.valueX !== undefined) {
+    ol.valueX = size.valueX;
+  }
+  if (size.cellWidth !== undefined) {
+    ol.cellWidth = size.cellWidth;
+  }
+  if (childFields && childFields.size > 0) {
+    ol.childFields = Array.from(childFields);
+  }
+  return ol;
+}
+
 /**
  * The main entry point. Scans steps, builds supergraph, finds root objects,
  * builds a tree for each root, runs d3-flextree, translates positions to
@@ -304,9 +344,72 @@ export function computeLayout(
 
   const { graph, fieldToChild } = buildSupergraph(objects, ignoreFields);
 
-  // Determine child fields for each object based on the supergraph.
-  // A field is a "child field" if it ever pointed to a structural child.
-  // First pass: find which field names are structural per type.
+  // Phase 1: classify types and compute structural metadata
+  const { chainTypes, objectChildFields, structuralChildren, roots } =
+    classifyTypes(objects, fieldToChild);
+
+  // Compute sizes for all objects (now with child field info)
+  const sizes = new Map<string, ObjSize>();
+  for (const [id, info] of objects) {
+    const cFields = objectChildFields.get(id) ?? new Set();
+    sizes.set(id, getObjectSize(info, fontSize, cFields));
+  }
+
+  // Phase 2: identify tree nodes and compute ref chains
+  const { refChains } = buildRefChains(
+    roots,
+    objects,
+    graph,
+    structuralChildren,
+    sizes,
+  );
+
+  // Phase 3: lay out all roots (chains and trees), then arrays and orphans
+  const result: Record<string, TraceObjectLayout> = {};
+  let yOffset = 0;
+
+  for (const rootId of roots) {
+    const rootInfo = objects.get(rootId)!;
+    if (chainTypes.has(rootInfo.type)) {
+      yOffset = layoutChainRoot(
+        rootId,
+        sizes,
+        refChains,
+        structuralChildren,
+        objects,
+        result,
+        yOffset,
+      );
+    } else {
+      yOffset = layoutTreeRoot(
+        rootId,
+        graph,
+        sizes,
+        refChains,
+        objectChildFields,
+        structuralChildren,
+        result,
+        yOffset,
+      );
+    }
+  }
+
+  yOffset = layoutArrays(objects, graph, sizes, fontSize, result, yOffset);
+  layoutOrphans(objects, sizes, result, yOffset);
+
+  return { objects: result, ignoreFields };
+}
+
+/**
+ * Phase 1: determine which types are "chain" (1 self-referencing field) vs
+ * "tree" (2+ fields), compute per-object child fields, structural children,
+ * and find tree/chain roots.
+ */
+function classifyTypes(
+  objects: Map<string, ObjectInfo>,
+  fieldToChild: Map<string, Map<string, string>>,
+) {
+  // Find which field names are structural per type (same-type references).
   const typeChildFields = new Map<string, Set<string>>();
   for (const [parentId, fMap] of fieldToChild) {
     const parentInfo = objects.get(parentId);
@@ -324,9 +427,10 @@ export function computeLayout(
       }
     }
   }
-  // Chain types (1 structural child field, e.g., linked list) are laid out
-  // horizontally. Tree types (2+ fields, e.g., BST) use d3-flextree.
-  // Only tree types get child-slot rendering.
+
+  // Chain types (1 structural child field) are laid out horizontally.
+  // Tree types (2+ fields) use d3-flextree. Only tree types get child-slot
+  // rendering.
   const chainTypes = new Set<string>();
   for (const [type, fields] of typeChildFields) {
     if (fields.size === 1) {
@@ -371,9 +475,7 @@ export function computeLayout(
   }
 
   // Find tree roots: objects that (a) belong to a type with structural child
-  // fields (i.e., a tree type) and (b) are not themselves a structural child
-  // of another object. Cross-type refs (e.g., PreorderIterator -> Node) don't
-  // prevent an object from being a root.
+  // fields and (b) are not themselves a structural child of another object.
   const structurallyReferenced = new Set<string>();
   for (const childSet of structuralChildren.values()) {
     for (const childId of childSet) {
@@ -395,17 +497,20 @@ export function computeLayout(
   // Sort roots by first appearance for deterministic ordering
   roots.sort((a, b) => objects.get(a)!.firstStep - objects.get(b)!.firstStep);
 
-  // Compute sizes for all objects (now with child field info)
-  const sizes = new Map<
-    string,
-    { width: number; height: number; valueX?: number; cellWidth?: number }
-  >();
-  for (const [id, info] of objects) {
-    const cFields = objectChildFields.get(id) ?? new Set();
-    sizes.set(id, getObjectSize(info, fontSize, cFields));
-  }
+  return { chainTypes, objectChildFields, structuralChildren, roots };
+}
 
-  // Identify tree nodes (reachable from roots via structural refs)
+/**
+ * Phase 2: walk from roots to mark tree nodes, then compute horizontal
+ * ref chains for each tree node.
+ */
+function buildRefChains(
+  roots: string[],
+  objects: Map<string, ObjectInfo>,
+  graph: Map<string, string[]>,
+  structuralChildren: Map<string, Set<string>>,
+  sizes: Map<string, ObjSize>,
+) {
   const treeNodeIds = new Set<string>();
   function markTreeNodes(id: string) {
     if (treeNodeIds.has(id)) {
@@ -427,7 +532,6 @@ export function computeLayout(
     }
   }
 
-  // Compute horizontal ref chains (non-tree children laid out to the right)
   const refChains = new Map<string, RefChain>();
   const claimed = new Set<string>();
   for (const treeId of treeNodeIds) {
@@ -447,187 +551,181 @@ export function computeLayout(
     }
   }
 
-  // Build layouts: chains go left-to-right, trees use d3-flextree
-  const result: Record<string, TraceObjectLayout> = {};
-  let yOffset = 0;
+  return { treeNodeIds, refChains };
+}
 
-  for (const rootId of roots) {
-    const rootInfo = objects.get(rootId)!;
+/** Effective width of a node including its ref chain. */
+function effectiveWidth(
+  nodeWidth: number,
+  chain: RefChain | undefined,
+): number {
+  return nodeWidth + (chain ? Math.round(OBJ_GAP * 0.5) + chain.totalWidth : 0);
+}
 
-    if (chainTypes.has(rootInfo.type)) {
-      // Horizontal chain layout with ref chains below each node
-      let xOff = 0;
-      let maxHeight = 0;
-      let currentId: string | undefined = rootId;
-      const visited = new Set<string>();
+/** Effective height of a node including its ref chain. */
+function effectiveHeight(
+  nodeHeight: number,
+  chain: RefChain | undefined,
+): number {
+  return chain ? Math.max(nodeHeight, chain.maxHeight) : nodeHeight;
+}
 
-      while (currentId && !visited.has(currentId) && objects.has(currentId)) {
-        visited.add(currentId);
-        const size = sizes.get(currentId)!;
-        const chain = refChains.get(currentId);
+/**
+ * Place ref chain objects in a horizontal line starting at (startX, y).
+ * Each object in the chain is separated by half the gap.
+ */
+function placeRefChain(
+  chain: RefChain,
+  startX: number,
+  y: number,
+  sizes: Map<string, ObjSize>,
+  result: Record<string, TraceObjectLayout>,
+) {
+  let xOff = startX;
+  for (const childId of chain.ids) {
+    const cs = sizes.get(childId)!;
+    result[childId] = makeLayout(xOff, y, cs);
+    xOff += cs.width + Math.round(OBJ_GAP * 0.5);
+  }
+}
 
-        // Effective width: node + ref chain to the right (if any)
-        const nodeWidth = size.width;
-        const chainWidth = chain
-          ? Math.round(OBJ_GAP * 0.5) + chain.totalWidth
-          : 0;
-        const effectiveWidth = nodeWidth + chainWidth;
+/**
+ * Lay out a chain-type root and its structural children left to right.
+ * Returns the updated yOffset.
+ */
+function layoutChainRoot(
+  rootId: string,
+  sizes: Map<string, ObjSize>,
+  refChains: Map<string, RefChain>,
+  structuralChildren: Map<string, Set<string>>,
+  objects: Map<string, ObjectInfo>,
+  result: Record<string, TraceObjectLayout>,
+  yOffset: number,
+): number {
+  let xOff = 0;
+  let maxHeight = 0;
+  let currentId: string | undefined = rootId;
+  const visited = new Set<string>();
 
-        const ol: TraceObjectLayout = {
-          x: Math.round(xOff),
-          y: Math.round(yOffset),
-          width: size.width,
-          height: size.height,
-        };
-        if (size.valueX !== undefined) {
-          ol.valueX = size.valueX;
-        }
-        if (size.cellWidth !== undefined) {
-          ol.cellWidth = size.cellWidth;
-        }
-        result[currentId] = ol;
+  while (currentId && !visited.has(currentId) && objects.has(currentId)) {
+    visited.add(currentId);
+    const size = sizes.get(currentId)!;
+    const chain = refChains.get(currentId);
+    const ew = effectiveWidth(size.width, chain);
 
-        // Place ref chain objects to the right of this chain node
-        if (chain) {
-          let refX = xOff + nodeWidth + Math.round(OBJ_GAP * 0.5);
-          for (const refId of chain.ids) {
-            const rs = sizes.get(refId)!;
-            const rol: TraceObjectLayout = {
-              x: Math.round(refX),
-              y: Math.round(yOffset),
-              width: rs.width,
-              height: rs.height,
-            };
-            if (rs.valueX !== undefined) {
-              rol.valueX = rs.valueX;
-            }
-            if (rs.cellWidth !== undefined) {
-              rol.cellWidth = rs.cellWidth;
-            }
-            result[refId] = rol;
-            refX += rs.width + Math.round(OBJ_GAP * 0.5);
-          }
-          maxHeight = Math.max(maxHeight, size.height, chain.maxHeight);
-        } else {
-          maxHeight = Math.max(maxHeight, size.height);
-        }
+    result[currentId] = makeLayout(Math.round(xOff), Math.round(yOffset), size);
 
-        xOff += effectiveWidth + OBJ_GAP;
-
-        // Follow the single structural child
-        const sChildren = structuralChildren.get(currentId);
-        currentId = sChildren ? [...sChildren][0] : undefined;
-      }
-
-      yOffset += maxHeight + OBJ_GAP;
-      continue;
+    if (chain) {
+      const refX = xOff + size.width + Math.round(OBJ_GAP * 0.5);
+      placeRefChain(
+        chain,
+        Math.round(refX),
+        Math.round(yOffset),
+        sizes,
+        result,
+      );
+      maxHeight = Math.max(maxHeight, size.height, chain.maxHeight);
+    } else {
+      maxHeight = Math.max(maxHeight, size.height);
     }
 
-    // Tree layout with d3-flextree
-    const visited = new Set<string>();
-    const treeData = buildTreeNode(
-      rootId,
-      graph,
-      sizes,
-      visited,
-      structuralChildren,
-    );
+    xOff += ew + OBJ_GAP;
 
-    if (!treeData) {
-      continue;
-    }
-
-    // d3-flextree nodeSize includes the chain width so nodes are spaced apart
-    const layoutEngine = flextree<TreeNode>({}).nodeSize(node => {
-      const chain = refChains.get(node.data.id);
-      const ew =
-        node.data.width +
-        (chain ? Math.round(OBJ_GAP * 0.5) + chain.totalWidth : 0);
-      const eh = chain
-        ? Math.max(node.data.height, chain.maxHeight)
-        : node.data.height;
-      return [ew + OBJ_GAP, eh + OBJ_GAP];
-    });
-
-    const root = layoutEngine.hierarchy(treeData, d => d.children);
-    layoutEngine(root);
-
-    // Find bounds to translate to positive coordinates
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-
-    root.each(node => {
-      const chain = refChains.get(node.data.id);
-      const ew =
-        node.data.width +
-        (chain ? Math.round(OBJ_GAP * 0.5) + chain.totalWidth : 0);
-      const eh = chain
-        ? Math.max(node.data.height, chain.maxHeight)
-        : node.data.height;
-      minX = Math.min(minX, node.x - ew / 2);
-      minY = Math.min(minY, node.y);
-      maxY = Math.max(maxY, node.y + eh);
-    });
-
-    // Place tree nodes and their ref chains
-    root.each(node => {
-      const size = sizes.get(node.data.id)!;
-      const cFields = objectChildFields.get(node.data.id);
-      const chain = refChains.get(node.data.id);
-      const ew =
-        node.data.width +
-        (chain ? Math.round(OBJ_GAP * 0.5) + chain.totalWidth : 0);
-
-      // Tree node is left-aligned within its effective bounding box
-      const leftEdge = node.x - ew / 2;
-
-      const ol: TraceObjectLayout = {
-        x: Math.round(leftEdge - minX),
-        y: Math.round(node.y - minY + yOffset),
-        width: size.width,
-        height: size.height,
-      };
-      if (size.valueX !== undefined) {
-        ol.valueX = size.valueX;
-      }
-      if (size.cellWidth !== undefined) {
-        ol.cellWidth = size.cellWidth;
-      }
-      if (cFields && cFields.size > 0) {
-        ol.childFields = Array.from(cFields);
-      }
-      result[node.data.id] = ol;
-
-      // Place chain objects to the right of the tree node
-      if (chain) {
-        let xOff =
-          Math.round(leftEdge - minX) + size.width + Math.round(OBJ_GAP * 0.5);
-        for (const childId of chain.ids) {
-          const cs = sizes.get(childId)!;
-          const col: TraceObjectLayout = {
-            x: xOff,
-            y: Math.round(node.y - minY + yOffset),
-            width: cs.width,
-            height: cs.height,
-          };
-          if (cs.valueX !== undefined) {
-            col.valueX = cs.valueX;
-          }
-          if (cs.cellWidth !== undefined) {
-            col.cellWidth = cs.cellWidth;
-          }
-          result[childId] = col;
-          xOff += cs.width + Math.round(OBJ_GAP * 0.5);
-        }
-      }
-    });
-
-    // Stack next tree below this one
-    yOffset += maxY - minY + OBJ_GAP;
+    // Follow the single structural child
+    const sChildren = structuralChildren.get(currentId);
+    currentId = sChildren ? [...sChildren][0] : undefined;
   }
 
-  // Position arrays and their referenced objects below the cells
+  return yOffset + maxHeight + OBJ_GAP;
+}
+
+/**
+ * Lay out a tree-type root using d3-flextree.
+ * Returns the updated yOffset.
+ */
+function layoutTreeRoot(
+  rootId: string,
+  graph: Map<string, string[]>,
+  sizes: Map<string, ObjSize>,
+  refChains: Map<string, RefChain>,
+  objectChildFields: Map<string, Set<string>>,
+  structuralChildren: Map<string, Set<string>>,
+  result: Record<string, TraceObjectLayout>,
+  yOffset: number,
+): number {
+  const visited = new Set<string>();
+  const treeData = buildTreeNode(
+    rootId,
+    graph,
+    sizes,
+    visited,
+    structuralChildren,
+  );
+
+  if (!treeData) {
+    return yOffset;
+  }
+
+  // d3-flextree nodeSize includes the chain width so nodes are spaced apart
+  const layoutEngine = flextree<TreeNode>({}).nodeSize(node => {
+    const chain = refChains.get(node.data.id);
+    const ew = effectiveWidth(node.data.width, chain);
+    const eh = effectiveHeight(node.data.height, chain);
+    return [ew + OBJ_GAP, eh + OBJ_GAP];
+  });
+
+  const root = layoutEngine.hierarchy(treeData, d => d.children);
+  layoutEngine(root);
+
+  // Find bounds to translate to positive coordinates
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  root.each(node => {
+    const chain = refChains.get(node.data.id);
+    const ew = effectiveWidth(node.data.width, chain);
+    const eh = effectiveHeight(node.data.height, chain);
+    minX = Math.min(minX, node.x - ew / 2);
+    minY = Math.min(minY, node.y);
+    maxY = Math.max(maxY, node.y + eh);
+  });
+
+  // Place tree nodes and their ref chains
+  root.each(node => {
+    const size = sizes.get(node.data.id)!;
+    const cFields = objectChildFields.get(node.data.id);
+    const chain = refChains.get(node.data.id);
+    const ew = effectiveWidth(node.data.width, chain);
+
+    // Tree node is left-aligned within its effective bounding box
+    const leftEdge = node.x - ew / 2;
+    const nx = Math.round(leftEdge - minX);
+    const ny = Math.round(node.y - minY + yOffset);
+
+    result[node.data.id] = makeLayout(nx, ny, size, cFields);
+
+    if (chain) {
+      const chainX = nx + size.width + Math.round(OBJ_GAP * 0.5);
+      placeRefChain(chain, chainX, ny, sizes, result);
+    }
+  });
+
+  return yOffset + maxY - minY + OBJ_GAP;
+}
+
+/**
+ * Position arrays and their referenced objects below the cells.
+ * Returns the updated yOffset.
+ */
+function layoutArrays(
+  objects: Map<string, ObjectInfo>,
+  graph: Map<string, string[]>,
+  sizes: Map<string, ObjSize>,
+  fontSize: number,
+  result: Record<string, TraceObjectLayout>,
+  yOffset: number,
+): number {
   for (const [id, info] of objects) {
     if (!info.isArray || id in result) {
       continue;
@@ -636,16 +734,7 @@ export function computeLayout(
     const size = sizes.get(id)!;
     const cw = size.cellWidth ?? Math.round(fontSize * CHAR_WIDTH_RATIO * 3);
 
-    const ol: TraceObjectLayout = {
-      x: 0,
-      y: Math.round(yOffset),
-      width: size.width,
-      height: size.height,
-    };
-    if (size.cellWidth !== undefined) {
-      ol.cellWidth = size.cellWidth;
-    }
-    result[id] = ol;
+    result[id] = makeLayout(0, Math.round(yOffset), size);
 
     // Get unreferenced children from graph, preserving cell order
     const children = (graph.get(id) ?? []).filter(
@@ -678,19 +767,7 @@ export function computeLayout(
       const refY = Math.round(yOffset + size.height + OBJ_GAP);
       let maxRefHeight = 0;
       for (const p of placements) {
-        const col: TraceObjectLayout = {
-          x: Math.round(Math.max(0, p.x)),
-          y: refY,
-          width: p.size.width,
-          height: p.size.height,
-        };
-        if (p.size.valueX !== undefined) {
-          col.valueX = p.size.valueX;
-        }
-        if (p.size.cellWidth !== undefined) {
-          col.cellWidth = p.size.cellWidth;
-        }
-        result[p.id] = col;
+        result[p.id] = makeLayout(Math.round(Math.max(0, p.x)), refY, p.size);
         maxRefHeight = Math.max(maxRefHeight, p.height);
       }
 
@@ -699,36 +776,27 @@ export function computeLayout(
       yOffset += size.height + OBJ_GAP;
     }
   }
+  return yOffset;
+}
 
-  // Place any orphan objects that weren't reached by the tree/chain/array passes
+/**
+ * Place any orphan objects that were not reached by tree, chain, or array
+ * layout passes.
+ */
+function layoutOrphans(
+  objects: Map<string, ObjectInfo>,
+  sizes: Map<string, ObjSize>,
+  result: Record<string, TraceObjectLayout>,
+  yOffset: number,
+) {
+  let y = yOffset;
   for (const id of objects.keys()) {
     if (!(id in result)) {
       const size = sizes.get(id)!;
-      const ol: TraceObjectLayout = {
-        x: 0,
-        y: Math.round(yOffset),
-        width: size.width,
-        height: size.height,
-      };
-      if (size.valueX !== undefined) {
-        ol.valueX = size.valueX;
-      }
-      if (size.cellWidth !== undefined) {
-        ol.cellWidth = size.cellWidth;
-      }
-      result[id] = ol;
-      yOffset += size.height + OBJ_GAP;
+      result[id] = makeLayout(0, Math.round(y), size);
+      y += size.height + OBJ_GAP;
     }
   }
-
-  return { objects: result, ignoreFields };
-}
-
-/** Chain of non-tree objects laid out horizontally to the right of a tree node. */
-interface RefChain {
-  ids: string[];
-  totalWidth: number;
-  maxHeight: number;
 }
 
 /** Compute the chain of non-tree objects reachable from a tree node. */
@@ -736,10 +804,7 @@ function computeRefChain(
   startId: string,
   graph: Map<string, string[]>,
   structuralChildren: Map<string, Set<string>>,
-  sizes: Map<
-    string,
-    { width: number; height: number; valueX?: number; cellWidth?: number }
-  >,
+  sizes: Map<string, ObjSize>,
   treeNodeIds: Set<string>,
   claimed: Set<string>,
 ): RefChain {
@@ -808,10 +873,7 @@ function computeRefChain(
 function buildTreeNode(
   id: string,
   graph: Map<string, string[]>,
-  sizes: Map<
-    string,
-    { width: number; height: number; valueX?: number; cellWidth?: number }
-  >,
+  sizes: Map<string, ObjSize>,
   visited: Set<string>,
   structuralChildren: Map<string, Set<string>>,
 ): TreeNode | null {
