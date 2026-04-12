@@ -1,8 +1,10 @@
+---
 title: Home
 description: The home page for <%= site.title %>.
 author: alex
 published: 2026-03-20
 toolName: Tada
+---
 
 ## Welcome
 

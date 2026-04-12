@@ -1,6 +1,8 @@
+---
 title: Lectures
 author: alex
 description: An example page for <%= site.title %>.
+---
 
 <%= renderTimeZoneChooser() %>
 

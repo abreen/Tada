@@ -44,6 +44,76 @@ describe('parseFrontMatter', () => {
     expect(result.frontMatter).toContain('  This is a');
     expect(result.frontMatter).toContain('  multiline value');
   });
+
+  test('parses standard YAML front matter with --- delimiters', () => {
+    const raw = '---\ntitle: Hello\nauthor: Alice\n---\nBody content here.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('title: Hello\nauthor: Alice');
+    expect(result.content).toBe('Body content here.');
+  });
+
+  test('parses standard format with blank line after closing delimiter', () => {
+    const raw = '---\ntitle: Hello\n---\n\nBody content here.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('title: Hello');
+    expect(result.content).toBe('\nBody content here.');
+  });
+
+  test('parses standard format with blank lines inside front matter', () => {
+    const raw = '---\ntitle: Hello\n\nauthor: Alice\n---\nBody.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('title: Hello\n\nauthor: Alice');
+    expect(result.content).toBe('Body.');
+  });
+
+  test('parses standard format with .html extension', () => {
+    const raw = '---\ntitle: Page\nlayout: full\n---\n<h1>Hi</h1>';
+    const result = parseFrontMatter(raw, '.html');
+    expect(result.frontMatter).toBe('title: Page\nlayout: full');
+    expect(result.content).toBe('<h1>Hi</h1>');
+  });
+
+  test('parses standard format with Windows line endings', () => {
+    const raw = '---\r\ntitle: Hello\r\n---\r\nBody.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('title: Hello');
+    expect(result.content).toBe('Body.');
+  });
+
+  test('parses standard format with empty front matter', () => {
+    const raw = '---\n---\nBody only.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('');
+    expect(result.content).toBe('Body only.');
+  });
+
+  test('throws on standard format with no closing delimiter', () => {
+    const raw = '---\ntitle: Hello\nBody without closing.';
+    expect(() => parseFrontMatter(raw, '.md')).toThrow(/closing.*---/i);
+  });
+
+  test('does not treat horizontal rule inside body as front matter', () => {
+    const raw = 'title: Hello\n\nFirst paragraph.\n\n---\n\nSecond paragraph.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('title: Hello');
+    expect(result.content).toBe(
+      '\nFirst paragraph.\n\n---\n\nSecond paragraph.',
+    );
+  });
+
+  test('accepts trailing whitespace on closing --- delimiter', () => {
+    const raw = '---\ntitle: Hello\n---  \nBody.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('title: Hello');
+    expect(result.content).toBe('Body.');
+  });
+
+  test('accepts trailing whitespace on opening --- delimiter', () => {
+    const raw = '---  \ntitle: Hello\n---\nBody.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('title: Hello');
+    expect(result.content).toBe('Body.');
+  });
 });
 
 describe('parseFrontMatterAndContent', () => {
@@ -73,5 +143,20 @@ describe('parseFrontMatterAndContent', () => {
     const raw = 'title: Hello\r\n\r\nBody content.';
     const result = parseFrontMatterAndContent(raw, '.md');
     expect(result.pageVariables.title).toBe('Hello');
+  });
+
+  test('parses standard YAML front matter into pageVariables', () => {
+    const raw = '---\ntitle: Hello World\nauthor: Bob\n---\n# Main Content';
+    const result = parseFrontMatterAndContent(raw, '.md');
+    expect(result.pageVariables.title).toBe('Hello World');
+    expect(result.pageVariables.author).toBe('Bob');
+    expect(result.content).toContain('# Main Content');
+  });
+
+  test('parses standard format with boolean and numeric values', () => {
+    const raw = '---\ntoc: true\norder: 5\n---\nContent.';
+    const result = parseFrontMatterAndContent(raw, '.md');
+    expect(result.pageVariables.toc).toBe(true);
+    expect(result.pageVariables.order).toBe(5);
   });
 });

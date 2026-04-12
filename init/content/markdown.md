@@ -1,18 +1,22 @@
+---
 title: Markdown Examples
 description: Examples of Markdown syntax supported by Tada.
 author: alex
 published: 2026-03-20
 toc: true
+---
 
 Markdown and HTML files in the `content/` directory
 must contain ["front matter"][front-matter] (YAML-formatted metadata).
 For example, this file's first five lines look like this:
 
 ```text
+---
 title: Markdown Examples
-description: Examples of Markdown syntax supported by tada.
+description: Examples of Markdown syntax supported by Tada.
 toc: true
 author: alex
+---
 ```
 
 This page contains a table of contents because the front matter

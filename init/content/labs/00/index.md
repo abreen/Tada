@@ -1,8 +1,10 @@
+---
 parent: /labs/index.html
 parentLabel: Labs
 title: Lab 0
 author: alex
 description: An example lab page for <%= site.title %>.
+---
 
 In this lab, we'll explore the [`VowelCounter` program](./VowelCounter.java.html).
 
