@@ -60,6 +60,7 @@ body.literate .literate-code-output {
 
   @media (width >= 924px) {
     grid-template-columns: 1fr 1fr;
+    align-items: start;
 
     > pre:last-child {
       min-width: 150px;

@@ -30,8 +30,23 @@
 
   pre,
   tt,
-  :not(pre) > code {
+  code {
     border: 1px solid #ccc;
+  }
+
+  pre {
+    white-space: pre-wrap;
+  }
+
+  pre code {
+    border: none;
+  }
+
+  .code-body pre,
+  .code-prose-content code,
+  .file-header tt,
+  .file-header code {
+    border: none;
   }
 
   // .alert strips the default padding from inline code (since it also
