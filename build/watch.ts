@@ -254,7 +254,15 @@ export async function runWatch(options: {
     }
 
     if (result.errors.length === 0) {
-      onBuildSuccess(result);
+      printFlair();
+      if (pagefindRunner) {
+        pagefindRunner.update(distDir, result.htmlAssetsByPath);
+        setImmediate(() => pagefindRunner!.run());
+      }
+      if (!serveStarted) {
+        serveStarted = true;
+        serve();
+      }
     }
   }
 
