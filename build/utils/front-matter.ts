@@ -62,7 +62,7 @@ function parseFrontMatterStandard(rawContent: string): RawParsedFrontMatter {
 
   // Caller has already verified lines[0] === '---'
   for (let i = 1; i < lines.length; i++) {
-    if (lines[i] === '---') {
+    if (lines[i].trimEnd() === '---') {
       return {
         frontMatter: lines.slice(1, i).join('\n'),
         content: lines.slice(i + 1).join('\n'),
@@ -80,15 +80,13 @@ export function parseFrontMatter(
   ext: string,
 ): RawParsedFrontMatter {
   if (extensionIsMarkdown(ext) || ext === '.html') {
-    // Detect standard YAML front matter (first line is exactly ---)
+    // Detect standard YAML front matter (first line is exactly ---,
+    // ignoring trailing whitespace and \r)
     const firstNewline = rawContent.indexOf('\n');
     const firstLine =
       firstNewline === -1 ? rawContent : rawContent.slice(0, firstNewline);
-    const firstLineTrimmedCR = firstLine.endsWith('\r')
-      ? firstLine.slice(0, -1)
-      : firstLine;
 
-    if (firstLineTrimmedCR === '---') {
+    if (firstLine.trimEnd() === '---') {
       return parseFrontMatterStandard(rawContent);
     }
 

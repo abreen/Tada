@@ -100,6 +100,20 @@ describe('parseFrontMatter', () => {
       '\nFirst paragraph.\n\n---\n\nSecond paragraph.',
     );
   });
+
+  test('accepts trailing whitespace on closing --- delimiter', () => {
+    const raw = '---\ntitle: Hello\n---  \nBody.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('title: Hello');
+    expect(result.content).toBe('Body.');
+  });
+
+  test('accepts trailing whitespace on opening --- delimiter', () => {
+    const raw = '---  \ntitle: Hello\n---\nBody.';
+    const result = parseFrontMatter(raw, '.md');
+    expect(result.frontMatter).toBe('title: Hello');
+    expect(result.content).toBe('Body.');
+  });
 });
 
 describe('parseFrontMatterAndContent', () => {
