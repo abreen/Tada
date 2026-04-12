@@ -1,9 +1,11 @@
+---
 parent: /labs/00/index.html
 parentLabel: Lab 0
 title: Counting vowels
 author: alex
 description: An example of a literate Java program that takes predefined input.
 stdin: "hello, world!\n"
+---
 
 A Java program can process input in different ways: it could open a file and
 read it; it could open a network connection and wait for data from another
