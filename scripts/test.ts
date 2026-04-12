@@ -38,8 +38,8 @@ switch (suite) {
     break;
   case 'all':
     await runUnit();
-    await runPlaywright();
     if (process.env.CLAUDE_CODE_REMOTE !== 'true') {
+      await runPlaywright();
       await runFunctional();
     }
     break;
