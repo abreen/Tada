@@ -11,7 +11,7 @@ interface PagefindSubResult {
 }
 
 interface PagefindResult {
-  meta?: { title?: string; page?: string };
+  meta?: { title?: string; page?: string; template?: string };
   url: string;
   excerpt?: string;
   score: number;
@@ -79,6 +79,7 @@ async function doSearch(state: State) {
       score: d.score ?? 0,
       subResults,
       pageNumber: getPdfPageNumber(d.url, d.meta?.page),
+      template: d.meta?.template ?? null,
     };
   });
 
@@ -139,13 +140,14 @@ function render(
     const titleEl = doc.createElement('div');
     titleEl.id = `title-${i}`;
     titleEl.className = 'title';
-    titleEl.textContent = result.title;
+    if (result.template === 'code') {
+      const code = doc.createElement('code');
+      code.textContent = result.title;
+      titleEl.appendChild(code);
+    } else {
+      titleEl.textContent = result.title;
+    }
     a.appendChild(titleEl);
-
-    const subtitle = doc.createElement('div');
-    subtitle.className = 'subtitle';
-    subtitle.innerText = result.url;
-    a.appendChild(subtitle);
 
     const excerpt = doc.createElement('div');
     excerpt.className = 'excerpt';

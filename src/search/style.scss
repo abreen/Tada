@@ -127,15 +127,11 @@ header {
 
     ol a .title {
       font-weight: 500;
-    }
 
-    ol li .subtitle {
-      font-family: var(--mono-font);
-      font-size: var(--font-size-small);
-      color: var(--fg2-color);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      code {
+        background: none;
+        padding: 0;
+      }
     }
 
     ol li .excerpt {

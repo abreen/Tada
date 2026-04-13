@@ -34,7 +34,6 @@ body.literate .literate-code-output {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--gap);
-  font-size: var(--mono-font-size);
 
   > pre {
     margin-top: 0;

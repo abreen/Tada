@@ -6,6 +6,7 @@ export type Result = {
   score: number;
   subResults: SubResult[];
   pageNumber: number | null;
+  template: string | null;
 };
 
 export function getPdfPageNumber(
@@ -71,6 +72,7 @@ export function groupPdfResults(results: Result[]): Result[] {
       score: primary.score,
       subResults,
       pageNumber: null,
+      template: null,
     });
   });
 
