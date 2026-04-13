@@ -24,6 +24,7 @@ import {
   toPosix,
   toUrlPath,
 } from './paths';
+import pkg from '../../package.json' with { type: 'json' };
 import { parseFrontMatterAndContent } from './front-matter';
 import { createMarkdown } from './markdown';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
@@ -44,6 +45,8 @@ import type {
 } from '../types';
 
 const log = makeLogger(import.meta.url);
+
+const tadaVersion: string = pkg.version;
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 
@@ -133,6 +136,7 @@ function createTemplateParameters({
     content,
     applyBasePath,
     isWatchMode,
+    tadaVersion,
   };
 }
 

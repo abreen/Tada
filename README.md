@@ -232,6 +232,7 @@ Example site configuration JSON file:
 | `features.search` | Enable search UI and Pagefind index generation |
 | `features.code` | Enable generated source-code HTML pages for configured code extensions |
 | `features.favicon` | Enable automatically generated favicons |
+| `features.footer` | Show the Tada footer at the bottom of every page |
 | `base` | Full base URL of the deployed site, used for metadata and URL generation |
 | `basePath` | URL prefix for deployment under a subpath (e.g., `"/cs101"`), use `"/"` at root |
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |

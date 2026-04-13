@@ -198,3 +198,35 @@ body.literate main table {
   grid-template-columns: 1fr 1fr;
   gap: var(--gap);
 }
+
+footer {
+  @include user-select(none);
+  text-align: center;
+  padding: 2rem 0 1rem;
+  color: var(--fg2-color);
+
+  a {
+    color: var(--fg2-color);
+    text-decoration: none;
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--link-color-hover);
+      }
+    }
+
+    &:active {
+      color: var(--link-active-color);
+    }
+
+    &::after {
+      content: '';
+      display: inline-block;
+      width: 1.3em;
+      height: 1.3em;
+      vertical-align: middle;
+      margin-left: 0.2em;
+      @include contained-mask(var(--icon-tada));
+    }
+  }
+}

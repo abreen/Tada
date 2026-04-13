@@ -172,7 +172,7 @@ describe('createSiteConfig', () => {
     base: 'https://example.edu',
     basePath: '/',
     internalDomains: ['example.edu'],
-    features: { search: true, code: true, favicon: false },
+    features: { search: true, code: true, favicon: false, footer: true },
   };
 
   test('returns an object with all expected keys', () => {
@@ -185,7 +185,7 @@ describe('createSiteConfig', () => {
       basePath: '/',
       internalDomains: ['example.edu'],
       defaultTimeZone: 'America/New_York',
-      features: { search: true, code: true, favicon: false },
+      features: { search: true, code: true, favicon: false, footer: true },
       codeLanguages: { java: 'java', py: 'python' },
       vars: {},
     });

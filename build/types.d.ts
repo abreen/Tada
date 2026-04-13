@@ -22,6 +22,7 @@ export type FeatureConfig = {
   search: boolean;
   code: boolean;
   favicon: boolean;
+  footer: boolean;
 };
 
 /** A rendered content asset ready to write to dist/ */
