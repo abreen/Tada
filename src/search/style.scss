@@ -127,11 +127,11 @@ header {
 
     ol a .title {
       font-weight: 500;
+    }
 
-      code {
-        background: none;
-        padding: 0;
-      }
+    ol a .title.code-page code {
+      background: none;
+      padding: 0;
     }
 
     ol li .excerpt {

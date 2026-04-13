@@ -1,6 +1,7 @@
 export type SubResult = { title: string; url: string; excerpt: string };
 export type Result = {
   title: string;
+  titleHtml: string | null;
   url: string;
   excerpt: string;
   score: number;
@@ -67,6 +68,7 @@ export function groupPdfResults(results: Result[]): Result[] {
 
     grouped.push({
       title: primary.title,
+      titleHtml: null,
       url: baseUrl,
       excerpt: primary.excerpt,
       score: primary.score,

@@ -79,6 +79,7 @@ describe('groupPdfResults', () => {
       score: 1,
       subResults: [],
       pageNumber: null,
+      titleHtml: null,
       template: null,
       ...overrides,
     };

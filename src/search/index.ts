@@ -11,7 +11,12 @@ interface PagefindSubResult {
 }
 
 interface PagefindResult {
-  meta?: { title?: string; page?: string; template?: string };
+  meta?: {
+    title?: string;
+    title_html?: string;
+    page?: string;
+    template?: string;
+  };
   url: string;
   excerpt?: string;
   score: number;
@@ -74,6 +79,7 @@ async function doSearch(state: State) {
       }));
     return {
       title,
+      titleHtml: d.meta?.title_html ?? null,
       url: d.url,
       excerpt: d.excerpt ?? '',
       score: d.score ?? 0,
@@ -141,9 +147,10 @@ function render(
     titleEl.id = `title-${i}`;
     titleEl.className = 'title';
     if (result.template === 'code') {
-      const code = doc.createElement('code');
-      code.textContent = result.title;
-      titleEl.appendChild(code);
+      titleEl.classList.add('code-page');
+    }
+    if (result.titleHtml) {
+      titleEl.innerHTML = result.titleHtml;
     } else {
       titleEl.textContent = result.title;
     }

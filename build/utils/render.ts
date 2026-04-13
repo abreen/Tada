@@ -291,7 +291,7 @@ export function renderCodePageAsset({
   const codeFilePath = applyBasePath(
     normalizeOutputPath(`/${toUrlPath(path.relative(contentDir, filePath))}`),
   );
-  const titleHtml = `<tt>${name + ext}</tt>`;
+  const titleHtml = `<code>${name + ext}</code>`;
   const tocItems = lang === 'java' ? extractJavaMethodToc(sourceCode) : [];
   const tocHtml = generateCodeTocHtml(tocItems);
   const pageVariables: Record<string, unknown> = {
