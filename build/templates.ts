@@ -122,8 +122,6 @@ export function compileTemplates(
       _.template(fs.readFileSync(filePath, 'utf-8'))({
         vars: siteVariables.vars || {},
         site: siteVariables,
-        base: siteVariables.base,
-        basePath: siteVariables.basePath,
       }),
     );
 

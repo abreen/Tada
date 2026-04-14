@@ -3,6 +3,24 @@ import pytest
 from conftest import run_tada, set_site_config
 
 
+MARKER = "123456789"
+
+
+def _write_marker_code_files(site):
+    """Create a .py and a .java file under content/ that both reference
+    <%= vars.foobar %>. Used by the templating functional tests."""
+    code_dir = site / "content" / "marker"
+    code_dir.mkdir(parents=True, exist_ok=True)
+    (code_dir / "marker.py").write_text(
+        "# marker = <%= vars.foobar %>\nprint('hi')\n"
+    )
+    (code_dir / "Marker.java").write_text(
+        "/// marker = <%= vars.foobar %>\n"
+        "public class Marker {}\n"
+    )
+    (code_dir / "index.md").write_text("---\ntitle: Marker\n---\n")
+
+
 class TestCodeFeatureDisabled:
     """When features.code is false, code files are not rendered as HTML pages."""
 
@@ -187,3 +205,89 @@ class TestCodeProseLinksRewritten:
         html = html_file.read_text()
         assert "https://example.edu/course/lectures/01/helper.py.html" in html
         assert "https://example.edu/course/about/index.html" in html
+
+
+class TestCodeSourceTemplating:
+    """When features.code is true, source code files in content/ are run
+    through the Lodash template engine before the code page and the
+    downloadable copy are written."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--no-interactive", cwd=str(tmp_path)
+        )
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+        set_site_config(site, {"vars": {"foobar": MARKER}})
+        _write_marker_code_files(site)
+        yield site
+
+    @pytest.fixture
+    def built_site(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"dev build failed: {result.stderr}"
+        yield site_dir
+
+    def test_py_page_substitutes_vars(self, built_site):
+        """marker.py.html should contain the marker value, not the raw
+        <%= %> template syntax."""
+        html = (built_site / "dist" / "marker" / "marker.py.html").read_text()
+        assert MARKER in html
+        assert "vars.foobar" not in html
+
+    def test_py_download_substitutes_vars(self, built_site):
+        """The copied marker.py file should have the var substituted."""
+        py = (built_site / "dist" / "marker" / "marker.py").read_text()
+        assert MARKER in py
+        assert "<%= vars.foobar %>" not in py
+
+    def test_java_page_substitutes_vars(self, built_site):
+        """Marker.java.html should contain the marker value."""
+        html = (built_site / "dist" / "marker" / "Marker.java.html").read_text()
+        assert MARKER in html
+        assert "vars.foobar" not in html
+
+    def test_java_download_substitutes_vars(self, built_site):
+        """The copied Marker.java file should have the var substituted."""
+        java = (built_site / "dist" / "marker" / "Marker.java").read_text()
+        assert MARKER in java
+        assert "<%= vars.foobar %>" not in java
+
+
+class TestCodeSourceTemplatingDisabled:
+    """When features.code is false, source code files are copied as-is."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        result = run_tada(
+            "init", "testsite", "--no-interactive", cwd=str(tmp_path)
+        )
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site = tmp_path / "testsite"
+        set_site_config(
+            site,
+            {"features": {"code": False}, "vars": {"foobar": MARKER}},
+        )
+        _write_marker_code_files(site)
+        yield site
+
+    @pytest.fixture
+    def built_site(self, site_dir):
+        result = run_tada("dev", cwd=str(site_dir))
+        assert result.returncode == 0, f"dev build failed: {result.stderr}"
+        yield site_dir
+
+    def test_py_download_is_literal_source(self, built_site):
+        """When features.code is false, the raw <%= %> syntax is preserved
+        and the marker value is NOT substituted."""
+        py = (built_site / "dist" / "marker" / "marker.py").read_text()
+        assert "<%= vars.foobar %>" in py
+        assert MARKER not in py
+
+    def test_java_download_is_literal_source(self, built_site):
+        """When features.code is false, the raw <%= %> syntax is preserved
+        and the marker value is NOT substituted."""
+        java = (built_site / "dist" / "marker" / "Marker.java").read_text()
+        assert "<%= vars.foobar %>" in java
+        assert MARKER not in java

@@ -80,6 +80,6 @@ export function createSiteConfig({
     themeColor,
     tintHue: Number(tintHue),
     tintAmount: Number(tintAmount),
-    vars: {},
+    vars: { foobar: 123 },
   };
 }

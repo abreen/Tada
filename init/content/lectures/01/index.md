@@ -8,6 +8,12 @@ author: alex
 
 Here is a sample description of the topics covered at the first lecture.
 
+The value of `vars.foobar` is <%= vars.foobar %>.
+
+You can add any variables you want to the `site.dev.json` and `site.prod.json`
+files under the `"vars"` property and access them using Lodash template syntax
+from Markdown files, HTML files, and source code. (Lodash template subtitution
+only works in source code files when `features.code` is `true`.)
 
 ## Slides
 

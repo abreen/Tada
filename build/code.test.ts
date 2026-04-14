@@ -191,6 +191,25 @@ describe('renderCodeWithComments', () => {
       'https://example.edu/course/lectures/01/rect.py.html',
     );
   });
+
+  test('does not substitute <%= %> by itself (templating happens in renderCodePageAsset)', () => {
+    const source = '# Supplied as part of <%= vars.fullCourseName %>\n';
+    const html = renderCodeWithComments(source, 'plaintext', {
+      base: '',
+      basePath: '/',
+      internalDomains: [],
+      title: 'Test',
+      titlePostfix: ' - Test',
+      themeColor: 'steelblue',
+      defaultTimeZone: 'America/New_York',
+      features: { search: true, code: true, favicon: true, footer: true },
+      vars: { fullCourseName: 'CS 0' },
+    } as SiteVariables);
+
+    // renderCodeWithComments itself does not template; the caller
+    // (renderCodePageAsset) is expected to template first.
+    expect(html).toContain('&lt;%=');
+  });
 });
 
 describe('rewriteProseLinks', () => {

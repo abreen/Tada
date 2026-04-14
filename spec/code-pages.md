@@ -34,3 +34,17 @@ Inner class members are excluded.
 Links to code files elsewhere on the site are automatically rewritten to point
 to the generated HTML page instead of the raw source file
 (see [Markdown Link Processing](markdown-link-processing.md)).
+
+## Template substitution
+
+When the code feature is enabled, source code files are run through the Lodash
+template engine before the code page is rendered and before the downloadable
+copy is written. Template holes use the same `<%= %>`, `<% %>`, and `<%- %>`
+delimiters as the rest of Tada and have access to `vars` and `site`. This lets
+authors interpolate site configuration values directly into their source code,
+for example a course name embedded in a header comment.
+
+Substitution runs before Java prose link rewriting, so an interpolated value
+may contain a Markdown link that is then rewritten to a full URL as usual.
+When `features.code` is false, source files are copied unchanged and no
+substitution is performed.

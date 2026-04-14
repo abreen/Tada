@@ -1,3 +1,8 @@
+#
+# rectangle.py
+#
+# Here's vars.foobar: <%= vars.foobar %>
+#
 class Rectangle:
     """A rectangle with integer side lengths.
 

@@ -24,6 +24,7 @@ import {
   toPosix,
   toUrlPath,
 } from './paths';
+import { applySourceTemplate } from './source-template';
 import pkg from '../../package.json' with { type: 'json' };
 import { parseFrontMatterAndContent } from './front-matter';
 import { createMarkdown } from './markdown';
@@ -130,8 +131,6 @@ function createTemplateParameters({
     vars: siteVariables.vars || {},
     ...createGlobals(pageVariables, siteVariables, subPath),
     site: siteVariables,
-    base: siteVariables.base,
-    basePath: siteVariables.basePath,
     page: pageVariables,
     content,
     applyBasePath,
@@ -282,7 +281,8 @@ export function renderCodePageAsset({
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
   const applyBasePath = createApplyBasePath(siteVariables);
   const lang = siteVariables.codeLanguages![ext.slice(1).toLowerCase()];
-  const sourceCode = fs.readFileSync(filePath, 'utf-8');
+  const rawSource = fs.readFileSync(filePath, 'utf-8');
+  const sourceCode = applySourceTemplate(rawSource, siteVariables, filePath);
   const pageDirPath = toPosix(path.relative(contentDir, dir));
 
   log.info`Rendering code page ${B`${subPath + ext}`}`;
@@ -346,20 +346,26 @@ export function renderCopiedContentAsset({
 
   log.info`${label} ${B`${relPath}`}`;
 
-  if (filePath.endsWith('.java') && isFeatureEnabled(siteVariables, 'code')) {
-    const sourceCode = fs.readFileSync(filePath, 'utf-8');
+  if (!isFeatureEnabled(siteVariables, 'code')) {
+    return [{ assetPath: relPath, content: fs.readFileSync(filePath) }];
+  }
+
+  const rawSource = fs.readFileSync(filePath, 'utf-8');
+  const templated = applySourceTemplate(rawSource, siteVariables, filePath);
+
+  if (filePath.endsWith('.java')) {
     const pageDirPath = toPosix(
       path.relative(contentDir, path.dirname(filePath)),
     );
     const rewrittenLines = rewriteProseLinks(
-      sourceCode.split('\n'),
+      templated.split('\n'),
       siteVariables,
       pageDirPath,
     );
     return [{ assetPath: relPath, content: rewrittenLines.join('\n') }];
   }
 
-  return [{ assetPath: relPath, content: fs.readFileSync(filePath) }];
+  return [{ assetPath: relPath, content: templated }];
 }
 
 /** Parses the file, renders using template, returns HTML & params used to generate page */
