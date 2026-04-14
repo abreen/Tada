@@ -44,7 +44,7 @@ and avoid cursory or surface-level reads which may produce false specs.
 - Typecheck: `bun run typecheck`
 - Run unit tests: `bun test`
 - Run a single unit test: `bun test build/code.test.ts`
-- Run functional tests: `AGENT=1 bun run test:functional`
+- Run functional tests: `bun run test:functional`
 
 Functional tests are black-box Python/pytest tests in `functional_tests/` that
 exercise the CLI end-to-end (init, dev, prod, watch, clean). They use

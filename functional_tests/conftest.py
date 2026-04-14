@@ -33,7 +33,7 @@ def pytest_collection_modifyitems(config, items):
 
 
 def pytest_configure(config):
-    """When AGENT is set, reduce output verbosity."""
+    """When CLAUDECODE is set, reduce output verbosity."""
     if os.environ.get("CLAUDECODE", ""):
         config.option.verbose = -1
         config.option.tbstyle = "line"
