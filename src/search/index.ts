@@ -181,7 +181,14 @@ function render(
 
         const subTitle = doc.createElement('div');
         subTitle.className = 'title';
-        subTitle.textContent = sub.title;
+        if (result.template === 'code') {
+          subTitle.classList.add('code-page');
+          const code = doc.createElement('code');
+          code.textContent = sub.title;
+          subTitle.appendChild(code);
+        } else {
+          subTitle.textContent = sub.title;
+        }
         subA.appendChild(subTitle);
 
         if (sub.excerpt) {
