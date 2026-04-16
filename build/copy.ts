@@ -102,6 +102,36 @@ function copySingleFile(
   log.info`Copying ${sourceLabel} file ${B`${rel}`}`;
 }
 
+export function deleteOutputPath(distDir: string, relPath: string): void {
+  const root = path.resolve(distDir);
+  const target = path.resolve(distDir, relPath);
+  const relative = path.relative(root, target);
+  if (
+    relative.startsWith('..') ||
+    path.isAbsolute(relative) ||
+    relative.length === 0
+  ) {
+    throw new Error(`refusing to delete path outside dist/: ${relPath}`);
+  }
+
+  fs.rmSync(target, { force: true });
+  log.info`Removing output ${B`${toPosix(relPath)}`}`;
+
+  let currentDir = path.dirname(target);
+  while (currentDir !== root) {
+    try {
+      fs.rmdirSync(currentDir);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ENOTEMPTY' || code === 'ENOENT') {
+        break;
+      }
+      throw err;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+}
+
 export function copyPublicFile(
   publicDir: string,
   distDir: string,

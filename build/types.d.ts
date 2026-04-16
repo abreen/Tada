@@ -50,6 +50,7 @@ export interface ContentRenderResult {
   errors: Error[];
   changedHtmlAssetPaths: Set<string>;
   removedHtmlAssetPaths: Set<string>;
+  removedOutputRelPaths: Set<string>;
   htmlAssetsByPath: Map<string, string>;
   buildContentFiles: string[];
 }

@@ -42,6 +42,9 @@ Pass `AGENT=1` for commands you run from the shell so test helpers can detect ag
 
 Functional tests are black-box Python and pytest tests in `functional_tests/` that exercise the CLI end to end, including `init`, `dev`, `prod`, `watch`, and `clean`. They use `subprocess` to run Tada and assert on exit codes, stdout, and file system state.
 
+Do not add new unit tests that create, modify, or delete files or directories.
+Coverage for file-system behavior belongs in the functional test suite.
+
 ## Testing locally
 
 This repository is the Tada package, not a Tada site. Do not run `tada dev` or `tada prod` in this directory because there is no site here. To test:

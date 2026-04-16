@@ -1,35 +1,145 @@
 # Watch Mode
 
-Watch mode monitors the file system for changes and performs incremental rebuilds
-with live reload.
+Watch mode continuously rebuilds a site while source files change and tells the
+browser when it should reload.
 
-Changes are debounced (300 ms) and classified into categories: content, public
-files, and config. The rebuild scope depends on the category:
+Its goals are:
 
-- **Content change**: only the affected pages are re-rendered. If any `.java`
-  file changed, all content pages are re-rendered so that pages calling
-  `renderTrace()` pick up the new trace output.
-- **Public file change**: only the changed file is copied
-- **Config or data file change**: full restart (site config, `nav.json`,
-  `authors.json`)
+- keep ordinary edits fast
+- keep `dist/` correct when files are added, removed, or moved between
+  `content/` and `public/`
+- report build errors without crashing the watcher
+- preserve the last successful site output when a rebuild fails
 
-Watch mode also starts a development web server, but only after the first
-successful build.
+## Startup
 
-## Client-side reload script
+When watch mode starts, it tries to build the site immediately.
 
-The reload script lives in `build/watch-reload-client.ts`. It is bundled
-separately and included as an asset only in watch mode.
+- If the initial build succeeds, watch mode starts serving the site and begins
+  watching for changes.
+- If the initial build fails, watch mode stays running and continues watching
+  for changes so the problem can be fixed in place.
+- A failed initial build does not publish partial output.
 
-The script opens a WebSocket connection to `ws://localhost:<port>` (the port is
-chosen at bundle time via `__WEBSOCKET_PORT__`. It handles two message types:
+## What Watch Mode Rebuilds
 
-- **`rebuilding`**: adds a shimmer animation to the page header and sets a
-  `wait` cursor on the body, giving visual feedback that a rebuild is in
-  progress
-- **`reload`**: sets `scrollRestoration` to `auto` so the browser preserves the
-  scroll position, then calls `window.location.reload()` to refresh the page
-  with the new build output
+Watch mode treats changes differently depending on what changed.
 
-The server also sends `error` when a build fails and `ready` when the watcher is
-initialized (used only by functional tests).
+### Existing content page edit
+
+Editing an existing Markdown or HTML page updates the affected page output.
+
+If a `.java` file changes, all content pages are rebuilt so pages that depend on
+trace output stay in sync.
+
+### Existing non-page file edit
+
+Editing an existing file in `public/` updates the corresponding file in
+`dist/`.
+
+Editing an existing non-processed file in `content/` updates the corresponding
+file in `dist/`.
+
+### Partial edit
+
+Editing a partial rebuilds pages that include that partial, including transitive
+includes.
+
+### Config or data change
+
+Changing `site.dev.json`, `nav.json`, or `authors.json` triggers a full site
+rebuild.
+
+### Adding a file
+
+Adding a file in `content/` or `public/` triggers a full site rebuild.
+
+This includes adding:
+
+- a new page
+- a new copied asset
+- a new file that would conflict with an existing output path
+
+### Deleting a file
+
+Deleting a file removes the output that came from that source.
+
+Examples:
+
+- deleting `content/about.md` removes `dist/about.html`
+- deleting `public/logo.png` removes `dist/logo.png`
+- deleting a copied asset in `content/` removes its copied output
+
+If deleting one side of a `content/` versus `public/` conflict changes which
+source should own that output path, watch mode rebuilds so the surviving source
+becomes authoritative immediately.
+
+### Rename and move behavior
+
+A rename or move is treated as the removal of the old path plus the addition of
+the new path.
+
+This means watch mode updates `dist/` so the old output disappears and the new
+output appears at its new location.
+
+## Content and Public Conflicts
+
+Watch mode rejects situations where a file in `content/` and a file in
+`public/` would produce the same path in `dist/`.
+
+Examples:
+
+- `content/about.md` conflicts with `public/about.html`
+- `content/logo.png` conflicts with `public/logo.png`
+
+Conflicts are based on the final output path, not on the source filename alone.
+
+When a conflict is detected:
+
+- the rebuild fails
+- watch mode stays running
+- the browser is not reloaded with partial output
+- the last successful `dist/` remains unchanged
+
+If the conflict is then fixed, watch mode rebuilds and resumes normal reload
+behavior.
+
+## Ownership Handoffs
+
+Watch mode supports switching which source tree owns a given output path.
+
+Examples:
+
+- removing `public/about.html` and adding `content/about.md`
+- removing `content/logo.png` and adding `public/logo.png`
+
+After a successful rebuild, `dist/` reflects the new owner of that path.
+
+## Failure and Recovery
+
+Watch mode does not exit just because a rebuild fails.
+
+This applies to:
+
+- invalid configuration
+- missing required data files
+- content errors
+- output-path conflicts
+
+After a failed rebuild:
+
+- watch mode keeps running
+- the previous successful `dist/` stays available
+- fixing the underlying problem triggers another rebuild
+
+Recovery must work both after startup failures and after failures that happen
+later while watch mode is already running.
+
+## Browser Reload Behavior
+
+Connected browsers use a WebSocket connection and react to these message types:
+
+- `rebuilding`: the page shows loading feedback
+- `reload`: the page reloads
+
+Failed rebuilds do not trigger `reload`.

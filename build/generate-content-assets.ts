@@ -103,28 +103,6 @@ export class ContentRenderer {
     return Object.prototype.hasOwnProperty.call(codeExtensions, ext.slice(1));
   }
 
-  getDirtyCopiedSourceFiles(
-    buildContentFiles: string[],
-    { changedContentFiles }: WatchState = {},
-  ): string[] {
-    if (this.lastBuildFiles.size === 0 || !changedContentFiles) {
-      return buildContentFiles.filter(filePath =>
-        this.isCopiedAssetSource(filePath),
-      );
-    }
-
-    const buildFileSet = new Set(buildContentFiles);
-    const dirtyCopiedSourceFiles: string[] = [];
-    for (const filePath of changedContentFiles) {
-      if (!buildFileSet.has(filePath) || !this.isCopiedAssetSource(filePath)) {
-        continue;
-      }
-      dirtyCopiedSourceFiles.push(filePath);
-    }
-
-    return dirtyCopiedSourceFiles;
-  }
-
   renderSourceAssets(
     filePath: string,
     contentDir: string,
@@ -190,27 +168,23 @@ export class ContentRenderer {
     return assets;
   }
 
-  writeUncachedAssets(
-    distDir: string,
-    copiedSourceFiles: string[],
-    contentDir: string,
-  ): void {
-    for (const filePath of copiedSourceFiles) {
-      for (const asset of renderCopiedContentAsset({
-        filePath,
-        contentDir,
-        siteVariables: this.siteVariables,
-      })) {
-        const outPath = path.join(distDir, asset.assetPath);
-        fs.mkdirSync(path.dirname(outPath), { recursive: true });
-        fs.writeFileSync(outPath, asset.content);
-      }
+  renderCopiedSourceAssets(filePath: string, contentDir: string): Asset[] {
+    if (!this.isCopiedAssetSource(filePath)) {
+      return [];
     }
+
+    return renderCopiedContentAsset({
+      filePath,
+      contentDir,
+      siteVariables: this.siteVariables,
+    });
   }
 
   updateSourceCache(
     filePath: string,
     assets: Asset[],
+    changedOutputRelPaths: Set<string>,
+    removedOutputRelPaths: Set<string>,
     changedHtmlAssetPaths: Set<string>,
     removedHtmlAssetPaths: Set<string>,
   ): void {
@@ -221,12 +195,14 @@ export class ContentRenderer {
       if (nextAssetPaths.has(asset.assetPath)) {
         continue;
       }
+      removedOutputRelPaths.add(asset.assetPath);
       if (asset.assetPath.endsWith('.html')) {
         removedHtmlAssetPaths.add(asset.assetPath);
       }
     }
 
     for (const asset of assets) {
+      changedOutputRelPaths.add(asset.assetPath);
       if (asset.assetPath.endsWith('.html')) {
         changedHtmlAssetPaths.add(asset.assetPath);
       }
@@ -248,6 +224,7 @@ export class ContentRenderer {
 
   pruneRemovedSources(
     buildFileSet: Set<string>,
+    removedOutputRelPaths: Set<string>,
     removedHtmlAssetPaths: Set<string>,
   ): void {
     for (const filePath of [...this.lastBuildFiles]) {
@@ -257,6 +234,7 @@ export class ContentRenderer {
 
       const previousAssets = this.getCachedAssets(filePath);
       for (const asset of previousAssets) {
+        removedOutputRelPaths.add(asset.assetPath);
         if (asset.assetPath.endsWith('.html')) {
           removedHtmlAssetPaths.add(asset.assetPath);
         }
@@ -280,10 +258,8 @@ export class ContentRenderer {
       buildContentFiles,
       watchState,
     );
-    const dirtyCopiedSourceFiles = this.getDirtyCopiedSourceFiles(
-      buildContentFiles,
-      watchState,
-    );
+    const changedOutputRelPaths = new Set<string>();
+    const removedOutputRelPaths = new Set<string>();
     const changedHtmlAssetPaths = new Set<string>();
     const removedHtmlAssetPaths = new Set<string>();
     const validInternalTargets = getValidInternalTargets(
@@ -312,7 +288,11 @@ export class ContentRenderer {
       errors.push(new Error(msg));
     }
 
-    this.pruneRemovedSources(buildFileSet, removedHtmlAssetPaths);
+    this.pruneRemovedSources(
+      buildFileSet,
+      removedOutputRelPaths,
+      removedHtmlAssetPaths,
+    );
 
     if (dirtySourceFiles.size > 0) {
       const noun = dirtySourceFiles.size === 1 ? 'file' : 'files';
@@ -329,14 +309,17 @@ export class ContentRenderer {
     for (const filePath of dirtySourceFiles) {
       let assets: Asset[];
       try {
-        assets = this.renderSourceAssets(
-          filePath,
-          contentDir,
-          distDir,
-          validInternalTargets,
-          assetFiles,
-          literateJavaOutputPaths,
-        );
+        assets = [
+          ...this.renderSourceAssets(
+            filePath,
+            contentDir,
+            distDir,
+            validInternalTargets,
+            assetFiles,
+            literateJavaOutputPaths,
+          ),
+          ...this.renderCopiedSourceAssets(filePath, contentDir),
+        ];
       } catch (err) {
         errors.push(err as Error);
         continue;
@@ -344,13 +327,14 @@ export class ContentRenderer {
       this.updateSourceCache(
         filePath,
         assets,
+        changedOutputRelPaths,
+        removedOutputRelPaths,
         changedHtmlAssetPaths,
         removedHtmlAssetPaths,
       );
     }
 
     this.writeCachedAssets(distDir, buildContentFiles);
-    this.writeUncachedAssets(distDir, dirtyCopiedSourceFiles, contentDir);
     this.lastBuildFiles = buildFileSet;
 
     // Collect HTML asset content for Pagefind
@@ -368,6 +352,7 @@ export class ContentRenderer {
       errors,
       changedHtmlAssetPaths,
       removedHtmlAssetPaths,
+      removedOutputRelPaths,
       htmlAssetsByPath,
       buildContentFiles,
     };

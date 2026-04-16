@@ -51,6 +51,53 @@ export function getBuildContentFiles(
   );
 }
 
+export function getContentOutputRelPaths(
+  contentDir: string,
+  codeExtensions: string[],
+  codeEnabled: boolean,
+): Set<string> {
+  const buildContentFiles = getBuildContentFiles(contentDir, codeExtensions);
+  const codeExtensionSet = new Set(
+    codeExtensions.map(ext => ext.toLowerCase()),
+  );
+  const outputs = new Set<string>();
+
+  for (const filePath of buildContentFiles) {
+    const relPath = toPosix(path.relative(contentDir, filePath));
+    const parsed = path.parse(relPath);
+    const ext = parsed.ext.toLowerCase();
+
+    if (isLiterateJava(filePath)) {
+      outputs.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
+      outputs.add(toPosix(path.join(parsed.dir, parsed.name)));
+      continue;
+    }
+
+    if (extensionIsMarkdown(ext) || ext === '.html') {
+      outputs.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
+      continue;
+    }
+
+    if (codeExtensionSet.has(ext.slice(1))) {
+      outputs.add(relPath);
+      if (codeEnabled) {
+        outputs.add(`${relPath}.html`);
+      }
+    }
+  }
+
+  const processedExtSet = new Set(getProcessedExtensions(codeExtensions));
+  for (const filePath of walkFiles(contentDir)) {
+    const ext = path.extname(filePath).slice(1).toLowerCase();
+    if (processedExtSet.has(ext)) {
+      continue;
+    }
+    outputs.add(toPosix(path.relative(contentDir, filePath)));
+  }
+
+  return outputs;
+}
+
 function addGeneratedRouteAliases(
   pathSet: Set<string>,
   outputPath: string,

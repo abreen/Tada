@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import threading
 import time
@@ -162,6 +163,25 @@ class WatchProcess:
             f"File {path} did not meet condition '{condition}' within timeout"
         )
 
+    def wait_for_reload(self):
+        """Block until a 'reload' WebSocket message is received."""
+        deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
+        self._reload_event.clear()
+        while time.monotonic() < deadline:
+            if self._reload_event.wait(timeout=WS_EVENT_WAIT_SEC):
+                self._reload_event.clear()
+                return
+            if self._error_event.is_set():
+                self._error_event.clear()
+                raise AssertionError(
+                    "Expected 'reload' WebSocket message but received 'error' instead"
+                )
+            if self.proc.poll() is not None:
+                raise RuntimeError(
+                    f"Watch process exited with code {self.proc.returncode}"
+                )
+        raise TimeoutError("Did not receive 'reload' message within timeout")
+
     def stop(self):
         """Terminate the watch process and all children (serve, etc.)."""
         if self._ws is not None:
@@ -216,6 +236,19 @@ class TestWatchEditContent:
         watch.wait_for_rebuild(dist_html, "modified", before_mtime=before_mtime)
         assert "Edited" in dist_html.read_text()
 
+    def test_atomic_save_on_markdown_triggers_rebuild(self, watch, site_dir):
+        index_md = site_dir / "content" / "index.md"
+        index_html = site_dir / "dist" / "index.html"
+
+        before_mtime = index_html.stat().st_mtime
+        original = index_md.read_text()
+        temp_md = site_dir / "content" / ".index.md.tmp"
+        temp_md.write_text(original + "\n\nAtomic save paragraph.\n")
+        os.replace(temp_md, index_md)
+
+        watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
+        assert "Atomic save paragraph." in index_html.read_text()
+
 
 class TestWatchAddContent:
     """Adding a new file to content/ triggers a build."""
@@ -252,6 +285,52 @@ class TestWatchRemoveContent:
         before_mtime = index_html.stat().st_mtime
         md_file.unlink()
         watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
+        watch.wait_for_rebuild(dist_md, "removed")
+
+    def test_removing_copied_content_asset_removes_dist_file(self, watch, site_dir):
+        asset = site_dir / "content" / "notes.txt"
+        asset.write_text("asset body")
+
+        dist_asset = site_dir / "dist" / "notes.txt"
+        watch.wait_for_rebuild(dist_asset, "exists")
+        assert dist_asset.read_text() == "asset body"
+
+        asset.unlink()
+        watch.wait_for_rebuild(dist_asset, "removed")
+
+    def test_renaming_markdown_file_updates_output_paths(self, watch, site_dir):
+        original_md = site_dir / "content" / "rename_me.md"
+        original_md.write_text("---\ntitle: Rename Me\n---\n\nOriginal page.\n")
+
+        original_html = site_dir / "dist" / "rename_me.html"
+        watch.wait_for_rebuild(original_html, "exists")
+        assert "Original page." in original_html.read_text()
+
+        renamed_md = site_dir / "content" / "renamed.md"
+        original_md.rename(renamed_md)
+
+        renamed_html = site_dir / "dist" / "renamed.html"
+        watch.wait_for_rebuild(renamed_html, "exists")
+        watch.wait_for_rebuild(original_html, "removed")
+        assert "Original page." in renamed_html.read_text()
+
+    def test_replacing_copied_content_asset_with_public_file_keeps_output(
+        self, watch, site_dir
+    ):
+        asset = site_dir / "content" / "logo.png"
+        asset.write_bytes(b"content-version")
+
+        dist_asset = site_dir / "dist" / "logo.png"
+        watch.wait_for_rebuild(dist_asset, "exists")
+        assert dist_asset.read_bytes() == b"content-version"
+
+        public_asset = site_dir / "public" / "logo.png"
+        asset.unlink()
+        public_asset.write_bytes(b"public-version")
+
+        watch.wait_for_reload()
+        assert dist_asset.exists()
+        assert dist_asset.read_bytes() == b"public-version"
 
 
 class TestWatchPublicFiles:
@@ -278,6 +357,111 @@ class TestWatchPublicFiles:
         watch.wait_for_rebuild(dist_file, "exists")
         assert dist_file.read_text() == "new public file"
 
+    def test_removing_public_file_removes_dist_file(self, watch, site_dir):
+        public_file = site_dir / "public" / "gone.txt"
+        public_file.write_text("temporary")
+
+        dist_file = site_dir / "dist" / "gone.txt"
+        watch.wait_for_rebuild(dist_file, "exists")
+        assert dist_file.read_text() == "temporary"
+
+        public_file.unlink()
+        watch.wait_for_rebuild(dist_file, "removed")
+
+    def test_public_file_conflicting_with_content_output_errors_and_recovers(
+        self, watch, site_dir
+    ):
+        page = site_dir / "content" / "about.md"
+        page.write_text("---\ntitle: About\n---\n\nFrom markdown.\n")
+
+        dist_file = site_dir / "dist" / "about.html"
+        watch.wait_for_rebuild(dist_file, "exists")
+        assert "From markdown." in dist_file.read_text()
+
+        before_text = dist_file.read_text()
+        public_file = site_dir / "public" / "about.html"
+        public_file.write_text("<p>From public</p>\n")
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+        assert dist_file.read_text() == before_text
+
+        public_file.unlink()
+        watch.wait_for_reload()
+        assert "From markdown." in dist_file.read_text()
+
+    def test_deleting_conflict_side_rebuilds_from_surviving_content(self, watch, site_dir):
+        page = site_dir / "content" / "about.md"
+        page.write_text("---\ntitle: About\n---\n\nOriginal markdown.\n")
+
+        dist_file = site_dir / "dist" / "about.html"
+        watch.wait_for_rebuild(dist_file, "exists")
+        assert "Original markdown." in dist_file.read_text()
+
+        page.write_text("---\ntitle: About\n---\n\nUpdated markdown.\n")
+        public_file = site_dir / "public" / "about.html"
+        public_file.write_text("<p>From public</p>\n")
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+        assert "Original markdown." in dist_file.read_text()
+
+        public_file.unlink()
+        watch.wait_for_reload()
+        assert "Updated markdown." in dist_file.read_text()
+
+    def test_replacing_public_file_with_content_page_keeps_output(self, watch, site_dir):
+        public_file = site_dir / "public" / "about.html"
+        public_file.write_text("<p>From public</p>\n")
+
+        dist_file = site_dir / "dist" / "about.html"
+        watch.wait_for_rebuild(dist_file, "exists")
+        assert "From public" in dist_file.read_text()
+
+        page = site_dir / "content" / "about.md"
+        public_file.unlink()
+        page.write_text("---\ntitle: About\n---\n\nFrom markdown.\n")
+
+        watch.wait_for_reload()
+        assert dist_file.exists()
+        assert "From markdown." in dist_file.read_text()
+
+    def test_content_change_conflicting_with_existing_public_file_errors_without_mutating(
+        self, watch, site_dir
+    ):
+        public_file = site_dir / "public" / "about.html"
+        public_file.write_text("<p>From public</p>\n")
+
+        dist_file = site_dir / "dist" / "about.html"
+        watch.wait_for_rebuild(dist_file, "exists")
+        before_text = dist_file.read_text()
+
+        page = site_dir / "content" / "about.md"
+        page.write_text("---\ntitle: About\n---\n\nFrom markdown.\n")
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+        assert dist_file.read_text() == before_text
+
+    def test_mixed_content_and_public_conflict_does_not_partially_update_dist(
+        self, watch, site_dir
+    ):
+        page = site_dir / "content" / "about.md"
+        page.write_text("---\ntitle: About\n---\n\nOriginal markdown.\n")
+
+        dist_file = site_dir / "dist" / "about.html"
+        watch.wait_for_rebuild(dist_file, "exists")
+        before_text = dist_file.read_text()
+        assert "Original markdown." in before_text
+
+        page.write_text("---\ntitle: About\n---\n\nUpdated markdown.\n")
+        public_file = site_dir / "public" / "about.html"
+        public_file.write_text("<p>From public</p>\n")
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+        assert dist_file.read_text() == before_text
+
 
 class TestWatchConfig:
     """Modifying the site config triggers a build."""
@@ -291,6 +475,65 @@ class TestWatchConfig:
         watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
         html = index_html.read_text()
         assert "Updated Title For Test" in html
+
+    def test_config_change_with_public_to_content_handoff_keeps_output(
+        self, watch, site_dir
+    ):
+        public_file = site_dir / "public" / "about.html"
+        public_file.write_text("<p>From public</p>\n")
+
+        dist_file = site_dir / "dist" / "about.html"
+        watch.wait_for_rebuild(dist_file, "exists")
+        assert "From public" in dist_file.read_text()
+
+        public_file.unlink()
+        page = site_dir / "content" / "about.md"
+        page.write_text("---\ntitle: About\n---\n\nFrom markdown.\n")
+        set_site_config(site_dir, {"title": "Updated Title For Handoff"})
+
+        watch.wait_for_reload()
+        assert dist_file.exists()
+        assert "From markdown." in dist_file.read_text()
+
+    def test_config_change_rebuild_rejects_output_path_conflict(self, watch, site_dir):
+        public_file = site_dir / "public" / "about.html"
+        public_file.write_text("<p>From public</p>\n")
+
+        dist_file = site_dir / "dist" / "about.html"
+        watch.wait_for_rebuild(dist_file, "exists")
+        before_text = dist_file.read_text()
+
+        page = site_dir / "content" / "about.md"
+        page.write_text("---\ntitle: About\n---\n\nFrom markdown.\n")
+        set_site_config(site_dir, {"title": "Conflict Title"})
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+        assert dist_file.read_text() == before_text
+
+
+class TestWatchInitialConflict:
+    """Watch startup should reject output-path conflicts before writing outputs."""
+
+    def test_initial_build_rejects_content_public_output_conflict(self, tmp_path):
+        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site_dir = tmp_path / "testsite"
+
+        public_file = site_dir / "public" / "about.html"
+        public_file.write_text("<p>From public</p>\n")
+        page = site_dir / "content" / "about.md"
+        page.write_text("---\ntitle: About\n---\n\nFrom markdown.\n")
+
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
+            assert wp._error_event.is_set()
+            wp._error_event.clear()
+            assert wp.proc.poll() is None
+            assert not (site_dir / "dist" / "about.html").exists()
+        finally:
+            wp.stop()
 
 
 class TestWatchWebSocket:
@@ -392,6 +635,21 @@ class TestWatchBadConfigAtStart:
 
 class TestWatchConfigBreakAndRecover:
     """Breaking the config mid-watch causes an error event; fixing it recovers."""
+
+    def test_failed_full_rebuild_from_broken_config_leaves_dist_unchanged(
+        self, watch, site_dir
+    ):
+        index_html = site_dir / "dist" / "index.html"
+        before_text = index_html.read_text()
+
+        config_path = site_dir / "site.dev.json"
+        config = json.loads(config_path.read_text())
+        del config["title"]
+        config_path.write_text(json.dumps(config, indent=2) + "\n")
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+        assert index_html.read_text() == before_text
 
     def test_break_config_then_fix(self, watch, site_dir):
         index_html = site_dir / "dist" / "index.html"

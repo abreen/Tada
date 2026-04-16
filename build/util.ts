@@ -1,6 +1,7 @@
 export {
   getBuildContentFiles,
   getContentFiles,
+  getContentOutputRelPaths,
   getFilesByExtensions,
   getValidInternalTargets,
   shouldSkipContentFile,

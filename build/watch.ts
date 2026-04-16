@@ -14,6 +14,7 @@ import {
   getPackageDir,
   toPosix,
 } from './utils/paths';
+import { getContentOutputRelPaths } from './util';
 import { isFeatureEnabled } from './features';
 import { bundle } from './bundle';
 import { copyFonts } from './generate-fonts';
@@ -25,8 +26,10 @@ import {
   copyContentAssets,
   copyContentFile,
   copyPublicFile,
+  deleteOutputPath,
 } from './copy';
 import { getProcessedExtensions } from './utils/file-types';
+import { extensionIsMarkdown, isLiterateJava } from './utils/file-types';
 import { ContentRenderer } from './generate-content-assets';
 import { WatchPagefindRunner } from './pagefind';
 import { ContentChangeDetector } from './content-watch';
@@ -47,16 +50,16 @@ export async function runWatch(options: {
   // Bundle the reload client separately to work around a Bun bundler bug where
   // side-effect-only JS entrypoints are tree-shaken when bundled alongside SCSS
   // entrypoints processed by a plugin.
-  async function bundleReloadClient(): Promise<string[]> {
+  async function bundleReloadClient(outDir: string): Promise<string[]> {
     const result = await Bun.build({
       entrypoints: [RELOAD_CLIENT_PATH],
-      outdir: getDistDir(),
+      outdir: outDir,
       naming: '[name].bundle.[ext]',
       sourcemap: 'inline',
       define: { __WEBSOCKET_PORT__: String(WEBSOCKET_PORT) },
     });
     return result.outputs.map(output =>
-      toPosix(path.relative(getDistDir(), output.path)),
+      toPosix(path.relative(outDir, output.path)),
     );
   }
 
@@ -162,17 +165,16 @@ export async function runWatch(options: {
   const publicDir: string = getPublicDir();
   const distDir: string = getDistDir();
 
-  let siteVariables: SiteVariables;
+  let siteVariables: SiteVariables | undefined;
   let processedExtSet = new Set<string>();
-  let publicRelPaths: Set<string> = new Set();
-  let contentAssetRelPaths: Set<string> = new Set();
-  let contentRenderer: ContentRenderer;
-  let changeDetector: ContentChangeDetector;
+  let contentRenderer: ContentRenderer | undefined;
+  let changeDetector: ContentChangeDetector | undefined;
   let pagefindRunner: WatchPagefindRunner | undefined;
   let assetFiles: string[] = [];
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  const pendingChanges = new Set<string>();
+  const pendingChanges = new Map<string, 'add' | 'change' | 'unlink'>();
   let rebuilding = false;
+  let initialBuildFailed = false;
 
   function onBuildSuccess(result?: ContentRenderResult): void {
     printFlair();
@@ -187,73 +189,276 @@ export async function runWatch(options: {
     }
   }
 
-  function copyChangedPublicFiles(changes: Set<string>): void {
-    for (const filePath of changes) {
-      if (classifyChange(filePath) !== 'public') {
-        continue;
+  function collectExistingRelPaths(rootDir: string): Set<string> {
+    const relPaths = new Set<string>();
+
+    function walk(dir: string): void {
+      let entries: fs.Dirent[];
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch (err: unknown) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+          return;
+        }
+        throw err;
       }
-      const absPath = path.resolve(filePath);
-      if (fs.existsSync(absPath)) {
-        copyPublicFile(publicDir, distDir, absPath, contentAssetRelPaths);
-        const rel = toPosix(path.relative(publicDir, absPath));
-        publicRelPaths.add(rel);
+
+      for (const entry of entries) {
+        const absPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(absPath);
+          continue;
+        }
+        if (entry.isFile()) {
+          relPaths.add(toPosix(path.relative(rootDir, absPath)));
+        }
       }
+    }
+
+    walk(rootDir);
+    return relPaths;
+  }
+
+  function getComputedContentOutputRelPaths(
+    nextSiteVariables: SiteVariables,
+  ): Set<string> {
+    return getContentOutputRelPaths(
+      contentDir,
+      Object.keys(nextSiteVariables.codeLanguages || {}),
+      isFeatureEnabled(nextSiteVariables, 'code'),
+    );
+  }
+
+  function collectChangedPathsByCategory(
+    changes: Map<string, 'add' | 'change' | 'unlink'>,
+    category: ChangeCategory,
+  ): string[] {
+    return [...changes.keys()].filter(
+      filePath => classifyChange(filePath) === category,
+    );
+  }
+
+  function assertNoOutputPathConflicts(
+    contentRelPaths: Set<string>,
+    publicRelPaths: Set<string>,
+  ): void {
+    const conflicts = [...contentRelPaths].filter(rel =>
+      publicRelPaths.has(rel),
+    );
+    if (conflicts.length === 0) {
+      return;
+    }
+
+    conflicts.sort();
+    for (const rel of conflicts) {
+      log.error`content/${B`${rel}`} conflicts with public/${B`${rel}`}`;
+    }
+    const noun = conflicts.length === 1 ? 'file' : 'files';
+    throw new Error(
+      `${conflicts.length} ${noun} in content/ and public/ have the same path`,
+    );
+  }
+
+  function getContentSourceOutputRelPaths(
+    filePath: string,
+    nextSiteVariables: SiteVariables,
+  ): Set<string> {
+    const relPath = toPosix(path.relative(contentDir, path.resolve(filePath)));
+    const parsed = path.parse(relPath);
+    const ext = parsed.ext.toLowerCase();
+    const outputRelPaths = new Set<string>();
+    const codeExtensions = new Set(
+      Object.keys(nextSiteVariables.codeLanguages || {}).map(ext =>
+        ext.toLowerCase(),
+      ),
+    );
+
+    if (isLiterateJava(filePath)) {
+      outputRelPaths.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
+      outputRelPaths.add(toPosix(path.join(parsed.dir, parsed.name)));
+      return outputRelPaths;
+    }
+
+    if (extensionIsMarkdown(ext) || ext === '.html') {
+      outputRelPaths.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
+      return outputRelPaths;
+    }
+
+    if (codeExtensions.has(ext.slice(1))) {
+      outputRelPaths.add(relPath);
+      if (isFeatureEnabled(nextSiteVariables, 'code')) {
+        outputRelPaths.add(`${relPath}.html`);
+      }
+      return outputRelPaths;
+    }
+
+    outputRelPaths.add(relPath);
+    return outputRelPaths;
+  }
+
+  function unlinkNeedsFullRebuild(
+    filePath: string,
+    nextSiteVariables: SiteVariables,
+    nextPublicRelPaths: Set<string>,
+    nextContentOutputRelPaths: Set<string>,
+  ): boolean {
+    const category = classifyChange(filePath);
+    if (category === 'public') {
+      const relPath = toPosix(path.relative(publicDir, path.resolve(filePath)));
+      return nextContentOutputRelPaths.has(relPath);
+    }
+    if (category === 'content') {
+      const outputRelPaths = getContentSourceOutputRelPaths(
+        filePath,
+        nextSiteVariables,
+      );
+      return [...outputRelPaths].some(relPath =>
+        nextPublicRelPaths.has(relPath),
+      );
+    }
+    return false;
+  }
+
+  function makeTempBuildDir(): string {
+    const parentDir = path.dirname(distDir);
+    const prefix = `${path.basename(distDir)}-watch-`;
+    return fs.mkdtempSync(path.join(parentDir, prefix));
+  }
+
+  function removeDirIfExists(dir: string): void {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  function replaceDistDir(nextDistDir: string): void {
+    const backupDir = `${distDir}.bak-${process.pid}-${Date.now()}`;
+    const distExists = fs.existsSync(distDir);
+
+    try {
+      if (distExists) {
+        fs.renameSync(distDir, backupDir);
+      }
+      fs.renameSync(nextDistDir, distDir);
+      if (distExists) {
+        removeDirIfExists(backupDir);
+      }
+    } catch (err) {
+      if (!fs.existsSync(distDir) && fs.existsSync(backupDir)) {
+        fs.renameSync(backupDir, distDir);
+      }
+      throw err;
     }
   }
 
-  async function buildFromConfig(
-    copyAssets: boolean,
-  ): Promise<ContentRenderResult> {
-    processedExtSet = new Set(
-      getProcessedExtensions(Object.keys(siteVariables.codeLanguages || {})),
+  async function buildSite(
+    outputDir: string,
+    nextSiteVariables: SiteVariables,
+  ): Promise<{
+    result: ContentRenderResult;
+    processedExtSet: Set<string>;
+    contentRenderer: ContentRenderer;
+    changeDetector: ContentChangeDetector;
+    pagefindRunner?: WatchPagefindRunner;
+    assetFiles: string[];
+  }> {
+    const nextPublicRelPaths = collectExistingRelPaths(publicDir);
+    const computedContentOutputRelPaths =
+      getComputedContentOutputRelPaths(nextSiteVariables);
+    assertNoOutputPathConflicts(
+      computedContentOutputRelPaths,
+      nextPublicRelPaths,
     );
-    contentRenderer = new ContentRenderer(siteVariables);
-    changeDetector = new ContentChangeDetector(siteVariables);
 
-    if (isFeatureEnabled(siteVariables, 'search')) {
-      pagefindRunner = new WatchPagefindRunner(siteVariables);
-    }
+    const nextProcessedExtSet = new Set(
+      getProcessedExtensions(
+        Object.keys(nextSiteVariables.codeLanguages || {}),
+      ),
+    );
+    const nextContentRenderer = new ContentRenderer(nextSiteVariables);
+    const nextChangeDetector = new ContentChangeDetector(nextSiteVariables);
+    const nextPagefindRunner = isFeatureEnabled(nextSiteVariables, 'search')
+      ? new WatchPagefindRunner(nextSiteVariables)
+      : undefined;
 
-    compileTemplates(siteVariables);
-    await contentRenderer.initHighlighter();
+    compileTemplates(nextSiteVariables);
+    await nextContentRenderer.initHighlighter();
 
-    assetFiles = [
-      ...(await bundle(siteVariables, { mode: 'development' })),
-      ...(await bundleReloadClient()),
+    const nextAssetFiles = [
+      ...(await bundle(nextSiteVariables, {
+        mode: 'development',
+        distDir: outputDir,
+      })),
+      ...(await bundleReloadClient(outputDir)),
     ];
 
-    copyFonts(distDir);
-    copyKatexAssets(distDir);
+    copyFonts(outputDir);
+    copyKatexAssets(outputDir);
 
-    if (isFeatureEnabled(siteVariables, 'favicon')) {
-      await generateFavicons(siteVariables, distDir);
-      generateWebAppManifest(siteVariables, distDir);
+    if (isFeatureEnabled(nextSiteVariables, 'favicon')) {
+      await generateFavicons(nextSiteVariables, outputDir);
+      generateWebAppManifest(nextSiteVariables, outputDir);
     }
 
-    if (copyAssets) {
-      publicRelPaths = copyPublicFiles(publicDir, distDir);
-      contentAssetRelPaths = copyContentAssets(
-        contentDir,
-        distDir,
-        [...processedExtSet],
-        publicRelPaths,
-      );
-    }
+    copyPublicFiles(publicDir, outputDir);
+    copyContentAssets(
+      contentDir,
+      outputDir,
+      [...nextProcessedExtSet],
+      nextPublicRelPaths,
+    );
 
-    return contentRenderer.processContent({ distDir, assetFiles });
+    const result = nextContentRenderer.processContent({
+      distDir: outputDir,
+      assetFiles: nextAssetFiles,
+    });
+    nextChangeDetector.detectChanges([]);
+    return {
+      result,
+      processedExtSet: nextProcessedExtSet,
+      contentRenderer: nextContentRenderer,
+      changeDetector: nextChangeDetector,
+      pagefindRunner: nextPagefindRunner,
+      assetFiles: nextAssetFiles,
+    };
+  }
+
+  function applyBuildState(
+    nextSiteVariables: SiteVariables,
+    build: Awaited<ReturnType<typeof buildSite>>,
+  ): void {
+    siteVariables = nextSiteVariables;
+    processedExtSet = build.processedExtSet;
+    contentRenderer = build.contentRenderer;
+    changeDetector = build.changeDetector;
+    pagefindRunner = build.pagefindRunner;
+    assetFiles = build.assetFiles;
   }
 
   async function initialBuild(): Promise<void> {
-    siteVariables = getDevSiteVariables();
-    fs.mkdirSync(distDir, { recursive: true });
+    const nextSiteVariables = getDevSiteVariables();
+    siteVariables = nextSiteVariables;
+    const tempDir = makeTempBuildDir();
+    let build: Awaited<ReturnType<typeof buildSite>> | undefined;
+    try {
+      build = await buildSite(tempDir, nextSiteVariables);
+    } finally {
+      if (!build || build.result.errors.length > 0) {
+        removeDirIfExists(tempDir);
+      }
+    }
 
-    const result = await buildFromConfig(true);
+    if (!build) {
+      throw new Error('Initial build failed before producing output');
+    }
 
+    const result = build.result;
     for (const err of result.errors) {
       log.error`${err.message}`;
     }
 
     if (result.errors.length === 0) {
+      replaceDistDir(tempDir);
+      applyBuildState(nextSiteVariables, build);
+      initialBuildFailed = false;
       printFlair();
       if (pagefindRunner) {
         pagefindRunner.update(distDir, result.htmlAssetsByPath);
@@ -263,6 +468,8 @@ export async function runWatch(options: {
         serveStarted = true;
         serve();
       }
+    } else {
+      initialBuildFailed = true;
     }
   }
 
@@ -294,14 +501,14 @@ export async function runWatch(options: {
     }
     rebuilding = true;
 
-    const changes = new Set(pendingChanges);
+    const changes = new Map(pendingChanges);
     pendingChanges.clear();
 
     broadcast('rebuilding');
 
     // Classify changes
     const categories = new Set<ChangeCategory>();
-    for (const filePath of changes) {
+    for (const filePath of changes.keys()) {
       const category = classifyChange(filePath);
       if (category) {
         categories.add(category);
@@ -311,41 +518,124 @@ export async function runWatch(options: {
     let succeeded = false;
 
     try {
-      // Site config changed, full restart
-      if (categories.has('config')) {
-        log.event`Site config changed, restarting`;
-        siteVariables = getDevSiteVariables();
+      const nextSiteVariables =
+        categories.has('config') || !siteVariables
+          ? getDevSiteVariables()
+          : siteVariables;
+      const nextPublicRelPaths = collectExistingRelPaths(publicDir);
+      const nextContentOutputRelPaths =
+        getComputedContentOutputRelPaths(nextSiteVariables);
+      const hasStructuralUnlink = [...changes].some(
+        ([filePath, event]) =>
+          event === 'unlink' &&
+          unlinkNeedsFullRebuild(
+            filePath,
+            nextSiteVariables,
+            nextPublicRelPaths,
+            nextContentOutputRelPaths,
+          ),
+      );
+      const needsFullRebuild =
+        initialBuildFailed ||
+        !siteVariables ||
+        !contentRenderer ||
+        !changeDetector ||
+        categories.has('config') ||
+        hasStructuralUnlink ||
+        [...changes.values()].some(event => event === 'add');
 
-        const result = await buildFromConfig(false);
+      if (needsFullRebuild) {
+        if (categories.has('config')) {
+          log.event`Site config changed, restarting`;
+        } else if (initialBuildFailed || !contentRenderer || !changeDetector) {
+          log.event`Recovering from failed initial build, full rebuild`;
+        } else {
+          log.event`Content or public structure changed, full rebuild`;
+        }
+
+        const tempDir = makeTempBuildDir();
+        let build: Awaited<ReturnType<typeof buildSite>> | undefined;
+        try {
+          build = await buildSite(tempDir, nextSiteVariables);
+        } catch (err) {
+          initialBuildFailed = true;
+          throw err;
+        } finally {
+          if (!build || build.result.errors.length > 0) {
+            removeDirIfExists(tempDir);
+          }
+        }
+        if (!build) {
+          throw new Error('Full rebuild failed before producing output');
+        }
+        const result = build.result;
         for (const err of result.errors) {
           log.error`${err.message}`;
         }
         if (result.errors.length === 0) {
+          replaceDistDir(tempDir);
+          applyBuildState(nextSiteVariables, build);
+          initialBuildFailed = false;
           onBuildSuccess(result);
           succeeded = true;
+        } else {
+          initialBuildFailed = true;
         }
         return;
       }
 
-      // Public file changed, copy just that file
-      if (categories.has('public') && !categories.has('content')) {
-        copyChangedPublicFiles(changes);
+      const activeSiteVariables = siteVariables;
+      const activeChangeDetector = changeDetector;
+      const activeContentRenderer = contentRenderer;
+      if (
+        !activeSiteVariables ||
+        !activeChangeDetector ||
+        !activeContentRenderer
+      ) {
+        throw new Error('Watch state was not initialized after startup');
+      }
+
+      assertNoOutputPathConflicts(
+        nextContentOutputRelPaths,
+        nextPublicRelPaths,
+      );
+
+      if (categories.size === 1 && categories.has('public')) {
+        for (const filePath of changes.keys()) {
+          const pubPath = toPublicRelativePath(filePath);
+          if (pubPath) {
+            log.event`${B`public/${pubPath}`} changed`;
+          }
+        }
+        for (const filePath of collectChangedPathsByCategory(
+          changes,
+          'public',
+        )) {
+          const absPath = path.resolve(filePath);
+          if (!fs.existsSync(absPath)) {
+            const relPath = toPosix(path.relative(publicDir, absPath));
+            if (!nextContentOutputRelPaths.has(relPath)) {
+              deleteOutputPath(distDir, relPath);
+            }
+            continue;
+          }
+          copyPublicFile(
+            publicDir,
+            distDir,
+            absPath,
+            nextContentOutputRelPaths,
+          );
+        }
         onBuildSuccess();
         succeeded = true;
+        initialBuildFailed = false;
         return;
       }
 
-      // Content changed, incremental rebuild
-      const detection = changeDetector.detectChanges(changes);
-
-      if (detection.needsRestart) {
-        log.event`Content structure changed, full rebuild`;
-        contentRenderer = new ContentRenderer(siteVariables);
-        await contentRenderer.initHighlighter();
-      }
+      const detection = activeChangeDetector.detectChanges(changes.keys());
 
       // Log changed content files
-      for (const filePath of changes) {
+      for (const filePath of changes.keys()) {
         const markdownPath = toContentMarkdownPath(filePath);
         if (markdownPath) {
           log.event`${B`${markdownPath}`} changed, rebuilding`;
@@ -353,27 +643,6 @@ export async function runWatch(options: {
           const pubPath = toPublicRelativePath(filePath);
           if (pubPath) {
             log.event`${B`public/${pubPath}`} changed`;
-          }
-        }
-      }
-
-      // Copy any changed public files too
-      if (categories.has('public')) {
-        copyChangedPublicFiles(changes);
-      }
-
-      // Copy any changed non-processed content files (images, PDFs, etc.)
-      if (categories.has('content')) {
-        for (const filePath of changes) {
-          if (classifyChange(filePath) !== 'content') {
-            continue;
-          }
-          const absPath = path.resolve(filePath);
-          const ext = path.extname(absPath).slice(1).toLowerCase();
-          if (!processedExtSet.has(ext) && fs.existsSync(absPath)) {
-            copyContentFile(contentDir, distDir, absPath, publicRelPaths);
-            const rel = toPosix(path.relative(contentDir, absPath));
-            contentAssetRelPaths.add(rel);
           }
         }
       }
@@ -386,7 +655,7 @@ export async function runWatch(options: {
             partialsChanged: detection.partialsChanged,
           };
 
-      const result = contentRenderer.processContent({
+      const result = activeContentRenderer.processContent({
         distDir,
         assetFiles,
         watchState,
@@ -397,10 +666,57 @@ export async function runWatch(options: {
       }
 
       if (result.errors.length === 0) {
+        for (const rel of result.removedOutputRelPaths) {
+          if (!nextPublicRelPaths.has(rel)) {
+            deleteOutputPath(distDir, rel);
+          }
+        }
+        for (const filePath of collectChangedPathsByCategory(
+          changes,
+          'content',
+        )) {
+          const absPath = path.resolve(filePath);
+          const ext = path.extname(absPath).slice(1).toLowerCase();
+          if (!fs.existsSync(absPath)) {
+            if (!processedExtSet.has(ext)) {
+              const relPath = toPosix(path.relative(contentDir, absPath));
+              if (!nextPublicRelPaths.has(relPath)) {
+                deleteOutputPath(distDir, relPath);
+              }
+            }
+            continue;
+          }
+          if (!processedExtSet.has(ext)) {
+            copyContentFile(contentDir, distDir, absPath, nextPublicRelPaths);
+          }
+        }
+        for (const filePath of collectChangedPathsByCategory(
+          changes,
+          'public',
+        )) {
+          const absPath = path.resolve(filePath);
+          if (!fs.existsSync(absPath)) {
+            const relPath = toPosix(path.relative(publicDir, absPath));
+            if (!nextContentOutputRelPaths.has(relPath)) {
+              deleteOutputPath(distDir, relPath);
+            }
+            continue;
+          }
+          copyPublicFile(
+            publicDir,
+            distDir,
+            absPath,
+            nextContentOutputRelPaths,
+          );
+        }
         onBuildSuccess(result);
         succeeded = true;
+        initialBuildFailed = false;
+      } else {
+        initialBuildFailed = true;
       }
     } catch (err) {
+      initialBuildFailed = true;
       log.error`Build failed: ${(err as Error).message}`;
     } finally {
       if (!succeeded) {
@@ -422,14 +738,30 @@ export async function runWatch(options: {
     debounceTimer = setTimeout(rebuild, DEBOUNCE_MS);
   }
 
-  function onFileChange(filePath: string): void {
-    pendingChanges.add(filePath);
+  function onFileChange(
+    filePath: string,
+    event: 'add' | 'change' | 'unlink',
+  ): void {
+    const previousEvent = pendingChanges.get(filePath);
+    if (
+      previousEvent === 'add' ||
+      previousEvent === 'unlink' ||
+      event === 'add' ||
+      event === 'unlink'
+    ) {
+      pendingChanges.set(filePath, previousEvent ?? event);
+      if (event === 'unlink' || previousEvent === 'unlink') {
+        pendingChanges.set(filePath, 'unlink');
+      } else {
+        pendingChanges.set(filePath, 'add');
+      }
+    } else {
+      pendingChanges.set(filePath, 'change');
+    }
     scheduleRebuild();
   }
 
   // Start
-
-  let initialBuildFailed = false;
 
   initialBuild()
     .catch(err => {
@@ -450,25 +782,37 @@ export async function runWatch(options: {
       const configWatcher = chokidar.watch(jsonDataDir, {
         ignoreInitial: true,
         depth: 0,
-        awaitWriteFinish: { stabilityThreshold: 100 },
+        atomic: true,
+        awaitWriteFinish: { stabilityThreshold: 1000 },
       });
       const onConfigFileChange = (filePath: string) => {
         if (configFilePaths.has(path.resolve(filePath))) {
-          onFileChange(filePath);
+          onFileChange(filePath, 'change');
         }
       };
-      configWatcher.on('add', onConfigFileChange);
+      const onConfigFileAdd = (filePath: string) => {
+        if (configFilePaths.has(path.resolve(filePath))) {
+          onFileChange(filePath, 'add');
+        }
+      };
+      const onConfigFileUnlink = (filePath: string) => {
+        if (configFilePaths.has(path.resolve(filePath))) {
+          onFileChange(filePath, 'unlink');
+        }
+      };
+      configWatcher.on('add', onConfigFileAdd);
       configWatcher.on('change', onConfigFileChange);
-      configWatcher.on('unlink', onConfigFileChange);
+      configWatcher.on('unlink', onConfigFileUnlink);
 
       const watcher = chokidar.watch(watchPaths, {
         ignoreInitial: true,
-        awaitWriteFinish: { stabilityThreshold: 100 },
+        atomic: true,
+        awaitWriteFinish: { stabilityThreshold: 1000 },
       });
 
-      watcher.on('change', onFileChange);
-      watcher.on('add', onFileChange);
-      watcher.on('unlink', onFileChange);
+      watcher.on('change', filePath => onFileChange(filePath, 'change'));
+      watcher.on('add', filePath => onFileChange(filePath, 'add'));
+      watcher.on('unlink', filePath => onFileChange(filePath, 'unlink'));
 
       let watchersReady = 0;
 
