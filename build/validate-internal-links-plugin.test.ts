@@ -140,6 +140,16 @@ describe('validateInternalLinks', () => {
     ).not.toThrow();
   });
 
+  test('ignores embedded tag markup inside non-target tag attributes', () => {
+    const md = createMd(['/about.html']);
+    expect(() =>
+      md.render(`<div data-template="<a href='/missing.html'>x</a>"></div>`),
+    ).not.toThrow();
+    expect(() =>
+      md.render(`<div data-template="<a href=/missing.html>x</a>"></div>`),
+    ).not.toThrow();
+  });
+
   test('allows protocol-relative URLs', () => {
     const md = createMd([]);
     expect(() => md.render('[CDN](//cdn.example.com/lib.js)')).not.toThrow();

@@ -149,6 +149,28 @@ describe('apply-base-path-plugin', () => {
     expect(html).not.toContain('/course/images/raw.png');
   });
 
+  test('does not rewrite embedded tag markup inside non-target tag attributes', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      [
+        `<div data-template="<a href='/docs'>x</a>"></div>`,
+        '',
+        `<div data-template="<img src=/images/raw.png>"></div>`,
+      ].join('\n'),
+    );
+
+    expect(html).toContain(`data-template="<a href='/docs'>x</a>"`);
+    expect(html).toContain(`data-template="<img src=/images/raw.png>"`);
+    expect(html).not.toContain('/course/docs');
+    expect(html).not.toContain('/course/images/raw.png');
+  });
+
   test('rewrites relative code file links without applying base path', () => {
     const md = new MarkdownIt();
     md.use(applyBasePathPlugin, {

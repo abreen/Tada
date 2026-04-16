@@ -91,15 +91,15 @@ export function findRawHtmlAttributes(
       tagNameEnd += 1;
     }
 
-    const tagName = html.slice(i + 1, tagNameEnd).toLowerCase();
-    if (!tagNameSet.has(tagName)) {
-      i += 1;
-      continue;
-    }
-
     const tagEnd = findTagEnd(html, tagNameEnd);
     if (tagEnd === -1) {
       break;
+    }
+
+    const tagName = html.slice(i + 1, tagNameEnd).toLowerCase();
+    if (!tagNameSet.has(tagName)) {
+      i = tagEnd + 1;
+      continue;
     }
 
     let attrIndex = tagNameEnd;
