@@ -1,6 +1,15 @@
-import { afterEach, beforeAll, describe, expect, test } from 'bun:test';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  test,
+} from 'bun:test';
 import { JSDOM } from 'jsdom';
 import mount from './index';
+
+const originalResizeObserver = globalThis.ResizeObserver;
 
 const resizeObserverState = {
   disconnectCalls: 0,
@@ -20,6 +29,15 @@ beforeAll(() => {
       resizeObserverState.disconnectCalls += 1;
     }
   };
+});
+
+afterAll(() => {
+  if (originalResizeObserver === undefined) {
+    delete (globalThis as Record<string, unknown>).ResizeObserver;
+    return;
+  }
+
+  globalThis.ResizeObserver = originalResizeObserver;
 });
 
 function create(html: string) {
