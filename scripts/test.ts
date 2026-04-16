@@ -1,7 +1,7 @@
 import { $ } from 'bun';
 
 const suite = process.argv[2] ?? 'all';
-const quiet = !!process.env.CLAUDECODE;
+const quiet = !!process.env.AGENT;
 
 const bunQuiet = quiet ? ['--only-failures'] : [];
 const pytestFlags = quiet
