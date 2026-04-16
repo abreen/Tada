@@ -8,6 +8,8 @@ import { makeLogger } from './log';
 import type { SiteVariables } from './types';
 
 const log = makeLogger(import.meta.url);
+const rawHtmlAttrPattern =
+  /(<(?:a|img)\b[^>]*\b(?:href|src)\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi;
 
 interface ApplyBasePathOptions {
   literateJavaOutputPaths?: Set<string>;
@@ -91,25 +93,35 @@ export default function applyBasePathPlugin(
         token.attrSet('src', afterApply);
       }
     } else if (token.type === 'html_block' || token.type === 'html_inline') {
-      token.content = token.content
-        .replace(
-          /(<a\b[^>]*\bhref=")(\/)([^"]*")/g,
-          (match, prefix, slash, rest) => {
-            const href = slash + rest.slice(0, -1);
-            const afterApply = applyBasePath(href);
-            log.debug`Applying base path to a tag href: ${href} -> ${afterApply}`;
-            return prefix + afterApply + '"';
-          },
-        )
-        .replace(
-          /(<img\b[^>]*\bsrc=")(\/)([^"]*")/g,
-          (match, prefix, slash, rest) => {
-            const src = slash + rest.slice(0, -1);
-            const afterApply = applyBasePath(src);
-            log.debug`Applying base path to img tag src: ${src} -> ${afterApply}`;
-            return prefix + afterApply + '"';
-          },
-        );
+      token.content = token.content.replace(
+        rawHtmlAttrPattern,
+        (
+          match,
+          prefix,
+          doubleQuotedValue,
+          singleQuotedValue,
+          unquotedValue,
+        ) => {
+          const value =
+            doubleQuotedValue ?? singleQuotedValue ?? unquotedValue ?? '';
+          if (!value.startsWith('/')) {
+            return match;
+          }
+
+          const afterApply = applyBasePath(value);
+          log.debug`Applying base path to raw HTML attribute: ${value} -> ${afterApply}`;
+
+          if (doubleQuotedValue !== undefined) {
+            return `${prefix}"${afterApply}"`;
+          }
+
+          if (singleQuotedValue !== undefined) {
+            return `${prefix}'${afterApply}'`;
+          }
+
+          return `${prefix}${afterApply}`;
+        },
+      );
     }
 
     token.children?.forEach(checkAndApplyBasePath);

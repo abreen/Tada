@@ -106,6 +106,20 @@ describe('validateInternalLinks', () => {
     );
   });
 
+  test('validates raw HTML links with single-quoted href', () => {
+    const md = createMd(['/about.html']);
+    expect(() => md.render("<a href='/missing.html'>link</a>")).toThrow(
+      'broken internal link',
+    );
+  });
+
+  test('validates raw HTML links with unquoted href', () => {
+    const md = createMd(['/about.html']);
+    expect(() => md.render('<a href=/missing.html>link</a>')).toThrow(
+      'broken internal link',
+    );
+  });
+
   test('allows protocol-relative URLs', () => {
     const md = createMd([]);
     expect(() => md.render('[CDN](//cdn.example.com/lib.js)')).not.toThrow();

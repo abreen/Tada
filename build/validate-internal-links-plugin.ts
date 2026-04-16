@@ -5,6 +5,8 @@ import { isInternalLink } from './utils/link';
 import { makeLogger } from './log';
 
 const log = makeLogger(import.meta.url);
+const rawHtmlHrefPattern =
+  /<a\b[^>]*\bhref\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s"'=<>`]+))/gi;
 
 interface ValidateInternalLinksOptions {
   enabled?: boolean;
@@ -174,10 +176,13 @@ export default function validateInternalLinks(
         validateHref(href);
       }
     } else if (token.type === 'html_block' || token.type === 'html_inline') {
-      token.content.replace(/<a\b[^>]*\bhref\s*=\s*"([^"]+)"/gi, (_, href) => {
-        validateHref(href);
-        return _;
-      });
+      token.content.replace(
+        rawHtmlHrefPattern,
+        (_, doubleQuotedHref, singleQuotedHref, unquotedHref) => {
+          validateHref(doubleQuotedHref ?? singleQuotedHref ?? unquotedHref);
+          return _;
+        },
+      );
     }
 
     token.children?.forEach(validateToken);

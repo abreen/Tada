@@ -57,6 +57,46 @@ describe('apply-base-path-plugin', () => {
     expect(html).toContain('href="relative.html"');
   });
 
+  test('rewrites raw html attributes with single quotes', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      [
+        "<img src='/images/raw.png' alt='Raw'>",
+        '',
+        "<a href='/about/'>About</a>",
+      ].join('\n'),
+    );
+
+    expect(html).toContain("src='/course/images/raw.png'");
+    expect(html).toContain("href='/course/about/'");
+  });
+
+  test('rewrites raw html attributes without quotes', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      [
+        '<img src=/images/raw.png alt=Raw>',
+        '',
+        '<a href=/about/>About</a>',
+      ].join('\n'),
+    );
+
+    expect(html).toContain('src=/course/images/raw.png');
+    expect(html).toContain('href=/course/about/');
+  });
+
   test('rewrites relative code file links without applying base path', () => {
     const md = new MarkdownIt();
     md.use(applyBasePathPlugin, {
