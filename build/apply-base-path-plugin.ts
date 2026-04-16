@@ -1,6 +1,7 @@
 import path from 'path';
 import type MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
+import { JSDOM } from 'jsdom';
 import { createApplyBasePath } from './utils/paths';
 import { isFeatureEnabled } from './features';
 import { isInternalLink } from './utils/link';
@@ -8,6 +9,47 @@ import { makeLogger } from './log';
 import type { SiteVariables } from './types';
 
 const log = makeLogger(import.meta.url);
+
+function serializeStartTag(element: Element): string {
+  const attrs = Array.from(element.attributes).map(attr =>
+    attr.value === '' ? attr.name : `${attr.name}="${attr.value}"`,
+  );
+  return `<${element.tagName.toLowerCase()}${attrs.length > 0 ? ` ${attrs.join(' ')}` : ''}>`;
+}
+
+function isStandaloneOpeningAnchorTag(html: string): boolean {
+  if (!/^<a\b/i.test(html)) {
+    return false;
+  }
+
+  let i = 2;
+  let quote: '"' | "'" | null = null;
+
+  while (i < html.length) {
+    const char = html[i];
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      i += 1;
+      continue;
+    }
+
+    if (char === '>') {
+      return html.slice(i + 1).trim() === '';
+    }
+
+    i += 1;
+  }
+
+  return false;
+}
 
 interface ApplyBasePathOptions {
   literateJavaOutputPaths?: Set<string>;
@@ -91,25 +133,45 @@ export default function applyBasePathPlugin(
         token.attrSet('src', afterApply);
       }
     } else if (token.type === 'html_block' || token.type === 'html_inline') {
-      token.content = token.content
-        .replace(
-          /(<a\b[^>]*\bhref=")(\/)([^"]*")/g,
-          (match, prefix, slash, rest) => {
-            const href = slash + rest.slice(0, -1);
+      if (isStandaloneOpeningAnchorTag(token.content)) {
+        const dom = new JSDOM(`<body>${token.content}__tada__</a></body>`);
+        const anchor = dom.window.document.body.querySelector('a[href]');
+        const href = anchor?.getAttribute('href');
+        if (anchor && href && href.startsWith('/')) {
+          const afterApply = applyBasePath(href);
+          log.debug`Applying base path to raw HTML anchor: ${href} -> ${afterApply}`;
+          anchor.setAttribute('href', afterApply);
+          token.content = serializeStartTag(anchor);
+        }
+      } else {
+        const dom = new JSDOM(`<body>${token.content}</body>`);
+        const { document } = dom.window;
+        let changed = false;
+
+        for (const anchor of document.body.querySelectorAll('a[href]')) {
+          const href = anchor.getAttribute('href');
+          if (href && href.startsWith('/')) {
             const afterApply = applyBasePath(href);
-            log.debug`Applying base path to a tag href: ${href} -> ${afterApply}`;
-            return prefix + afterApply + '"';
-          },
-        )
-        .replace(
-          /(<img\b[^>]*\bsrc=")(\/)([^"]*")/g,
-          (match, prefix, slash, rest) => {
-            const src = slash + rest.slice(0, -1);
+            log.debug`Applying base path to raw HTML anchor: ${href} -> ${afterApply}`;
+            anchor.setAttribute('href', afterApply);
+            changed = true;
+          }
+        }
+
+        for (const image of document.body.querySelectorAll('img[src]')) {
+          const src = image.getAttribute('src');
+          if (src && src.startsWith('/')) {
             const afterApply = applyBasePath(src);
-            log.debug`Applying base path to img tag src: ${src} -> ${afterApply}`;
-            return prefix + afterApply + '"';
-          },
-        );
+            log.debug`Applying base path to raw HTML image: ${src} -> ${afterApply}`;
+            image.setAttribute('src', afterApply);
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          token.content = document.body.innerHTML;
+        }
+      }
     }
 
     token.children?.forEach(checkAndApplyBasePath);

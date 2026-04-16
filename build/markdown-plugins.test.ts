@@ -57,6 +57,111 @@ describe('apply-base-path-plugin', () => {
     expect(html).toContain('href="relative.html"');
   });
 
+  test('rewrites raw html href and src attributes across quoting styles', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      [
+        "<a href='/about/'>Single</a>",
+        '',
+        '<img src=/images/raw.png alt=Raw>',
+        '',
+        '<a href="/docs">Double</a>',
+      ].join('\n'),
+    );
+
+    expect(html).toContain('href="/course/about/"');
+    expect(html).toContain('src="/course/images/raw.png"');
+    expect(html).toContain('href="/course/docs"');
+  });
+
+  test('rewrites only real a[href] and img[src] attributes', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      [
+        '<a href="/docs">Docs</a>',
+        '',
+        '<img src="/images/raw.png" alt="Raw">',
+        '',
+        "<a data-href='/about/'>Data</a>",
+        '',
+        '<a src="/images/raw.png">Not a link attr</a>',
+        '',
+        '<img href="/docs" alt="Not an image src">',
+        '',
+        `<div data-template="<a href='/nested'>x</a>"></div>`,
+      ].join('\n'),
+    );
+
+    expect(html).toContain('href="/course/docs"');
+    expect(html).toContain('src="/course/images/raw.png"');
+    expect(html).toContain("data-href='/about/'");
+    expect(html).toContain('src="/images/raw.png">Not a link attr</a>');
+    expect(html).toContain('href="/docs" alt="Not an image src"');
+    expect(html).toContain('data-template="');
+    expect(html).not.toContain('/course/nested');
+  });
+
+  test('preserves trailing content in raw html tokens that start with img', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      `<img src="/images/one.png"><img src="/images/two.png"><span>tail</span>`,
+    );
+
+    expect(html).toContain('src="/course/images/one.png"');
+    expect(html).toContain('src="/course/images/two.png"');
+    expect(html).toContain('<span>tail</span>');
+  });
+
+  test('preserves trailing content in raw html tokens that start with a', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      `<a href="/docs">Docs</a><img src="/images/two.png"><span>tail</span>`,
+    );
+
+    expect(html).toContain('href="/course/docs"');
+    expect(html).toContain('src="/course/images/two.png"');
+    expect(html).toContain('<span>tail</span>');
+  });
+
+  test('rewrites standalone opening anchor tags with > inside quoted attrs', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(`<a href="/docs" title="1 > 0">Docs</a>`);
+
+    expect(html).toContain('href="/course/docs"');
+    expect(html).toContain('title="1 > 0"');
+    expect(html).not.toContain('</a>Docs</a>');
+  });
+
   test('rewrites relative code file links without applying base path', () => {
     const md = new MarkdownIt();
     md.use(applyBasePathPlugin, {

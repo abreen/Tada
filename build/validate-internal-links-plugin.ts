@@ -1,5 +1,6 @@
 import type MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
+import { JSDOM } from 'jsdom';
 import path from 'path';
 import { isInternalLink } from './utils/link';
 import { makeLogger } from './log';
@@ -174,10 +175,15 @@ export default function validateInternalLinks(
         validateHref(href);
       }
     } else if (token.type === 'html_block' || token.type === 'html_inline') {
-      token.content.replace(/<a\b[^>]*\bhref\s*=\s*"([^"]+)"/gi, (_, href) => {
-        validateHref(href);
-        return _;
-      });
+      const dom = new JSDOM(`<body>${token.content}</body>`);
+      for (const anchor of dom.window.document.body.querySelectorAll(
+        'a[href]',
+      )) {
+        const href = anchor.getAttribute('href');
+        if (href) {
+          validateHref(href);
+        }
+      }
     }
 
     token.children?.forEach(validateToken);

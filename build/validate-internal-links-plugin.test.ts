@@ -106,6 +106,29 @@ describe('validateInternalLinks', () => {
     );
   });
 
+  test('validates raw HTML links across quoting styles', () => {
+    const md = createMd(['/about.html']);
+    expect(() => md.render("<a href='/missing.html'>link</a>")).toThrow(
+      'broken internal link',
+    );
+    expect(() => md.render('<a href=/missing.html>link</a>')).toThrow(
+      'broken internal link',
+    );
+  });
+
+  test('ignores non-link raw HTML attributes', () => {
+    const md = createMd(['/about.html']);
+    expect(() =>
+      md.render("<a data-href='/missing.html'>link</a>"),
+    ).not.toThrow();
+    expect(() =>
+      md.render('<a title="copy href=/missing.html">link</a>'),
+    ).not.toThrow();
+    expect(() =>
+      md.render(`<div data-template="<a href='/missing.html'>x</a>"></div>`),
+    ).not.toThrow();
+  });
+
   test('allows protocol-relative URLs', () => {
     const md = createMd([]);
     expect(() => md.render('[CDN](//cdn.example.com/lib.js)')).not.toThrow();
