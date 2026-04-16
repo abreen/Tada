@@ -9,7 +9,7 @@ import { scheduleTask } from '../util';
 
 const PER_PAGE_COMPONENTS: Record<
   string,
-  (w: Window) => void | (() => void) | Promise<void>
+  (w: Window) => void | (() => void) | Promise<void | (() => void)>
 > = {
   toc: mountTableOfContents,
   anchor: mountAnchor,

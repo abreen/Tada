@@ -1,4 +1,6 @@
-export default async function mount(window: Window): Promise<void> {
+export default async function mount(
+  window: Window,
+): Promise<void | (() => void)> {
   const { document } = window;
   if (!document.body.classList.contains('code')) {
     return;
@@ -109,6 +111,11 @@ export default async function mount(window: Window): Promise<void> {
     syncing = false;
   });
 
-  new ResizeObserver(updateScrollbar).observe(codeBody);
+  const resizeObserver = new ResizeObserver(updateScrollbar);
+  resizeObserver.observe(codeBody);
   updateScrollbar();
+
+  return () => {
+    resizeObserver.disconnect();
+  };
 }

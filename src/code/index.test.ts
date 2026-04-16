@@ -1,15 +1,25 @@
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import mount from './index';
 
+const resizeObserverState = {
+  disconnectCalls: 0,
+  observeCalls: 0,
+  unobserveCalls: 0,
+};
+
 beforeAll(() => {
-  if (typeof globalThis.ResizeObserver === 'undefined') {
-    (globalThis as Record<string, unknown>).ResizeObserver = class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
-  }
+  (globalThis as Record<string, unknown>).ResizeObserver = class {
+    observe(_target: Element) {
+      resizeObserverState.observeCalls += 1;
+    }
+    unobserve(_target: Element) {
+      resizeObserverState.unobserveCalls += 1;
+    }
+    disconnect() {
+      resizeObserverState.disconnectCalls += 1;
+    }
+  };
 });
 
 function create(html: string) {
@@ -51,6 +61,12 @@ function selectAll(win: Window, root: Node): void {
   selection.removeAllRanges();
   selection.addRange(range);
 }
+
+afterEach(() => {
+  resizeObserverState.observeCalls = 0;
+  resizeObserverState.unobserveCalls = 0;
+  resizeObserverState.disconnectCalls = 0;
+});
 
 describe('code', () => {
   test('returns early when body does not have code class', async () => {
@@ -210,5 +226,21 @@ describe('code', () => {
     ) as HTMLElement;
     expect(codeBody).not.toBeNull();
     expect(scrollbar).not.toBeNull();
+  });
+
+  test('returns a cleanup function that disconnects the resize observer', async () => {
+    const win = create(
+      '<div class="code-body"><div class="code-row"><code>x</code></div></div>' +
+        '<div class="code-scrollbar"><div></div></div>',
+    );
+
+    const cleanup = await mount(win);
+
+    expect(typeof cleanup).toBe('function');
+    expect(resizeObserverState.observeCalls).toBe(1);
+
+    cleanup!();
+
+    expect(resizeObserverState.disconnectCalls).toBe(1);
   });
 });
