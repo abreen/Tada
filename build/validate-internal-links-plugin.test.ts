@@ -130,6 +130,16 @@ describe('validateInternalLinks', () => {
     ).not.toThrow();
   });
 
+  test('ignores href text inside other quoted attribute values', () => {
+    const md = createMd(['/about.html']);
+    expect(() =>
+      md.render('<a title="copy href=/missing.html">link</a>'),
+    ).not.toThrow();
+    expect(() =>
+      md.render("<a title='copy href=/missing.html'>link</a>"),
+    ).not.toThrow();
+  });
+
   test('allows protocol-relative URLs', () => {
     const md = createMd([]);
     expect(() => md.render('[CDN](//cdn.example.com/lib.js)')).not.toThrow();

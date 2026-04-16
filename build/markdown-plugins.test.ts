@@ -127,6 +127,28 @@ describe('apply-base-path-plugin', () => {
     expect(html).not.toContain('/course/docs/');
   });
 
+  test('does not rewrite href or src text inside quoted attribute values', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      [
+        '<a title="example href=/docs">About</a>',
+        '',
+        "<img alt='example src=/images/raw.png'>",
+      ].join('\n'),
+    );
+
+    expect(html).toContain('title="example href=/docs"');
+    expect(html).toContain("alt='example src=/images/raw.png'");
+    expect(html).not.toContain('/course/docs');
+    expect(html).not.toContain('/course/images/raw.png');
+  });
+
   test('rewrites relative code file links without applying base path', () => {
     const md = new MarkdownIt();
     md.use(applyBasePathPlugin, {

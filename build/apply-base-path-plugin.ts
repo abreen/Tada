@@ -2,14 +2,13 @@ import path from 'path';
 import type MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import { createApplyBasePath } from './utils/paths';
+import { findRawHtmlAttributes } from './utils/raw-html-attributes';
 import { isFeatureEnabled } from './features';
 import { isInternalLink } from './utils/link';
 import { makeLogger } from './log';
 import type { SiteVariables } from './types';
 
 const log = makeLogger(import.meta.url);
-const rawHtmlAttrPattern =
-  /(<(?:a|img)\b[^>]*\s(?:href|src)\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi;
 
 interface ApplyBasePathOptions {
   literateJavaOutputPaths?: Set<string>;
@@ -93,35 +92,28 @@ export default function applyBasePathPlugin(
         token.attrSet('src', afterApply);
       }
     } else if (token.type === 'html_block' || token.type === 'html_inline') {
-      token.content = token.content.replace(
-        rawHtmlAttrPattern,
-        (
-          match,
-          prefix,
-          doubleQuotedValue,
-          singleQuotedValue,
-          unquotedValue,
-        ) => {
-          const value =
-            doubleQuotedValue ?? singleQuotedValue ?? unquotedValue ?? '';
-          if (!value.startsWith('/')) {
-            return match;
-          }
-
-          const afterApply = applyBasePath(value);
-          log.debug`Applying base path to raw HTML attribute: ${value} -> ${afterApply}`;
-
-          if (doubleQuotedValue !== undefined) {
-            return `${prefix}"${afterApply}"`;
-          }
-
-          if (singleQuotedValue !== undefined) {
-            return `${prefix}'${afterApply}'`;
-          }
-
-          return `${prefix}${afterApply}`;
-        },
+      const matches = findRawHtmlAttributes(
+        token.content,
+        ['a', 'img'],
+        ['href', 'src'],
       );
+      if (matches.length > 0) {
+        let rewritten = '';
+        let lastIndex = 0;
+        for (const match of matches) {
+          rewritten += token.content.slice(lastIndex, match.valueStart);
+          if (match.value.startsWith('/')) {
+            const afterApply = applyBasePath(match.value);
+            log.debug`Applying base path to raw HTML attribute: ${match.value} -> ${afterApply}`;
+            rewritten += afterApply;
+          } else {
+            rewritten += match.value;
+          }
+          lastIndex = match.valueEnd;
+        }
+        rewritten += token.content.slice(lastIndex);
+        token.content = rewritten;
+      }
     }
 
     token.children?.forEach(checkAndApplyBasePath);

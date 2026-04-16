@@ -3,10 +3,9 @@ import type Token from 'markdown-it/lib/token.mjs';
 import path from 'path';
 import { isInternalLink } from './utils/link';
 import { makeLogger } from './log';
+import { findRawHtmlAttributes } from './utils/raw-html-attributes';
 
 const log = makeLogger(import.meta.url);
-const rawHtmlHrefPattern =
-  /<a\b[^>]*\shref\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s"'=<>`]+))/gi;
 
 interface ValidateInternalLinksOptions {
   enabled?: boolean;
@@ -176,13 +175,13 @@ export default function validateInternalLinks(
         validateHref(href);
       }
     } else if (token.type === 'html_block' || token.type === 'html_inline') {
-      token.content.replace(
-        rawHtmlHrefPattern,
-        (_, doubleQuotedHref, singleQuotedHref, unquotedHref) => {
-          validateHref(doubleQuotedHref ?? singleQuotedHref ?? unquotedHref);
-          return _;
-        },
-      );
+      for (const match of findRawHtmlAttributes(
+        token.content,
+        ['a'],
+        ['href'],
+      )) {
+        validateHref(match.value);
+      }
     }
 
     token.children?.forEach(validateToken);
