@@ -190,22 +190,62 @@ export class ContentRenderer {
     return assets;
   }
 
+  getOutputAssetPaths(): Set<string> {
+    const assetPaths = new Set<string>();
+    for (const assets of this.sourceFileCache.values()) {
+      for (const asset of assets) {
+        assetPaths.add(asset.assetPath);
+      }
+    }
+    return assetPaths;
+  }
+
+  private getPublicConflictError(assetPath: string): Error {
+    log.error`content/${assetPath} conflicts with public/${assetPath}`;
+    return new Error(
+      `content/${assetPath} and public/${assetPath} have the same path`,
+    );
+  }
+
+  private writeAssets(
+    distDir: string,
+    assets: Asset[],
+    publicRelPaths?: Set<string>,
+  ): Error[] {
+    const errors: Error[] = [];
+    for (const asset of assets) {
+      if (publicRelPaths?.has(asset.assetPath)) {
+        errors.push(this.getPublicConflictError(asset.assetPath));
+        continue;
+      }
+      const outPath = path.join(distDir, asset.assetPath);
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      fs.writeFileSync(outPath, asset.content);
+    }
+    return errors;
+  }
+
   writeUncachedAssets(
     distDir: string,
     copiedSourceFiles: string[],
     contentDir: string,
-  ): void {
+    publicRelPaths?: Set<string>,
+  ): Error[] {
+    const errors: Error[] = [];
     for (const filePath of copiedSourceFiles) {
-      for (const asset of renderCopiedContentAsset({
-        filePath,
-        contentDir,
-        siteVariables: this.siteVariables,
-      })) {
-        const outPath = path.join(distDir, asset.assetPath);
-        fs.mkdirSync(path.dirname(outPath), { recursive: true });
-        fs.writeFileSync(outPath, asset.content);
-      }
+      errors.push(
+        ...this.writeAssets(
+          distDir,
+          renderCopiedContentAsset({
+            filePath,
+            contentDir,
+            siteVariables: this.siteVariables,
+          }),
+          publicRelPaths,
+        ),
+      );
     }
+    return errors;
   }
 
   updateSourceCache(
@@ -235,15 +275,17 @@ export class ContentRenderer {
     this.sourceFileCache.set(filePath, assets);
   }
 
-  writeCachedAssets(distDir: string, buildContentFiles: string[]): void {
+  writeCachedAssets(
+    distDir: string,
+    buildContentFiles: string[],
+    publicRelPaths?: Set<string>,
+  ): Error[] {
+    const errors: Error[] = [];
     for (const filePath of buildContentFiles) {
       const assets = this.getCachedAssets(filePath);
-      for (const asset of assets) {
-        const outPath = path.join(distDir, asset.assetPath);
-        fs.mkdirSync(path.dirname(outPath), { recursive: true });
-        fs.writeFileSync(outPath, asset.content);
-      }
+      errors.push(...this.writeAssets(distDir, assets, publicRelPaths));
     }
+    return errors;
   }
 
   pruneRemovedSources(
@@ -268,6 +310,7 @@ export class ContentRenderer {
   processContent({
     distDir,
     assetFiles,
+    publicRelPaths,
     watchState,
   }: ContentRenderOptions): ContentRenderResult {
     const contentDir: string = getContentDir();
@@ -349,8 +392,17 @@ export class ContentRenderer {
       );
     }
 
-    this.writeCachedAssets(distDir, buildContentFiles);
-    this.writeUncachedAssets(distDir, dirtyCopiedSourceFiles, contentDir);
+    errors.push(
+      ...this.writeCachedAssets(distDir, buildContentFiles, publicRelPaths),
+    );
+    errors.push(
+      ...this.writeUncachedAssets(
+        distDir,
+        dirtyCopiedSourceFiles,
+        contentDir,
+        publicRelPaths,
+      ),
+    );
     this.lastBuildFiles = buildFileSet;
 
     // Collect HTML asset content for Pagefind

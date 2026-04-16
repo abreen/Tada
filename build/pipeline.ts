@@ -78,6 +78,7 @@ export async function runPipeline(
   const { errors, htmlAssetsByPath } = contentRenderer.processContent({
     distDir,
     assetFiles,
+    publicRelPaths,
   });
 
   for (const err of errors) {

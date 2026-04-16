@@ -35,6 +35,7 @@ export interface Asset {
 export interface ContentRenderOptions {
   distDir: string;
   assetFiles: string[];
+  publicRelPaths?: Set<string>;
   watchState?: WatchState;
 }
 

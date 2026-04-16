@@ -115,3 +115,27 @@ class TestDevBuildErrors:
         result = run_tada("dev", cwd=str(tmp_path))
         assert result.returncode == 1
         assert "site.dev.json" in result.stderr
+
+    def test_fails_when_public_file_conflicts_with_rendered_page_output(self, site_dir):
+        (site_dir / "content" / "about.md").write_text(
+            "---\ntitle: About\n---\n\n# About\n"
+        )
+        (site_dir / "public" / "about.html").write_text("public about\n")
+
+        result = run_tada("dev", cwd=str(site_dir))
+
+        output = result.stdout + result.stderr
+        assert result.returncode == 1
+        assert "content/about.html conflicts with public/about.html" in output
+        assert "content/about.html and public/about.html have the same path" in output
+
+    def test_fails_when_public_file_conflicts_with_copied_content_output(self, site_dir):
+        (site_dir / "content" / "about.py").write_text("print('about')\n")
+        (site_dir / "public" / "about.py").write_text("public about\n")
+
+        result = run_tada("dev", cwd=str(site_dir))
+
+        output = result.stdout + result.stderr
+        assert result.returncode == 1
+        assert "content/about.py conflicts with public/about.py" in output
+        assert "content/about.py and public/about.py have the same path" in output

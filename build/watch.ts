@@ -194,7 +194,15 @@ export async function runWatch(options: {
       }
       const absPath = path.resolve(filePath);
       if (fs.existsSync(absPath)) {
-        copyPublicFile(publicDir, distDir, absPath, contentAssetRelPaths);
+        copyPublicFile(
+          publicDir,
+          distDir,
+          absPath,
+          new Set([
+            ...contentAssetRelPaths,
+            ...contentRenderer.getOutputAssetPaths(),
+          ]),
+        );
         const rel = toPosix(path.relative(publicDir, absPath));
         publicRelPaths.add(rel);
       }
@@ -240,7 +248,11 @@ export async function runWatch(options: {
       );
     }
 
-    return contentRenderer.processContent({ distDir, assetFiles });
+    return contentRenderer.processContent({
+      distDir,
+      assetFiles,
+      publicRelPaths,
+    });
   }
 
   async function initialBuild(): Promise<void> {
@@ -389,6 +401,7 @@ export async function runWatch(options: {
       const result = contentRenderer.processContent({
         distDir,
         assetFiles,
+        publicRelPaths,
         watchState,
       });
 
