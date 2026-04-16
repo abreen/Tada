@@ -6,7 +6,7 @@ import { makeLogger } from './log';
 
 const log = makeLogger(import.meta.url);
 const rawHtmlHrefPattern =
-  /<a\b[^>]*\bhref\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s"'=<>`]+))/gi;
+  /<a\b[^>]*\shref\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s"'=<>`]+))/gi;
 
 interface ValidateInternalLinksOptions {
   enabled?: boolean;

@@ -9,7 +9,7 @@ import type { SiteVariables } from './types';
 
 const log = makeLogger(import.meta.url);
 const rawHtmlAttrPattern =
-  /(<(?:a|img)\b[^>]*\b(?:href|src)\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi;
+  /(<(?:a|img)\b[^>]*\s(?:href|src)\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi;
 
 interface ApplyBasePathOptions {
   literateJavaOutputPaths?: Set<string>;

@@ -97,6 +97,36 @@ describe('apply-base-path-plugin', () => {
     expect(html).toContain('href=/course/about/');
   });
 
+  test('does not rewrite data-href or data-src attributes', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      codeLanguages: {},
+      features: { code: true },
+    });
+
+    const html = md.render(
+      [
+        "<img data-src='/images/raw.png' alt='Raw'>",
+        '',
+        '<img data-src=/images/raw-2.png alt=Raw>',
+        '',
+        "<a data-href='/about/'>About</a>",
+        '',
+        '<a data-href=/docs/>Docs</a>',
+      ].join('\n'),
+    );
+
+    expect(html).toContain("data-src='/images/raw.png'");
+    expect(html).toContain('data-src=/images/raw-2.png');
+    expect(html).toContain("data-href='/about/'");
+    expect(html).toContain('data-href=/docs/');
+    expect(html).not.toContain('/course/images/raw.png');
+    expect(html).not.toContain('/course/images/raw-2.png');
+    expect(html).not.toContain('/course/about/');
+    expect(html).not.toContain('/course/docs/');
+  });
+
   test('rewrites relative code file links without applying base path', () => {
     const md = new MarkdownIt();
     md.use(applyBasePathPlugin, {
