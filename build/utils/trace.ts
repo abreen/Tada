@@ -266,6 +266,25 @@ function materializeTraceOutputs({
   return true;
 }
 
+function buildManifestUrl({
+  relDir,
+  className,
+  applyBasePath,
+}: {
+  relDir: string;
+  className: string;
+  applyBasePath: (subPath: string) => string;
+}): string {
+  return applyBasePath(
+    normalizeOutputPath(
+      '/' +
+        [relDir, '_traces', className, 'manifest.json']
+          .filter(Boolean)
+          .join('/'),
+    ),
+  );
+}
+
 function renderWidgetHtml({
   highlightedSource,
   manifestUrl,
@@ -346,7 +365,10 @@ export function createTraceHelpers(context: TraceContext): {
           for (const outputPath of outputPaths) {
             dependencyCollector?.generatedOutputPaths?.add(outputPath);
           }
-          return cached;
+          return {
+            ...cached,
+            manifestUrl: buildManifestUrl({ relDir, className, applyBasePath }),
+          };
         }
       }
     }
@@ -393,14 +415,11 @@ export function createTraceHelpers(context: TraceContext): {
         dependencyCollector?.generatedOutputPaths?.add(outputPath);
       }
 
-      const manifestUrl = applyBasePath(
-        normalizeOutputPath(
-          '/' +
-            [relDir, '_traces', className, 'manifest.json']
-              .filter(Boolean)
-              .join('/'),
-        ),
-      );
+      const manifestUrl = buildManifestUrl({
+        relDir,
+        className,
+        applyBasePath,
+      });
 
       const totalSteps = manifest.totalSteps;
       const mtime = fs.statSync(javaFilePath).mtimeMs;

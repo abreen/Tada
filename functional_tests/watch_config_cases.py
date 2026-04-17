@@ -53,6 +53,39 @@ class TestWatchConfig:
         assert watch.proc.poll() is None
         assert dist_file.read_text() == before_text
 
+    def test_base_path_change_updates_trace_manifest_urls(self, tmp_path):
+        result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
+        assert result.returncode == 0, f"init failed: {result.stderr}"
+        site_dir = tmp_path / "testsite"
+
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
+
+            lab_html = site_dir / "dist" / "labs" / "01" / "index.html"
+            assert lab_html.exists()
+            before_html = lab_html.read_text()
+            assert (
+                'data-trace-manifest="/labs/01/_traces/TraceDemo/manifest.json"'
+                in before_html
+            )
+            before_mtime = lab_html.stat().st_mtime
+
+            set_site_config(site_dir, {"basePath": "/course"})
+            wp.wait_for_rebuild(lab_html, "modified", before_mtime=before_mtime)
+
+            after_html = lab_html.read_text()
+            assert (
+                'data-trace-manifest="/course/labs/01/_traces/TraceDemo/manifest.json"'
+                in after_html
+            )
+            assert (
+                'data-trace-manifest="/course/labs/01/_traces/SearchTreeDemo/manifest.json"'
+                in after_html
+            )
+        finally:
+            wp.stop()
+
 
 class TestWatchInitialConflict:
     """Watch startup should reject output-path conflicts before writing outputs."""
