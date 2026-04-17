@@ -62,6 +62,7 @@ export async function buildFull({
         assetFiles,
         outputDir,
         traceCache,
+        cachedTraceSourceDir: distDir,
       });
       if (record.outputs.size > 0) {
         contentRecords.set(filePath, record);

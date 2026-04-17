@@ -209,6 +209,7 @@ export function renderPlainTextPageAsset({
   assetFiles,
   literateJavaOutputPaths,
   dependencyCollector,
+  cachedTraceSourceDir,
   traceCache,
   javacAvailable,
 }: RenderPlainTextOptions): Asset[] {
@@ -232,6 +233,7 @@ export function renderPlainTextPageAsset({
       contentDir,
       distDir,
       literateJavaOutputPaths,
+      cachedTraceSourceDir,
       javacAvailable,
     },
   );
@@ -388,6 +390,7 @@ function renderPlainTextContent(
     contentDir,
     distDir,
     literateJavaOutputPaths,
+    cachedTraceSourceDir,
     javacAvailable,
   }: {
     validateInternalLinks?: boolean;
@@ -404,6 +407,7 @@ function renderPlainTextContent(
     contentDir?: string;
     distDir?: string;
     literateJavaOutputPaths?: Set<string>;
+    cachedTraceSourceDir?: string;
     javacAvailable?: boolean;
   } = {},
 ): {
@@ -492,6 +496,7 @@ function renderPlainTextContent(
       cache: traceCache,
       javacAvailable,
       dependencyCollector,
+      cachedTraceSourceDir,
     });
     params.renderTrace = helpers.renderTrace;
   }

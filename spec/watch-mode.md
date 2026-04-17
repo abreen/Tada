@@ -29,8 +29,8 @@ Watch mode treats changes differently depending on what changed.
 
 Editing an existing Markdown or HTML page updates the affected page output.
 
-If a `.java` file changes, all content pages are rebuilt so pages that depend on
-trace output stay in sync.
+If a `.java` file changes, watch mode rebuilds the changed `.java` source output
+and any content pages that depend on that file's trace output.
 
 ### Existing non-page file edit
 

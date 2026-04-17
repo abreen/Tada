@@ -63,6 +63,7 @@ export async function buildIncremental({
         assetFiles: snapshot.assetFiles,
         outputDir,
         traceCache,
+        cachedTraceSourceDir: getDistDir(),
         persistOutputs: false,
       });
       if (record.outputs.size > 0) {

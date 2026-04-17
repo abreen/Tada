@@ -198,6 +198,7 @@ export interface TraceContext {
   cache: Map<string, TraceResult>;
   javacAvailable?: boolean;
   dependencyCollector?: RenderDependencyCollector;
+  cachedTraceSourceDir?: string;
 }
 
 export interface TraceResult {
@@ -211,6 +212,58 @@ function highlightSource(source: string): string {
   return renderCodeSegment(splitLines(source), 1, 'java', {
     linkLineNumbers: false,
   });
+}
+
+function getTraceOutputPaths(
+  relDir: string,
+  className: string,
+  totalSteps: number,
+): string[] {
+  const baseDir = [relDir, '_traces', className].filter(Boolean).join('/');
+  const outputPaths = [`${baseDir}/manifest.json`];
+  for (
+    let chunkIndex = 0;
+    chunkIndex * DEFAULT_CHUNK_SIZE < totalSteps;
+    chunkIndex++
+  ) {
+    outputPaths.push(`${baseDir}/chunk-${chunkIndex}.json`);
+  }
+  return outputPaths;
+}
+
+function linkOrCopyFile(sourcePath: string, targetPath: string): void {
+  try {
+    fs.linkSync(sourcePath, targetPath);
+  } catch {
+    fs.copyFileSync(sourcePath, targetPath);
+  }
+}
+
+function materializeTraceOutputs({
+  outputPaths,
+  targetDistDir,
+  sourceDistDir,
+}: {
+  outputPaths: string[];
+  targetDistDir: string;
+  sourceDistDir: string;
+}): boolean {
+  for (const relPath of outputPaths) {
+    const targetPath = path.join(targetDistDir, relPath);
+    if (fs.existsSync(targetPath)) {
+      continue;
+    }
+
+    const sourcePath = path.join(sourceDistDir, relPath);
+    if (!fs.existsSync(sourcePath)) {
+      return false;
+    }
+
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    linkOrCopyFile(sourcePath, targetPath);
+  }
+
+  return true;
 }
 
 function renderWidgetHtml({
@@ -262,12 +315,15 @@ export function createTraceHelpers(context: TraceContext): {
     cache,
     javacAvailable,
     dependencyCollector,
+    cachedTraceSourceDir,
   } = context;
   const pageDir = path.dirname(filePath);
 
   function getOrRunTrace(javaFile: string): TraceResult {
     const javaFilePath = path.resolve(pageDir, javaFile);
     dependencyCollector?.traceFiles?.add(javaFilePath);
+    const className = path.parse(javaFile).name;
+    const relDir = toPosix(path.relative(contentDir, pageDir));
 
     const cached = cache.get(javaFilePath);
     if (cached) {
@@ -275,7 +331,23 @@ export function createTraceHelpers(context: TraceContext): {
         throwIfNoEntry: false,
       })?.mtimeMs;
       if (mtime !== undefined && mtime === cached.mtime) {
-        return cached;
+        const outputPaths = getTraceOutputPaths(
+          relDir,
+          className,
+          cached.totalSteps,
+        );
+        if (
+          materializeTraceOutputs({
+            outputPaths,
+            targetDistDir: distDir,
+            sourceDistDir: cachedTraceSourceDir || distDir,
+          })
+        ) {
+          for (const outputPath of outputPaths) {
+            dependencyCollector?.generatedOutputPaths?.add(outputPath);
+          }
+          return cached;
+        }
       }
     }
 
@@ -290,7 +362,6 @@ export function createTraceHelpers(context: TraceContext): {
       );
     }
 
-    const className = path.parse(javaFile).name;
     log.info`Tracing ${B`${javaFile}`}`;
 
     const targetClassDir = compileTargetFile(javaFilePath);
@@ -305,7 +376,6 @@ export function createTraceHelpers(context: TraceContext): {
 
       const highlightedSource = highlightSource(source);
 
-      const relDir = toPosix(path.relative(contentDir, pageDir));
       const traceOutputDir = path.join(distDir, relDir, '_traces', className);
 
       const manifest = chunkTraceOutput(
@@ -315,24 +385,12 @@ export function createTraceHelpers(context: TraceContext): {
         source,
         DEFAULT_CHUNK_SIZE,
       );
-      dependencyCollector?.generatedOutputPaths?.add(
-        toPosix(
-          path.relative(distDir, path.join(traceOutputDir, 'manifest.json')),
-        ),
-      );
-      for (
-        let chunkIndex = 0;
-        chunkIndex * DEFAULT_CHUNK_SIZE < manifest.totalSteps;
-        chunkIndex++
-      ) {
-        dependencyCollector?.generatedOutputPaths?.add(
-          toPosix(
-            path.relative(
-              distDir,
-              path.join(traceOutputDir, `chunk-${chunkIndex}.json`),
-            ),
-          ),
-        );
+      for (const outputPath of getTraceOutputPaths(
+        relDir,
+        className,
+        manifest.totalSteps,
+      )) {
+        dependencyCollector?.generatedOutputPaths?.add(outputPath);
       }
 
       const manifestUrl = applyBasePath(

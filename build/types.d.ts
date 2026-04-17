@@ -77,6 +77,7 @@ export interface RenderPlainTextOptions {
   assetFiles: string[];
   literateJavaOutputPaths?: Set<string>;
   dependencyCollector?: RenderDependencyCollector;
+  cachedTraceSourceDir?: string;
   traceCache?: Map<
     string,
     {

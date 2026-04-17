@@ -67,6 +67,7 @@ export function renderContentRecord({
   assetFiles,
   outputDir,
   traceCache,
+  cachedTraceSourceDir,
   persistOutputs = true,
 }: {
   filePath: string;
@@ -75,6 +76,7 @@ export function renderContentRecord({
   assetFiles: string[];
   outputDir: string;
   traceCache: TraceCache;
+  cachedTraceSourceDir?: string;
   persistOutputs?: boolean;
 }): TadaSourceRecord {
   const deps = createDependencyCollector();
@@ -113,6 +115,7 @@ export function renderContentRecord({
           assetFiles,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
+          cachedTraceSourceDir,
           traceCache,
         }),
       );

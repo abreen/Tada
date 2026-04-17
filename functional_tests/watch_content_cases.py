@@ -349,6 +349,34 @@ class TestWatchTraceRebuildsOnJavaChange:
         finally:
             wp.stop()
 
+    def test_editing_trace_page_preserves_trace_artifacts(self, site_dir):
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
+
+            lab_html = site_dir / "dist" / "labs" / "01" / "index.html"
+            assert lab_html.exists()
+            before_lab_mtime = lab_html.stat().st_mtime
+
+            trace_manifest = (
+                site_dir / "dist" / "labs" / "01" / "_traces" / "TraceDemo" / "manifest.json"
+            )
+            trace_chunk = (
+                site_dir / "dist" / "labs" / "01" / "_traces" / "TraceDemo" / "chunk-0.json"
+            )
+            assert trace_manifest.exists()
+            assert trace_chunk.exists()
+
+            page = site_dir / "content" / "labs" / "01" / "index.md"
+            page.write_text(page.read_text() + "\n<!-- keep trace artifacts -->\n")
+
+            wp.wait_for_rebuild(lab_html, "modified", before_mtime=before_lab_mtime)
+
+            assert trace_manifest.exists()
+            assert trace_chunk.exists()
+        finally:
+            wp.stop()
+
 
 class TestWatchLiterateJavaError:
     """A Java compilation error should stop the build but not crash watch mode."""
