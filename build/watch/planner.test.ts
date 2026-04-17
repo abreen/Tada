@@ -1,3 +1,4 @@
+import path from 'path';
 import { describe, expect, test } from 'bun:test';
 import { createTadaWatchPlan, diffAuthorKeys } from './planner';
 import type { ChangeBatch } from '../../watch/types';
@@ -6,6 +7,12 @@ import type {
   TadaSnapshot,
   TadaSourceRecord,
 } from './snapshot';
+
+const SITE_ROOT = path.resolve(path.sep, 'site');
+
+function sitePath(...parts: string[]): string {
+  return path.join(SITE_ROOT, ...parts);
+}
 
 function makeRecord(
   sourcePath: string,
@@ -26,9 +33,9 @@ function makeRecord(
 
 function makeScan(overrides: Partial<TadaProjectScan> = {}): TadaProjectScan {
   return {
-    contentDir: '/site/content',
-    publicDir: '/site/public',
-    distDir: '/site/dist',
+    contentDir: sitePath('content'),
+    publicDir: sitePath('public'),
+    distDir: sitePath('dist'),
     contentFiles: new Set(),
     buildContentFiles: new Set(),
     publicFiles: new Set(),
@@ -44,7 +51,9 @@ function makeScan(overrides: Partial<TadaProjectScan> = {}): TadaProjectScan {
 }
 
 function makeSnapshot(overrides: Partial<TadaSnapshot> = {}): TadaSnapshot {
-  const contentRecord = makeRecord('/site/content/index.md', ['index.html']);
+  const contentRecord = makeRecord(sitePath('content', 'index.md'), [
+    'index.html',
+  ]);
   return {
     siteVariables: {
       base: 'http://localhost',
@@ -109,8 +118,8 @@ describe('createTadaWatchPlan', () => {
   });
 
   test('rebuilds reverse partial dependents for partial edits', () => {
-    const partialPath = '/site/content/_greeting.md';
-    const dependentPath = '/site/content/page.md';
+    const partialPath = sitePath('content', '_greeting.md');
+    const dependentPath = sitePath('content', 'page.md');
     const snapshot = makeSnapshot({
       reversePartialDeps: new Map([[partialPath, new Set([dependentPath])]]),
     });
@@ -132,8 +141,8 @@ describe('createTadaWatchPlan', () => {
   });
 
   test('rebuilds a content owner after public handoff removal', () => {
-    const contentPath = '/site/content/about.md';
-    const publicPath = '/site/public/about.html';
+    const contentPath = sitePath('content', 'about.md');
+    const publicPath = sitePath('public', 'about.html');
     const snapshot = makeSnapshot({
       contentRecords: new Map([
         [contentPath, makeRecord(contentPath, ['about.html'])],
