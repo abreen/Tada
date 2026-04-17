@@ -42,23 +42,21 @@ file in `dist/`.
 
 ### Partial edit
 
-Editing a partial rebuilds pages that include that partial, including transitive
-includes.
+Editing, adding, or deleting a partial rebuilds only pages that include that
+partial, including transitive includes.
 
 ### Config or data change
 
-Changing `site.dev.json`, `nav.json`, or `authors.json` triggers a full site
-rebuild.
+Changing `site.dev.json` or `nav.json` triggers a full site rebuild.
+
+Changing `authors.json` rebuilds only pages whose `author` front matter depends
+on author entries whose data changed.
 
 ### Adding a file
 
-Adding a file in `content/` or `public/` triggers a full site rebuild.
-
-This includes adding:
-
-- a new page
-- a new copied asset
-- a new file that would conflict with an existing output path
+Adding a file in `content/` or `public/` rebuilds only outputs affected by that
+new source, unless the change also requires a full rebuild for one of the
+site-wide cases above.
 
 ### Deleting a file
 
@@ -71,8 +69,9 @@ Examples:
 - deleting a copied asset in `content/` removes its copied output
 
 If deleting one side of a `content/` versus `public/` conflict changes which
-source should own that output path, watch mode rebuilds so the surviving source
-becomes authoritative immediately.
+source should own that output path, watch mode updates that output so the
+surviving source becomes authoritative immediately without rebuilding
+unrelated pages.
 
 ### Rename and move behavior
 
@@ -113,7 +112,8 @@ Examples:
 - removing `public/about.html` and adding `content/about.md`
 - removing `content/logo.png` and adding `public/logo.png`
 
-After a successful rebuild, `dist/` reflects the new owner of that path.
+After a successful rebuild, `dist/` reflects the new owner of that path while
+leaving unrelated outputs untouched.
 
 ## Failure and Recovery
 
@@ -143,3 +143,12 @@ Connected browsers use a WebSocket connection and react to these message types:
 - `reload`: the page reloads
 
 Failed rebuilds do not trigger `reload`.
+
+## Architecture
+
+Watch mode is split into:
+
+- a reusable file-watching engine that batches changes, schedules rebuilds,
+  commits staged output updates, and preserves the last successful snapshot
+- a Tada adapter that decides which sources need to be rebuilt and how those
+  outputs map into `dist/`

@@ -621,7 +621,7 @@ try {
     case 'watch': {
       requireSiteConfig('dev');
       const { runWatch } = await import(
-        path.join(packageDir, 'build/watch.ts')
+        path.join(packageDir, 'build/watch/index.ts')
       );
       await runWatch({
         httpPort: parsePortArg('--port'),

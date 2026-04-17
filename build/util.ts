@@ -2,6 +2,7 @@ export {
   getBuildContentFiles,
   getContentFiles,
   getContentOutputRelPaths,
+  getContentSourceOutputRelPaths,
   getFilesByExtensions,
   getValidInternalTargets,
   shouldSkipContentFile,
@@ -16,6 +17,7 @@ export {
   getProjectDir,
   getPublicDir,
   normalizeOutputPath,
+  toPosix,
 } from './utils/paths';
 export {
   injectAssetTags,

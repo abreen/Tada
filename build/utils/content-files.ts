@@ -51,6 +51,57 @@ export function getBuildContentFiles(
   );
 }
 
+export function getContentSourceOutputRelPaths(
+  contentDir: string,
+  filePath: string,
+  codeExtensions: string[],
+  codeEnabled: boolean,
+): Set<string> {
+  const processedExtSet = new Set(getProcessedExtensions(codeExtensions));
+  const relPath = toPosix(path.relative(contentDir, filePath));
+  const ext = path.extname(filePath).slice(1).toLowerCase();
+  const parsed = path.parse(relPath);
+  const outputs = new Set<string>();
+
+  if (!processedExtSet.has(ext)) {
+    outputs.add(relPath);
+    return outputs;
+  }
+
+  const buildContentFiles = new Set(
+    getBuildContentFiles(contentDir, codeExtensions),
+  );
+  if (!buildContentFiles.has(filePath)) {
+    return outputs;
+  }
+
+  if (isLiterateJava(filePath)) {
+    outputs.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
+    outputs.add(toPosix(path.join(parsed.dir, parsed.name)));
+    return outputs;
+  }
+
+  if (
+    extensionIsMarkdown(parsed.ext.toLowerCase()) ||
+    parsed.ext.toLowerCase() === '.html'
+  ) {
+    outputs.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
+    return outputs;
+  }
+
+  const codeExtensionSet = new Set(
+    codeExtensions.map(value => value.toLowerCase()),
+  );
+  if (codeExtensionSet.has(ext)) {
+    outputs.add(relPath);
+    if (codeEnabled) {
+      outputs.add(`${relPath}.html`);
+    }
+  }
+
+  return outputs;
+}
+
 export function getContentOutputRelPaths(
   contentDir: string,
   codeExtensions: string[],

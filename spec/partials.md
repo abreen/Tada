@@ -52,7 +52,8 @@ available to the page. Partials do not have their own front matter.
 
 - Partials are excluded from the build output. No HTML page is generated for
   a partial, and partials do not appear as valid internal link targets.
-- In watch mode, editing a partial triggers a full content rebuild
+- In watch mode, editing, adding, or deleting a partial rebuilds only the pages
+  that depend on that partial, including transitive include chains
   (see [Watch Mode](watch-mode.md)).
 
 ## Naming convention

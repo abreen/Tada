@@ -10,6 +10,7 @@ import { renderCodeSegment } from './code';
 import { computeLayout } from './trace-layout';
 import { generateStepSvg } from './trace-svg';
 import type { TraceStep, TraceManifest, TraceChunkEntry } from '../types';
+import type { RenderDependencyCollector } from '../types';
 
 const log = makeLogger(import.meta.url);
 
@@ -196,6 +197,7 @@ export interface TraceContext {
   applyBasePath: (subPath: string) => string;
   cache: Map<string, TraceResult>;
   javacAvailable?: boolean;
+  dependencyCollector?: RenderDependencyCollector;
 }
 
 export interface TraceResult {
@@ -259,11 +261,13 @@ export function createTraceHelpers(context: TraceContext): {
     applyBasePath,
     cache,
     javacAvailable,
+    dependencyCollector,
   } = context;
   const pageDir = path.dirname(filePath);
 
   function getOrRunTrace(javaFile: string): TraceResult {
     const javaFilePath = path.resolve(pageDir, javaFile);
+    dependencyCollector?.traceFiles?.add(javaFilePath);
 
     const cached = cache.get(javaFilePath);
     if (cached) {
@@ -311,6 +315,25 @@ export function createTraceHelpers(context: TraceContext): {
         source,
         DEFAULT_CHUNK_SIZE,
       );
+      dependencyCollector?.generatedOutputPaths?.add(
+        toPosix(
+          path.relative(distDir, path.join(traceOutputDir, 'manifest.json')),
+        ),
+      );
+      for (
+        let chunkIndex = 0;
+        chunkIndex * DEFAULT_CHUNK_SIZE < manifest.totalSteps;
+        chunkIndex++
+      ) {
+        dependencyCollector?.generatedOutputPaths?.add(
+          toPosix(
+            path.relative(
+              distDir,
+              path.join(traceOutputDir, `chunk-${chunkIndex}.json`),
+            ),
+          ),
+        );
+      }
 
       const manifestUrl = applyBasePath(
         normalizeOutputPath(

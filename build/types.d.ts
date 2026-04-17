@@ -76,6 +76,7 @@ export interface RenderPlainTextOptions {
   validInternalTargets: Set<string>;
   assetFiles: string[];
   literateJavaOutputPaths?: Set<string>;
+  dependencyCollector?: RenderDependencyCollector;
   traceCache?: Map<
     string,
     {
@@ -95,6 +96,7 @@ export interface RenderCodePageOptions {
   distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
+  dependencyCollector?: RenderDependencyCollector;
 }
 
 /** Options for literate Java asset rendering */
@@ -107,6 +109,7 @@ export interface RenderLiterateJavaOptions {
   skipExecution?: boolean;
   validInternalTargets: Set<string>;
   literateJavaOutputPaths?: Set<string>;
+  dependencyCollector?: RenderDependencyCollector;
 }
 
 /** Options for copied content asset rendering */
@@ -114,6 +117,14 @@ export interface RenderCopiedContentOptions {
   filePath: string;
   contentDir: string;
   siteVariables: SiteVariables;
+}
+
+export interface RenderDependencyCollector {
+  partials?: Set<string>;
+  traceFiles?: Set<string>;
+  internalTargets?: Set<string>;
+  generatedOutputPaths?: Set<string>;
+  setAuthorKey?: (authorKey: string) => void;
 }
 
 /** Front matter parse result (from parseFrontMatterAndContent) */

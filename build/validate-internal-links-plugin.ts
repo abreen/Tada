@@ -13,6 +13,7 @@ interface ValidateInternalLinksOptions {
   sourceUrlPath?: string;
   validTargets?: Set<string>;
   codeExtensions?: string[];
+  onValidLink?: (targetPath: string) => void;
 }
 
 function stripQueryAndHash(href: string): string {
@@ -91,6 +92,7 @@ export default function validateInternalLinks(
     sourceUrlPath,
     validTargets,
     codeExtensions = [],
+    onValidLink,
   } = options;
 
   if (!enabled) {
@@ -161,11 +163,15 @@ export default function validateInternalLinks(
       if (codeExtPattern) {
         const unrewritten = resolveLinkPath(sourceUrlPath!, href, null);
         if (unrewritten && validTargets!.has(unrewritten)) {
+          onValidLink?.(unrewritten);
           return;
         }
       }
       reportBrokenLink(rawHref, resolvedPath);
+      return;
     }
+
+    onValidLink?.(resolvedPath);
   }
 
   function validateToken(token: Token): void {

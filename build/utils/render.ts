@@ -43,6 +43,7 @@ import type {
   RenderCodePageOptions,
   RenderLiterateJavaOptions,
   RenderCopiedContentOptions,
+  RenderDependencyCollector,
 } from '../types';
 
 const log = makeLogger(import.meta.url);
@@ -81,6 +82,7 @@ interface TemplateParametersInput {
 function resolveAuthor(
   pageVariables: Record<string, unknown>,
   filePath: string,
+  dependencyCollector?: RenderDependencyCollector,
 ): void {
   if (!pageVariables.author) {
     return;
@@ -94,6 +96,7 @@ function resolveAuthor(
     );
   }
   const authorKey = pageVariables.author as string;
+  dependencyCollector?.setAuthorKey?.(authorKey);
   const authorEntry = authors[authorKey];
   if (!authorEntry) {
     throw new Error(
@@ -205,6 +208,7 @@ export function renderPlainTextPageAsset({
   validInternalTargets,
   assetFiles,
   literateJavaOutputPaths,
+  dependencyCollector,
   traceCache,
   javacAvailable,
 }: RenderPlainTextOptions): Asset[] {
@@ -223,6 +227,7 @@ export function renderPlainTextPageAsset({
     watchMode,
     {
       validateInternalLinks: extensionIsMarkdown(ext.toLowerCase()),
+      dependencyCollector,
       traceCache,
       contentDir,
       distDir,
@@ -378,6 +383,7 @@ function renderPlainTextContent(
   isWatchMode: boolean,
   {
     validateInternalLinks = true,
+    dependencyCollector,
     traceCache,
     contentDir,
     distDir,
@@ -385,6 +391,7 @@ function renderPlainTextContent(
     javacAvailable,
   }: {
     validateInternalLinks?: boolean;
+    dependencyCollector?: RenderDependencyCollector;
     traceCache?: Map<
       string,
       {
@@ -415,6 +422,9 @@ function renderPlainTextContent(
       codeExtensions: isFeatureEnabled(siteVariables, 'code')
         ? Object.keys(siteVariables.codeLanguages!)
         : [],
+      onValidLink: (targetPath: string) => {
+        dependencyCollector?.internalTargets?.add(targetPath);
+      },
     },
     literateJavaOutputPaths,
     sourceUrlPath,
@@ -446,7 +456,7 @@ function renderPlainTextContent(
   renderInlineField(md, pageVariablesProcessed, 'title');
   renderInlineField(md, pageVariablesProcessed, 'description');
 
-  resolveAuthor(pageVariablesProcessed, filePath);
+  resolveAuthor(pageVariablesProcessed, filePath, dependencyCollector);
 
   const parentError = validateParentLink(
     pageVariablesProcessed.parent,
@@ -455,6 +465,11 @@ function renderPlainTextContent(
   );
   if (parentError) {
     throw new Error(parentError);
+  }
+  if (typeof pageVariablesProcessed.parent === 'string') {
+    dependencyCollector?.internalTargets?.add(
+      normalizeOutputPath(pageVariablesProcessed.parent),
+    );
   }
 
   const strippedContent = stripHtmlComments(content);
@@ -476,11 +491,12 @@ function renderPlainTextContent(
       applyBasePath,
       cache: traceCache,
       javacAvailable,
+      dependencyCollector,
     });
     params.renderTrace = helpers.renderTrace;
   }
 
-  params.include = createIncludeFunction(filePath, params);
+  params.include = createIncludeFunction(filePath, params, dependencyCollector);
 
   let html: string;
   try {
@@ -522,6 +538,7 @@ export function renderLiterateJavaPageAsset({
   skipExecution,
   validInternalTargets,
   literateJavaOutputPaths,
+  dependencyCollector,
 }: RenderLiterateJavaOptions): Asset[] {
   const { dir, name } = path.parse(filePath);
   const className = deriveClassName(filePath);
@@ -581,6 +598,9 @@ export function renderLiterateJavaPageAsset({
       codeExtensions: isFeatureEnabled(siteVariables, 'code')
         ? Object.keys(siteVariables.codeLanguages!)
         : [],
+      onValidLink: (targetPath: string) => {
+        dependencyCollector?.internalTargets?.add(targetPath);
+      },
     },
     literateJavaOutputPaths,
     sourceUrlPath,
@@ -656,7 +676,7 @@ export function renderLiterateJavaPageAsset({
     );
   }
 
-  resolveAuthor(pageVariables, filePath);
+  resolveAuthor(pageVariables, filePath, dependencyCollector);
 
   const templateParameters = createTemplateParameters({
     pageVariables,

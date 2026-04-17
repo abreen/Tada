@@ -3,12 +3,14 @@ import path from 'path';
 import _ from 'lodash';
 import { isPartial } from './file-types';
 import { stripHtmlComments } from './render';
+import type { RenderDependencyCollector } from '../types';
 
 const MAX_INCLUDE_DEPTH = 10;
 
 export function createIncludeFunction(
   callerFilePath: string,
   templateParams: Record<string, unknown>,
+  collector?: RenderDependencyCollector,
   depth: number = 0,
 ): (relativePath: string) => string {
   return (relativePath: string): string => {
@@ -25,6 +27,7 @@ export function createIncludeFunction(
         `${callerFilePath}: include target must start with "_": ${relativePath}`,
       );
     }
+    collector?.partials?.add(resolved);
     if (depth >= MAX_INCLUDE_DEPTH) {
       throw new Error(
         `${callerFilePath}: maximum include depth (${MAX_INCLUDE_DEPTH}) exceeded`,
@@ -37,6 +40,7 @@ export function createIncludeFunction(
     const nestedInclude = createIncludeFunction(
       resolved,
       templateParams,
+      collector,
       depth + 1,
     );
     const nestedParams = { ...templateParams, include: nestedInclude };

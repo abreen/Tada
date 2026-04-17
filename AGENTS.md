@@ -23,6 +23,8 @@ For a broader audit across all specs, use `git log` to compare each spec's last 
 - Do not use em dashes
 - Do not use decorative Unicode symbols such as arrows
 - Keep written instructions and summaries plain and direct
+- Type-only shared modules in this repo should use `.d.ts` files, matching
+  existing files such as `build/types.d.ts` and `types/*.d.ts`
 
 ## Commands
 
