@@ -92,6 +92,8 @@ class WatchProcess:
     def wait_for_error(self):
         """Block until an 'error' WebSocket message is received."""
         deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
+        # Drop a stale reload from a prior successful build step.
+        self._reload_event.clear()
         while time.monotonic() < deadline:
             if self._error_event.wait(timeout=WS_EVENT_WAIT_SEC):
                 self._error_event.clear()
@@ -115,7 +117,6 @@ class WatchProcess:
             )
 
         deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
-
         def _check():
             if condition == "exists":
                 return path.exists()
@@ -149,6 +150,8 @@ class WatchProcess:
     def wait_for_reload(self):
         """Block until a 'reload' WebSocket message is received."""
         deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
+        # Drop a stale error from a prior failing build step.
+        self._error_event.clear()
         self._reload_event.clear()
         while time.monotonic() < deadline:
             if self._reload_event.wait(timeout=WS_EVENT_WAIT_SEC):
@@ -188,6 +191,8 @@ class WatchProcess:
         if self._ws is not None:
             self._ws.close()
             self._ws = None
+        if self._ws_thread is not None and self._ws_thread.is_alive():
+            self._ws_thread.join(timeout=2)
 
         terminate_process_group(self.proc)
         self._stdout_file.close()

@@ -29,19 +29,22 @@ class TestWatchWebSocket:
         ws_thread = threading.Thread(target=ws.run_forever, daemon=True)
         ws_thread.start()
 
-        assert connected.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
-            f"WebSocket did not connect on port {watch.ws_port}"
-        )
+        try:
+            assert connected.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
+                f"WebSocket did not connect on port {watch.ws_port}"
+            )
 
-        index_md = site_dir / "content" / "index.md"
-        original = index_md.read_text()
-        index_md.write_text(original + "\n\nWebSocket test paragraph.\n")
+            index_md = site_dir / "content" / "index.md"
+            original = index_md.read_text()
+            index_md.write_text(original + "\n\nWebSocket test paragraph.\n")
 
-        assert done.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
-            f"Did not receive 'reload' message; got: {messages}"
-        )
-        assert "reload" in messages
-        ws.close()
+            assert done.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
+                f"Did not receive 'reload' message; got: {messages}"
+            )
+            assert "reload" in messages
+        finally:
+            ws.close()
+            ws_thread.join(timeout=2)
 
     def test_watch_build_includes_reload_client(self, watch, site_dir):
         client_bundle = site_dir / "dist" / "watch-reload-client.bundle.js"
