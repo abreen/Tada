@@ -87,7 +87,12 @@ export interface RenderPlainTextOptions {
       mtime: number;
     }
   >;
-  javacAvailable?: boolean;
+  traceToolAvailability?: TraceToolAvailability;
+}
+
+export interface TraceToolAvailability {
+  java?: boolean;
+  python?: boolean;
 }
 
 /** Options for code page asset rendering */

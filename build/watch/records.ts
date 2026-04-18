@@ -8,7 +8,12 @@ import {
   toPosix,
 } from '../util';
 import { extensionIsMarkdown, isLiterateJava } from '../utils/file-types';
-import type { Asset, RenderDependencyCollector, SiteVariables } from '../types';
+import type {
+  Asset,
+  RenderDependencyCollector,
+  SiteVariables,
+  TraceToolAvailability,
+} from '../types';
 import {
   collectSourceOutputs,
   type TadaProjectScan,
@@ -67,6 +72,7 @@ export function renderContentRecord({
   assetFiles,
   outputDir,
   traceCache,
+  traceToolAvailability,
   cachedTraceSourceDir,
   persistOutputs = true,
 }: {
@@ -76,6 +82,7 @@ export function renderContentRecord({
   assetFiles: string[];
   outputDir: string;
   traceCache: TraceCache;
+  traceToolAvailability: TraceToolAvailability;
   cachedTraceSourceDir?: string;
   persistOutputs?: boolean;
 }): TadaSourceRecord {
@@ -117,6 +124,7 @@ export function renderContentRecord({
           dependencyCollector: deps.collector,
           cachedTraceSourceDir,
           traceCache,
+          traceToolAvailability,
         }),
       );
     } else if (codeExtensions.includes(ext)) {

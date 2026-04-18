@@ -14,6 +14,12 @@ A simple program with an array, recursion, and a string.
 
 <%= renderTrace('TraceDemo.java') %>
 
+### Python version
+
+Here's a similar trace, but of a Python script:
+
+<%= renderTrace('trace_demo.py') %>
+
 ## Binary search tree
 
 Building a binary search tree with parent references.

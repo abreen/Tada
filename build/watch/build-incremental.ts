@@ -1,7 +1,11 @@
 import { compileTemplates, json } from '../templates';
 import { getDistDir } from '../util';
 import type { CompilerBuildResult } from '../../watch/types';
-import type { TadaBuildMeta, TraceCache } from './compiler-types';
+import type {
+  TadaBuildMeta,
+  TraceCache,
+  WatchTraceOptions,
+} from './compiler-types';
 import type { TadaWatchPlan } from './planner';
 import {
   collectHtmlAssetsByPath,
@@ -26,10 +30,12 @@ export async function buildIncremental({
   plan,
   snapshot,
   traceCache,
+  traceOptions,
 }: {
   plan: TadaWatchPlan;
   snapshot: TadaSnapshot;
   traceCache: TraceCache;
+  traceOptions: WatchTraceOptions;
 }): Promise<CompilerBuildResult<TadaSnapshot, TadaBuildMeta>> {
   const outputDir = makeTempBuildDir(plan.scan.distDir);
   try {
@@ -63,6 +69,7 @@ export async function buildIncremental({
         assetFiles: snapshot.assetFiles,
         outputDir,
         traceCache,
+        traceToolAvailability: traceOptions.toolAvailability,
         cachedTraceSourceDir: getDistDir(),
         persistOutputs: false,
       });

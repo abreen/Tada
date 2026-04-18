@@ -9,7 +9,11 @@ import {
   type TadaSourceRecord,
   type TadaSnapshot,
 } from './snapshot';
-import type { TadaBuildMeta, TraceCache } from './compiler-types';
+import type {
+  TadaBuildMeta,
+  TraceCache,
+  WatchTraceOptions,
+} from './compiler-types';
 import {
   bundleWatchAssets,
   ensureHighlighter,
@@ -28,9 +32,11 @@ import {
 export async function buildFull({
   wsPort,
   traceCache,
+  traceOptions,
 }: {
   wsPort: number;
   traceCache: TraceCache;
+  traceOptions: WatchTraceOptions;
 }): Promise<CompilerBuildResult<TadaSnapshot, TadaBuildMeta>> {
   const distDir = getDistDir();
   const outputDir = makeTempBuildDir(distDir);
@@ -62,6 +68,7 @@ export async function buildFull({
         assetFiles,
         outputDir,
         traceCache,
+        traceToolAvailability: traceOptions.toolAvailability,
         cachedTraceSourceDir: distDir,
       });
       if (record.outputs.size > 0) {

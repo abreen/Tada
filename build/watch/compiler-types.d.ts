@@ -1,4 +1,4 @@
-import type { SiteVariables } from '../types';
+import type { SiteVariables, TraceToolAvailability } from '../types';
 
 export interface TraceCacheEntry {
   manifestUrl: string;
@@ -12,4 +12,8 @@ export type TraceCache = Map<string, TraceCacheEntry>;
 export interface TadaBuildMeta {
   htmlAssetsByPath: Map<string, string>;
   siteVariables: SiteVariables;
+}
+
+export interface WatchTraceOptions {
+  toolAvailability: TraceToolAvailability;
 }

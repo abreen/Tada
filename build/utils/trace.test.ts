@@ -2,7 +2,9 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { chunkTraceOutput, parseIgnoreFields } from './trace';
+import { chunkTraceOutput } from './trace-core';
+import { parseIgnoreFields } from './trace-java';
+import { isTraceSourceFile } from './trace';
 import type { TraceManifest } from '../types';
 
 describe('chunkTraceOutput', () => {
@@ -37,7 +39,7 @@ describe('chunkTraceOutput', () => {
       outputDir,
       'Test.java',
       'public class Test {}',
-      3,
+      { chunkSize: 3 },
     );
 
     // Should create 2 chunks (3 + 2)
@@ -82,7 +84,7 @@ describe('chunkTraceOutput', () => {
       outputDir,
       'Test.java',
       'class Test {}',
-      50,
+      { chunkSize: 50 },
     );
 
     expect(manifest.totalSteps).toBe(1);
@@ -161,9 +163,15 @@ class B {
       outputDir,
       'Test.java',
       '',
-      50,
+      { chunkSize: 50 },
     );
 
     expect(manifest.lineToSteps[3]).toEqual([0, 1, 2]);
+  });
+
+  test('treats only .java and .py files as trace sources', () => {
+    expect(isTraceSourceFile('/tmp/TraceDemo.java')).toBe(true);
+    expect(isTraceSourceFile('/tmp/trace_demo.py')).toBe(true);
+    expect(isTraceSourceFile('/tmp/index.md')).toBe(false);
   });
 });

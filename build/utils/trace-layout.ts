@@ -789,13 +789,41 @@ function layoutOrphans(
   result: Record<string, TraceObjectLayout>,
   yOffset: number,
 ) {
+  type OrphanSlot = { ids: string[]; lastStep: number; maxHeight: number };
+
+  const orphanIds = [...objects.keys()]
+    .filter(id => !(id in result))
+    .sort((a, b) => {
+      const aInfo = objects.get(a)!;
+      const bInfo = objects.get(b)!;
+      return (
+        aInfo.firstStep - bInfo.firstStep || aInfo.lastStep - bInfo.lastStep
+      );
+    });
+
+  const slots: OrphanSlot[] = [];
+  for (const id of orphanIds) {
+    const info = objects.get(id)!;
+    const size = sizes.get(id)!;
+
+    let slot = slots.find(existing => existing.lastStep < info.firstStep);
+    if (!slot) {
+      slot = { ids: [], lastStep: info.lastStep, maxHeight: size.height };
+      slots.push(slot);
+    } else {
+      slot.lastStep = info.lastStep;
+      slot.maxHeight = Math.max(slot.maxHeight, size.height);
+    }
+    slot.ids.push(id);
+  }
+
   let y = yOffset;
-  for (const id of objects.keys()) {
-    if (!(id in result)) {
+  for (const slot of slots) {
+    for (const id of slot.ids) {
       const size = sizes.get(id)!;
       result[id] = makeLayout(0, Math.round(y), size);
-      y += size.height + OBJ_GAP;
     }
+    y += slot.maxHeight + OBJ_GAP;
   }
 }
 

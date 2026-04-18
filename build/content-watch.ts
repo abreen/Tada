@@ -85,10 +85,10 @@ export class ContentChangeDetector {
       }
     }
 
-    const changedJavaFiles = [...changedContentFiles].filter(f =>
-      f.endsWith('.java'),
+    const changedTraceFiles = [...changedContentFiles].filter(
+      f => f.endsWith('.java') || f.endsWith('.py'),
     );
-    for (const filePath of changedJavaFiles) {
+    for (const filePath of changedTraceFiles) {
       log.event`${B`${path.basename(filePath)}`} changed, re-running traces`;
     }
 

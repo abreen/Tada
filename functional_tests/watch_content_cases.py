@@ -359,6 +359,35 @@ class TestWatchTraceRebuildsOnJavaChange:
         finally:
             wp.stop()
 
+    def test_trace_rerun_on_python_edit(self, site_dir):
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
+
+            manifest_path = (
+                site_dir / "dist" / "labs" / "01" / "_traces" / "trace_demo" / "manifest.json"
+            )
+            assert manifest_path.exists()
+            old_manifest = json.loads(manifest_path.read_text())
+            old_steps = old_manifest["totalSteps"]
+
+            before_mtime = manifest_path.stat().st_mtime
+
+            python_file = site_dir / "content" / "labs" / "01" / "trace_demo.py"
+            python_file.write_text(
+                "value = 7\n"
+                "nums = [1, 2, 3]\n"
+                "print('changed', value)\n"
+            )
+
+            wp.wait_for_rebuild(manifest_path, "modified", before_mtime=before_mtime)
+
+            new_manifest = json.loads(manifest_path.read_text())
+            assert new_manifest["totalSteps"] != old_steps
+            assert "print('changed', value)" in new_manifest["source"]
+        finally:
+            wp.stop()
+
     def test_editing_trace_page_preserves_trace_artifacts(self, site_dir):
         wp = WatchProcess(site_dir)
         try:

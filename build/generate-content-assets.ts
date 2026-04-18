@@ -15,13 +15,14 @@ import {
   renderPlainTextPageAsset,
 } from './util';
 import { isLiterateJava } from './utils/file-types';
-import { checkJavac } from './utils/literate-java';
+import { checkTraceToolAvailability, isTraceSourceFile } from './utils/trace';
 import { toPosix } from './utils/paths';
 import type {
   SiteVariables,
   Asset,
   ContentRenderOptions,
   ContentRenderResult,
+  TraceToolAvailability,
   WatchState,
 } from './types';
 
@@ -33,6 +34,7 @@ export class ContentRenderer {
   private sourceFileCache: Map<string, Asset[]>;
   private lastBuildFiles: Set<string>;
   private javacAvailable: boolean | undefined;
+  private traceToolAvailability: TraceToolAvailability | undefined;
   private traceCache: Map<
     string,
     {
@@ -78,12 +80,10 @@ export class ContentRenderer {
       return new Set(buildContentFiles);
     }
 
-    // If any .java file changed, the trace cache will be stale, so rebuild
+    // If any trace source changed, the trace cache will be stale, so rebuild
     // all content pages to pick up the new trace output.
-    const javaFileChanged = [...changedContentFiles].some(f =>
-      f.endsWith('.java'),
-    );
-    if (javaFileChanged) {
+    const traceFileChanged = [...changedContentFiles].some(isTraceSourceFile);
+    if (traceFileChanged) {
       return new Set(buildContentFiles);
     }
 
@@ -141,7 +141,7 @@ export class ContentRenderer {
           assetFiles,
           literateJavaOutputPaths,
           traceCache: this.traceCache,
-          javacAvailable: this.javacAvailable,
+          traceToolAvailability: this.traceToolAvailability,
         }),
       );
       return assets;
@@ -300,7 +300,8 @@ export class ContentRenderer {
     }
 
     if (this.javacAvailable === undefined && dirtySourceFiles.size > 0) {
-      this.javacAvailable = checkJavac();
+      this.traceToolAvailability = checkTraceToolAvailability();
+      this.javacAvailable = this.traceToolAvailability.java;
       if (!this.javacAvailable) {
         log.warn`javac was not found; literate Java pages will not include execution output`;
       }

@@ -11,7 +11,12 @@ import type {
 } from '../../watch/types';
 import { buildFull } from './build-full';
 import { buildIncremental } from './build-incremental';
-import type { TadaBuildMeta, TraceCache } from './compiler-types';
+import type {
+  TadaBuildMeta,
+  TraceCache,
+  WatchTraceOptions,
+} from './compiler-types';
+import { checkTraceToolAvailability, isTraceSourceFile } from '../utils/trace';
 import { createTadaWatchPlan, type TadaWatchPlan } from './planner';
 import { scanProject, type TadaSnapshot, updateProjectScan } from './snapshot';
 
@@ -21,7 +26,7 @@ export function invalidateTraceCacheForBatch(
 ): void {
   for (const change of batch.changes) {
     const sourcePath = path.resolve(change.path);
-    if (path.extname(sourcePath).toLowerCase() === '.java') {
+    if (isTraceSourceFile(sourcePath)) {
       traceCache.delete(sourcePath);
     }
   }
@@ -32,10 +37,12 @@ export class TadaWatchCompiler
 {
   private wsPort: number;
   private traceCache: TraceCache;
+  private traceOptions: WatchTraceOptions;
 
   constructor({ wsPort }: { wsPort: number }) {
     this.wsPort = wsPort;
     this.traceCache = new Map();
+    this.traceOptions = { toolAvailability: checkTraceToolAvailability() };
   }
 
   getWatchTargets(): WatchTarget[] {
@@ -62,7 +69,11 @@ export class TadaWatchCompiler
   async buildInitial(): Promise<
     CompilerBuildResult<TadaSnapshot, TadaBuildMeta>
   > {
-    return buildFull({ wsPort: this.wsPort, traceCache: this.traceCache });
+    return buildFull({
+      wsPort: this.wsPort,
+      traceCache: this.traceCache,
+      traceOptions: this.traceOptions,
+    });
   }
 
   async plan(
@@ -84,9 +95,18 @@ export class TadaWatchCompiler
     snapshot: TadaSnapshot | undefined,
   ): Promise<CompilerBuildResult<TadaSnapshot, TadaBuildMeta>> {
     if (plan.kind === 'full' || !snapshot) {
-      return buildFull({ wsPort: this.wsPort, traceCache: this.traceCache });
+      return buildFull({
+        wsPort: this.wsPort,
+        traceCache: this.traceCache,
+        traceOptions: this.traceOptions,
+      });
     }
 
-    return buildIncremental({ plan, snapshot, traceCache: this.traceCache });
+    return buildIncremental({
+      plan,
+      snapshot,
+      traceCache: this.traceCache,
+      traceOptions: this.traceOptions,
+    });
   }
 }

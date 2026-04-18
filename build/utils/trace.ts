@@ -1,194 +1,32 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
-import { execFileSync } from 'child_process';
 import { makeLogger } from '../log';
 import { B } from '../colors';
-import { normalizeOutputPath, toPosix } from './paths';
-import { hasMainMethod, runJavac, splitLines } from './literate-java';
-import { renderCodeSegment } from './code';
-import { computeLayout } from './trace-layout';
-import { generateStepSvg } from './trace-svg';
-import type { TraceStep, TraceManifest, TraceChunkEntry } from '../types';
-import type { RenderDependencyCollector } from '../types';
+import { toPosix } from './paths';
+import { checkJavac } from './literate-java';
+import {
+  buildManifestUrl,
+  chunkTraceOutput,
+  DEFAULT_CHUNK_SIZE,
+  getTraceOutputPaths,
+  highlightTraceSource,
+  materializeTraceOutputs,
+  renderTraceWidgetHtml,
+} from './trace-core';
+import {
+  parseIgnoreFields,
+  runJavaTrace,
+  validateJavaTraceTarget,
+} from './trace-java';
+import { resolvePythonCommand, runPythonTrace } from './trace-python';
+import type {
+  RenderDependencyCollector,
+  TraceToolAvailability,
+} from '../types';
 
 const log = makeLogger(import.meta.url);
 
-const DEFAULT_CHUNK_SIZE = 50;
-
-/**
- * Parse // @trace-ignore comments from Java source code.
- * Returns a map of className -> fieldName[] for fields that should be
- * excluded from layout consideration.
- */
-export function parseIgnoreFields(source: string): Record<string, string[]> {
-  const result: Record<string, string[]> = {};
-  const lines = source.split('\n');
-  // Track nesting: Java inner classes are reported as Outer$Inner by the tracer.
-  // Each entry is [className, braceDepthWhenOpened].
-  const classStack: { name: string; depth: number }[] = [];
-  let braceDepth = 0;
-
-  for (const line of lines) {
-    // Strip strings and comments (except @trace-ignore) to avoid false braces
-    const stripped = line
-      .replace(/"(?:[^"\\]|\\.)*"/g, '')
-      .replace(/\/\/(?!.*@trace-ignore).*/g, '');
-
-    const classMatch = stripped.match(/\bclass\s+(\w+)/);
-    if (classMatch) {
-      classStack.push({ name: classMatch[1], depth: braceDepth });
-    }
-
-    for (const ch of stripped) {
-      if (ch === '{') {
-        braceDepth++;
-      }
-      if (ch === '}') {
-        braceDepth--;
-        // Pop classes whose scope has ended
-        while (
-          classStack.length > 0 &&
-          braceDepth <= classStack[classStack.length - 1].depth
-        ) {
-          classStack.pop();
-        }
-      }
-    }
-
-    const currentClass =
-      classStack.length > 0 ? classStack.map(c => c.name).join('$') : null;
-
-    if (currentClass && line.includes('// @trace-ignore')) {
-      const before = line.split('//')[0].trim();
-      const withoutSemicolon = before.endsWith(';')
-        ? before.slice(0, -1).trim()
-        : before;
-      const parts = withoutSemicolon.split(/\s+/);
-      if (parts.length >= 2) {
-        const fieldName = parts[parts.length - 1];
-        if (!result[currentClass]) {
-          result[currentClass] = [];
-        }
-        result[currentClass].push(fieldName);
-      }
-    }
-  }
-
-  return result;
-}
-
-let tracerClassDir: string | null = null;
-
-function ensureTracerCompiled(): string {
-  if (tracerClassDir) {
-    return tracerClassDir;
-  }
-
-  const sourceDir = path.join(import.meta.dir, 'jdi-runner');
-  const sourceFile = path.join(sourceDir, 'TraceRunner.java');
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-tracer-'));
-
-  log.debug`Compiling TraceRunner.java into ${tempDir}`;
-
-  runJavac(['-d', tempDir, sourceFile], {
-    tempDir,
-    label: 'Failed to compile TraceRunner.java',
-  });
-
-  tracerClassDir = tempDir;
-  return tempDir;
-}
-
-function compileTargetFile(javaFilePath: string): string {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-trace-target-'));
-
-  runJavac(
-    [
-      '-g',
-      '-d',
-      tempDir,
-      '-sourcepath',
-      path.dirname(javaFilePath),
-      javaFilePath,
-    ],
-    { tempDir, label: `Compilation failed for ${javaFilePath}` },
-  );
-
-  return tempDir;
-}
-
-export function chunkTraceOutput(
-  output: string,
-  traceOutputDir: string,
-  sourceFile: string,
-  source: string,
-  chunkSize: number = DEFAULT_CHUNK_SIZE,
-): TraceManifest {
-  fs.mkdirSync(traceOutputDir, { recursive: true });
-
-  const lines = output
-    .trim()
-    .split('\n')
-    .filter(l => l.length > 0);
-
-  // Parse all steps first (needed for layout pass)
-  const allSteps: TraceStep[] = lines.map(l => JSON.parse(l));
-
-  const lineToSteps: Record<number, number[]> = {};
-  for (let i = 0; i < allSteps.length; i++) {
-    const step = allSteps[i];
-    if (!lineToSteps[step.line]) {
-      lineToSteps[step.line] = [];
-    }
-    lineToSteps[step.line].push(i);
-  }
-
-  // Parse @trace-ignore comments from source
-  const ignoreFields = parseIgnoreFields(source);
-
-  // Compute stable layout across all steps, then generate SVG per step
-  const layout = computeLayout(allSteps, ignoreFields);
-
-  let chunkEntries: TraceChunkEntry[] = [];
-  let chunkIndex = 0;
-
-  for (const step of allSteps) {
-    const svg = generateStepSvg(step, layout);
-    chunkEntries.push({ line: step.line, stdout: step.stdout, svg });
-
-    if (chunkEntries.length >= chunkSize) {
-      fs.writeFileSync(
-        path.join(traceOutputDir, `chunk-${chunkIndex}.json`),
-        JSON.stringify(chunkEntries),
-      );
-      chunkEntries = [];
-      chunkIndex++;
-    }
-  }
-
-  if (chunkEntries.length > 0) {
-    fs.writeFileSync(
-      path.join(traceOutputDir, `chunk-${chunkIndex}.json`),
-      JSON.stringify(chunkEntries),
-    );
-  }
-
-  const manifest: TraceManifest = {
-    totalSteps: allSteps.length,
-    chunkSize,
-    sourceFile,
-    source,
-    lineToSteps,
-  };
-
-  fs.writeFileSync(
-    path.join(traceOutputDir, 'manifest.json'),
-    JSON.stringify(manifest),
-  );
-
-  return manifest;
-}
+export const TRACEABLE_EXTENSIONS = new Set(['.java', '.py']);
 
 export interface TraceContext {
   filePath: string;
@@ -196,7 +34,7 @@ export interface TraceContext {
   distDir: string;
   applyBasePath: (subPath: string) => string;
   cache: Map<string, TraceResult>;
-  javacAvailable?: boolean;
+  toolAvailability?: TraceToolAvailability;
   dependencyCollector?: RenderDependencyCollector;
   cachedTraceSourceDir?: string;
 }
@@ -208,123 +46,72 @@ export interface TraceResult {
   mtime: number;
 }
 
-function highlightSource(source: string): string {
-  return renderCodeSegment(splitLines(source), 1, 'java', {
-    linkLineNumbers: false,
-  });
+export function isTraceSourceFile(filePath: string): boolean {
+  return TRACEABLE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
 }
 
-function getTraceOutputPaths(
-  relDir: string,
-  className: string,
-  totalSteps: number,
-): string[] {
-  const baseDir = [relDir, '_traces', className].filter(Boolean).join('/');
-  const outputPaths = [`${baseDir}/manifest.json`];
-  for (
-    let chunkIndex = 0;
-    chunkIndex * DEFAULT_CHUNK_SIZE < totalSteps;
-    chunkIndex++
-  ) {
-    outputPaths.push(`${baseDir}/chunk-${chunkIndex}.json`);
+export function checkTraceToolAvailability(): TraceToolAvailability {
+  return { java: checkJavac(), python: resolvePythonCommand() !== null };
+}
+
+function traceLanguageForFile(filePath: string): 'java' | 'python' {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.java') {
+    return 'java';
   }
-  return outputPaths;
-}
-
-function linkOrCopyFile(sourcePath: string, targetPath: string): void {
-  try {
-    fs.linkSync(sourcePath, targetPath);
-  } catch {
-    fs.copyFileSync(sourcePath, targetPath);
+  if (ext === '.py') {
+    return 'python';
   }
+  throw new Error(`Unsupported trace source: ${filePath}`);
 }
 
-function materializeTraceOutputs({
-  outputPaths,
-  targetDistDir,
-  sourceDistDir,
-}: {
-  outputPaths: string[];
-  targetDistDir: string;
-  sourceDistDir: string;
-}): boolean {
-  for (const relPath of outputPaths) {
-    const targetPath = path.join(targetDistDir, relPath);
-    if (fs.existsSync(targetPath)) {
-      continue;
-    }
-
-    const sourcePath = path.join(sourceDistDir, relPath);
-    if (!fs.existsSync(sourcePath)) {
-      return false;
-    }
-
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    linkOrCopyFile(sourcePath, targetPath);
+function availabilityForFile(
+  filePath: string,
+  toolAvailability?: TraceToolAvailability,
+): boolean | undefined {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.java') {
+    return toolAvailability?.java;
   }
-
-  return true;
+  if (ext === '.py') {
+    return toolAvailability?.python;
+  }
+  return undefined;
 }
 
-function buildManifestUrl({
-  relDir,
-  className,
-  applyBasePath,
-}: {
-  relDir: string;
-  className: string;
-  applyBasePath: (subPath: string) => string;
-}): string {
-  return applyBasePath(
-    normalizeOutputPath(
-      '/' +
-        [relDir, '_traces', className, 'manifest.json']
-          .filter(Boolean)
-          .join('/'),
-    ),
-  );
+function disabledTraceMessage(fileName: string): string {
+  const ext = path.extname(fileName).toLowerCase();
+  if (ext === '.java') {
+    return `javac was not found; trace for ${B`${fileName}`} will be disabled`;
+  }
+  return `python3/python was not found; trace for ${B`${fileName}`} will be disabled`;
 }
 
-function renderWidgetHtml({
-  highlightedSource,
-  manifestUrl,
-  totalSteps,
-}: {
-  highlightedSource: string;
-  manifestUrl?: string;
-  totalSteps?: number;
-}): string {
-  const svgAttrs = `aria-hidden='true' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'`;
-  const iconFirst = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='6' x2='2' y2='18'/><polyline points='10 6 4 12 10 18'/><line x1='4' y1='12' x2='22' y2='12'/></svg>`;
-  const iconPrev = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><polyline points='10 6 4 12 10 18'/><line x1='4' y1='12' x2='22' y2='12'/></svg>`;
-  const iconNext = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/></svg>`;
-  const iconLast = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/><line x1='22' y1='6' x2='22' y2='18'/></svg>`;
-  const disabled = totalSteps === undefined;
-  const counterContent = disabled ? '--' : `1/${totalSteps}`;
-  const counterStyle = disabled
-    ? ''
-    : ` style="min-width: ${String(totalSteps).length * 2 + 1}ch"`;
-  const controls =
-    `<button class="trace-btn trace-first" disabled tabindex="-1" aria-label="First step" title="First step">${iconFirst}</button>` +
-    `<button class="trace-btn trace-prev" disabled tabindex="-1" aria-label="Previous step" title="Previous step">${iconPrev}</button>` +
-    `<span class="trace-step-counter"${counterStyle}>${counterContent}</span>` +
-    (disabled
-      ? `<button class="trace-btn trace-next" disabled tabindex="-1" aria-label="Next step" title="Next step">${iconNext}</button>`
-      : `<button class="trace-btn trace-next" aria-label="Next step" title="Next step">${iconNext}</button>`) +
-    (disabled
-      ? `<button class="trace-btn trace-last" disabled tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`
-      : `<button class="trace-btn trace-last" tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`);
-  const wrapperAttrs = manifestUrl
-    ? ` data-trace-manifest="${manifestUrl}"`
-    : '';
-  const wrapperClass = disabled
-    ? 'trace-widget trace-disabled'
-    : 'trace-widget';
-  return `<div class="${wrapperClass}"${wrapperAttrs}><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-source-wrapper"><div class="trace-source">${highlightedSource}</div></div><pre class="trace-output"></pre></div></div></div>`;
+function sourceFileNameForTrace(fileName: string): string {
+  const { name, ext } = path.parse(fileName);
+  return `${name}${ext}`;
+}
+
+function runTraceForFile(
+  filePath: string,
+  source: string,
+): { output: string; ignoreFields?: Record<string, string[]> } {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.java') {
+    validateJavaTraceTarget(filePath, source);
+    return {
+      output: runJavaTrace(filePath, path.parse(filePath).name),
+      ignoreFields: parseIgnoreFields(source),
+    };
+  }
+  if (ext === '.py') {
+    return { output: runPythonTrace(filePath) };
+  }
+  throw new Error(`Unsupported trace source: ${filePath}`);
 }
 
 export function createTraceHelpers(context: TraceContext): {
-  renderTrace: (javaFile: string) => string;
+  renderTrace: (sourceFile: string) => string;
 } {
   const {
     filePath,
@@ -332,27 +119,27 @@ export function createTraceHelpers(context: TraceContext): {
     distDir,
     applyBasePath,
     cache,
-    javacAvailable,
+    toolAvailability,
     dependencyCollector,
     cachedTraceSourceDir,
   } = context;
   const pageDir = path.dirname(filePath);
 
-  function getOrRunTrace(javaFile: string): TraceResult {
-    const javaFilePath = path.resolve(pageDir, javaFile);
-    dependencyCollector?.traceFiles?.add(javaFilePath);
-    const className = path.parse(javaFile).name;
+  function getOrRunTrace(sourceFile: string): TraceResult {
+    const sourceFilePath = path.resolve(pageDir, sourceFile);
+    dependencyCollector?.traceFiles?.add(sourceFilePath);
+    const traceName = path.parse(sourceFile).name;
     const relDir = toPosix(path.relative(contentDir, pageDir));
 
-    const cached = cache.get(javaFilePath);
+    const cached = cache.get(sourceFilePath);
     if (cached) {
-      const mtime = fs.statSync(javaFilePath, {
+      const mtime = fs.statSync(sourceFilePath, {
         throwIfNoEntry: false,
       })?.mtimeMs;
       if (mtime !== undefined && mtime === cached.mtime) {
         const outputPaths = getTraceOutputPaths(
           relDir,
-          className,
+          traceName,
           cached.totalSteps,
         );
         if (
@@ -367,88 +154,80 @@ export function createTraceHelpers(context: TraceContext): {
           }
           return {
             ...cached,
-            manifestUrl: buildManifestUrl({ relDir, className, applyBasePath }),
+            manifestUrl: buildManifestUrl({ relDir, traceName, applyBasePath }),
           };
         }
       }
     }
 
-    if (!fs.existsSync(javaFilePath)) {
-      throw new Error(`Trace target not found: ${javaFilePath}`);
+    if (!fs.existsSync(sourceFilePath)) {
+      throw new Error(`Trace target not found: ${sourceFilePath}`);
     }
 
-    const source = fs.readFileSync(javaFilePath, 'utf-8');
-    if (!hasMainMethod(source)) {
-      throw new Error(
-        `${javaFilePath}: no main() method found (required for tracing)`,
-      );
+    const source = fs.readFileSync(sourceFilePath, 'utf-8');
+
+    log.info`Tracing ${B`${sourceFile}`}`;
+
+    const { output, ignoreFields } = runTraceForFile(sourceFilePath, source);
+    const highlightedSource = highlightTraceSource(
+      source,
+      traceLanguageForFile(sourceFilePath),
+    );
+    const traceOutputDir = path.join(distDir, relDir, '_traces', traceName);
+
+    const manifest = chunkTraceOutput(
+      output,
+      traceOutputDir,
+      sourceFileNameForTrace(sourceFile),
+      source,
+      { chunkSize: DEFAULT_CHUNK_SIZE, ignoreFields },
+    );
+    for (const outputPath of getTraceOutputPaths(
+      relDir,
+      traceName,
+      manifest.totalSteps,
+    )) {
+      dependencyCollector?.generatedOutputPaths?.add(outputPath);
     }
 
-    log.info`Tracing ${B`${javaFile}`}`;
+    const manifestUrl = buildManifestUrl({ relDir, traceName, applyBasePath });
 
-    const targetClassDir = compileTargetFile(javaFilePath);
-
-    try {
-      const tracerDir = ensureTracerCompiled();
-      const output = execFileSync(
-        'java',
-        ['-cp', tracerDir, 'TraceRunner', className, targetClassDir],
-        { timeout: 60000, encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 },
-      );
-
-      const highlightedSource = highlightSource(source);
-
-      const traceOutputDir = path.join(distDir, relDir, '_traces', className);
-
-      const manifest = chunkTraceOutput(
-        output,
-        traceOutputDir,
-        `${className}.java`,
-        source,
-        DEFAULT_CHUNK_SIZE,
-      );
-      for (const outputPath of getTraceOutputPaths(
-        relDir,
-        className,
-        manifest.totalSteps,
-      )) {
-        dependencyCollector?.generatedOutputPaths?.add(outputPath);
-      }
-
-      const manifestUrl = buildManifestUrl({
-        relDir,
-        className,
-        applyBasePath,
-      });
-
-      const totalSteps = manifest.totalSteps;
-      const mtime = fs.statSync(javaFilePath).mtimeMs;
-      cache.set(javaFilePath, {
-        manifestUrl,
-        highlightedSource,
-        totalSteps,
-        mtime,
-      });
-      return { manifestUrl, highlightedSource, totalSteps, mtime };
-    } finally {
-      fs.rmSync(targetClassDir, { recursive: true, force: true });
-    }
+    const totalSteps = manifest.totalSteps;
+    const mtime = fs.statSync(sourceFilePath).mtimeMs;
+    cache.set(sourceFilePath, {
+      manifestUrl,
+      highlightedSource,
+      totalSteps,
+      mtime,
+    });
+    return { manifestUrl, highlightedSource, totalSteps, mtime };
   }
 
   return {
-    renderTrace: (javaFile: string): string => {
-      if (javacAvailable === false) {
-        log.warn`javac was not found; trace for ${B`${javaFile}`} will be disabled`;
-        const javaFilePath = path.resolve(pageDir, javaFile);
-        if (!fs.existsSync(javaFilePath)) {
-          throw new Error(`Trace target not found: ${javaFilePath}`);
+    renderTrace: (sourceFile: string): string => {
+      const sourceFilePath = path.resolve(pageDir, sourceFile);
+      const available = availabilityForFile(sourceFilePath, toolAvailability);
+      if (available === false) {
+        log.warn`${disabledTraceMessage(sourceFile)}`;
+        if (!fs.existsSync(sourceFilePath)) {
+          throw new Error(`Trace target not found: ${sourceFilePath}`);
         }
-        const source = fs.readFileSync(javaFilePath, 'utf-8');
-        return renderWidgetHtml({ highlightedSource: highlightSource(source) });
+        const source = fs.readFileSync(sourceFilePath, 'utf-8');
+        return renderTraceWidgetHtml({
+          highlightedSource: highlightTraceSource(
+            source,
+            traceLanguageForFile(sourceFilePath),
+          ),
+        });
       }
+
       const { manifestUrl, highlightedSource, totalSteps } =
-        getOrRunTrace(javaFile);
-      return renderWidgetHtml({ highlightedSource, manifestUrl, totalSteps });
+        getOrRunTrace(sourceFile);
+      return renderTraceWidgetHtml({
+        highlightedSource,
+        manifestUrl,
+        totalSteps,
+      });
     },
   };
 }

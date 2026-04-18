@@ -44,6 +44,7 @@ import type {
   RenderLiterateJavaOptions,
   RenderCopiedContentOptions,
   RenderDependencyCollector,
+  TraceToolAvailability,
 } from '../types';
 
 const log = makeLogger(import.meta.url);
@@ -211,7 +212,7 @@ export function renderPlainTextPageAsset({
   dependencyCollector,
   cachedTraceSourceDir,
   traceCache,
-  javacAvailable,
+  traceToolAvailability,
 }: RenderPlainTextOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
@@ -234,7 +235,7 @@ export function renderPlainTextPageAsset({
       distDir,
       literateJavaOutputPaths,
       cachedTraceSourceDir,
-      javacAvailable,
+      traceToolAvailability,
     },
   );
 
@@ -391,7 +392,7 @@ function renderPlainTextContent(
     distDir,
     literateJavaOutputPaths,
     cachedTraceSourceDir,
-    javacAvailable,
+    traceToolAvailability,
   }: {
     validateInternalLinks?: boolean;
     dependencyCollector?: RenderDependencyCollector;
@@ -408,7 +409,7 @@ function renderPlainTextContent(
     distDir?: string;
     literateJavaOutputPaths?: Set<string>;
     cachedTraceSourceDir?: string;
-    javacAvailable?: boolean;
+    traceToolAvailability?: TraceToolAvailability;
   } = {},
 ): {
   content: string | null;
@@ -494,7 +495,7 @@ function renderPlainTextContent(
       distDir,
       applyBasePath,
       cache: traceCache,
-      javacAvailable,
+      toolAvailability: traceToolAvailability,
       dependencyCollector,
       cachedTraceSourceDir,
     });

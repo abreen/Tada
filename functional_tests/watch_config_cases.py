@@ -83,6 +83,10 @@ class TestWatchConfig:
                 'data-trace-manifest="/course/labs/01/_traces/SearchTreeDemo/manifest.json"'
                 in after_html
             )
+            assert (
+                'data-trace-manifest="/course/labs/01/_traces/trace_demo/manifest.json"'
+                in after_html
+            )
         finally:
             wp.stop()
 

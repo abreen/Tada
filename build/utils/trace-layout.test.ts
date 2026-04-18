@@ -567,4 +567,16 @@ describe('computeLayout', () => {
     // Person should NOT have childFields since String is a different type
     expect(layout.objects['1'].childFields).toBeUndefined();
   });
+
+  test('reuses orphan rows for objects with non-overlapping lifetimes', () => {
+    const steps: TraceStep[] = [
+      makeStep(1, mainStack, { '1': { type: 'String', value: 'a' } }),
+      makeStep(2, mainStack, { '2': { type: 'String', value: 'b' } }),
+      makeStep(3, mainStack, { '3': { type: 'String', value: 'c' } }),
+    ];
+
+    const layout = computeLayout(steps);
+    expect(layout.objects['1'].y).toBe(layout.objects['2'].y);
+    expect(layout.objects['2'].y).toBe(layout.objects['3'].y);
+  });
 });

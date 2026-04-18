@@ -18,19 +18,22 @@ function makeTraceCache(paths: string[]): TraceCache {
 }
 
 describe('invalidateTraceCacheForBatch', () => {
-  test('invalidates cache entries for changed Java paths', () => {
+  test('invalidates cache entries for changed trace source paths', () => {
     const javaPath = path.resolve('/site/content/labs/TraceDemo.java');
+    const pythonPath = path.resolve('/site/content/labs/trace_demo.py');
     const markdownPath = path.resolve('/site/content/labs/index.md');
-    const cache = makeTraceCache([javaPath, markdownPath]);
+    const cache = makeTraceCache([javaPath, pythonPath, markdownPath]);
 
     invalidateTraceCacheForBatch(cache, {
       changes: [
         { path: javaPath, kind: 'change' },
+        { path: pythonPath, kind: 'change' },
         { path: markdownPath, kind: 'change' },
       ],
     });
 
     expect(cache.has(javaPath)).toBe(false);
+    expect(cache.has(pythonPath)).toBe(false);
     expect(cache.has(markdownPath)).toBe(true);
   });
 
@@ -48,5 +51,21 @@ describe('invalidateTraceCacheForBatch', () => {
 
     expect(cache.has(oldJavaPath)).toBe(false);
     expect(cache.has(newJavaPath)).toBe(false);
+  });
+
+  test('invalidates cache entries for removed Python paths', () => {
+    const oldPythonPath = path.resolve('/site/content/labs/trace_demo.py');
+    const newPythonPath = path.resolve('/site/content/labs/new_trace.py');
+    const cache = makeTraceCache([oldPythonPath, newPythonPath]);
+
+    invalidateTraceCacheForBatch(cache, {
+      changes: [
+        { path: oldPythonPath, kind: 'unlink' },
+        { path: newPythonPath, kind: 'add' },
+      ],
+    });
+
+    expect(cache.has(oldPythonPath)).toBe(false);
+    expect(cache.has(newPythonPath)).toBe(false);
   });
 });
