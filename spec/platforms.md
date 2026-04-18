@@ -59,5 +59,5 @@ brackets (`[x](</my notes.md>)`) or written with a percent-encoded space
 Developing Tada itself is supported on macOS, Linux, and Windows.
 
 The repository's local development commands use Bun Shell instead of assuming a
-POSIX shell. The functional tests (implemented in Python) run with either
-`python` or `python3` commands, for compatibility with Windows.
+POSIX shell. Functional tests (written in Python) expect a working `python3`
+command.
