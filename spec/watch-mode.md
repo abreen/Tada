@@ -144,6 +144,12 @@ Connected browsers use a WebSocket connection and react to these message types:
 
 Failed rebuilds do not trigger `reload`.
 
+If a watched change batch results in no output changes in `dist/`, watch mode
+does not trigger `reload`.
+
+Exception: if the previous rebuild failed, the next successful rebuild triggers
+`reload` even when `dist/` bytes are unchanged.
+
 ## Architecture
 
 Watch mode is split into:

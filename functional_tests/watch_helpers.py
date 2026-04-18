@@ -165,6 +165,24 @@ class WatchProcess:
                 )
         raise TimeoutError("Did not receive 'reload' message within timeout")
 
+    def assert_no_reload(self, timeout_sec=3):
+        """Assert that no 'reload' WebSocket message is received for a period."""
+        deadline = time.monotonic() + timeout_sec
+        self._reload_event.clear()
+        while time.monotonic() < deadline:
+            if self._reload_event.wait(timeout=WS_EVENT_WAIT_SEC):
+                self._reload_event.clear()
+                raise AssertionError("Expected no 'reload' WebSocket message")
+            if self._error_event.is_set():
+                self._error_event.clear()
+                raise AssertionError(
+                    "Expected no rebuild outcome but received 'error' instead"
+                )
+            if self.proc.poll() is not None:
+                raise RuntimeError(
+                    f"Watch process exited with code {self.proc.returncode}"
+                )
+
     def stop(self):
         """Terminate the watch process and all children (serve, etc.)."""
         if self._ws is not None:

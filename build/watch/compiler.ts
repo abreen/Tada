@@ -15,6 +15,18 @@ import type { TadaBuildMeta, TraceCache } from './compiler-types';
 import { createTadaWatchPlan, type TadaWatchPlan } from './planner';
 import { scanProject, type TadaSnapshot, updateProjectScan } from './snapshot';
 
+export function invalidateTraceCacheForBatch(
+  traceCache: TraceCache,
+  batch: ChangeBatch,
+): void {
+  for (const change of batch.changes) {
+    const sourcePath = path.resolve(change.path);
+    if (path.extname(sourcePath).toLowerCase() === '.java') {
+      traceCache.delete(sourcePath);
+    }
+  }
+}
+
 export class TadaWatchCompiler
   implements WatchCompiler<TadaSnapshot, TadaWatchPlan, TadaBuildMeta>
 {
@@ -57,6 +69,7 @@ export class TadaWatchCompiler
     snapshot: TadaSnapshot | undefined,
     batch: ChangeBatch,
   ): Promise<CompilerPlanResult<TadaWatchPlan>> {
+    invalidateTraceCacheForBatch(this.traceCache, batch);
     const scan = snapshot
       ? updateProjectScan(snapshot, batch)
       : scanProject(getDevSiteVariables());

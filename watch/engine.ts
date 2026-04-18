@@ -46,6 +46,15 @@ function toDiagnostics(error: unknown): { message: string }[] {
   return [{ message: String(error) }];
 }
 
+function isNoopCommit(commit: {
+  kind: string;
+  mutations?: unknown[];
+}): boolean {
+  return (
+    commit.kind === 'apply-mutations' && (commit.mutations?.length ?? 0) === 0
+  );
+}
+
 type BuildAttemptOutcome<Snapshot, Meta> =
   | { kind: 'skipped'; batch: ChangeBatch; initial: boolean }
   | {
@@ -131,6 +140,7 @@ export async function runWatchEngine<Snapshot, Plan, Meta>(
             batch?: ChangeBatch;
             initial: boolean;
             result: Extract<CompilerBuildResult<Snapshot, Meta>, { ok: true }>;
+            changed: boolean;
           }
         | undefined;
 
@@ -140,7 +150,7 @@ export async function runWatchEngine<Snapshot, Plan, Meta>(
         const outcome = await runBuild(batch, false);
 
         if (outcome.kind === 'skipped') {
-          if (pending.size === 0) {
+          if (pending.size === 0 && !finalSuccess) {
             await emitWatchEvent(options, {
               kind: 'build-skipped',
               batch: outcome.batch,
@@ -168,12 +178,16 @@ export async function runWatchEngine<Snapshot, Plan, Meta>(
           return;
         }
 
-        applyCommitPlan(outcome.result.commit);
+        const changed = !isNoopCommit(outcome.result.commit);
+        if (changed) {
+          applyCommitPlan(outcome.result.commit);
+        }
         snapshot = outcome.result.snapshot;
         finalSuccess = {
           batch: outcome.batch,
           initial: outcome.initial,
           result: outcome.result,
+          changed: (finalSuccess?.changed ?? false) || changed,
         };
 
         if (pending.size === 0) {
@@ -186,6 +200,7 @@ export async function runWatchEngine<Snapshot, Plan, Meta>(
           kind: 'build-succeeded',
           initial: finalSuccess.initial,
           batch: finalSuccess.batch,
+          changed: finalSuccess.changed,
           snapshot: finalSuccess.result.snapshot,
           meta: finalSuccess.result.meta,
           diagnostics: finalSuccess.result.diagnostics || [],
@@ -237,6 +252,7 @@ export async function runWatchEngine<Snapshot, Plan, Meta>(
     await emitWatchEvent(options, {
       kind: 'build-succeeded',
       initial: true,
+      changed: !isNoopCommit(initialOutcome.result.commit),
       snapshot: initialOutcome.result.snapshot,
       meta: initialOutcome.result.meta,
       diagnostics: initialOutcome.result.diagnostics || [],

@@ -103,14 +103,19 @@ export class TadaWatchRuntime {
           this.broadcast('rebuilding');
         }
         return;
-      case 'build-succeeded':
+      case 'build-succeeded': {
+        const recoveredFromFailure = this.lastBuildFailed;
         this.lastBuildFailed = false;
         printFlair();
         this.ensureServerStarted();
         if (!event.initial) {
-          this.broadcast('reload');
+          if (event.changed || recoveredFromFailure) {
+            this.broadcast('reload');
+          } else {
+            this.broadcast('ready');
+          }
         }
-        if (event.meta) {
+        if (event.meta && event.changed) {
           if (event.meta.siteVariables.features.search !== false) {
             const siteVariablesKey = JSON.stringify(event.meta.siteVariables);
             if (
@@ -133,6 +138,7 @@ export class TadaWatchRuntime {
           }
         }
         return;
+      }
       case 'build-failed':
         this.lastBuildFailed = true;
         for (const diagnostic of event.diagnostics) {
@@ -149,6 +155,7 @@ export class TadaWatchRuntime {
         log.info`Watching for changes...`;
         return;
       case 'build-skipped':
+        this.broadcast('ready');
         return;
     }
   }

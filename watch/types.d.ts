@@ -80,6 +80,7 @@ export type WatchLifecycleEvent<Snapshot, Meta> =
       kind: 'build-succeeded';
       initial: boolean;
       batch?: ChangeBatch;
+      changed: boolean;
       snapshot: Snapshot;
       meta?: Meta;
       diagnostics: WatchDiagnostic[];

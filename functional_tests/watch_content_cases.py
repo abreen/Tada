@@ -305,6 +305,16 @@ class TestWatchPartials:
         watch.wait_for_rebuild(page_html, "modified", before_mtime=before_mtime)
         assert "Updated inner" in page_html.read_text()
 
+    def test_adding_unused_partial_does_not_trigger_reload(self, watch, site_dir):
+        index_html = site_dir / "dist" / "index.html"
+        before_mtime = index_html.stat().st_mtime
+
+        unused_partial = site_dir / "content" / "_unused.md"
+        unused_partial.write_text("Unused partial content.\n")
+
+        watch.assert_no_reload(timeout_sec=3)
+        assert index_html.stat().st_mtime == before_mtime
+
 
 class TestWatchTraceRebuildsOnJavaChange:
     """Editing a Java file used by renderTrace re-runs the trace."""
