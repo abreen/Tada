@@ -9,22 +9,26 @@ from pathlib import Path
 
 import pytest
 
+pytest_plugins = ['watch_helpers']
+
 # Resolve the Tada package root (parent of functional_tests/)
 PACKAGE_DIR = Path(__file__).resolve().parent.parent
-TADA_BIN = PACKAGE_DIR / "bin" / "tada.ts"
+TADA_BIN = PACKAGE_DIR / 'bin' / 'tada.ts'
 
 
 def pytest_addoption(parser):
-    parser.addoption("--shard", type=int, default=None,
-                     help="1-indexed shard number (requires --num-shards)")
-    parser.addoption("--num-shards", type=int, default=1,
-                     help="Total number of shards to split tests across")
+    parser.addoption(
+        '--shard', type=int, default=None, help='1-indexed shard number (requires --num-shards)'
+    )
+    parser.addoption(
+        '--num-shards', type=int, default=1, help='Total number of shards to split tests across'
+    )
 
 
 def pytest_collection_modifyitems(config, items):
     """Split collected tests by file across shards using round-robin."""
-    shard = config.getoption("--shard")
-    num_shards = config.getoption("--num-shards")
+    shard = config.getoption('--shard')
+    num_shards = config.getoption('--num-shards')
     if shard is None or num_shards <= 1:
         return
     files = sorted(set(str(item.fspath) for item in items))
@@ -34,17 +38,17 @@ def pytest_collection_modifyitems(config, items):
 
 def init_site(tmp_path, *, bare=True, extra_args=None):
     """Create a Tada site and return the site directory path."""
-    args = ["init", "testsite"]
+    args = ['init', 'testsite']
     if bare:
-        args.append("--bare")
-    args.append("--no-interactive")
+        args.append('--bare')
+    args.append('--no-interactive')
     if extra_args:
         args.extend(extra_args)
 
     result = run_tada(*args, cwd=str(tmp_path))
-    assert result.returncode == 0, f"init failed: {result.stderr}"
+    assert result.returncode == 0, f'init failed: {result.stderr}'
 
-    site = tmp_path / "testsite"
+    site = tmp_path / 'testsite'
     assert site.is_dir()
     return site
 
@@ -63,7 +67,7 @@ def get_free_ports(n=2):
     return ports
 
 
-def set_site_config(site_dir, overrides, config_file="site.dev.json"):
+def set_site_config(site_dir, overrides, config_file='site.dev.json'):
     """Read a site config file, deep-merge overrides, and write it back."""
     config_path = site_dir / config_file
     config = json.loads(config_path.read_text())
@@ -72,17 +76,17 @@ def set_site_config(site_dir, overrides, config_file="site.dev.json"):
             config[key].update(value)
         else:
             config[key] = value
-    config_path.write_text(json.dumps(config, indent=2) + "\n")
+    config_path.write_text(json.dumps(config, indent=2) + '\n')
 
 
-COVERAGE_PRELOAD = PACKAGE_DIR / "scripts" / "coverage-preload.ts"
+COVERAGE_PRELOAD = PACKAGE_DIR / 'scripts' / 'coverage-preload.ts'
 
 
 def _bun_command(*args):
     """Build the bun command, injecting --preload for coverage if enabled."""
-    cmd = ["bun"]
-    if os.environ.get("TADA_COVERAGE"):
-        cmd.extend(["--preload", str(COVERAGE_PRELOAD)])
+    cmd = ['bun']
+    if os.environ.get('TADA_COVERAGE'):
+        cmd.extend(['--preload', str(COVERAGE_PRELOAD)])
     cmd.append(str(TADA_BIN))
     cmd.extend(args)
     return cmd
@@ -107,9 +111,9 @@ def process_group_popen_kwargs():
     so it can be terminated as a tree. Cross-platform: uses
     CREATE_NEW_PROCESS_GROUP on Windows and start_new_session on POSIX.
     """
-    if sys.platform == "win32":
-        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-    return {"start_new_session": True}
+    if sys.platform == 'win32':
+        return {'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {'start_new_session': True}
 
 
 def terminate_process_group(proc, timeout=5):
@@ -122,7 +126,7 @@ def terminate_process_group(proc, timeout=5):
     """
     if proc.poll() is not None:
         return
-    if sys.platform == "win32":
+    if sys.platform == 'win32':
         try:
             proc.send_signal(signal.CTRL_BREAK_EVENT)
         except (OSError, ValueError):
@@ -132,7 +136,7 @@ def terminate_process_group(proc, timeout=5):
     try:
         proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
-        if sys.platform == "win32":
+        if sys.platform == 'win32':
             proc.kill()
         else:
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
@@ -152,14 +156,14 @@ def make_fake_failing_command(directory, name):
 
     Returns the primary fake path.
     """
-    if sys.platform == "win32":
-        fake_cmd = directory / f"{name}.cmd"
-        fake_cmd.write_text("@exit 1\r\n")
-        fake_exe = directory / f"{name}.exe"
-        fake_exe.write_bytes(b"")
+    if sys.platform == 'win32':
+        fake_cmd = directory / f'{name}.cmd'
+        fake_cmd.write_text('@exit 1\r\n')
+        fake_exe = directory / f'{name}.exe'
+        fake_exe.write_bytes(b'')
         return fake_cmd
     fake = directory / name
-    fake.write_text("#!/bin/sh\nexit 1\n")
+    fake.write_text('#!/bin/sh\nexit 1\n')
     fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
     return fake
 
@@ -183,14 +187,14 @@ def site_dir(tmp_path):
 @pytest.fixture
 def built_dev_site(site_dir):
     """Create a site and build it with tada dev. Yields the site Path."""
-    result = run_tada("dev", cwd=str(site_dir))
-    assert result.returncode == 0, f"dev build failed: {result.stderr}"
+    result = run_tada('dev', cwd=str(site_dir))
+    assert result.returncode == 0, f'dev build failed: {result.stderr}'
     yield site_dir
 
 
 @pytest.fixture
 def built_prod_site(site_dir):
     """Create a site and build it with tada prod. Yields the site Path."""
-    result = run_tada("prod", cwd=str(site_dir))
-    assert result.returncode == 0, f"prod build failed: {result.stderr}"
+    result = run_tada('prod', cwd=str(site_dir))
+    assert result.returncode == 0, f'prod build failed: {result.stderr}'
     yield site_dir

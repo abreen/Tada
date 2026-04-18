@@ -1,26 +1,25 @@
 import pytest
-
 from conftest import init_site, run_tada
 
 
 def _write_basic_literate_java_site(site):
-    lectures_dir = site / "content" / "lectures" / "01"
+    lectures_dir = site / 'content' / 'lectures' / '01'
     lectures_dir.mkdir(parents=True, exist_ok=True)
-    (site / "content" / "lectures" / "index.md").write_text(
-        "---\ntitle: Lectures\n---\n\n[Lecture 1](./01/index.html)\n"
+    (site / 'content' / 'lectures' / 'index.md').write_text(
+        '---\ntitle: Lectures\n---\n\n[Lecture 1](./01/index.html)\n'
     )
-    (lectures_dir / "index.md").write_text(
-        "---\ntitle: Lecture 1\n---\n\n[Pair source](./Pair.java)\n"
+    (lectures_dir / 'index.md').write_text(
+        '---\ntitle: Lecture 1\n---\n\n[Pair source](./Pair.java)\n'
     )
-    (lectures_dir / "Pair.java.md").write_text(
-        "---\ntitle: Pair\n---\n\n"
-        "```java\n"
-        "public class Pair {\n"
-        "  public static void main(String[] args) {\n"
+    (lectures_dir / 'Pair.java.md').write_text(
+        '---\ntitle: Pair\n---\n\n'
+        '```java\n'
+        'public class Pair {\n'
+        '  public static void main(String[] args) {\n'
         '    System.out.println("pair");\n'
-        "  }\n"
-        "}\n"
-        "```\n"
+        '  }\n'
+        '}\n'
+        '```\n'
     )
 
 
@@ -35,13 +34,13 @@ class TestLiterateJavaPages:
 
     def test_literate_java_page_has_java_html_extension(self, built_dev_site):
         """Pair.java.md should produce Pair.java.html and Pair.java."""
-        dist = built_dev_site / "dist"
-        java_html = dist / "lectures" / "01" / "Pair.java.html"
-        assert java_html.exists(), f"Expected Pair.java.html to exist at {java_html}"
+        dist = built_dev_site / 'dist'
+        java_html = dist / 'lectures' / '01' / 'Pair.java.html'
+        assert java_html.exists(), f'Expected Pair.java.html to exist at {java_html}'
 
         # The literate Java page should always produce a .java file
-        code_file = dist / "lectures" / "01" / "Pair.java"
-        assert code_file.exists(), f"Expected Pair.java to exist at {code_file}"
+        code_file = dist / 'lectures' / '01' / 'Pair.java'
+        assert code_file.exists(), f'Expected Pair.java to exist at {code_file}'
 
 
 class TestLiterateJavaLinkNotRewritten:
@@ -52,44 +51,42 @@ class TestLiterateJavaLinkNotRewritten:
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
 
-        content = site / "content" / "test"
+        content = site / 'content' / 'test'
         content.mkdir(parents=True)
 
         # A literate Java file
-        (content / "Hello.java.md").write_text(
-            "---\ntitle: Hello\n---\n\n"
-            "```java\n"
-            "public class Hello {\n"
-            "    public static void main(String[] args) {\n"
+        (content / 'Hello.java.md').write_text(
+            '---\ntitle: Hello\n---\n\n'
+            '```java\n'
+            'public class Hello {\n'
+            '    public static void main(String[] args) {\n'
             '        System.out.println("hi");\n'
-            "    }\n"
-            "}\n"
-            "```\n"
+            '    }\n'
+            '}\n'
+            '```\n'
         )
 
         # A regular code file
-        (content / "Plain.java").write_text(
-            "public class Plain {}\n"
-        )
+        (content / 'Plain.java').write_text('public class Plain {}\n')
 
         # A page that links to both
-        (content / "index.md").write_text(
-            "---\ntitle: Test\n---\n\n"
-            "* [Hello source](./Hello.java)\n"
-            "* [Plain source](./Plain.java)\n"
+        (content / 'index.md').write_text(
+            '---\ntitle: Test\n---\n\n'
+            '* [Hello source](./Hello.java)\n'
+            '* [Plain source](./Plain.java)\n'
         )
 
         yield site
 
     def test_literate_java_link_not_rewritten(self, built_dev_site):
         """Link to Hello.java (literate Java output) should stay as .java."""
-        html = (built_dev_site / "dist" / "test" / "index.html").read_text()
+        html = (built_dev_site / 'dist' / 'test' / 'index.html').read_text()
         assert 'href="./Hello.java"' in html
         assert 'href="./Hello.java.html"' not in html
 
     def test_code_page_link_still_rewritten(self, built_dev_site):
         """Link to Plain.java (a code page) should be rewritten to .java.html."""
-        html = (built_dev_site / "dist" / "test" / "index.html").read_text()
+        html = (built_dev_site / 'dist' / 'test' / 'index.html').read_text()
         assert 'href="./Plain.java.html"' in html
 
 
@@ -100,21 +97,21 @@ class TestLiterateJavaBrokenLink:
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
 
-        content = site / "content" / "test"
+        content = site / 'content' / 'test'
         content.mkdir(parents=True)
 
-        (content / "Broken.java.md").write_text(
-            "---\ntitle: Broken\n---\n\n"
-            "See [this page](./nonexistent.html).\n\n"
-            "```java\n"
-            "public class Broken {}\n"
-            "```\n"
+        (content / 'Broken.java.md').write_text(
+            '---\ntitle: Broken\n---\n\n'
+            'See [this page](./nonexistent.html).\n\n'
+            '```java\n'
+            'public class Broken {}\n'
+            '```\n'
         )
 
         yield site
 
     def test_build_fails(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
+        result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode != 0
         output = result.stdout + result.stderr
-        assert "broken internal link" in output
+        assert 'broken internal link' in output

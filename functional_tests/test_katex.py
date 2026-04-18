@@ -1,5 +1,4 @@
 import pytest
-
 from conftest import init_site, run_tada
 
 
@@ -11,39 +10,39 @@ class TestKatexRendering:
         site = init_site(tmp_path, bare=True)
 
         # Create a page with math
-        (site / "content" / "math.md").write_text(
-            "---\ntitle: Math\n---\n\nInline $E = mc^2$ and display:\n\n"
-            "$$\\int_0^\\infty e^{-x^2} dx$$\n"
+        (site / 'content' / 'math.md').write_text(
+            '---\ntitle: Math\n---\n\nInline $E = mc^2$ and display:\n\n'
+            '$$\\int_0^\\infty e^{-x^2} dx$$\n'
         )
 
         yield site
 
     def test_math_page_contains_katex_html(self, built_dev_site):
-        html = (built_dev_site / "dist" / "math.html").read_text()
+        html = (built_dev_site / 'dist' / 'math.html').read_text()
         assert 'class="katex"' in html
 
     def test_math_page_has_katex_stylesheet(self, built_dev_site):
-        html = (built_dev_site / "dist" / "math.html").read_text()
-        assert "katex.min.css" in html
+        html = (built_dev_site / 'dist' / 'math.html').read_text()
+        assert 'katex.min.css' in html
 
     def test_katex_stylesheet_is_linked(self, built_dev_site):
-        html = (built_dev_site / "dist" / "math.html").read_text()
+        html = (built_dev_site / 'dist' / 'math.html').read_text()
         assert 'rel="stylesheet"' in html
 
     def test_non_math_page_has_no_katex_stylesheet(self, built_dev_site):
-        html = (built_dev_site / "dist" / "index.html").read_text()
-        assert "katex.min.css" not in html
+        html = (built_dev_site / 'dist' / 'index.html').read_text()
+        assert 'katex.min.css' not in html
 
     def test_katex_css_exists_in_dist(self, built_dev_site):
-        assert (built_dev_site / "dist" / "katex" / "katex.min.css").exists()
+        assert (built_dev_site / 'dist' / 'katex' / 'katex.min.css').exists()
 
     def test_katex_fonts_exist_in_dist(self, built_dev_site):
-        fonts = list((built_dev_site / "dist" / "katex" / "fonts").glob("*.woff2"))
+        fonts = list((built_dev_site / 'dist' / 'katex' / 'fonts').glob('*.woff2'))
         assert len(fonts) > 0
 
     def test_katex_css_has_no_ttf_references(self, built_dev_site):
-        css = (built_dev_site / "dist" / "katex" / "katex.min.css").read_text()
-        assert ".ttf" not in css
+        css = (built_dev_site / 'dist' / 'katex' / 'katex.min.css').read_text()
+        assert '.ttf' not in css
 
 
 class TestKatexErrorHandling:
@@ -54,14 +53,14 @@ class TestKatexErrorHandling:
         site = init_site(tmp_path, bare=True)
 
         # Create a page with invalid LaTeX
-        (site / "content" / "bad-math.md").write_text(
-            "---\ntitle: Bad Math\n---\n\n$\\invalidcommand{$\n"
+        (site / 'content' / 'bad-math.md').write_text(
+            '---\ntitle: Bad Math\n---\n\n$\\invalidcommand{$\n'
         )
 
         yield site
 
     def test_build_fails_on_invalid_latex(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
+        result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode != 0
         output = result.stdout + result.stderr
-        assert "KaTeX" in output or "katex" in output.lower()
+        assert 'KaTeX' in output or 'katex' in output.lower()

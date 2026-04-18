@@ -58,4 +58,5 @@ The `init/` directory contains the default content and public files copied into 
 
 ## Formatting
 
-The pre-commit hook runs Prettier. Do not run formatting commands manually. There is no code formatter for Python code.
+The pre-commit hook runs Prettier for JavaScript and Ruff for
+`functional_tests/*.py`. Do not run formatting commands manually.

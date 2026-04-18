@@ -6,9 +6,7 @@ set up your development environment and submit changes.
 
 ## Prerequisites
 
-- A Unix-like environment (macOS or Linux). The test scripts, Git hooks, and
-  functional test harness use shell syntax that is not available on Windows
-  outside of WSL.
+- A Unix-like environment (macOS, Linux, or WSL on Windows)
 - [Bun](https://bun.sh/)
 - A recent Java JDK (for the literate Java feature)
 - [MuPDF](https://mupdf.com/) (the `mutool` command for PDF text extraction)
@@ -56,6 +54,7 @@ From the repository root:
 
 ```
 bun run lint        # Run the linter
+bun run lint:python # Run the Python linter for functional tests
 bun run typecheck   # Run TypeScript's type checker
 ```
 
@@ -78,13 +77,13 @@ machines.
 
 ## Code style
 
-The Git pre-commit hook formats code using Prettier according to this project's
-style preferences. You don't need to run Prettier yourself, but you may
-configure your IDE to run it when saving a file.
+The Git pre-commit hook formats JavaScript, TypeScript, JSON, and SCSS with
+Prettier, and formats `functional_tests/*.py` with Ruff. You don't need to run
+these formatters yourself, but you may configure your IDE to run them when
+saving a file.
 
-The pre-commit hook also runs the linter and TypeScript's type checker.
-
-There are currently no style preferences for the Python test code.
+The pre-commit hook also runs ESLint, Ruff's Python linter, and TypeScript's
+type checker.
 
 
 ## Logging
