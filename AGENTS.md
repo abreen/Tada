@@ -35,6 +35,7 @@ For a broader audit across all specs, use `git log` to compare each spec's last 
 - Watch files: `tada watch`
 - Clean build artifacts: `tada clean`
 - Lint: `bun run lint`
+- Set up Python tooling for functional tests and Ruff: `bun run setup:python`
 - Typecheck: `bun run typecheck`
 - Run unit tests: `bun test`
 - Run a single unit test: `bun test build/code.test.ts`

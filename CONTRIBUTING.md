@@ -21,6 +21,13 @@ Clone the repo and install dependencies:
 git clone https://github.com/abreen/tada.git
 cd tada
 bun install
+bun run setup:python
+```
+
+To verify your local toolchain, run:
+
+```
+bun run check-deps
 ```
 
 To test your changes to Tada against a real site, use the `init-example` script:
@@ -53,9 +60,9 @@ installed it.
 From the repository root:
 
 ```
-bun run lint        # Run the linter
-bun run lint:python # Run the Python linter for functional tests
-bun run typecheck   # Run TypeScript's type checker
+bun run lint         # Run the linter
+bun run lint:python  # Run the Python linter for functional tests
+bun run typecheck    # Run TypeScript's type checker
 ```
 
 These checks run automatically as part of the Git pre-commit hook.
@@ -67,8 +74,8 @@ From the repository root:
 ```
 bun test                      # Unit tests
 bun test build/code.test.ts   # Run a single unit test file
-bun test:functional           # Black-box tests of Tada functionality
-bun test:all                  # Run all unit & functional tests
+bun run test:functional       # Black-box tests of Tada functionality
+bun run test:all              # Run all unit & functional tests
 ```
 
 The functional tests exercise the CLI end-to-end and may be slow on older
@@ -83,7 +90,7 @@ these formatters yourself, but you may configure your IDE to run them when
 saving a file.
 
 The pre-commit hook also runs ESLint, Ruff's Python linter, and TypeScript's
-type checker.
+type checker. Make sure you've run `bun run setup:python` so Ruff is available.
 
 
 ## Logging

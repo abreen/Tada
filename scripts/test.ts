@@ -23,12 +23,6 @@ async function runFunctional(extra: string[] = []) {
   await $`pytest functional_tests/ ${pytestFlags} ${extra}`.throws(true);
 }
 
-if (suite == 'functional' || suite == 'coverage' || suite == 'all') {
-  await $`python3 -m pip install -q -r functional_tests/requirements.txt`.throws(
-    true,
-  );
-}
-
 switch (suite) {
   case 'unit':
     await runUnit(process.argv.slice(3));
