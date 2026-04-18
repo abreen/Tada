@@ -1,7 +1,3 @@
-if (!Bun.which('bun')) {
-  console.error('Warning: Bun is required to develop this project.');
-}
-
 if (!Bun.which('javac')) {
   console.error('Warning: javac is required to develop this project.');
 }
