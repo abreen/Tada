@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from conftest import run_tada, set_site_config
+from conftest import init_site, run_tada, set_site_config
 
 
 class TestBrokenNavLink:
@@ -10,9 +10,7 @@ class TestBrokenNavLink:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         nav_path = site / "nav.json"
         nav = json.loads(nav_path.read_text())
@@ -33,9 +31,7 @@ class TestBrokenParentLink:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         (site / "content" / "page.md").write_text(
             "---\ntitle: Page\nparent: /nonexistent.html\nparentLabel: Missing\n---\n\nContent.\n"
@@ -55,9 +51,7 @@ class TestLinkToPartialBroken:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         (site / "content" / "_partial.md").write_text("Partial content.\n")
         (site / "content" / "page.md").write_text(
@@ -77,9 +71,7 @@ class TestLinkToPublicFile:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         (site / "public" / "data.csv").write_text("a,b\n1,2\n")
         (site / "content" / "page.md").write_text(
@@ -98,9 +90,7 @@ class TestLinkToPublicIndexHtml:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         report_dir = site / "public" / "report"
         report_dir.mkdir(parents=True)
@@ -129,9 +119,7 @@ class TestLinkToPublicCodeFile:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         set_site_config(site, {"features": {"code": True}})
 
@@ -160,9 +148,7 @@ class TestDisabledNavLinkSkipped:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         nav_path = site / "nav.json"
         nav = json.loads(nav_path.read_text())

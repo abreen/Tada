@@ -26,7 +26,6 @@ export class TadaWatchRuntime {
   private httpPort: number | undefined;
   private distDir: string;
   private wss: WebSocketServer | null;
-  private watching: boolean;
   private lastBuildFailed: boolean;
   private serveStarted: boolean;
   private pagefindRunner: WatchPagefindRunner | undefined;
@@ -44,7 +43,6 @@ export class TadaWatchRuntime {
     this.wsPort = wsPort;
     this.httpPort = httpPort;
     this.distDir = distDir;
-    this.watching = false;
     this.lastBuildFailed = false;
     this.serveStarted = false;
     this.pagefindSiteVariablesKey = undefined;
@@ -52,12 +50,6 @@ export class TadaWatchRuntime {
 
     this.wss.on('connection', conn => {
       wslog.debug`WebSocket client connected`;
-      if (this.watching && conn.readyState === WebSocket.OPEN) {
-        if (this.lastBuildFailed) {
-          conn.send('error');
-        }
-        conn.send('ready');
-      }
       conn.on('close', () => {
         wslog.debug`WebSocket client disconnected`;
       });
@@ -108,12 +100,8 @@ export class TadaWatchRuntime {
         this.lastBuildFailed = false;
         printFlair();
         this.ensureServerStarted();
-        if (!event.initial) {
-          if (event.changed || recoveredFromFailure) {
-            this.broadcast('reload');
-          } else {
-            this.broadcast('ready');
-          }
+        if (!event.initial && (event.changed || recoveredFromFailure)) {
+          this.broadcast('reload');
         }
         if (event.meta && event.changed) {
           if (event.meta.siteVariables.features.search !== false) {
@@ -144,18 +132,11 @@ export class TadaWatchRuntime {
         for (const diagnostic of event.diagnostics) {
           log.error`${diagnostic.message}`;
         }
-        this.broadcast('error');
         return;
       case 'watching':
-        this.watching = true;
-        if (this.lastBuildFailed) {
-          this.broadcast('error');
-        }
-        this.broadcast('ready');
         log.info`Watching for changes...`;
         return;
       case 'build-skipped':
-        this.broadcast('ready');
         return;
     }
   }

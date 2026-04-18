@@ -6,14 +6,6 @@ from conftest import run_tada
 class TestTemplateErrors:
     """Tests for template rendering error handling."""
 
-    @pytest.fixture
-    def site_dir(self, tmp_path):
-        result = run_tada(
-            "init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path)
-        )
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        yield tmp_path / "testsite"
-
     def test_undefined_variable_fails_build(self, site_dir):
         """A Markdown file referencing an undefined variable should fail."""
         (site_dir / "content" / "index.md").write_text(
@@ -50,14 +42,6 @@ class TestTemplateErrors:
 
 class TestMissingFrontMatter:
     """Tests for required front matter field validation."""
-
-    @pytest.fixture
-    def site_dir(self, tmp_path):
-        result = run_tada(
-            "init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path)
-        )
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        yield tmp_path / "testsite"
 
     def test_missing_title_fails_build(self, site_dir):
         """A markdown page without a title field should fail the build."""

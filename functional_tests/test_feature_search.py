@@ -16,20 +16,14 @@ class TestSearchFeatureDisabled:
 
         yield site
 
-    @pytest.fixture
-    def built_site(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
-        assert result.returncode == 0, f"dev build failed: {result.stderr}"
-        yield site_dir
-
-    def test_no_pagefind_directory(self, built_site):
+    def test_no_pagefind_directory(self, built_dev_site):
         """No pagefind/ directory should exist in the output."""
-        dist = built_site / "dist"
+        dist = built_dev_site / "dist"
         assert not (dist / "pagefind").exists()
 
-    def test_html_pages_still_generated(self, built_site):
+    def test_html_pages_still_generated(self, built_dev_site):
         """Content pages should still be rendered even without search."""
-        dist = built_site / "dist"
+        dist = built_dev_site / "dist"
         assert (dist / "index.html").exists()
 
     def test_exit_code_zero(self, site_dir):
@@ -47,19 +41,13 @@ class TestSearchFeatureEnabled:
         assert result.returncode == 0, f"init failed: {result.stderr}"
         yield tmp_path / "testsite"
 
-    @pytest.fixture
-    def built_site(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
-        assert result.returncode == 0, f"dev build failed: {result.stderr}"
-        yield site_dir
-
-    def test_pagefind_directory_exists(self, built_site):
+    def test_pagefind_directory_exists(self, built_dev_site):
         """pagefind/ directory should exist in the output."""
-        dist = built_site / "dist"
+        dist = built_dev_site / "dist"
         assert (dist / "pagefind").is_dir()
 
-    def test_pagefind_has_index_files(self, built_site):
+    def test_pagefind_has_index_files(self, built_dev_site):
         """pagefind/ should contain index files."""
-        pagefind_dir = built_site / "dist" / "pagefind"
+        pagefind_dir = built_dev_site / "dist" / "pagefind"
         files = list(pagefind_dir.iterdir())
         assert len(files) > 0

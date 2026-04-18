@@ -32,13 +32,21 @@ def pytest_collection_modifyitems(config, items):
     items[:] = [item for item in items if str(item.fspath) in shard_files]
 
 
-def pytest_configure(config):
-    """When AGENT is set, reduce output verbosity."""
-    if os.environ.get("AGENT", ""):
-        config.option.verbose = -1
-        config.option.tbstyle = "line"
-        config.option.durations = None
-        config.option.no_header = True
+def init_site(tmp_path, *, bare=True, extra_args=None):
+    """Create a Tada site and return the site directory path."""
+    args = ["init", "testsite"]
+    if bare:
+        args.append("--bare")
+    args.append("--no-interactive")
+    if extra_args:
+        args.extend(extra_args)
+
+    result = run_tada(*args, cwd=str(tmp_path))
+    assert result.returncode == 0, f"init failed: {result.stderr}"
+
+    site = tmp_path / "testsite"
+    assert site.is_dir()
+    return site
 
 
 def get_free_ports(n=2):
@@ -168,10 +176,7 @@ def site_dir(tmp_path):
 
     Yields the Path to the site directory (tmp_path / 'testsite').
     """
-    result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-    assert result.returncode == 0, f"init failed: {result.stderr}"
-    site = tmp_path / "testsite"
-    assert site.is_dir()
+    site = init_site(tmp_path, bare=True)
     yield site
 
 

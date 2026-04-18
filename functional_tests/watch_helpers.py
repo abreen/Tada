@@ -1,10 +1,9 @@
+import re
 import subprocess
-import threading
 import time
 from pathlib import Path
 
 import pytest
-import websocket
 
 from conftest import (
     _bun_command,
@@ -16,7 +15,8 @@ from conftest import (
 REBUILD_TIMEOUT_SEC = 30
 INITIAL_BUILD_TIMEOUT_SEC = 60
 WEBSOCKET_TIMEOUT_SEC = 15
-WS_EVENT_WAIT_SEC = 0.5
+POLL_SEC = 0.05
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 class WatchProcess:
@@ -25,9 +25,11 @@ class WatchProcess:
     def __init__(self, site_dir: Path):
         self.site_dir = site_dir
         self.dist_dir = site_dir / "dist"
+        self.stdout_log_path = site_dir / "watch_stdout.log"
+        self.stderr_log_path = site_dir / "watch_stderr.log"
         http_port, self.ws_port = get_free_ports(2)
-        self._stdout_file = open(site_dir / "watch_stdout.log", "w")
-        self._stderr_file = open(site_dir / "watch_stderr.log", "w")
+        self._stdout_file = open(self.stdout_log_path, "w")
+        self._stderr_file = open(self.stderr_log_path, "w")
         self.proc = subprocess.Popen(
             _bun_command(
                 "watch",
@@ -41,73 +43,63 @@ class WatchProcess:
             stderr=self._stderr_file,
             **process_group_popen_kwargs(),
         )
+        self._stdout_cursor = 0
 
-        self._reload_event = threading.Event()
-        self._ready_event = threading.Event()
-        self._error_event = threading.Event()
-        self._ws_connected = threading.Event()
+    def _stdout_text(self) -> str:
+        try:
+            return self.stdout_log_path.read_text()
+        except FileNotFoundError:
+            return ""
 
-        def on_message(ws, message):
-            if message == "reload":
-                self._reload_event.set()
-            elif message == "ready":
-                self._ready_event.set()
-            elif message == "error":
-                self._error_event.set()
+    def _stdout_len(self) -> int:
+        return len(self._stdout_text())
 
-        def on_open(ws):
-            self._ws_connected.set()
+    def _stdout_since(self, start: int) -> str:
+        return self._stdout_text()[start:]
 
-        def on_close(ws, close_status_code, close_msg):
-            self._ws_connected.clear()
+    def _clean(self, text: str) -> str:
+        return ANSI_RE.sub("", text)
 
-        self._ws = websocket.WebSocketApp(
-            f"ws://localhost:{self.ws_port}",
-            on_message=on_message,
-            on_open=on_open,
-            on_close=on_close,
-        )
-        self._ws_thread = threading.Thread(
-            target=lambda: self._ws.run_forever(reconnect=0.1),
-            daemon=True,
-        )
-        self._ws_thread.start()
+    def _has_error_since(self, start: int) -> bool:
+        return " error " in self._clean(self._stdout_since(start)).lower()
+
+    def _advance_stdout_cursor(self) -> None:
+        self._stdout_cursor = self._stdout_len()
 
     def wait_for_initial_build(self):
-        """Block until the watcher is fully ready (initial build + file watching)."""
+        """Block until watch mode is active after its initial build attempt."""
         deadline = time.monotonic() + INITIAL_BUILD_TIMEOUT_SEC
-        saw_error = False
+        index_html = self.dist_dir / "index.html"
         while time.monotonic() < deadline:
-            if self._ready_event.wait(timeout=WS_EVENT_WAIT_SEC):
+            stdout = self._stdout_text()
+            watching_started = "Watching for changes..." in stdout
+            if watching_started and index_html.exists():
+                self._advance_stdout_cursor()
                 return
-            if self._error_event.is_set():
-                saw_error = True
+            if watching_started and self._has_error_since(0):
+                self._advance_stdout_cursor()
+                return
             if self.proc.poll() is not None:
                 raise RuntimeError(
                     f"Watch process exited early with code {self.proc.returncode}"
                 )
-        detail = " (received 'error' WebSocket message during wait)" if saw_error else ""
-        raise TimeoutError(f"Initial watch build did not complete in time{detail}")
+            time.sleep(POLL_SEC)
+        raise TimeoutError("Initial watch build did not complete in time")
 
-    def wait_for_error(self):
-        """Block until an 'error' WebSocket message is received."""
+    def wait_for_error(self, after: int | None = None):
+        """Block until the watch process logs a new build error."""
         deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
-        # Drop a stale reload from a prior successful build step.
-        self._reload_event.clear()
+        start = self._stdout_cursor if after is None else after
         while time.monotonic() < deadline:
-            if self._error_event.wait(timeout=WS_EVENT_WAIT_SEC):
-                self._error_event.clear()
+            if self._has_error_since(start):
+                self._advance_stdout_cursor()
                 return
-            if self._reload_event.is_set():
-                self._reload_event.clear()
-                raise AssertionError(
-                    "Expected 'error' WebSocket message but received 'reload' instead"
-                )
             if self.proc.poll() is not None:
                 raise RuntimeError(
                     f"Watch process exited with code {self.proc.returncode}"
                 )
-        raise TimeoutError("Did not receive 'error' message within timeout")
+            time.sleep(POLL_SEC)
+        raise TimeoutError("Did not observe a build error within timeout")
 
     def wait_for_rebuild(self, path: Path, condition="modified", before_mtime=None):
         """Wait for a file to be created, modified, or removed."""
@@ -117,83 +109,43 @@ class WatchProcess:
             )
 
         deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
+
         def _check():
             if condition == "exists":
                 return path.exists()
-            elif condition == "removed":
+            if condition == "removed":
                 return not path.exists()
-            elif condition == "modified":
+            if condition == "modified":
                 return path.exists() and path.stat().st_mtime > before_mtime
             return False
 
-        self._reload_event.clear()
         while time.monotonic() < deadline:
             if _check():
+                self._advance_stdout_cursor()
                 return
-            if self._reload_event.wait(timeout=WS_EVENT_WAIT_SEC):
-                self._reload_event.clear()
-                if _check():
-                    return
-            if self._error_event.is_set():
-                self._error_event.clear()
-                raise AssertionError(
-                    "Expected 'reload' WebSocket message but received 'error' instead"
-                )
             if self.proc.poll() is not None:
                 raise RuntimeError(
                     f"Watch process exited with code {self.proc.returncode}"
                 )
+            time.sleep(POLL_SEC)
         raise TimeoutError(
             f"File {path} did not meet condition '{condition}' within timeout"
         )
 
-    def wait_for_reload(self):
-        """Block until a 'reload' WebSocket message is received."""
-        deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
-        # Drop a stale error from a prior failing build step.
-        self._error_event.clear()
-        self._reload_event.clear()
-        while time.monotonic() < deadline:
-            if self._reload_event.wait(timeout=WS_EVENT_WAIT_SEC):
-                self._reload_event.clear()
-                return
-            if self._error_event.is_set():
-                self._error_event.clear()
-                raise AssertionError(
-                    "Expected 'reload' WebSocket message but received 'error' instead"
-                )
-            if self.proc.poll() is not None:
-                raise RuntimeError(
-                    f"Watch process exited with code {self.proc.returncode}"
-                )
-        raise TimeoutError("Did not receive 'reload' message within timeout")
-
-    def assert_no_reload(self, timeout_sec=3):
-        """Assert that no 'reload' WebSocket message is received for a period."""
+    def assert_no_rebuild(self, path: Path, before_mtime: float, timeout_sec=3):
+        """Assert that a file is not modified for a period."""
         deadline = time.monotonic() + timeout_sec
-        self._reload_event.clear()
         while time.monotonic() < deadline:
-            if self._reload_event.wait(timeout=WS_EVENT_WAIT_SEC):
-                self._reload_event.clear()
-                raise AssertionError("Expected no 'reload' WebSocket message")
-            if self._error_event.is_set():
-                self._error_event.clear()
-                raise AssertionError(
-                    "Expected no rebuild outcome but received 'error' instead"
-                )
+            if path.stat().st_mtime > before_mtime:
+                raise AssertionError(f"Expected no rebuild for {path}")
             if self.proc.poll() is not None:
                 raise RuntimeError(
                     f"Watch process exited with code {self.proc.returncode}"
                 )
+            time.sleep(POLL_SEC)
 
     def stop(self):
         """Terminate the watch process and all children (serve, etc.)."""
-        if self._ws is not None:
-            self._ws.close()
-            self._ws = None
-        if self._ws_thread is not None and self._ws_thread.is_alive():
-            self._ws_thread.join(timeout=2)
-
         terminate_process_group(self.proc)
         self._stdout_file.close()
         self._stderr_file.close()

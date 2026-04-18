@@ -1,6 +1,6 @@
 import pytest
 
-from conftest import run_tada
+from conftest import init_site, run_tada
 
 
 class TestKatexRendering:
@@ -8,9 +8,7 @@ class TestKatexRendering:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         # Create a page with math
         (site / "content" / "math.md").write_text(
@@ -20,37 +18,31 @@ class TestKatexRendering:
 
         yield site
 
-    @pytest.fixture
-    def built_site(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
-        assert result.returncode == 0, f"dev build failed: {result.stderr}"
-        yield site_dir
-
-    def test_math_page_contains_katex_html(self, built_site):
-        html = (built_site / "dist" / "math.html").read_text()
+    def test_math_page_contains_katex_html(self, built_dev_site):
+        html = (built_dev_site / "dist" / "math.html").read_text()
         assert 'class="katex"' in html
 
-    def test_math_page_has_katex_stylesheet(self, built_site):
-        html = (built_site / "dist" / "math.html").read_text()
+    def test_math_page_has_katex_stylesheet(self, built_dev_site):
+        html = (built_dev_site / "dist" / "math.html").read_text()
         assert "katex.min.css" in html
 
-    def test_katex_stylesheet_is_linked(self, built_site):
-        html = (built_site / "dist" / "math.html").read_text()
+    def test_katex_stylesheet_is_linked(self, built_dev_site):
+        html = (built_dev_site / "dist" / "math.html").read_text()
         assert 'rel="stylesheet"' in html
 
-    def test_non_math_page_has_no_katex_stylesheet(self, built_site):
-        html = (built_site / "dist" / "index.html").read_text()
+    def test_non_math_page_has_no_katex_stylesheet(self, built_dev_site):
+        html = (built_dev_site / "dist" / "index.html").read_text()
         assert "katex.min.css" not in html
 
-    def test_katex_css_exists_in_dist(self, built_site):
-        assert (built_site / "dist" / "katex" / "katex.min.css").exists()
+    def test_katex_css_exists_in_dist(self, built_dev_site):
+        assert (built_dev_site / "dist" / "katex" / "katex.min.css").exists()
 
-    def test_katex_fonts_exist_in_dist(self, built_site):
-        fonts = list((built_site / "dist" / "katex" / "fonts").glob("*.woff2"))
+    def test_katex_fonts_exist_in_dist(self, built_dev_site):
+        fonts = list((built_dev_site / "dist" / "katex" / "fonts").glob("*.woff2"))
         assert len(fonts) > 0
 
-    def test_katex_css_has_no_ttf_references(self, built_site):
-        css = (built_site / "dist" / "katex" / "katex.min.css").read_text()
+    def test_katex_css_has_no_ttf_references(self, built_dev_site):
+        css = (built_dev_site / "dist" / "katex" / "katex.min.css").read_text()
         assert ".ttf" not in css
 
 
@@ -59,9 +51,7 @@ class TestKatexErrorHandling:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         # Create a page with invalid LaTeX
         (site / "content" / "bad-math.md").write_text(

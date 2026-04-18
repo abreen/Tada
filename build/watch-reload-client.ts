@@ -31,10 +31,6 @@ body.loading-cursor * {
       setLoading(false);
       window.history.scrollRestoration = 'auto';
       window.location.reload();
-    } else if (event.data === 'ready') {
-      setLoading(false);
-    } else if (event.data === 'error') {
-      setLoading(false);
     }
   };
 

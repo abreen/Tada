@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from conftest import run_tada
+from conftest import init_site, run_tada
 
 
 class TestProdBuild:
@@ -56,14 +56,16 @@ class TestProdBuildWithBasePath:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada(
-            "init", "testsite", "--bare", "--no-interactive",
-            "--prod-base-path", "/test",
-            "--prod-base", "https://example.edu",
-            cwd=str(tmp_path),
+        site = init_site(
+            tmp_path,
+            bare=True,
+            extra_args=[
+                "--prod-base-path",
+                "/test",
+                "--prod-base",
+                "https://example.edu",
+            ],
         )
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
 
         # Add a second page so we can link to it
         about_dir = site / "content" / "about"
@@ -83,34 +85,28 @@ class TestProdBuildWithBasePath:
 
         yield site
 
-    @pytest.fixture
-    def built_site(self, site_dir):
-        result = run_tada("prod", cwd=str(site_dir))
-        assert result.returncode == 0, f"prod build failed: {result.stderr}"
-        yield site_dir
+    def test_creates_dist_prod_directory(self, built_prod_site):
+        assert (built_prod_site / "dist-prod" / "v1").is_dir()
 
-    def test_creates_dist_prod_directory(self, built_site):
-        assert (built_site / "dist-prod" / "v1").is_dir()
-
-    def test_head_asset_links_include_base_path(self, built_site):
-        html = (built_site / "dist-prod" / "v1" / "index.html").read_text()
+    def test_head_asset_links_include_base_path(self, built_prod_site):
+        html = (built_prod_site / "dist-prod" / "v1" / "index.html").read_text()
         assert "/test/index.bundle.css" in html
         assert "/test/index.bundle.js" in html
 
-    def test_markdown_links_include_base_path(self, built_site):
-        html = (built_site / "dist-prod" / "v1" / "index.html").read_text()
+    def test_markdown_links_include_base_path(self, built_prod_site):
+        html = (built_prod_site / "dist-prod" / "v1" / "index.html").read_text()
         assert 'href="/test/about/index.html"' in html
 
-    def test_raw_html_links_include_base_path(self, built_site):
-        html = (built_site / "dist-prod" / "v1" / "index.html").read_text()
+    def test_raw_html_links_include_base_path(self, built_prod_site):
+        html = (built_prod_site / "dist-prod" / "v1" / "index.html").read_text()
         assert '<a href="/test/about/index.html">HTML link</a>' in html
 
-    def test_markdown_images_include_base_path(self, built_site):
-        html = (built_site / "dist-prod" / "v1" / "index.html").read_text()
+    def test_markdown_images_include_base_path(self, built_prod_site):
+        html = (built_prod_site / "dist-prod" / "v1" / "index.html").read_text()
         assert 'src="/test/images/logo.png"' in html
 
-    def test_raw_html_images_include_base_path(self, built_site):
-        html = (built_site / "dist-prod" / "v1" / "index.html").read_text()
+    def test_raw_html_images_include_base_path(self, built_prod_site):
+        html = (built_prod_site / "dist-prod" / "v1" / "index.html").read_text()
         assert 'src="/test/images/banner.png"' in html
 
 

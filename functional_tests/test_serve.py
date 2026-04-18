@@ -11,7 +11,6 @@ from conftest import (
     _bun_command,
     get_free_ports,
     process_group_popen_kwargs,
-    run_tada,
     terminate_process_group,
 )
 
@@ -23,26 +22,12 @@ class TestServe:
     """Tests for the tada serve command."""
 
     @pytest.fixture
-    def site_dir(self, tmp_path):
-        result = run_tada(
-            "init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path)
-        )
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
-
-        # Build so dist/ exists
-        result = run_tada("dev", cwd=str(site))
-        assert result.returncode == 0, f"dev build failed: {result.stderr}"
-
-        yield site
-
-    @pytest.fixture
-    def server(self, site_dir):
+    def server(self, built_dev_site):
         """Start tada serve on a free port, yield (site_dir, port), then kill."""
         port = get_free_ports(1)[0]
         proc = subprocess.Popen(
             _bun_command("serve", "--port", str(port)),
-            cwd=str(site_dir),
+            cwd=str(built_dev_site),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -63,7 +48,7 @@ class TestServe:
 
         assert ready, "Server did not become ready within 10 seconds"
 
-        yield site_dir, port
+        yield built_dev_site, port
 
         terminate_process_group(proc)
 
@@ -118,10 +103,11 @@ class TestServe:
         req = urllib.request.Request(url)
         req.add_header("If-Modified-Since", last_modified)
         try:
-            urllib.request.urlopen(req, timeout=5)
-            # Some urllib versions raise on 304, some don't
+            resp = urllib.request.urlopen(req, timeout=5)
         except urllib.error.HTTPError as e:
             assert e.code == 304
+        else:
+            assert resp.status == 304
 
     def test_sets_no_cache_header(self, server):
         _, port = server
@@ -149,3 +135,5 @@ class TestServe:
         url = f"http://localhost:{port}/my%20file.html"
         resp = urllib.request.urlopen(url, timeout=5)
         assert resp.status == 200
+        body = resp.read().decode()
+        assert "<p>ok</p>" in body

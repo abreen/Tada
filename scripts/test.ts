@@ -1,13 +1,15 @@
 import { $ } from 'bun';
 
 const suite = process.argv[2] ?? 'all';
-const quiet = !!process.env.AGENT;
-
-const bunQuiet = quiet ? ['--only-failures'] : [];
-const pytestFlags = quiet
-  ? ['-q', '--no-header', '--tb=line']
-  : ['-v', '--durations=10'];
-const playwrightQuiet = quiet ? ['--reporter=dot', '--quiet'] : [];
+const bunQuiet = ['--only-failures'];
+const pytestFlags = [
+  '-q',
+  '--no-header',
+  '--tb=line',
+  '--maxfail=1',
+  '-n=auto',
+];
+const playwrightQuiet = ['--reporter=dot', '--quiet'];
 
 async function runUnit(extra: string[] = []) {
   await $`bun test ${bunQuiet} ${extra}`.throws(true);
@@ -17,11 +19,12 @@ async function runPlaywright() {
   await $`bunx playwright test ${playwrightQuiet}`.throws(true);
 }
 
-async function runFunctional() {
+async function runFunctional(extra: string[] = []) {
+  await $`pytest functional_tests/ ${pytestFlags} ${extra}`.throws(true);
+}
+
+if (suite == 'functional' || suite == 'coverage' || suite == 'all') {
   await $`python3 -m pip install -q -r functional_tests/requirements.txt`.throws(
-    true,
-  );
-  await $`python3 -m pytest functional_tests/ ${pytestFlags} -n auto`.throws(
     true,
   );
 }
@@ -34,22 +37,17 @@ switch (suite) {
     await runPlaywright();
     break;
   case 'functional':
-    await runFunctional();
+    await runFunctional(process.argv.slice(3));
     break;
   case 'all':
     await runUnit();
-    if (process.env.CLAUDE_CODE_REMOTE !== 'true') {
-      await runPlaywright();
-      await runFunctional();
-    }
+    await runPlaywright();
+    await runFunctional();
     break;
   case 'coverage':
     await $`rm -rf coverage/unit coverage/functional`;
     await runUnit(['--coverage']);
-    await $`TADA_COVERAGE=1 python3 -m pip install -q -r functional_tests/requirements.txt`.throws(
-      true,
-    );
-    await $`TADA_COVERAGE=1 python3 -m pytest functional_tests/ ${pytestFlags} -n auto`.throws(
+    await $`TADA_COVERAGE=1 pytest functional_tests/ ${pytestFlags}`.throws(
       true,
     );
     await $`bun run scripts/coverage-report.ts`.throws(true);

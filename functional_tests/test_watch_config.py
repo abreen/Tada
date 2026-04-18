@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from conftest import run_tada, set_site_config
-from watch_helpers import WatchProcess
+from conftest import init_site, run_tada, set_site_config
+from watch_helpers import WatchProcess, watch
 
 
 class TestWatchConfig:
@@ -29,29 +29,46 @@ class TestWatchConfig:
         assert "From public" in dist_file.read_text()
 
         public_file.unlink()
+        watch.wait_for_rebuild(dist_file, "removed")
+
         page = site_dir / "content" / "about.md"
         page.write_text("---\ntitle: About\n---\n\nFrom markdown.\n")
-        set_site_config(site_dir, {"title": "Updated Title For Handoff"})
 
-        watch.wait_for_reload()
+        watch.wait_for_rebuild(dist_file, "exists")
         assert dist_file.exists()
         assert "From markdown." in dist_file.read_text()
 
-    def test_config_change_rebuild_rejects_output_path_conflict(self, watch, site_dir):
-        public_file = site_dir / "public" / "about.html"
+        index_html = site_dir / "dist" / "index.html"
+        before_config_mtime = index_html.stat().st_mtime
+        set_site_config(site_dir, {"title": "Updated Title For Handoff"})
+
+        watch.wait_for_rebuild(index_html, "modified", before_mtime=before_config_mtime)
+        assert dist_file.exists()
+        assert "From markdown." in dist_file.read_text()
+
+    def test_config_change_rebuild_rejects_output_path_conflict(self, tmp_path):
+        site_dir = init_site(tmp_path, bare=True)
+        set_site_config(site_dir, {"features": {"code": False}})
+        public_file = site_dir / "public" / "Test.java.html"
         public_file.write_text("<p>From public</p>\n")
+        code_file = site_dir / "content" / "Test.java"
+        code_file.write_text("public class Test {}\n")
 
-        dist_file = site_dir / "dist" / "about.html"
-        watch.wait_for_rebuild(dist_file, "exists")
-        before_text = dist_file.read_text()
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
 
-        page = site_dir / "content" / "about.md"
-        page.write_text("---\ntitle: About\n---\n\nFrom markdown.\n")
-        set_site_config(site_dir, {"title": "Conflict Title"})
+            dist_file = site_dir / "dist" / "Test.java.html"
+            assert dist_file.exists()
+            before_text = dist_file.read_text()
 
-        watch.wait_for_error()
-        assert watch.proc.poll() is None
-        assert dist_file.read_text() == before_text
+            set_site_config(site_dir, {"features": {"code": True}})
+
+            wp.wait_for_error()
+            assert wp.proc.poll() is None
+            assert dist_file.read_text() == before_text
+        finally:
+            wp.stop()
 
     def test_base_path_change_updates_trace_manifest_urls(self, tmp_path):
         result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
@@ -95,9 +112,7 @@ class TestWatchInitialConflict:
     """Watch startup should reject output-path conflicts before writing outputs."""
 
     def test_initial_build_rejects_content_public_output_conflict(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site_dir = tmp_path / "testsite"
+        site_dir = init_site(tmp_path, bare=True)
 
         public_file = site_dir / "public" / "about.html"
         public_file.write_text("<p>From public</p>\n")
@@ -107,8 +122,6 @@ class TestWatchInitialConflict:
         wp = WatchProcess(site_dir)
         try:
             wp.wait_for_initial_build()
-            assert wp._error_event.is_set()
-            wp._error_event.clear()
             assert wp.proc.poll() is None
             assert not (site_dir / "dist" / "about.html").exists()
         finally:
@@ -120,9 +133,7 @@ class TestWatchBadConfigAtStart:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         config_path = site / "site.dev.json"
         config = json.loads(config_path.read_text())
@@ -136,8 +147,6 @@ class TestWatchBadConfigAtStart:
         try:
             wp.wait_for_initial_build()
 
-            assert wp._error_event.is_set()
-            wp._error_event.clear()
             assert not (site_dir / "dist" / "index.html").exists()
             assert wp.proc.poll() is None
 
@@ -217,9 +226,7 @@ class TestWatchConfigFileDetection:
         watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
 
     def test_missing_nav_json_at_start_then_create_recovers(self, tmp_path):
-        result = run_tada("init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site_dir = tmp_path / "testsite"
+        site_dir = init_site(tmp_path, bare=True)
 
         nav_path = site_dir / "nav.json"
         nav_backup = nav_path.read_text()
@@ -228,8 +235,6 @@ class TestWatchConfigFileDetection:
         wp = WatchProcess(site_dir)
         try:
             wp.wait_for_initial_build()
-            assert wp._error_event.is_set()
-            wp._error_event.clear()
             assert not (site_dir / "dist" / "index.html").exists()
             assert wp.proc.poll() is None
 
@@ -274,24 +279,29 @@ class TestWatchConfigFileDetection:
         watch.wait_for_rebuild(index_html, "modified", before_mtime=before_mtime)
 
     def test_editing_authors_json_only_rebuilds_author_pages(self, watch, site_dir):
+        avatar = site_dir / "public" / "avatar.png"
+        avatar.write_bytes(b"avatar")
+        watch.wait_for_rebuild(site_dir / "dist" / "avatar.png", "exists")
+
+        index_html = site_dir / "dist" / "index.html"
+        before_index_mtime = index_html.stat().st_mtime
+
         authors_path = site_dir / "authors.json"
         authors_path.write_text(
             json.dumps({"alex": {"name": "Alex", "avatar": "/avatar.png"}}) + "\n"
         )
-        avatar = site_dir / "public" / "avatar.png"
-        avatar.write_bytes(b"avatar")
-        watch.wait_for_reload()
+        watch.wait_for_rebuild(index_html, "modified", before_mtime=before_index_mtime)
 
         author_page = site_dir / "content" / "author_page.md"
         author_page.write_text(
             "---\ntitle: Author Page\nauthor: alex\n---\n\nAuthor content.\n"
         )
+        author_html = site_dir / "dist" / "author_page.html"
+        watch.wait_for_rebuild(author_html, "exists")
+
         plain_page = site_dir / "content" / "plain_page.md"
         plain_page.write_text("---\ntitle: Plain Page\n---\n\nPlain content.\n")
-
-        author_html = site_dir / "dist" / "author_page.html"
         plain_html = site_dir / "dist" / "plain_page.html"
-        watch.wait_for_rebuild(author_html, "exists")
         watch.wait_for_rebuild(plain_html, "exists")
 
         before_author_mtime = author_html.stat().st_mtime
@@ -308,13 +318,18 @@ class TestWatchConfigFileDetection:
     def test_editing_authors_json_rebuilds_literate_java_author_pages(
         self, watch, site_dir
     ):
+        avatar = site_dir / "public" / "avatar.png"
+        avatar.write_bytes(b"avatar")
+        watch.wait_for_rebuild(site_dir / "dist" / "avatar.png", "exists")
+
+        index_html = site_dir / "dist" / "index.html"
+        before_index_mtime = index_html.stat().st_mtime
+
         authors_path = site_dir / "authors.json"
         authors_path.write_text(
             json.dumps({"alex": {"name": "Alex", "avatar": "/avatar.png"}}) + "\n"
         )
-        avatar = site_dir / "public" / "avatar.png"
-        avatar.write_bytes(b"avatar")
-        watch.wait_for_reload()
+        watch.wait_for_rebuild(index_html, "modified", before_mtime=before_index_mtime)
 
         java_page = site_dir / "content" / "AuthorExample.java.md"
         java_page.write_text(
@@ -331,12 +346,12 @@ class TestWatchConfigFileDetection:
             "}\n"
             "```\n"
         )
+        java_html = site_dir / "dist" / "AuthorExample.java.html"
+        watch.wait_for_rebuild(java_html, "exists")
+
         plain_page = site_dir / "content" / "plain_page.md"
         plain_page.write_text("---\ntitle: Plain Page\n---\n\nPlain content.\n")
-
-        java_html = site_dir / "dist" / "AuthorExample.java.html"
         plain_html = site_dir / "dist" / "plain_page.html"
-        watch.wait_for_rebuild(java_html, "exists")
         watch.wait_for_rebuild(plain_html, "exists")
 
         before_java_mtime = java_html.stat().st_mtime

@@ -245,13 +245,6 @@ export async function runPagefind({
     pdfSourceByOutputPath,
   });
 
-  try {
-    const pagefind = await getPagefind();
-    await pagefind.close();
-  } catch {
-    // Best-effort cleanup
-  }
-
   const finishedAt = Date.now();
   log.debug`Search index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
 }

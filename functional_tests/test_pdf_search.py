@@ -34,29 +34,23 @@ class TestPdfSearchIndexing:
         assert result.returncode == 0, f"init failed: {result.stderr}"
         yield tmp_path / "testsite"
 
-    @pytest.fixture
-    def built_site(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
-        assert result.returncode == 0, f"dev build failed: {result.stderr}"
-        yield site_dir
-
-    def test_pagefind_directory_exists(self, built_site):
-        dist = built_site / "dist"
+    def test_pagefind_directory_exists(self, built_dev_site):
+        dist = built_dev_site / "dist"
         assert (dist / "pagefind").is_dir()
 
-    def test_pdf_is_copied_to_dist(self, built_site):
-        pdf = built_site / "dist" / "lectures" / "01" / "lecture1.pdf"
+    def test_pdf_is_copied_to_dist(self, built_dev_site):
+        pdf = built_dev_site / "dist" / "lectures" / "01" / "lecture1.pdf"
         assert pdf.exists()
 
-    def test_pagefind_indexes_pdf_content(self, built_site):
+    def test_pagefind_indexes_pdf_content(self, built_dev_site):
         """The pagefind index should contain fragments referencing the PDF."""
-        pagefind_dir = built_site / "dist" / "pagefind"
+        pagefind_dir = built_dev_site / "dist" / "pagefind"
         assert _pagefind_has_pdf_ref(pagefind_dir, "lecture1.pdf")
 
-    def test_pagefind_entry_includes_pdf_pages(self, built_site):
+    def test_pagefind_entry_includes_pdf_pages(self, built_dev_site):
         """The pagefind entry JSON page count should include PDF pages."""
         entry = json.loads(
-            (built_site / "dist" / "pagefind" / "pagefind-entry.json").read_text()
+            (built_dev_site / "dist" / "pagefind" / "pagefind-entry.json").read_text()
         )
         # The default site has 14 HTML pages. With the PDF (2 pages),
         # the total should be greater than 14.

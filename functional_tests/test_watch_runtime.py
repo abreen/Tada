@@ -2,11 +2,11 @@ import threading
 
 import websocket
 
-from watch_helpers import WEBSOCKET_TIMEOUT_SEC
+from watch_helpers import WEBSOCKET_TIMEOUT_SEC, watch
 
 
-class TestWatchWebSocket:
-    """Watch mode uses a WebSocket to tell the client to reload."""
+class TestWatchRuntime:
+    """Watch mode serves the reload client used by the dev page."""
 
     def test_receives_reload_message_on_content_change(self, watch, site_dir):
         messages = []
@@ -51,3 +51,4 @@ class TestWatchWebSocket:
         assert client_bundle.exists(), "watch-reload-client.bundle.js not in dist/"
         content = client_bundle.read_text()
         assert "WebSocket" in content
+        assert "reload" in content

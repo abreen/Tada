@@ -28,19 +28,18 @@ For a broader audit across all specs, use `git log` to compare each spec's last 
 
 ## Commands
 
-Pass `AGENT=1` for commands you run from the shell so test helpers can detect agent execution and reduce noisy output when appropriate.
-
-- Create a new site: `AGENT=1 tada init <dirname>`
-- Build development: `AGENT=1 tada dev` (uses `site.dev.json`)
-- Build production: `AGENT=1 tada prod` (uses `site.prod.json`)
-- Start dev web server: `AGENT=1 tada serve`
-- Watch files: `AGENT=1 tada watch`
-- Clean build artifacts: `AGENT=1 tada clean`
-- Lint: `AGENT=1 bun run lint`
-- Typecheck: `AGENT=1 bun run typecheck`
-- Run unit tests: `AGENT=1 bun test`
-- Run a single unit test: `AGENT=1 bun test build/code.test.ts`
-- Run functional tests: `AGENT=1 bun run test:functional`
+- Create a new site: `tada init <dirname>`
+- Build development: `tada dev` (uses `site.dev.json`)
+- Build production: `tada prod` (uses `site.prod.json`)
+- Start dev web server: `tada serve`
+- Watch files: `tada watch`
+- Clean build artifacts: `tada clean`
+- Lint: `bun run lint`
+- Typecheck: `bun run typecheck`
+- Run unit tests: `bun test`
+- Run a single unit test: `bun test build/code.test.ts`
+- Run functional tests: `bun run test:functional`
+- Run functional tests with extra pytest args: `bun run test:functional -k watch`
 
 Functional tests are black-box Python and pytest tests in `functional_tests/` that exercise the CLI end to end, including `init`, `dev`, `prod`, `watch`, and `clean`. They use `subprocess` to run Tada and assert on exit codes, stdout, and file system state.
 

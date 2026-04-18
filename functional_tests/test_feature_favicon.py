@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from conftest import run_tada, set_site_config
+from conftest import init_site, run_tada, set_site_config
 
 
 class TestFaviconFeatureDisabled:
@@ -10,35 +10,25 @@ class TestFaviconFeatureDisabled:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
-
+        site = init_site(tmp_path, bare=True)
         set_site_config(site, {"features": {"favicon": False}})
-
         yield site
 
-    @pytest.fixture
-    def built_site(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
-        assert result.returncode == 0, f"dev build failed: {result.stderr}"
-        yield site_dir
-
-    def test_no_favicon_svg(self, built_site):
-        dist = built_site / "dist"
+    def test_no_favicon_svg(self, built_dev_site):
+        dist = built_dev_site / "dist"
         assert not (dist / "favicon.svg").exists()
 
-    def test_no_favicon_ico(self, built_site):
-        dist = built_site / "dist"
+    def test_no_favicon_ico(self, built_dev_site):
+        dist = built_dev_site / "dist"
         assert not (dist / "favicon.ico").exists()
 
-    def test_no_favicon_pngs(self, built_site):
-        dist = built_site / "dist"
+    def test_no_favicon_pngs(self, built_dev_site):
+        dist = built_dev_site / "dist"
         png_favicons = list(dist.glob("favicon-*.png"))
         assert len(png_favicons) == 0
 
-    def test_no_manifest(self, built_site):
-        dist = built_site / "dist"
+    def test_no_manifest(self, built_dev_site):
+        dist = built_dev_site / "dist"
         assert not (dist / "manifest.json").exists()
 
     def test_exit_code_zero(self, site_dir):
@@ -52,35 +42,25 @@ class TestFaviconFeatureEnabled:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada("init", "testsite", "--no-interactive", cwd=str(tmp_path))
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
-
+        site = init_site(tmp_path, bare=True)
         set_site_config(site, {"features": {"favicon": True}})
-
         yield site
 
-    @pytest.fixture
-    def built_site(self, site_dir):
-        result = run_tada("dev", cwd=str(site_dir))
-        assert result.returncode == 0, f"dev build failed: {result.stderr}"
-        yield site_dir
-
-    def test_favicon_svg_generated(self, built_site):
-        dist = built_site / "dist"
+    def test_favicon_svg_generated(self, built_dev_site):
+        dist = built_dev_site / "dist"
         assert (dist / "favicon.svg").exists()
 
-    def test_favicon_ico_generated(self, built_site):
-        dist = built_site / "dist"
+    def test_favicon_ico_generated(self, built_dev_site):
+        dist = built_dev_site / "dist"
         assert (dist / "favicon.ico").exists()
 
-    def test_favicon_pngs_generated(self, built_site):
-        dist = built_site / "dist"
+    def test_favicon_pngs_generated(self, built_dev_site):
+        dist = built_dev_site / "dist"
         png_favicons = list(dist.glob("favicon-*.png"))
         assert len(png_favicons) > 0
 
-    def test_manifest_generated(self, built_site):
-        dist = built_site / "dist"
+    def test_manifest_generated(self, built_dev_site):
+        dist = built_dev_site / "dist"
         manifest = dist / "manifest.json"
         assert manifest.exists()
         data = json.loads(manifest.read_text())

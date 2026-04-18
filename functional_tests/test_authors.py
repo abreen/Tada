@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from conftest import run_tada, set_site_config
+from conftest import init_site, run_tada, set_site_config
 
 
 class TestAuthorsFeature:
@@ -10,11 +10,7 @@ class TestAuthorsFeature:
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        result = run_tada(
-            "init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path)
-        )
-        assert result.returncode == 0, f"init failed: {result.stderr}"
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         # Create avatar images in public/ so link validation passes
         images_dir = site / "public" / "images"
@@ -74,11 +70,7 @@ class TestAuthorsFeature:
 
     def test_author_without_authors_json_fails(self, tmp_path):
         """Using author front matter without an authors.json should fail."""
-        result = run_tada(
-            "init", "testsite", "--bare", "--no-interactive", cwd=str(tmp_path)
-        )
-        assert result.returncode == 0
-        site = tmp_path / "testsite"
+        site = init_site(tmp_path, bare=True)
 
         (site / "content" / "index.md").write_text(
             "---\ntitle: Home\nauthor: someone\n---\n\nContent.\n"

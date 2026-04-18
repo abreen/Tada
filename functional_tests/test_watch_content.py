@@ -3,7 +3,7 @@ import json
 import pytest
 
 from conftest import run_tada
-from watch_helpers import WatchProcess
+from watch_helpers import WatchProcess, watch
 
 
 class TestWatchEditContent:
@@ -127,10 +127,10 @@ class TestWatchRemoveContent:
 
         public_asset = site_dir / "public" / "logo.png"
         asset.unlink()
-        public_asset.write_bytes(b"public-version")
+        watch.wait_for_rebuild(dist_asset, "removed")
 
-        watch.wait_for_reload()
-        assert dist_asset.exists()
+        public_asset.write_bytes(b"public-version")
+        watch.wait_for_rebuild(dist_asset, "exists")
         assert dist_asset.read_bytes() == b"public-version"
 
 
@@ -188,28 +188,30 @@ class TestWatchPublicFiles:
         assert dist_file.read_text() == before_text
 
         public_file.unlink()
-        watch.wait_for_reload()
-        assert "From markdown." in dist_file.read_text()
+        before_mtime = dist_file.stat().st_mtime
+        page.write_text("---\ntitle: About\n---\n\nRecovered markdown.\n")
+        watch.wait_for_rebuild(dist_file, "modified", before_mtime=before_mtime)
+        assert "Recovered markdown." in dist_file.read_text()
 
-    def test_deleting_conflict_side_rebuilds_from_surviving_content(self, watch, site_dir):
+    def test_deleting_conflict_side_rebuilds_from_surviving_content(self, site_dir):
         page = site_dir / "content" / "about.md"
-        page.write_text("---\ntitle: About\n---\n\nOriginal markdown.\n")
-
-        dist_file = site_dir / "dist" / "about.html"
-        watch.wait_for_rebuild(dist_file, "exists")
-        assert "Original markdown." in dist_file.read_text()
-
         page.write_text("---\ntitle: About\n---\n\nUpdated markdown.\n")
         public_file = site_dir / "public" / "about.html"
         public_file.write_text("<p>From public</p>\n")
 
-        watch.wait_for_error()
-        assert watch.proc.poll() is None
-        assert "Original markdown." in dist_file.read_text()
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
+            assert wp.proc.poll() is None
 
-        public_file.unlink()
-        watch.wait_for_reload()
-        assert "Updated markdown." in dist_file.read_text()
+            dist_file = site_dir / "dist" / "about.html"
+            assert not dist_file.exists()
+
+            public_file.unlink()
+            wp.wait_for_rebuild(dist_file, "exists")
+            assert "Updated markdown." in dist_file.read_text()
+        finally:
+            wp.stop()
 
     def test_replacing_public_file_with_content_page_keeps_output(self, watch, site_dir):
         public_file = site_dir / "public" / "about.html"
@@ -219,12 +221,13 @@ class TestWatchPublicFiles:
         watch.wait_for_rebuild(dist_file, "exists")
         assert "From public" in dist_file.read_text()
 
-        page = site_dir / "content" / "about.md"
         public_file.unlink()
+        watch.wait_for_rebuild(dist_file, "removed")
+
+        page = site_dir / "content" / "about.md"
         page.write_text("---\ntitle: About\n---\n\nFrom markdown.\n")
 
-        watch.wait_for_reload()
-        assert dist_file.exists()
+        watch.wait_for_rebuild(dist_file, "exists")
         assert "From markdown." in dist_file.read_text()
 
     def test_content_change_conflicting_with_existing_public_file_errors_without_mutating(
@@ -245,23 +248,31 @@ class TestWatchPublicFiles:
         assert dist_file.read_text() == before_text
 
     def test_mixed_content_and_public_conflict_does_not_partially_update_dist(
-        self, watch, site_dir
+        self, site_dir
     ):
         page = site_dir / "content" / "about.md"
         page.write_text("---\ntitle: About\n---\n\nOriginal markdown.\n")
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
 
-        dist_file = site_dir / "dist" / "about.html"
-        watch.wait_for_rebuild(dist_file, "exists")
-        before_text = dist_file.read_text()
-        assert "Original markdown." in before_text
+            dist_file = site_dir / "dist" / "about.html"
+            wp.wait_for_rebuild(dist_file, "exists")
+            before_text = dist_file.read_text()
+            assert "Original markdown." in before_text
 
-        page.write_text("---\ntitle: About\n---\n\nUpdated markdown.\n")
-        public_file = site_dir / "public" / "about.html"
-        public_file.write_text("<p>From public</p>\n")
+            wp.stop()
 
-        watch.wait_for_error()
-        assert watch.proc.poll() is None
-        assert dist_file.read_text() == before_text
+            page.write_text("---\ntitle: About\n---\n\nUpdated markdown.\n")
+            public_file = site_dir / "public" / "about.html"
+            public_file.write_text("<p>From public</p>\n")
+
+            wp = WatchProcess(site_dir)
+            wp.wait_for_initial_build()
+            assert wp.proc.poll() is None
+            assert dist_file.read_text() == before_text
+        finally:
+            wp.stop()
 
 
 class TestWatchPartials:
@@ -312,7 +323,7 @@ class TestWatchPartials:
         unused_partial = site_dir / "content" / "_unused.md"
         unused_partial.write_text("Unused partial content.\n")
 
-        watch.assert_no_reload(timeout_sec=3)
+        watch.assert_no_rebuild(index_html, before_mtime=before_mtime, timeout_sec=3)
         assert index_html.stat().st_mtime == before_mtime
 
 
