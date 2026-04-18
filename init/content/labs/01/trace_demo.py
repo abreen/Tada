@@ -3,13 +3,13 @@ def sum(n: int):
         return 0
     return n + sum(n - 1)
 
-
-nums = [x for x in range(7)]
-for i in range(len(nums)):
-    nums[i] = pow(2, i)
+nums = (pow(2, x) for x in range(7))
+first = next(nums)
+second = next(nums)
 
 total = sum(4)
 print("total", total)
+print("nums", first, second)
 
 s = "hello"
 for c in s:

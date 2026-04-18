@@ -26,6 +26,8 @@ class CaptureStream(io.TextIOBase):
 
 
 class TracePdb(pdb.Pdb):
+    SYNTHETIC_FRAME_NAMES = {"<listcomp>", "<dictcomp>", "<setcomp>"}
+
     def __init__(self, target_path, trace_writer, output_chunks):
         super().__init__(nosigint=True, readrc=False)
         self.target_path = os.path.abspath(target_path)
@@ -203,9 +205,14 @@ class TracePdb(pdb.Pdb):
             return f"<{type(value).__name__}>"
 
     def _is_traced_frame(self, frame):
-        return os.path.abspath(frame.f_code.co_filename) == self.target_path
+        return (
+            os.path.abspath(frame.f_code.co_filename) == self.target_path
+            and frame.f_code.co_name not in self.SYNTHETIC_FRAME_NAMES
+        )
 
     def _should_skip_local(self, name, value):
+        if name.startswith("."):
+            return True
         if name.startswith("__"):
             return True
         if isinstance(value, (types.ModuleType, types.FunctionType, type)):
