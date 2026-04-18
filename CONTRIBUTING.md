@@ -6,7 +6,6 @@ set up your development environment and submit changes.
 
 ## Prerequisites
 
-- A Unix-like environment (macOS, Linux, or WSL on Windows)
 - [Bun](https://bun.sh/)
 - A recent Java JDK (for the literate Java feature)
 - [MuPDF](https://mupdf.com/) (the `mutool` command for PDF text extraction)

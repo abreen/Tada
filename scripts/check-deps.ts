@@ -10,6 +10,8 @@ if (!Bun.which('mutool')) {
   console.error('Warning: mutool (MuPDF) is required to run functional tests.');
 }
 
-if (!Bun.which('python3')) {
-  console.error('Warning: python3 is required to run functional tests.');
+if (!Bun.which('python3') && !Bun.which('python')) {
+  console.error(
+    'Warning: python3 or python is required to run functional tests.',
+  );
 }
