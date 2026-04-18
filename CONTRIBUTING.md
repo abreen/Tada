@@ -38,6 +38,8 @@ cd example
 ../bin/tada.ts serve
 ```
 
+For a shortcut that creates `example/` if needed and then runs watch mode there, use `bun run iew`.
+
 
 ## Development workflow
 
