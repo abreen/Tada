@@ -16,6 +16,7 @@ INITIAL_BUILD_TIMEOUT_SEC = 60
 WEBSOCKET_TIMEOUT_SEC = 15
 POLL_SEC = 0.05
 ANSI_RE = re.compile(r'\x1b\[[0-9;]*m')
+SUCCESS_RE = re.compile(r'^.+! 🎉$', re.MULTILINE)
 
 
 class WatchProcess:
@@ -44,6 +45,17 @@ class WatchProcess:
         )
         self._stdout_cursor = 0
 
+    def _file_snapshot(self, path: Path):
+        """Return a lightweight snapshot for change detection."""
+        if not path.exists():
+            return None
+        stat = path.stat()
+        return {
+            'mtime_ns': stat.st_mtime_ns,
+            'size': stat.st_size,
+            'content': path.read_bytes(),
+        }
+
     def _stdout_text(self) -> str:
         try:
             return self.stdout_log_path.read_text()
@@ -61,6 +73,9 @@ class WatchProcess:
 
     def _has_error_since(self, start: int) -> bool:
         return ' error ' in self._clean(self._stdout_since(start)).lower()
+
+    def _has_success_since(self, start: int) -> bool:
+        return SUCCESS_RE.search(self._clean(self._stdout_since(start))) is not None
 
     def _advance_stdout_cursor(self) -> None:
         self._stdout_cursor = self._stdout_len()
@@ -102,6 +117,8 @@ class WatchProcess:
             raise ValueError("before_mtime must be provided for 'modified' condition")
 
         deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
+        start = self._stdout_cursor
+        before_snapshot = self._file_snapshot(path)
 
         def _check():
             if condition == 'exists':
@@ -109,7 +126,10 @@ class WatchProcess:
             if condition == 'removed':
                 return not path.exists()
             if condition == 'modified':
-                return path.exists() and path.stat().st_mtime > before_mtime
+                current_snapshot = self._file_snapshot(path)
+                if current_snapshot is None:
+                    return False
+                return current_snapshot != before_snapshot or self._has_success_since(start)
             return False
 
         while time.monotonic() < deadline:
@@ -124,8 +144,12 @@ class WatchProcess:
     def assert_no_rebuild(self, path: Path, before_mtime: float, timeout_sec=3):
         """Assert that a file is not modified for a period."""
         deadline = time.monotonic() + timeout_sec
+        before_snapshot = self._file_snapshot(path)
         while time.monotonic() < deadline:
-            if path.stat().st_mtime > before_mtime:
+            current_snapshot = self._file_snapshot(path)
+            if current_snapshot is None:
+                raise AssertionError(f'Expected no rebuild for {path}')
+            if current_snapshot != before_snapshot:
                 raise AssertionError(f'Expected no rebuild for {path}')
             if self.proc.poll() is not None:
                 raise RuntimeError(f'Watch process exited with code {self.proc.returncode}')
