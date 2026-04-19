@@ -7,7 +7,7 @@ export default defineConfig({
   use: { baseURL: 'http://localhost:8081', headless: true },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
   webServer: {
-    command: 'bash playwright/serve-test-site.sh',
+    command: 'bun run playwright/serve-test-site.ts',
     url: 'http://localhost:8081/index.html',
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

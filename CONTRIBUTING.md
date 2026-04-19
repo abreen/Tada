@@ -6,10 +6,10 @@ set up your development environment and submit changes.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh/)
-- A recent Java JDK (for the literate Java feature)
+- [Bun](https://bun.com/)
 - [MuPDF](https://mupdf.com/) (the `mutool` command for PDF text extraction)
-- Python 3 (for functional tests)
+- A recent Java JDK (for Java traces and the literate Java feature)
+- Python 3 (for functional tests and Python traces)
 
 
 ## Getting started
@@ -21,6 +21,7 @@ git clone https://github.com/abreen/tada.git
 cd tada
 bun install
 bun run setup:python
+bunx playwright install
 ```
 
 To verify your local toolchain, run:
@@ -75,8 +76,9 @@ These checks run automatically as part of the Git pre-commit hook.
 From the repository root:
 
 ```
-bun test                      # Unit tests
+bun test                      # Run all unit tests
 bun test build/code.test.ts   # Run a single unit test file
+bun run test:playwright       # Run browser tests using Playwright
 bun run test:functional       # Black-box tests of Tada functionality
 bun run test:all              # Run all unit & functional tests
 ```
