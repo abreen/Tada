@@ -77,6 +77,9 @@ class WatchProcess:
     def _has_success_since(self, start: int) -> bool:
         return SUCCESS_RE.search(self._clean(self._stdout_since(start))) is not None
 
+    def _has_rebuild_started_since(self, start: int) -> bool:
+        return 'rebuilding' in self._clean(self._stdout_since(start)).lower()
+
     def _advance_stdout_cursor(self) -> None:
         self._stdout_cursor = self._stdout_len()
 
@@ -121,15 +124,22 @@ class WatchProcess:
         before_snapshot = self._file_snapshot(path)
 
         def _check():
+            rebuild_started = self._has_rebuild_started_since(start)
+            rebuild_succeeded = self._has_success_since(start)
+
             if condition == 'exists':
-                return path.exists()
-            if condition == 'removed':
-                return not path.exists()
-            if condition == 'modified':
-                current_snapshot = self._file_snapshot(path)
-                if current_snapshot is None:
+                if not path.exists():
                     return False
-                return current_snapshot != before_snapshot or self._has_success_since(start)
+                return rebuild_succeeded if rebuild_started else True
+            if condition == 'removed':
+                if path.exists():
+                    return False
+                return rebuild_succeeded if rebuild_started else True
+            if condition == 'modified':
+                if rebuild_started:
+                    return path.exists() and rebuild_succeeded
+                current_snapshot = self._file_snapshot(path)
+                return current_snapshot is not None and current_snapshot != before_snapshot
             return False
 
         while time.monotonic() < deadline:
