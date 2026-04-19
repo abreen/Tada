@@ -172,7 +172,7 @@ class TestWatchConfigBreakAndRecover:
 
     def test_break_config_then_fix(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
-        before_mtime = index_html.stat().st_mtime
+        before_html = index_html.read_text()
 
         config_path = site_dir / 'site.dev.json'
         config = json.loads(config_path.read_text())
@@ -186,26 +186,31 @@ class TestWatchConfigBreakAndRecover:
         config['title'] = original_title
         config_path.write_text(json.dumps(config, indent=2) + '\n')
 
-        watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
-        assert original_title in index_html.read_text()
+        watch.wait_for_successful_rebuild()
+        assert index_html.read_text() == before_html
 
 
 class TestWatchConfigFileDetection:
     """Deleting/moving & re-adding config files re-builds and doesn't crash."""
 
-    def test_editing_nav_json_triggers_rebuild(self, watch, site_dir):
+    def test_editing_nav_json_updates_nav_output(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
+        before_html = index_html.read_text()
         before_mtime = index_html.stat().st_mtime
 
         nav_path = site_dir / 'nav.json'
         nav = json.loads(nav_path.read_text())
+        nav[0]['links'].append({'text': 'Docs', 'internal': '/index.html'})
         nav_path.write_text(json.dumps(nav, indent=2) + '\n')
 
         watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
+        after_html = index_html.read_text()
+        assert 'Docs' in after_html
+        assert after_html != before_html
 
     def test_deleting_nav_json_triggers_error_then_restore_recovers(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
-        before_mtime = index_html.stat().st_mtime
+        before_html = index_html.read_text()
 
         nav_path = site_dir / 'nav.json'
         nav_backup = nav_path.read_text()
@@ -215,7 +220,8 @@ class TestWatchConfigFileDetection:
         assert watch.proc.poll() is None
 
         nav_path.write_text(nav_backup)
-        watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
+        watch.wait_for_successful_rebuild()
+        assert index_html.read_text() == before_html
 
     def test_missing_nav_json_at_start_then_create_recovers(self, tmp_path):
         site_dir = init_site(tmp_path, bare=True)
@@ -240,7 +246,7 @@ class TestWatchConfigFileDetection:
 
     def test_deleting_site_config_triggers_error_then_restore_recovers(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
-        before_mtime = index_html.stat().st_mtime
+        before_html = index_html.read_text()
 
         config_path = site_dir / 'site.dev.json'
         config_backup = config_path.read_text()
@@ -250,24 +256,33 @@ class TestWatchConfigFileDetection:
         assert watch.proc.poll() is None
 
         config_path.write_text(config_backup)
-        watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
+        watch.wait_for_successful_rebuild()
+        assert index_html.read_text() == before_html
 
-    def test_creating_authors_json_triggers_rebuild(self, watch, site_dir):
-        index_html = site_dir / 'dist' / 'index.html'
-
+    def test_creating_authors_json_builds_pages_that_require_it(self, watch, site_dir):
         avatar_dir = site_dir / 'public' / 'avatars'
         avatar_dir.mkdir(parents=True)
         (avatar_dir / 'jdoe.png').write_bytes(b'')
 
         watch.wait_for_rebuild(site_dir / 'dist' / 'avatars' / 'jdoe.png', 'exists')
-        before_mtime = index_html.stat().st_mtime
+
+        author_page = site_dir / 'content' / 'author_page.md'
+        author_page.write_text('---\ntitle: Author Page\nauthor: jdoe\n---\n\nAuthor content.\n')
+        author_html = site_dir / 'dist' / 'author_page.html'
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+        assert not author_html.exists()
 
         authors_path = site_dir / 'authors.json'
         authors_path.write_text(
             json.dumps({'jdoe': {'name': 'Jane Doe', 'avatar': '/avatars/jdoe.png'}}) + '\n'
         )
 
-        watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
+        watch.wait_for_rebuild(author_html, 'exists')
+        html = author_html.read_text()
+        assert 'Jane Doe' in html
+        assert '/avatars/jdoe.png' in html
 
     def test_editing_authors_json_only_rebuilds_author_pages(self, watch, site_dir):
         avatar = site_dir / 'public' / 'avatar.png'
@@ -294,15 +309,15 @@ class TestWatchConfigFileDetection:
         watch.wait_for_rebuild(plain_html, 'exists')
 
         before_author_mtime = author_html.stat().st_mtime
-        before_plain_mtime = plain_html.stat().st_mtime
+        before_plain_snapshot = watch.snapshot(plain_html)
 
         authors = json.loads(authors_path.read_text())
         authors['alex']['name'] = 'Alex Updated'
         authors_path.write_text(json.dumps(authors, indent=2) + '\n')
 
         watch.wait_for_rebuild(author_html, 'modified', before_mtime=before_author_mtime)
-        assert plain_html.stat().st_mtime == before_plain_mtime
-        assert 'authors.json' in (site_dir / 'watch_stdout.log').read_text()
+        assert 'Alex Updated' in author_html.read_text()
+        assert watch.snapshot(plain_html) == before_plain_snapshot
 
     def test_editing_authors_json_rebuilds_literate_java_author_pages(self, watch, site_dir):
         avatar = site_dir / 'public' / 'avatar.png'
@@ -342,12 +357,12 @@ class TestWatchConfigFileDetection:
         watch.wait_for_rebuild(plain_html, 'exists')
 
         before_java_mtime = java_html.stat().st_mtime
-        before_plain_mtime = plain_html.stat().st_mtime
+        before_plain_snapshot = watch.snapshot(plain_html)
 
         authors = json.loads(authors_path.read_text())
         authors['alex']['name'] = 'Alex Updated'
         authors_path.write_text(json.dumps(authors, indent=2) + '\n')
 
         watch.wait_for_rebuild(java_html, 'modified', before_mtime=before_java_mtime)
-        assert plain_html.stat().st_mtime == before_plain_mtime
+        assert watch.snapshot(plain_html) == before_plain_snapshot
         assert 'Alex Updated' in java_html.read_text()

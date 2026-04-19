@@ -83,6 +83,10 @@ class WatchProcess:
     def _advance_stdout_cursor(self) -> None:
         self._stdout_cursor = self._stdout_len()
 
+    def snapshot(self, path: Path):
+        """Return the current file snapshot for test assertions."""
+        return self._file_snapshot(path)
+
     def wait_for_initial_build(self):
         """Block until watch mode is active after its initial build attempt."""
         deadline = time.monotonic() + INITIAL_BUILD_TIMEOUT_SEC
@@ -114,6 +118,19 @@ class WatchProcess:
             time.sleep(POLL_SEC)
         raise TimeoutError('Did not observe a build error within timeout')
 
+    def wait_for_successful_rebuild(self):
+        """Block until a new rebuild cycle finishes successfully."""
+        deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
+        start = self._stdout_cursor
+        while time.monotonic() < deadline:
+            if self._has_rebuild_started_since(start) and self._has_success_since(start):
+                self._advance_stdout_cursor()
+                return
+            if self.proc.poll() is not None:
+                raise RuntimeError(f'Watch process exited with code {self.proc.returncode}')
+            time.sleep(POLL_SEC)
+        raise TimeoutError('Did not observe a successful rebuild within timeout')
+
     def wait_for_rebuild(self, path: Path, condition='modified', before_mtime=None):
         """Wait for a file to be created, modified, or removed."""
         if condition == 'modified' and before_mtime is None:
@@ -136,10 +153,11 @@ class WatchProcess:
                     return False
                 return rebuild_succeeded if rebuild_started else True
             if condition == 'modified':
-                if rebuild_started:
-                    return path.exists() and rebuild_succeeded
                 current_snapshot = self._file_snapshot(path)
-                return current_snapshot is not None and current_snapshot != before_snapshot
+                changed = current_snapshot is not None and current_snapshot != before_snapshot
+                if rebuild_started:
+                    return changed and rebuild_succeeded
+                return changed
             return False
 
         while time.monotonic() < deadline:

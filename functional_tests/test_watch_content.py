@@ -1,8 +1,10 @@
 import json
+import threading
 
 import pytest
+import websocket
 from conftest import run_tada
-from watch_helpers import WatchProcess
+from watch_helpers import WEBSOCKET_TIMEOUT_SEC, WatchProcess
 
 
 class TestWatchEditContent:
@@ -53,14 +55,14 @@ class TestWatchAddContent:
 
     def test_adding_new_markdown_file(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
-        before_index_mtime = index_html.stat().st_mtime
+        before_index_snapshot = watch.snapshot(index_html)
         new_md = site_dir / 'content' / 'new_page.md'
         new_md.write_text('---\ntitle: New Page\n---\n\nHello from new page.\n')
 
         new_html = site_dir / 'dist' / 'new_page.html'
         watch.wait_for_rebuild(new_html, 'exists')
         assert 'Hello from new page.' in new_html.read_text()
-        assert index_html.stat().st_mtime == before_index_mtime
+        assert watch.snapshot(index_html) == before_index_snapshot
 
     def test_adding_new_asset(self, watch, site_dir):
         new_asset = site_dir / 'content' / 'test_asset.txt'
@@ -311,13 +313,40 @@ class TestWatchPartials:
 
     def test_adding_unused_partial_does_not_trigger_reload(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
-        before_mtime = index_html.stat().st_mtime
+        before_snapshot = watch.snapshot(index_html)
+        messages = []
+        connected = threading.Event()
+        reloaded = threading.Event()
 
-        unused_partial = site_dir / 'content' / '_unused.md'
-        unused_partial.write_text('Unused partial content.\n')
+        def on_message(ws, message):
+            messages.append(message)
+            if message == 'reload':
+                reloaded.set()
 
-        watch.assert_no_rebuild(index_html, before_mtime=before_mtime, timeout_sec=3)
-        assert index_html.stat().st_mtime == before_mtime
+        def on_open(ws):
+            connected.set()
+
+        ws = websocket.WebSocketApp(
+            f'ws://localhost:{watch.ws_port}',
+            on_message=on_message,
+            on_open=on_open,
+        )
+        ws_thread = threading.Thread(target=ws.run_forever, daemon=True)
+        ws_thread.start()
+
+        try:
+            assert connected.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
+                f'WebSocket did not connect on port {watch.ws_port}'
+            )
+
+            unused_partial = site_dir / 'content' / '_unused.md'
+            unused_partial.write_text('Unused partial content.\n')
+
+            assert not reloaded.wait(timeout=3), f'Unexpected reload message: {messages}'
+            assert watch.snapshot(index_html) == before_snapshot
+        finally:
+            ws.close()
+            ws_thread.join(timeout=2)
 
 
 class TestWatchTraceRebuildsOnJavaChange:
@@ -433,7 +462,7 @@ class TestWatchLiterateJavaError:
 
             pair_html = site_dir / 'dist' / 'lectures' / '01' / 'Pair.java.html'
             assert pair_html.exists()
-            before_mtime = pair_html.stat().st_mtime
+            before_html = pair_html.read_text()
 
             pair_md = site_dir / 'content' / 'lectures' / '01' / 'Pair.java.md'
             original = pair_md.read_text()
@@ -449,7 +478,7 @@ class TestWatchLiterateJavaError:
 
             pair_md.write_text(original)
 
-            wp.wait_for_rebuild(pair_html, 'modified', before_mtime=before_mtime)
-            assert pair_html.exists()
+            wp.wait_for_successful_rebuild()
+            assert pair_html.read_text() == before_html
         finally:
             wp.stop()
