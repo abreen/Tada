@@ -61,9 +61,11 @@ installed it.
 From the repository root:
 
 ```
-bun run lint         # Run the linter
-bun run lint:python  # Run the Python linter for functional tests
-bun run typecheck    # Run TypeScript's type checker
+bun run format          # Run Prettier
+bun run lint            # Run the linter
+bun run typecheck       # Run TypeScript's type checker
+bun run format:python   # Run the code formatter for Python
+bun run lint:python     # Run the linter for Python
 ```
 
 These checks run automatically as part of the Git pre-commit hook.

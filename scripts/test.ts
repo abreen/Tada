@@ -1,4 +1,5 @@
 import { $ } from 'bun';
+import { runPythonModuleSync } from '../python/module';
 
 const suite = process.argv[2] ?? 'all';
 const bunQuiet = ['--only-failures'];
@@ -20,7 +21,14 @@ async function runPlaywright() {
 }
 
 async function runFunctional(extra: string[] = []) {
-  await $`pytest functional_tests/ ${pytestFlags} ${extra}`.throws(true);
+  const exitCode = runPythonModuleSync(
+    'pytest',
+    ['functional_tests/', ...pytestFlags, ...extra],
+    { stdio: 'inherit' },
+  );
+  if (exitCode !== 0) {
+    process.exit(exitCode);
+  }
 }
 
 switch (suite) {
@@ -41,9 +49,16 @@ switch (suite) {
   case 'coverage':
     await $`rm -rf coverage/unit coverage/functional`;
     await runUnit(['--coverage']);
-    await $`TADA_COVERAGE=1 pytest functional_tests/ ${pytestFlags}`.throws(
-      true,
-    );
+    {
+      const exitCode = runPythonModuleSync(
+        'pytest',
+        ['functional_tests/', ...pytestFlags],
+        { stdio: 'inherit', env: { ...process.env, TADA_COVERAGE: '1' } },
+      );
+      if (exitCode !== 0) {
+        process.exit(exitCode);
+      }
+    }
     await $`bun run scripts/coverage-report.ts`.throws(true);
     break;
   default:

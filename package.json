@@ -32,17 +32,19 @@
   "scripts": {
     "prepare": "bunx husky",
     "check-deps": "bun run scripts/check-deps.ts",
-    "setup:python": "bun run scripts/setup-python.ts",
+    "init-example": "bun run bin/tada.ts init example --no-interactive",
+    "iew": "bun run scripts/init-example-watch.ts",
     "lint": "eslint src/ build/ bin/",
-    "lint:python": "ruff check functional_tests/",
-    "format:python": "ruff check --fix functional_tests/ && ruff format functional_tests/",
     "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,js,scss,json}\"",
+    "test:playwright": "bun run scripts/test.ts playwright",
     "test:functional": "bun run scripts/test.ts functional",
     "test:all": "bun run scripts/test.ts all",
     "test:coverage": "bun run scripts/test.ts coverage",
-    "test:playwright": "bun run scripts/test.ts playwright",
-    "init-example": "bun run bin/tada.ts init example --no-interactive",
-    "iew": "bun run scripts/init-example-watch.ts"
+    "setup:python": "bun run scripts/setup-python.ts",
+    "lint:python": "bun run scripts/python-module.ts ruff check functional_tests/",
+    "fix:python": "bun run scripts/python-module.ts ruff check --fix functional_tests/",
+    "format:python": "bun run fix:python && bun run scripts/python-module.ts ruff format functional_tests/"
   },
   "engines": {
     "bun": ">=1.0.0"
@@ -84,8 +86,8 @@
     "*.scss": "prettier --write",
     "*.json": "prettier --write",
     "functional_tests/**/*.py": [
-      "ruff check --fix",
-      "ruff format"
+      "bun run scripts/python-module.ts ruff check --fix",
+      "bun run scripts/python-module.ts ruff format"
     ]
   },
   "devDependencies": {
