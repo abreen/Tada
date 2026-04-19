@@ -31,9 +31,14 @@ const defaultChunk = makeChunk([
   { line: 3, stdout: ' world', svg: '<svg>step2</svg>' },
 ]);
 
-function widgetHtml(manifestUrl = '/trace/manifest.json'): string {
+function widgetHtml(
+  manifestUrl: string | null = '/trace/manifest.json',
+): string {
+  const manifestAttr = manifestUrl
+    ? ` data-trace-manifest="${manifestUrl}"`
+    : '';
   return (
-    `<div class="trace-widget" data-trace-manifest="${manifestUrl}">` +
+    `<div class="trace-widget"${manifestAttr}>` +
     '<div class="trace-source">' +
     '<span class="line-number" data-line="1">1</span>' +
     '<span class="line-number" data-line="2">2</span>' +
@@ -94,28 +99,25 @@ describe('trace', () => {
   });
 
   test('returns early when no trace widgets exist', () => {
-    let fetchCalled = false;
-    globalThis.fetch = (async () => {
-      fetchCalled = true;
-      return {} as Response;
-    }) as unknown as typeof fetch;
-
     const win = createWindow('<div>no widgets</div>');
+    const before = win.document.body.innerHTML;
     mount(win);
-    expect(fetchCalled).toBe(false);
+    expect(win.document.body.innerHTML).toBe(before);
   });
 
   test('returns early when widget has no data-trace-manifest', async () => {
-    let fetchCalled = false;
-    globalThis.fetch = (async () => {
-      fetchCalled = true;
-      return {} as Response;
-    }) as unknown as typeof fetch;
-
-    const win = createWindow('<div class="trace-widget"></div>');
+    const win = createWindow(widgetHtml(null));
     mount(win);
     await flush();
-    expect(fetchCalled).toBe(false);
+
+    const counter = win.document.querySelector('.trace-step-counter');
+    const diagram = win.document.querySelector('.trace-diagram');
+    const output = win.document.querySelector('.trace-output');
+
+    expect(counter!.textContent).toBe('');
+    expect(diagram!.innerHTML).toBe('');
+    expect(output!.textContent).toBe('');
+    expect(win.document.querySelector('.trace-line-active')).toBeNull();
   });
 
   test('fetches manifest and first chunk on init', async () => {
