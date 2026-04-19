@@ -23,7 +23,11 @@ class TestNoPython:
 
         fake_dir = tmp_path / 'fake_bin'
         fake_dir.mkdir()
+        make_fake_python(fake_dir, 'python')
         make_fake_python(fake_dir, 'python3')
+        if os.name == 'nt':
+            make_fake_python(fake_dir, 'powershell')
+            make_fake_python(fake_dir, 'powershell.exe')
 
         result = run_tada('init', 'testsite', '--no-interactive', cwd=str(tmp_path))
         assert result.returncode == 0, f'init failed: {result.stderr}'

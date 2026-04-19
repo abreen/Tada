@@ -98,15 +98,6 @@ jobs:
   functional-test-windows:
     runs-on: windows-latest
 
-    # Force Python into UTF-8 mode so Path.read_text() / Path.write_text()
-    # and open() default to UTF-8 instead of the Windows system code page
-    # (cp1252 on English locales). Without this, tests that read Tada's
-    # generated HTML fail with charmap codec errors when the content
-    # contains smart quotes, em-dashes, or other non-ASCII bytes from
-    # markdown-it's typographer.
-    env:
-      PYTHONUTF8: "1"
-
     strategy:
       fail-fast: false
       matrix:

@@ -24,7 +24,7 @@ async function runFunctional(extra: string[] = []) {
   const exitCode = runPythonModuleSync(
     'pytest',
     ['functional_tests/', ...pytestFlags, ...extra],
-    { stdio: 'inherit' },
+    { stdio: 'inherit', env: { ...process.env, PYTHONUTF8: '1' } },
   );
   if (exitCode !== 0) {
     process.exit(exitCode);
@@ -53,7 +53,10 @@ switch (suite) {
       const exitCode = runPythonModuleSync(
         'pytest',
         ['functional_tests/', ...pytestFlags],
-        { stdio: 'inherit', env: { ...process.env, TADA_COVERAGE: '1' } },
+        {
+          stdio: 'inherit',
+          env: { ...process.env, TADA_COVERAGE: '1', PYTHONUTF8: '1' },
+        },
       );
       if (exitCode !== 0) {
         process.exit(exitCode);
