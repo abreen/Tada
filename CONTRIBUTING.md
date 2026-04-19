@@ -91,7 +91,8 @@ these formatters yourself, but you may configure your IDE to run them when
 saving a file.
 
 The pre-commit hook also runs ESLint, Ruff's Python linter, and TypeScript's
-type checker. Make sure you've run `bun run setup:python` so Ruff is available.
+type checker. Make sure you've run `bun run setup:python` so Ruff is available;
+that command resolves the right Python interpreter for your platform.
 
 
 ## Logging

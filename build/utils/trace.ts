@@ -18,7 +18,8 @@ import {
   runJavaTrace,
   validateJavaTraceTarget,
 } from './trace-java';
-import { resolvePythonCommand, runPythonTrace } from './trace-python';
+import { resolvePythonCommand } from '../../python/command';
+import { runPythonTrace } from './trace-python';
 import type {
   RenderDependencyCollector,
   TraceToolAvailability,
@@ -84,7 +85,7 @@ function disabledTraceMessage(fileName: string): string {
   if (ext === '.java') {
     return `javac was not found; trace for ${B`${fileName}`} will be disabled`;
   }
-  return `python3/python was not found; trace for ${B`${fileName}`} will be disabled`;
+  return `Python was not found; trace for ${B`${fileName}`} will be disabled`;
 }
 
 function sourceFileNameForTrace(fileName: string): string {

@@ -23,7 +23,8 @@ with metadata and a line-to-step index. These files are written to
 
 If the runtime needed for a trace backend is not available, `renderTrace` logs a
 warning and emits a disabled widget for that source file. Java traces require
-`javac`; Python traces require either `python3` or `python`. The disabled
+`javac`; Python traces require Python. On Windows, Tada first tries `python`,
+then `python3`, then the same commands through PowerShell. The disabled
 widget shows the syntax-highlighted source code but has all navigation buttons
 disabled and no manifest URL. The client-side component also handles missing
 trace data gracefully: if fetching the manifest fails (network error or non-OK

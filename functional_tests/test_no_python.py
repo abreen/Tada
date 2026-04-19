@@ -24,7 +24,6 @@ class TestNoPython:
         fake_dir = tmp_path / 'fake_bin'
         fake_dir.mkdir()
         make_fake_python(fake_dir, 'python3')
-        make_fake_python(fake_dir, 'python')
 
         result = run_tada('init', 'testsite', '--no-interactive', cwd=str(tmp_path))
         assert result.returncode == 0, f'init failed: {result.stderr}'
@@ -37,7 +36,7 @@ class TestNoPython:
         return {'site_dir': site_dir, 'output': result.stdout + result.stderr}
 
     def test_python_trace_disabled_warning(self, built_site):
-        assert 'python3/python was not found' in built_site['output']
+        assert 'Python was not found' in built_site['output']
 
     def test_java_trace_manifest_still_present(self, built_site):
         html = (built_site['site_dir'] / 'dist' / 'labs' / '01' / 'index.html').read_text()

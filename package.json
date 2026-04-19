@@ -22,6 +22,7 @@
     "init/",
     "schema/",
     "types/",
+    "python/",
     "tsconfig.json",
     "!**/*.test.ts",
     "!**/__pycache__",
@@ -31,7 +32,7 @@
   "scripts": {
     "prepare": "bunx husky",
     "check-deps": "bun run scripts/check-deps.ts",
-    "setup:python": "python3 -m pip install -q -r functional_tests/requirements.txt",
+    "setup:python": "bun run scripts/setup-python.ts",
     "lint": "eslint src/ build/ bin/",
     "lint:python": "ruff check functional_tests/",
     "format:python": "ruff check --fix functional_tests/ && ruff format functional_tests/",
