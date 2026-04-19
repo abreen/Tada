@@ -798,6 +798,77 @@ describe('popstate handling', () => {
     const container = win.document.querySelector('.container')!;
     expect(container.innerHTML).toContain('Restored');
   });
+
+  test('forward popstate during pending back navigation restores scroll', async () => {
+    const win = createDOM(
+      '<a href="http://localhost/markdown.html">Markdown</a>',
+      { url: 'http://localhost/index.html' },
+    );
+    const scrollTo = setupGlobals(win);
+    Object.defineProperty(win, 'scrollY', {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+
+    let backFetchAborted = false;
+    let callCount = 0;
+    globals.fetch = mock(async (_url: string, init?: RequestInit) => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          ok: true,
+          text: async () =>
+            createPageHTML({
+              title: 'Markdown Examples',
+              containerContent: '<p>Markdown</p>',
+            }),
+        };
+      }
+
+      if (callCount === 2) {
+        await new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            backFetchAborted = true;
+            const err = new Error('Aborted');
+            err.name = 'AbortError';
+            reject(err);
+          });
+        });
+      }
+
+      return {
+        ok: true,
+        text: async () =>
+          createPageHTML({
+            title: 'Markdown Examples',
+            containerContent: '<p>Markdown restored</p>',
+          }),
+      };
+    });
+
+    mount(win);
+    clickLink(win);
+    await flush();
+
+    win.scrollY = 500;
+    win.dispatchEvent(new win.Event('scroll'));
+
+    win.history.replaceState(null, '', '/index.html');
+    win.dispatchEvent(new win.PopStateEvent('popstate', { state: null }));
+    await new Promise(r => setTimeout(r, 0));
+
+    win.history.replaceState({ navIndex: 1 }, '', '/markdown.html');
+    win.dispatchEvent(
+      new win.PopStateEvent('popstate', { state: { navIndex: 1 } }),
+    );
+    await flush();
+
+    expect(backFetchAborted).toBe(true);
+    expect(callCount).toBe(3);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 500 });
+    expect(win.document.title).toBe('Markdown Examples');
+  });
 });
 
 describe('view transitions', () => {

@@ -12,11 +12,13 @@ import './timezone/style.scss';
 import './toc/style.scss';
 import './trace/style.scss';
 import './navigate/style.scss';
+import './page-update/style.scss';
 
 import mountSearch from './search';
 import mountHeader from './header';
 import mountTop from './top';
 import mountNavigate from './navigate';
+import mountPageUpdate from './page-update';
 import { mountPerPageComponents } from './navigate/lifecycle';
 
 import { scheduleTask, formatDuration } from './util';
@@ -29,6 +31,7 @@ const PERSISTENT_COMPONENTS: Record<
   search: mountSearch,
   top: mountTop,
   navigate: mountNavigate,
+  pageUpdate: mountPageUpdate,
 };
 
 let startTime = -1;

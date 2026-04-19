@@ -20,8 +20,9 @@ title, meta tags, and body class, and re-mounts per-page components
 View Transition for a crossfade where supported.
 
 Persistent components (header, search, back-to-top, navigate) mount
-once at startup. Per-page components are torn down and re-mounted on
-every navigation.
+once at startup. The page update toast also stays mounted and resets its
+tracking state when navigation completes. Per-page components are torn down and
+re-mounted on every navigation.
 
 ## Scroll and `:target`
 
@@ -38,6 +39,11 @@ URL hash once per-page components have mounted.
 
 If the fetch fails or returns a non-OK response, the navigator gives up
 and does a normal full-page navigation to the target URL.
+
+The same fetch, swap, and fallback path is also used when the page update
+toast refreshes the current URL in place. In that case, navigation preserves
+the current scroll position, does not push a new history entry, and does not
+run a View Transition.
 
 ## Search dismissal
 

@@ -62,6 +62,10 @@ export function startServer(options: StartServerOptions): void {
       return new Response(null, { status: 304, headers });
     }
 
+    if (req.method === 'HEAD') {
+      return new Response(null, { headers });
+    }
+
     return new Response(Bun.file(result.filePath), { headers });
   }
 

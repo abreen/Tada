@@ -1,3 +1,4 @@
+import http.client
 import subprocess
 import time
 import urllib.error
@@ -115,6 +116,49 @@ class TestServe:
         url = f'http://localhost:{port}/index.html'
         resp = urllib.request.urlopen(url, timeout=5)
         assert resp.headers.get('Cache-Control') == 'no-cache'
+
+    def test_head_returns_last_modified_without_body(self, server):
+        _, port = server
+        conn = http.client.HTTPConnection('localhost', port, timeout=5)
+        try:
+            conn.request('HEAD', '/index.html')
+            resp = conn.getresponse()
+            body = resp.read()
+        finally:
+            conn.close()
+
+        assert resp.status == 200
+        assert resp.getheader('Last-Modified') is not None
+        assert body == b''
+
+    def test_head_returns_304_with_if_modified_since(self, server):
+        _, port = server
+
+        conn = http.client.HTTPConnection('localhost', port, timeout=5)
+        try:
+            conn.request('HEAD', '/index.html')
+            first = conn.getresponse()
+            first.read()
+            last_modified = first.getheader('Last-Modified')
+        finally:
+            conn.close()
+
+        assert last_modified is not None
+
+        conn = http.client.HTTPConnection('localhost', port, timeout=5)
+        try:
+            conn.request(
+                'HEAD',
+                '/index.html',
+                headers={'If-Modified-Since': last_modified},
+            )
+            resp = conn.getresponse()
+            body = resp.read()
+        finally:
+            conn.close()
+
+        assert resp.status == 304
+        assert body == b''
 
     def test_serves_nested_file(self, server):
         site_dir, port = server

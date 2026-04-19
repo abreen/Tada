@@ -20,6 +20,7 @@ them in the bundle. Shared utilities are in `src/util.ts`.
 - **Code scrollbar**: a sticky horizontal scrollbar for code pages, synced
   with the code body so wide code can be scrolled from the bottom of the viewport
 - **Header navigation**: collapsible header with logo, title, and nav links
+- **Page update toast**: floating bottom toast that checks the current page
+  for newer validators and offers an in-place refresh
 - **Traces**: widget that renders execution traces generated at build time and
   renders a stack and heap memory diagram (see [Traces](traces.md))
-

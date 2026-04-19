@@ -1,16 +1,16 @@
 import { isEligibleLink } from './eligible';
-import { mountPerPageComponents, teardownPerPageComponents } from './lifecycle';
-
-let currentAbortController: AbortController | null = null;
-let historyIndex = 0;
-let currentPath = '';
-
-// In-memory scroll positions keyed by navIndex. Populated on scroll and
-// consulted by handlePopState so returning to a previous entry via
-// back/forward restores the user's scroll, not just scroll 0.
-const scrollByIndex = new Map<number, number>();
-
-type Direction = 'forward' | 'back';
+import {
+  clearSearch,
+  closeHeaderDetails,
+  getCurrentPath,
+  getHistoryIndex,
+  getSavedScroll,
+  initNavigation,
+  navigateToUrl,
+  saveScrollPosition,
+  setCurrentPath,
+  setHistoryIndex,
+} from './runtime';
 
 function findAnchor(event: MouseEvent): HTMLAnchorElement | null {
   const target = event.target as HTMLElement | null;
@@ -37,251 +37,15 @@ function shouldIgnoreClick(
   return false;
 }
 
-function updateHead(newDoc: Document): void {
-  document.title = newDoc.title;
-
-  const metaTags = ['description', 'author'];
-  for (const name of metaTags) {
-    const newMeta = newDoc.querySelector(`meta[name="${name}"]`);
-    const oldMeta = document.querySelector(`meta[name="${name}"]`);
-    if (newMeta && oldMeta) {
-      oldMeta.setAttribute('content', newMeta.getAttribute('content') ?? '');
-    } else if (newMeta && !oldMeta) {
-      document.head.appendChild(newMeta.cloneNode(true));
-    } else if (!newMeta && oldMeta) {
-      oldMeta.remove();
-    }
-  }
-
-  const ogTags = ['og:title', 'og:author'];
-  for (const prop of ogTags) {
-    const newMeta = newDoc.querySelector(`meta[property="${prop}"]`);
-    const oldMeta = document.querySelector(`meta[property="${prop}"]`);
-    if (newMeta && oldMeta) {
-      oldMeta.setAttribute('content', newMeta.getAttribute('content') ?? '');
-    } else if (newMeta && !oldMeta) {
-      document.head.appendChild(newMeta.cloneNode(true));
-    } else if (!newMeta && oldMeta) {
-      oldMeta.remove();
-    }
-  }
-
-  // Adopt stylesheet links from the new page that aren't already loaded
-  const existingHrefs = new Set(
-    Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link =>
-      link.getAttribute('href'),
-    ),
-  );
-  for (const link of newDoc.querySelectorAll('link[rel="stylesheet"]')) {
-    if (!existingHrefs.has(link.getAttribute('href'))) {
-      document.head.appendChild(link.cloneNode(true));
-    }
-  }
-}
-
-function swapContent(newDoc: Document): void {
-  const newContainer = newDoc.querySelector('.container');
-  const oldContainer = document.querySelector('.container');
-  if (newContainer && oldContainer) {
-    const imported = document.importNode(newContainer, true);
-    oldContainer.replaceChildren(...imported.childNodes);
-  }
-
-  // Update body class (carries template name and toc-is-active)
-  document.body.className = newDoc.body.className;
-}
-
-function clearSearch(): void {
-  const input = document.querySelector(
-    'input.search.quick-search',
-  ) as HTMLInputElement | null;
-  if (input && input.value) {
-    input.value = '';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-}
-
-async function performNavigation(
-  url: string,
-  scrollTarget: number | string | null,
-  direction: Direction,
-  isPush: boolean,
-): Promise<void> {
-  if (currentAbortController) {
-    currentAbortController.abort();
-  }
-
-  const controller = new AbortController();
-  currentAbortController = controller;
-
-  const header = document.querySelector('header');
-  header?.classList.add('loading');
-
-  let response: Response;
-  try {
-    response = await fetch(url, { signal: controller.signal });
-  } catch (err: unknown) {
-    header?.classList.remove('loading');
-    if (err instanceof Error && err.name === 'AbortError') {
-      return;
-    }
-    // Fetch failed, fall back to full navigation
-    window.location.href = url;
-    return;
-  }
-
-  if (!response.ok) {
-    header?.classList.remove('loading');
-    window.location.href = url;
-    return;
-  }
-
-  const html = await response.text();
-  header?.classList.remove('loading');
-  const parser = new DOMParser();
-  const newDoc = parser.parseFromString(html, 'text/html');
-
-  if (!newDoc.querySelector('meta[name="generator"][content="Tada"]')) {
-    window.location.href = url;
-    return;
-  }
-
-  const doSwap = () => {
-    teardownPerPageComponents();
-    swapContent(newDoc);
-    updateHead(newDoc);
-    const parsed = new URL(url);
-    currentPath = parsed.pathname + parsed.search;
-
-    if (isPush) {
-      historyIndex++;
-      // Push without the hash; we add it back below via location.replace
-      // so the browser performs a real fragment navigation that updates
-      // :target and fires hashchange. pushState alone would not do
-      // either of those things.
-      const urlWithoutHash = parsed.origin + parsed.pathname + parsed.search;
-      window.history.pushState({ navIndex: historyIndex }, '', urlWithoutHash);
-    }
-
-    if (typeof scrollTarget === 'string') {
-      // Trigger a real fragment navigation. location.replace overwrites
-      // the current entry's URL in place and runs fragment navigation
-      // (updating :target, firing hashchange, scrolling to the element).
-      // It wipes the entry's state object, so reapply it via
-      // replaceState.
-      const urlWithHash = parsed.pathname + parsed.search + '#' + scrollTarget;
-      window.location.replace(urlWithHash);
-      window.history.replaceState({ navIndex: historyIndex }, '', urlWithHash);
-    } else if (typeof scrollTarget === 'number') {
-      // Restore scroll position (popstate)
-      window.scrollTo({ top: scrollTarget });
-    } else {
-      window.scrollTo({ top: 0 });
-    }
-    scrollByIndex.set(historyIndex, window.scrollY);
-  };
-
-  const doc = document as Document & {
-    startViewTransition?: (cb: () => void) => { finished: Promise<void> };
-  };
-
-  if (typeof doc.startViewTransition === 'function') {
-    // Only give the title its own transition group if it's visible
-    const titleEl = document.querySelector('.title-and-info');
-    const headerHeight =
-      document.querySelector('header')?.getBoundingClientRect().height ?? 0;
-    const titleVisible =
-      titleEl != null && titleEl.getBoundingClientRect().top >= headerHeight;
-
-    if (titleVisible) {
-      const h1 = titleEl.querySelector('h1') as HTMLElement | null;
-      const info = titleEl.querySelector('.info') as HTMLElement | null;
-      const breadcrumb = titleEl.querySelector(
-        'a.breadcrumb',
-      ) as HTMLElement | null;
-      if (h1) {
-        h1.style.viewTransitionName = 'page-title';
-      }
-      if (info) {
-        info.style.viewTransitionName = 'page-info';
-      }
-      if (breadcrumb) {
-        breadcrumb.style.viewTransitionName = 'page-breadcrumb';
-      }
-    }
-
-    document.documentElement.classList.add(
-      direction === 'forward' ? 'nav-forward' : 'nav-back',
-    );
-
-    const transition = doc.startViewTransition(() => {
-      doSwap();
-      // Check title visibility on the new page independently (scroll
-      // has been restored by doSwap, so the position reflects the
-      // destination page)
-      const newTitleEl = document.querySelector('.title-and-info');
-      const newHeaderHeight =
-        document.querySelector('header')?.getBoundingClientRect().height ?? 0;
-      const newTitleVisible =
-        newTitleEl != null &&
-        newTitleEl.getBoundingClientRect().top >= newHeaderHeight;
-      if (newTitleVisible && newTitleEl) {
-        const h1 = newTitleEl.querySelector('h1') as HTMLElement | null;
-        const info = newTitleEl.querySelector('.info') as HTMLElement | null;
-        const breadcrumb = newTitleEl.querySelector(
-          'a.breadcrumb',
-        ) as HTMLElement | null;
-        if (h1) {
-          h1.style.viewTransitionName = 'page-title';
-        }
-        if (info) {
-          info.style.viewTransitionName = 'page-info';
-        }
-        if (breadcrumb) {
-          breadcrumb.style.viewTransitionName = 'page-breadcrumb';
-        }
-      }
-    });
-    await transition.finished;
-    document.documentElement.classList.remove('nav-forward', 'nav-back');
-    // Clean up inline styles
-    const newH1 = document.querySelector(
-      '.title-and-info h1',
-    ) as HTMLElement | null;
-    const newInfo = document.querySelector(
-      '.title-and-info .info',
-    ) as HTMLElement | null;
-    if (newH1) {
-      newH1.style.viewTransitionName = '';
-    }
-    if (newInfo) {
-      newInfo.style.viewTransitionName = '';
-    }
-    const newBreadcrumb = document.querySelector(
-      '.title-and-info a.breadcrumb',
-    ) as HTMLElement | null;
-    if (newBreadcrumb) {
-      newBreadcrumb.style.viewTransitionName = '';
-    }
-  } else {
-    doSwap();
-  }
-
-  await mountPerPageComponents(window);
-  currentAbortController = null;
-}
-
 export default function mountNavigate(window: Window): () => void {
-  window.history.scrollRestoration = 'manual';
-  currentPath = window.location.pathname + window.location.search;
-  scrollByIndex.set(historyIndex, window.scrollY);
+  initNavigation(window);
 
   // Track scroll position on every scroll event. We keep the latest
   // scrollY per navIndex so that back/forward navigation can restore
   // where the user was, not just scroll 0. Map writes are cheap; no
   // need to debounce.
   const saveScroll = () => {
-    scrollByIndex.set(historyIndex, window.scrollY);
+    saveScrollPosition(window);
   };
   window.addEventListener('scroll', saveScroll, { passive: true });
 
@@ -309,13 +73,8 @@ export default function mountNavigate(window: Window): () => void {
       url.search === window.location.search
     ) {
       event.preventDefault();
-      clearSearch();
-      const details = window.document.querySelector(
-        'header details',
-      ) as HTMLDetailsElement | null;
-      if (details?.open) {
-        details.open = false;
-      }
+      clearSearch(window.document);
+      closeHeaderDetails(window.document);
       if (url.hash) {
         // location.hash assignment performs a real fragment navigation:
         // updates :target, fires hashchange (which the TOC listens for),
@@ -329,26 +88,25 @@ export default function mountNavigate(window: Window): () => void {
     event.preventDefault();
 
     // Clear search and close header immediately, before the fetch
-    clearSearch();
-
-    const details = window.document.querySelector(
-      'header details',
-    ) as HTMLDetailsElement | null;
-    if (details?.open) {
-      details.open = false;
-    }
+    clearSearch(window.document);
+    closeHeaderDetails(window.document);
 
     // Save current scroll position for the entry we're leaving
-    scrollByIndex.set(historyIndex, window.scrollY);
+    saveScrollPosition(window);
 
     const hash = url.hash ? url.hash.slice(1) : null;
 
-    performNavigation(anchor.href, hash, 'forward', true);
+    navigateToUrl(window, {
+      url: anchor.href,
+      scrollTarget: hash,
+      direction: 'forward',
+      pushHistory: true,
+    });
   }
 
   function handlePopState(event: PopStateEvent) {
     const newPath = window.location.pathname + window.location.search;
-    if (newPath === currentPath) {
+    if (newPath === getCurrentPath()) {
       // Same page, different hash: scroll to the target
       const hash = window.location.hash.slice(1);
       if (hash) {
@@ -361,19 +119,18 @@ export default function mountNavigate(window: Window): () => void {
       }
       return;
     }
-    currentPath = newPath;
 
+    setCurrentPath(newPath);
     const targetIndex = event.state?.navIndex ?? 0;
-    const direction: Direction =
-      targetIndex >= historyIndex ? 'forward' : 'back';
-    historyIndex = targetIndex;
-    const savedY = scrollByIndex.get(targetIndex);
-    performNavigation(
-      window.location.href,
-      typeof savedY === 'number' ? savedY : null,
+    const direction = targetIndex >= getHistoryIndex() ? 'forward' : 'back';
+    setHistoryIndex(targetIndex);
+    const savedY = getSavedScroll(targetIndex);
+    navigateToUrl(window, {
+      url: window.location.href,
+      scrollTarget: typeof savedY === 'number' ? savedY : null,
       direction,
-      false,
-    );
+      pushHistory: false,
+    });
   }
 
   // Use capture phase so the handler fires before stopPropagation

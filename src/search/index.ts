@@ -1,6 +1,11 @@
 import { getElement, applyBasePath } from '../util';
 import { getPdfPageNumber, groupPdfResults } from './pdf-utils';
 import type { Result } from './pdf-utils';
+import {
+  getResponseValidators,
+  hasResponseValidatorsChanged,
+  type ResponseValidators,
+} from '../validators';
 
 const MAX_RESULTS = 24;
 
@@ -281,8 +286,7 @@ export default (window: Window) => {
   // Unhide (hidden via inline style in template to prevent FOUC)
   resultsDiv.style.display = '';
 
-  let entryETag: string | null = null;
-  let entryLastModified: string | null = null;
+  let entryValidators: ResponseValidators = { etag: null, lastModified: null };
   let lastIndexCheck = 0;
   let indexCheckInFlight = false;
 
@@ -302,8 +306,7 @@ export default (window: Window) => {
     });
 
     if (res.ok) {
-      entryETag = res.headers.get('ETag');
-      entryLastModified = res.headers.get('Last-Modified');
+      entryValidators = getResponseValidators(res);
     }
   }
 
@@ -321,14 +324,8 @@ export default (window: Window) => {
       if (!res.ok) {
         return;
       }
-      const newETag = res.headers.get('ETag');
-      const newLastModified = res.headers.get('Last-Modified');
-      const changed =
-        (newETag !== null && newETag !== entryETag) ||
-        (newETag === null &&
-          newLastModified !== null &&
-          newLastModified !== entryLastModified);
-      if (changed) {
+      const newValidators = getResponseValidators(res);
+      if (hasResponseValidatorsChanged(entryValidators, newValidators)) {
         pagefind = null;
         await loadPagefind();
         await update();
