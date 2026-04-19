@@ -9,6 +9,7 @@ A static site generator. The successor to Presto.
 
 - Modern design (light & dark following system, floating header, styled lists)
 - Fast client-side navigation
+- Detects a new version of the current page and allows the user to reload
 - Clickable/linkable landmarks (headings, deflists, alert boxes)
 - Dynamic table of contents
   * Floats on the side of the screen when window is large enough
