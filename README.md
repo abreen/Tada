@@ -21,8 +21,11 @@ A static site generator. The successor to Presto.
   * Dynamic table of contents for each method/function
   * Converts new Markdown comment syntax ([added in Java 23][jep467]) to HTML
   * Indexed by Pagefind (classes, interfaces, methods, and fields)
+- Interactive execution traces via `renderTrace()`
+  * Supports Java and Python source files
+  * Renders step-by-step source highlighting, output, and memory diagrams
 - PDF files are copied into `dist/`
-  - Text of each PDF page is extracted using [mutool][mutool] and indexed
+  - Text of each PDF page is extracted using `mutool` (if present) and indexed
 - External link handling (special visual treatment for external links)
 - Internal link validation at build time (broken links fail the build)
 - Internal links automatically prefixed with base path, if specified
@@ -38,15 +41,30 @@ A static site generator. The successor to Presto.
 - Automatically generated favicon
   * Text, color, font and font weight taken from config file
 
+## Prerequisites
+
+- [Bun](https://bun.com/)
+- [MuPDF](https://mupdf.com/) (optional)
+  - macOS (using [Homebrew][homebrew]): `brew install mupdf-tools`
+  - Fedora Linux: `sudo dnf install mupdf`
+  - Ubuntu Linux: `sudo apt-get install mupdf-tools`
+  - Windows: `winget install mutool`
+
+> [!NOTE]
+> You may skip MuPDF if you don't need search results to include links to PDF
+> pages. You can also turn off `features.search` in the config to disable
+> search entirely.
+
+If you plan to use `renderTrace()` to generate traces of Java or Python code,
+the appropriate compiler/interpreter must be installed.
 
 ## Installation
 
-Install [Bun](https://bun.sh/), then install Tada globally:
+Install Tada globally:
 
 ```
-bun add -g @abreen/tada
+bun install --global @abreen/tada
 ```
-
 
 ## Quick start
 
@@ -68,7 +86,6 @@ tada serve
 ```
 
 Visit [http://localhost:8080/index.html](http://localhost:8080/index.html).
-
 
 ## CLI commands
 
@@ -92,29 +109,24 @@ You can also override specific defaults with flags:
 Available flags: `--title`, `--symbol`, `--theme-color`, `--tint-hue`,
 `--tint-amount`, `--default-time-zone`, `--prod-base`, `--prod-base-path`.
 
-
 ### `tada dev`
 
 Build the site for local development (using `site.dev.json`)
 into the `dist/` directory.
-
 
 ### `tada serve`
 
 Start a development web server at `http://localhost:8080` which serves the
 files in the `dist/` directory.
 
-
 ### `tada watch`
 
 Start a development web server, watch for changes and rebuild automatically.
-
 
 ### `tada clean`
 
 Remove the `dist/` directory. Pass `--prod` to also prune old production
 builds (keeps the latest two versions).
-
 
 ### `tada prod`
 
@@ -122,7 +134,6 @@ Build the site for production (uses `site.prod.json`). Each prod build is
 saved to a versioned directory under `dist-prod/` (e.g., `dist-prod/v1/`,
 `dist-prod/v2/`) with a manifest file that records the SHA-256 hash of every
 output file.
-
 
 ### `tada diff`
 
@@ -139,7 +150,6 @@ Use `--copy <dir>` to copy only the changed and added files to a directory:
 
 The output directory will also include a `manifest.json` for the newer build.
 
-
 ## Development vs. production builds
 
 `tada dev` and `tada watch` build to the `dist/` directory using
@@ -150,7 +160,6 @@ for previewing a `tada dev` build. Dev builds overwrite `dist/` each time.
 `tada prod` builds to a new versioned directory under `dist-prod/` each time
 it runs. Previous production builds are preserved, so you can compare any
 two versions with `tada diff`.
-
 
 ## Deploying to S3
 
@@ -175,20 +184,6 @@ tada diff --copy upload/
 
 If `tada diff` reports removed files, delete those from your S3 bucket
 manually.
-
-
-## Prerequisites
-
-- [Bun](https://bun.sh/)
-- [MuPDF](https://mupdf.com/) (optional, for PDF text extraction in search)
-  - On macOS: `brew install mupdf-tools`
-  - On Fedora: `dnf install mupdf`
-  - On Ubuntu: `apt-get install mupdf-tools`
-
-> You may skip MuPDF if you don't need search results to include links to PDF
-> pages. You can also turn off `features.search` in the config to disable
-> search entirely.
-
 
 ## Configuration
 
@@ -241,7 +236,6 @@ Example site configuration JSON file:
 | `faviconFontWeight` | *Optional*, font weight used for favicon text (default `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content as `vars.*` (e.g., `<%= vars.staffEmail %>`) |
 
-
 #### `nav.json`
 
 Defines the site navigation structure. The file contains an array of section
@@ -275,7 +269,6 @@ but three or more sections are supported.
 ]
 ```
 
-
 #### `authors.json`
 
 Maps author handles (used in front matter `author` fields) to display names
@@ -293,7 +286,6 @@ with `name`, `avatar`, and optionally `url`.
 }
 ```
 
-
 ## Content
 
 Site content lives in the `content/` directory. Markdown is converted to HTML.
@@ -303,7 +295,6 @@ Any other kinds of files are copied into `dist/` in the same locations.
 
 All files in `public/` are copied directly into `dist/` with zero processing.
 Files in `public/` are **not** included in the search index.
-
 
 ### Front matter fields
 
@@ -323,7 +314,6 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 You may also add arbitrary fields in a page's front matter, and access them
 using Lodash syntax (see below).
 
-
 ### Variable substitution
 
 Plain text content (e.g., HTML and Markdown) are processed using [Lodash
@@ -335,11 +325,10 @@ templates][lodash].
   under `vars` (e.g., `<%= vars.staffEmail %>`)
 
 
-
 [inter]: https://fonts.google.com/specimen/Inter
 [lodash]: https://lodash.info/doc/template
 [front-matter]: https://www.npmjs.com/package/front-matter
 [pagefind]: https://pagefind.app/
-[mutool]: https://mupdf.readthedocs.io/en/latest/tools/mutool.html
 [jep467]: https://openjdk.org/jeps/467
 [katex]: https://katex.org/
+[homebrew]: https://brew.sh/
