@@ -89,7 +89,7 @@ class TestCodeFeatureDisabled:
         assert 'demo.py' in html
         # The links should NOT have been rewritten to .html
         assert 'Rectangle.java.html' not in html
-        assert 'demo.java.html' not in html
+        assert 'demo.py.html' not in html
 
     def test_literate_java_page_still_rendered(self, built_dev_site):
         """Pair.java.md should still produce Pair.java.html when code is disabled."""

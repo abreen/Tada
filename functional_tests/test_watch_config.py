@@ -77,7 +77,7 @@ class TestWatchConfig:
             wp.wait_for_initial_build()
 
             lab_html = site_dir / 'dist' / 'labs' / '01' / 'index.html'
-            wp.wait_for_rebuild(lab_html, 'exists')
+            assert lab_html.exists()
             before_html = lab_html.read_text()
             assert 'data-trace-manifest="/labs/01/_traces/TraceDemo/manifest.json"' in before_html
             before_mtime = lab_html.stat().st_mtime

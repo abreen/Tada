@@ -79,8 +79,12 @@ class TestServe:
             assert e.code == 404
 
     def test_rejects_path_traversal(self, server):
-        _, port = server
-        url = f'http://localhost:{port}/../etc/passwd'
+        site_dir, port = server
+        escaped_dir = site_dir / 'etc'
+        escaped_dir.mkdir(exist_ok=True)
+        (escaped_dir / 'passwd').write_text('should not be served')
+
+        url = f'http://localhost:{port}/..%2Fetc/passwd'
         try:
             urllib.request.urlopen(url, timeout=5)
             assert False, 'Expected 404'
