@@ -14,6 +14,14 @@ import type { PluginBuilder } from 'bun';
 import type { SiteVariables } from './types';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 
+function formatCssNumber(value: number, precision = 4): string {
+  if (Number.isInteger(value)) {
+    return String(value);
+  }
+
+  return value.toFixed(precision).replace(/\.?0+$/, '');
+}
+
 function renderThemeScss(siteVariables: SiteVariables): string {
   const templatePath = path.join(getPackageDir(), 'templates/_theme.scss');
   const template = fs.readFileSync(templatePath, 'utf-8');
@@ -27,7 +35,7 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const iconColorHoverDark = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 60%)`;
   const iconColorTranslucentDark = `hsl(${tintHue}deg ${(85 * tintAmount) / 100}% 90%)`;
 
-  const linkHue = deriveLinkHue(tintHue);
+  const linkHue = formatCssNumber(deriveLinkHue(tintHue));
   const linkColor = `hsl(${linkHue}deg 44.4% 49.4%)`;
   const linkColorHover = `hsl(${linkHue}deg 34% 60%)`;
   const linkColorDark = `hsl(${linkHue}deg 50% 72%)`;

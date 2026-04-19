@@ -5,30 +5,26 @@
 }
 
 header {
-  backdrop-filter: var(--backdrop-filter);
-  background: var(--bg-color-translucent);
-
-  width: 100%;
   position: fixed;
   top: 0;
-
   z-index: 1000;
-
   display: grid;
   grid-template-columns: 1fr;
-
+  width: 100%;
+  background: var(--bg-color-translucent);
+  backdrop-filter: var(--backdrop-filter);
   view-transition-name: site-header;
 }
 
 header details summary {
+  position: relative;
   display: flex;
   align-items: center;
   height: var(--header-collapsed-height);
   padding: 0 200px 0 0;
-  list-style-type: none;
-  cursor: pointer;
-  position: relative;
   container-type: inline-size;
+  cursor: pointer;
+  list-style-type: none;
 
   @media (hover: hover) {
     &:hover {
@@ -62,9 +58,9 @@ header details summary::marker {
 header summary::after {
   order: -1;
   height: 24px;
-  content: var(--icon-chevron);
-  margin-left: var(--gap);
   margin-right: 8px;
+  margin-left: var(--gap);
+  content: var(--icon-chevron);
 }
 
 header details[open] summary::after {
@@ -77,24 +73,24 @@ header .content {
 
 header summary .logo {
   flex: 0 0 auto;
-  color: var(--text-on-theme);
-  background: var(--theme-color);
   padding: 1px 6px;
   margin: 0 8px 0 0;
   font-size: var(--font-size-smaller);
   font-weight: 600;
+  color: var(--text-on-theme);
   pointer-events: none;
+  background: var(--theme-color);
 }
 
 header summary .site-title {
   flex: 1 1 0;
+  min-width: 0;
+  margin: 0 8px 0 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
   font-weight: 500;
+  white-space: nowrap;
   pointer-events: none;
-  margin: 0 8px 0 0;
 }
 
 @container (max-width: 200px) {
@@ -107,20 +103,20 @@ header > .header-controls {
   position: absolute;
   top: 0;
   right: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   height: var(--header-collapsed-height);
   padding: 0 var(--gap) 0 0;
-  z-index: 1;
 }
 
 header .to-top-container {
   display: none;
   align-items: center;
   height: var(--header-collapsed-height);
-  pointer-events: none;
-  white-space: nowrap;
   padding: 0 var(--gap) 0 0;
+  white-space: nowrap;
+  pointer-events: none;
 
   &:has(.is-visible) {
     display: flex;
@@ -142,7 +138,7 @@ header .search-controls {
   input.search {
     width: 180px;
 
-    @media (max-width: 400px) {
+    @media (width <= 400px) {
       display: none;
     }
   }
@@ -153,25 +149,26 @@ header .search-controls {
   15% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
 }
 
 header.loading::after {
-  content: '';
   position: absolute;
+  right: 0;
   bottom: 0;
   left: 0;
-  right: 0;
   height: 3px;
+  content: '';
   background-image: linear-gradient(
     90deg,
     transparent 25%,
     var(--theme-color) 50%,
     transparent 75%
   );
-  background-size: 200% 100%;
   background-repeat: no-repeat;
+  background-size: 200% 100%;
   animation: shimmer 3s ease-in-out infinite;
 }

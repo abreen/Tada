@@ -4,7 +4,9 @@
 header nav {
   display: flex;
   flex-wrap: wrap;
+
   @include user-select(none);
+
   gap: var(--gap);
   margin: var(--gap);
 }
@@ -14,9 +16,9 @@ header nav div {
 }
 
 header nav ul {
-  list-style-type: none;
   padding: 0;
-  margin: 8px 0 0 0;
+  margin: 8px 0 0;
+  list-style-type: none;
 }
 
 header nav ul li {
@@ -24,8 +26,9 @@ header nav ul li {
 }
 
 header nav a {
-  border: none;
   display: inline;
+  border: none;
+
   @include subdued-link;
 }
 
@@ -33,17 +36,18 @@ header nav a.external {
   border: none;
 }
 
-@media only screen and (min-width: 740px) {
+@media only screen and (width >= 740px) {
   header details nav {
     min-height: 100px;
   }
 }
 
 header nav div > p {
-  font-style: italic;
-  @include user-select(none);
-  border-bottom: 1px solid var(--fg-color);
   padding-bottom: 2px;
+  font-style: italic;
+  border-bottom: 1px solid var(--fg-color);
+
+  @include user-select(none);
 }
 
 @media (hover: hover) {
@@ -53,27 +57,27 @@ header nav div > p {
 }
 
 header .results-container {
-  display: block;
   position: absolute;
   top: var(--header-collapsed-height);
-  left: 0;
   right: 0;
-  box-sizing: border-box;
-  max-width: 640px;
-  margin: 0 auto;
-  padding: var(--gap);
-  pointer-events: none;
+  left: 0;
   z-index: 1000;
+  box-sizing: border-box;
+  display: block;
+  max-width: 640px;
+  padding: var(--gap);
+  margin: 0 auto;
+  pointer-events: none;
 }
 
 header ol {
-  padding: 0;
   flex: 1;
   min-height: 0;
+  padding: 0;
   overflow-y: auto;
 
   .excerpt {
-    line-height: 2.5ex;
     height: 5ex;
+    line-height: 2.5ex;
   }
 }

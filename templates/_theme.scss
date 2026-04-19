@@ -6,11 +6,9 @@
   // Background & foreground color tint
   --tint-hue: <%= tintHue %>deg;
   --tint-amount: <%= tintAmount / 100 %>;
-
   --link-active-color: #000;
-
-  --warning-bg-color: hsl(36 95% 70%);
-  --note-bg-color: hsl(209 95% 75%);
+  --warning-bg-color: hsl(36deg 95% 70%);
+  --note-bg-color: hsl(209deg 95% 75%);
 
   // Main foreground color (the color of most text)
   --fg-color: hsl(var(--tint-hue) calc(8% * var(--tint-amount)) 8%);
@@ -20,7 +18,6 @@
 
   // Secondary foreground color (lighter)
   --fg2-color: hsl(var(--tint-hue) calc(6% * var(--tint-amount)) 45%);
-
   --link-color: <%= linkColor %>;
   --link-color-hover: <%= linkColorHover %>;
 
@@ -35,24 +32,20 @@
   --bg2-color-translucent: hsl(
     var(--tint-hue) calc(12% * var(--tint-amount)) 92% / 66%
   );
-
   --box-shadow: 0 2px 9px
     hsl(var(--tint-hue) calc(85% * var(--tint-amount)) 10% / 25%);
   --backdrop-filter: blur(10px);
-
   --font:
-    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    'Inter', -apple-system, 'BlinkMacSystemFont', 'Segoe UI', 'Roboto',
+    'Helvetica', 'Arial', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol';
   --heading-font: var(--font);
-  --mono-font: 'Google Sans Code', Consolas, Courier, monospace;
-
+  --mono-font: 'Google Sans Code', 'Consolas', 'Courier', monospace;
   --font-size: 16px;
   --font-size-smaller: 15px;
   --font-size-small: 13px;
-
   --font-weight: 400;
   --line-height: 1.7;
-
   --mono-font-size: 0.94em;
   --mono-line-height: 1.5;
   --mono-border-radius: 0.375em;
@@ -77,7 +70,6 @@
     --theme-color: <%= themeColorDark %>;
     --theme-color-text: <%= themeColorTextDark %>;
     --text-on-theme: <%= textOnThemeDark %>;
-
     --fg-color: hsl(var(--tint-hue) calc(10% * var(--tint-amount)) 92%);
     --fg-color-translucent: hsl(
       var(--tint-hue) calc(85% * var(--tint-amount)) 90% / 33%
@@ -93,14 +85,11 @@
     --bg2-color-translucent: hsl(
       var(--tint-hue) calc(12% * var(--tint-amount)) 12% / 66%
     );
-
     --box-shadow: 0 3px 8px
       hsl(var(--tint-hue) calc(33% * var(--tint-amount)) 8% / 70%);
-
     --link-active-color: #fff;
-
-    --warning-bg-color: hsl(36 77% 27%);
-    --note-bg-color: hsl(209 90% 25%);
+    --warning-bg-color: hsl(36deg 77% 27%);
+    --note-bg-color: hsl(209deg 90% 25%);
 
     // SVG icons (dark overrides)
     --icon-search: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'><circle cx='11' cy='11' r='7' stroke='<%= iconColorDark %>' stroke-width='2' fill='none'/><line x1='16.5' y1='16.5' x2='22' y2='22' stroke='<%= iconColorDark %>' stroke-width='2' stroke-linecap='round'/></svg>");

@@ -1,9 +1,9 @@
 @use 'mixins' as *;
 
 .alert {
-  border: 2px solid var(--bg2-color);
   position: relative;
   margin: 1rem 0;
+  border: 2px solid var(--bg2-color);
 }
 
 .alert.warning {
@@ -29,8 +29,8 @@
 
   tt,
   code {
-    background: inherit;
     padding: inherit;
+    background: inherit;
   }
 
   time[datetime].is-modified {
@@ -40,6 +40,7 @@
 
   a {
     @include link-underline;
+
     color: var(--fg-color);
 
     &:hover {
@@ -65,12 +66,12 @@
 }
 
 .alert .title::before {
-  content: '';
-  left: 8px;
-  top: 8px;
   position: absolute;
+  top: 8px;
+  left: 8px;
   width: 32px;
   height: 32px;
+  content: '';
 }
 
 .alert.warning .title::before {
@@ -79,9 +80,10 @@
 
 i.warning {
   @include contained-mask(var(--icon-warning));
+
   display: inline-block;
-  height: 1em;
   width: 1em;
+  height: 1em;
   vertical-align: sub;
 }
 
@@ -90,10 +92,11 @@ i.warning {
 }
 
 .alert .title {
-  font-weight: 700;
-  @include user-select(none);
   padding-left: 48px;
   margin: 0;
+  font-weight: 700;
+
+  @include user-select(none);
 }
 
 .alert > p:last-child {

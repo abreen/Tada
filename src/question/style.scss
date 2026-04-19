@@ -17,21 +17,23 @@
 
 .question-label,
 .question-a-label {
-  color: var(--theme-color-text);
-  font-weight: 700;
   flex-shrink: 0;
   margin: 0;
+  font-weight: 700;
+  color: var(--theme-color-text);
+
   @include user-select(none);
 }
 
 .question-q > span:last-child {
-  color: var(--fg-color);
   font-weight: var(--font-weight);
+  color: var(--fg-color);
 }
 
 .question-a-body {
   flex: 1;
   cursor: pointer;
+
   @include user-select(none);
 }
 
@@ -68,10 +70,10 @@
 
 .question-a-body:not([data-revealed]) > * {
   color: transparent;
+  pointer-events: none;
   background-color: var(--bg2-color);
   border-color: transparent;
   box-shadow: none;
-  pointer-events: none;
 }
 
 .question-a-body:not([data-revealed]) > * * {
@@ -82,13 +84,13 @@
 }
 
 .question-a-body::after {
-  content: 'Click to reveal';
   display: block;
   font-size: var(--font-size-small);
   font-style: italic;
   color: var(--fg2-color);
   text-align: center;
   pointer-events: none;
+  content: 'Click to reveal';
 
   @media (prefers-reduced-motion: no-preference) {
     transition: opacity 0.25s;
@@ -107,18 +109,20 @@
 
 .question-a-body[data-revealed] {
   cursor: unset;
+
   @include user-select(text);
 }
 
 @media print {
   .question-a-body {
     cursor: default;
+
     @include user-select(text);
 
     &:not([data-revealed]) > * {
       color: inherit;
-      background-color: transparent;
       pointer-events: auto;
+      background-color: transparent;
     }
 
     &:not([data-revealed]) > * * {

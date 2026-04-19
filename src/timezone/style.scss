@@ -5,14 +5,14 @@ time[datetime] {
 }
 
 span.next-prev-day {
-  color: var(--fg2-color);
   font-style: italic;
+  color: var(--fg2-color);
 }
 
 .timezone-wrapper {
   display: inline-flex;
-  align-items: center;
   gap: 4px;
+  align-items: center;
 }
 
 @media print {
@@ -21,12 +21,12 @@ span.next-prev-day {
   }
 
   select.time-zone {
-    appearance: none;
-    border: none;
-    background: none;
     padding: 0;
     font: inherit;
     color: inherit;
+    appearance: none;
+    background: none;
+    border: none;
 
     option {
       display: none;

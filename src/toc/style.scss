@@ -3,6 +3,7 @@
 :root {
   --highlight-hue: 59deg;
   --highlight-color: hsl(var(--highlight-hue) 100% 50% / 50%);
+
   // For animations
   --highlight-color-transparent: hsl(var(--highlight-hue) 50% 90% / 0%);
 }
@@ -19,37 +20,37 @@ body.code .toc ol li:has(a) {
 }
 
 body.code .toc ol a {
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toc ol::before {
-  content: 'On this page';
   display: block;
   font-family: var(--mono-font);
-  font-style: italic;
   font-size: var(--font-size-small);
+  font-style: italic;
   text-align: center;
+  content: 'On this page';
 }
 
 .toc ol {
-  margin: 0;
   padding: 0;
+  margin: 0;
 }
 
 .toc ol li {
-  list-style-type: none;
-  overflow-wrap: break-word;
   margin-bottom: 0;
+  overflow-wrap: break-word;
+  list-style-type: none;
 }
 
 .toc ol a {
-  text-decoration: none;
-  border: none;
   display: block;
   padding: 4px 6px;
   color: var(--fg-color);
+  text-decoration: none;
+  border: none;
 
   &:focus-visible {
     outline-offset: -2px;
@@ -68,7 +69,7 @@ body.code .toc ol a {
   color: var(--link-active-color);
 }
 
-@media (min-width: 900px) {
+@media (width >= 900px) {
   .toc ol li.current a {
     background: var(--bg2-color);
   }
@@ -92,26 +93,26 @@ body.code .toc ol a {
 }
 
 .toc ol li.level3 {
-  font-size: var(--font-size-smaller);
   margin-left: 10px;
+  font-size: var(--font-size-smaller);
 }
 
 .toc ol li.level4 {
+  margin-left: 18px;
   font-size: var(--font-size-small);
   font-weight: 450;
-  margin-left: 18px;
 }
 
 .toc ol li.level5 {
+  margin-left: 24px;
   font-size: var(--font-size-small);
   font-weight: 450;
-  margin-left: 24px;
 }
 
 .toc ol li.level6 {
+  margin-left: 32px;
   font-size: var(--font-size-small);
   font-weight: 450;
-  margin-left: 32px;
 }
 
 .toc ol li.dinkus-item {
@@ -120,8 +121,8 @@ body.code .toc ol a {
   pointer-events: none;
   background-color: var(--fg2-color);
   mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 12'><rect x='0' y='5.5' width='96' height='1' fill='black'/><path d='M 64,6 C 71,6 80,4.5 80,1 C 80,4.5 89,6 96,6 C 89,6 80,7.5 80,11 C 80,7.5 71,6 64,6 Z' fill='black'/><rect x='64' y='5.5' width='96' height='1' fill='black'/></svg>");
-  mask-size: 100% 100%;
   mask-repeat: no-repeat;
+  mask-size: 100% 100%;
 }
 
 .toc ol li.alert-item {
@@ -130,12 +131,12 @@ body.code .toc ol a {
 
 .toc ol li.alert-item.warning a::before,
 .toc ol li.alert-item.note a::before {
-  content: '';
   display: inline-block;
   width: 20px;
   height: 20px;
-  vertical-align: bottom;
   margin-right: 4px;
+  vertical-align: bottom;
+  content: '';
 }
 
 .toc ol li.alert-item.warning a::before {

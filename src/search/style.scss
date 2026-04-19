@@ -4,8 +4,8 @@ header {
   .search-controls {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
     gap: 0.5rem;
+    align-items: center;
 
     input.search {
       flex: 1;
@@ -13,8 +13,8 @@ header {
   }
 
   .results-container.is-showing .results {
-    opacity: 1;
     pointer-events: all;
+    opacity: 1;
   }
 
   @media (hover: hover) {
@@ -25,45 +25,47 @@ header {
   }
 
   .results {
-    opacity: 0;
-    pointer-events: none;
-    margin: 0 auto;
-    background: var(--bg-color);
-    color: var(--fg-color);
-    border: var(--control-border-width) solid var(--fg2-color);
-    box-shadow: var(--box-shadow);
-    border-radius: var(--border-radius);
-    overflow: hidden;
     display: flex;
     flex-direction: column;
-    max-height: 66vh;
     min-height: 80px;
+    max-height: 66vh;
+    margin: 0 auto;
+    overflow: hidden;
+    color: var(--fg-color);
+    pointer-events: none;
+    background: var(--bg-color);
+    border: var(--control-border-width) solid var(--fg2-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    opacity: 0;
+
     @include user-select(none);
 
     .results-info {
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 8px;
       color: var(--fg2-color);
+
       @include user-select(none);
-      padding: 8px 8px 8px 8px;
-      position: relative;
 
       &.loading::after {
-        content: '';
         position: absolute;
+        right: 0;
         bottom: 0;
         left: 0;
-        right: 0;
         height: 2px;
+        content: '';
         background-image: linear-gradient(
           90deg,
           transparent 25%,
           var(--theme-color) 50%,
           transparent 75%
         );
-        background-size: 200% 100%;
         background-repeat: no-repeat;
+        background-size: 200% 100%;
         animation: shimmer 3s ease-in-out infinite;
       }
 
@@ -72,25 +74,25 @@ header {
         color: var(--fg2-color);
 
         kbd {
+          line-height: 1.4;
           border-color: var(--fg2-color);
           box-shadow: 0 2px 0 var(--fg2-color);
-          line-height: 1.4;
         }
       }
     }
 
     ol {
-      margin: 0;
-      padding: 0;
-      list-style-type: none;
       display: grid;
+      flex: 1;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 0;
-      overflow-y: auto;
-      flex: 1;
       min-height: 0;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto;
+      list-style-type: none;
 
-      @media (max-width: 580px) {
+      @media (width <= 580px) {
         grid-template-columns: minmax(0, 1fr);
       }
 
@@ -101,18 +103,18 @@ header {
       }
 
       a.result:focus {
-        background: var(--bg2-color);
         outline-offset: -2px;
+        background: var(--bg2-color);
       }
     }
 
     ol a {
-      text-decoration: none;
-      display: grid;
-      border: none;
       position: relative;
-      color: var(--fg-color);
+      display: grid;
       padding: 8px;
+      color: var(--fg-color);
+      text-decoration: none;
+      border: none;
 
       &:focus {
         outline-offset: -2px;
@@ -130,38 +132,38 @@ header {
     }
 
     ol a .title.code-page code {
-      background: none;
       padding: 0;
+      background: none;
     }
 
     ol li .excerpt {
       grid-row-start: 3;
-      font-size: var(--font-size-small);
-      color: var(--fg2-color);
-      line-height: 2.5ex;
       height: 7.5ex;
       overflow: hidden;
+      font-size: var(--font-size-small);
+      line-height: 2.5ex;
+      color: var(--fg2-color);
 
       mark {
-        background: transparent;
         font-weight: 600;
         color: var(--theme-color-text);
+        background: transparent;
       }
     }
 
     ol li .sub-results {
-      list-style-type: none;
-      margin: 0;
-      padding: 0 8px 6px 8px;
       display: flex;
       flex-direction: column;
       gap: 2px;
+      padding: 0 8px 6px;
+      margin: 0;
+      list-style-type: none;
 
       a.sub-result {
         display: block;
         padding: 4px 8px;
-        text-decoration: none;
         color: var(--fg2-color);
+        text-decoration: none;
         border-left: 2px solid var(--bg2-color);
 
         &:hover {
@@ -169,8 +171,8 @@ header {
         }
 
         &:focus {
-          background: var(--bg2-color);
           outline-offset: -2px;
+          background: var(--bg2-color);
         }
 
         .title {
@@ -180,16 +182,16 @@ header {
         }
 
         .excerpt {
-          font-size: var(--font-size-small);
-          color: var(--fg2-color);
-          line-height: 2.5ex;
           height: 2.5ex;
           overflow: hidden;
+          font-size: var(--font-size-small);
+          line-height: 2.5ex;
+          color: var(--fg2-color);
 
           mark {
-            background: transparent;
             font-weight: 600;
             color: var(--theme-color-text);
+            background: transparent;
           }
         }
       }

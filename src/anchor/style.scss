@@ -3,17 +3,19 @@
 a.heading-anchor {
   position: relative;
   display: inline-block;
+
   @include subdued-link;
 }
 
 a.heading-anchor::after {
-  content: '';
   display: inline-block;
-  height: 1em;
   width: 1em;
+  height: 1em;
   margin-left: 4px;
   vertical-align: middle;
+  content: '';
   opacity: 0;
+
   @include contained-mask(var(--icon-anchor));
 }
 

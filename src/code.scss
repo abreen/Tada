@@ -6,18 +6,18 @@ body.code {
 
 .file-header {
   display: flex;
+  gap: var(--gap);
   align-items: center;
   justify-content: center;
-  gap: var(--gap);
-  border: 1px solid var(--fg2-color);
-  border-radius: var(--border-radius);
   padding: var(--gap);
   margin-bottom: var(--gap);
+  border: 1px solid var(--fg2-color);
+  border-radius: var(--border-radius);
 
   tt,
   code {
-    background: none;
     padding: 0;
+    background: none;
   }
 }
 
@@ -27,19 +27,20 @@ body.code {
 }
 
 .line-number {
-  display: block;
-  padding: 0 0.75em 0 0.75em;
-  text-align: right;
-  @include user-select(none);
-  color: var(--fg2-color);
-  font-family: var(--mono-font);
-  text-decoration: none;
   position: sticky;
   left: 0;
   z-index: 1;
+  display: block;
+  padding: 0 0.75em;
+  margin-right: var(--gap);
+  font-family: var(--mono-font);
+  color: var(--fg2-color);
+  text-align: right;
+  text-decoration: none;
   background: var(--bg2-color);
   border-right: 1px solid var(--fg2-color);
-  margin-right: var(--gap);
+
+  @include user-select(none);
 }
 
 a.line-number {
@@ -50,7 +51,7 @@ a.line-number {
   }
 
   &:target {
-    background: var(--fg2-color);
     color: var(--bg-color);
+    background: var(--fg2-color);
   }
 }

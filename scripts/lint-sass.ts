@@ -1,0 +1,70 @@
+import fs from 'fs';
+import path from 'path';
+import { renderThemeScss } from '../build/bundle';
+import { getPackageDir } from '../build/utils/paths';
+import type { SiteVariables } from '../build/types';
+
+const packageDir = getPackageDir();
+const configFile = path.join(packageDir, 'stylelint.config.mjs');
+const templatePath = path.join(packageDir, 'templates/_theme.scss');
+const stylelintArgs = [
+  'stylelint',
+  '--config',
+  configFile,
+  '--formatter',
+  'string',
+  '--max-warnings',
+  '0',
+];
+
+const lintThemeSiteVariables: SiteVariables = {
+  base: 'https://example.com',
+  basePath: '/',
+  title: 'Lint',
+  titlePostfix: ' - Lint',
+  themeColor: 'steelblue',
+  defaultTimeZone: 'America/New_York',
+  features: { search: true, code: true, favicon: true, footer: true },
+  tintHue: 20,
+  tintAmount: 100,
+};
+
+async function runStylelint(args: string[], input?: string): Promise<number> {
+  const proc = Bun.spawn({
+    cmd: ['bunx', ...stylelintArgs, ...args],
+    cwd: packageDir,
+    env: process.env,
+    stdin: input ? new TextEncoder().encode(input) : 'ignore',
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
+
+  return await proc.exited;
+}
+
+async function main() {
+  let themeDir: string | undefined;
+  let exitCode = 0;
+
+  try {
+    exitCode ||= await runStylelint(['src/**/*.scss']);
+
+    themeDir = renderThemeScss(lintThemeSiteVariables);
+    const renderedThemePath = path.join(themeDir, 'config/_theme.scss');
+    const renderedTheme = fs.readFileSync(renderedThemePath, 'utf-8');
+    exitCode ||= await runStylelint(
+      ['--stdin', '--stdin-filename', templatePath],
+      renderedTheme,
+    );
+  } finally {
+    if (themeDir) {
+      fs.rmSync(themeDir, { recursive: true, force: true });
+    }
+  }
+
+  if (exitCode !== 0) {
+    process.exit(exitCode);
+  }
+}
+
+await main();

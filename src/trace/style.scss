@@ -1,44 +1,44 @@
 .trace-body {
   display: flex;
   flex-direction: column;
+  gap: var(--gap);
   height: calc(100dvh - var(--header-collapsed-height) - 3 * var(--gap));
   overflow: hidden;
-  gap: var(--gap);
 }
 
 .trace-content {
   display: flex;
-  flex-direction: column;
   flex: 1;
-  min-height: 0;
+  flex-direction: column;
   gap: var(--gap);
+  min-height: 0;
 }
 
 .trace-content > .trace-diagram {
   flex: 1 1 100%;
   min-height: 8rem;
+  overflow: auto;
   border: 1px solid var(--fg2-color);
   border-radius: var(--border-radius);
-  overflow: auto;
 }
 
 .trace-source-wrapper {
+  position: relative;
   min-height: calc(
     3 * var(--font-size-smaller) * var(--mono-line-height) + 1em
   );
   max-height: calc(
     5 * var(--font-size-smaller) * var(--mono-line-height) + 1em
   );
-  position: relative;
 
   &:has(:focus-visible)::after {
-    content: '';
     position: absolute;
     inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    content: '';
     border: 2px solid var(--theme-color);
     border-radius: var(--mono-border-radius);
-    pointer-events: none;
-    z-index: 1;
   }
 
   & > .trace-source {
@@ -48,64 +48,64 @@
 
 .trace-toolbar {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   padding: 3px;
 }
 
 .trace-controls {
   display: flex;
-  align-items: center;
   gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  max-width: 386px;
   padding: 6px;
-  border-radius: calc(var(--border-radius) + 4px);
   background: var(--bg2-color);
+  border-radius: calc(var(--border-radius) + 4px);
 
   &:focus-within {
     outline: 2px solid var(--fg-color);
     outline-offset: 1px;
   }
 
-  width: 100%;
-  max-width: 386px;
-
-  @media (max-width: 410px) {
+  @media (width <= 410px) {
     max-width: none;
   }
 }
 
 .trace-btn {
   display: inline-flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
-  flex: 1;
   min-width: 2.5em;
   padding: 0.5em 0.75em;
 }
 
 .trace-step-counter {
-  text-align: center;
-  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-smaller);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .trace-source {
   --code-gutter-width: 4rem;
+
   overflow: auto;
-  clip-path: inset(0 round var(--mono-border-radius));
   scroll-behavior: smooth;
+  clip-path: inset(0 round var(--mono-border-radius));
 
   &:focus-visible {
     outline: none;
   }
 
   & > pre {
-    margin: 0;
-    padding: 0;
-    overflow: visible;
     width: max-content;
     min-width: 100%;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
 
     code {
       padding-right: var(--gap);
@@ -117,11 +117,11 @@
     color: var(--fg-color);
 
     &::before {
-      content: '\25B6';
       position: absolute;
-      margin-right: 0.25em;
       left: 0;
+      margin-right: 0.25em;
       line-height: 1.3;
+      content: '\25B6';
     }
   }
 }
@@ -133,18 +133,18 @@
 }
 
 .trace-output::before {
-  content: 'Output';
   display: block;
   font-size: var(--font-size-small);
   font-style: italic;
   color: var(--fg2-color);
+  content: 'Output';
 }
 
 .trace-memory {
-  font-family: var(--mono-font, monospace);
-  font-size: var(--font-size-smaller, 15px);
   max-width: 100%;
   height: auto;
+  font-family: var(--mono-font, monospace);
+  font-size: var(--font-size-smaller, 15px);
 
   .trace-separator {
     stroke: var(--fg2-color);
