@@ -65,13 +65,12 @@ jobs:
       with:
         python-version: "3.13"
 
-    - name: Install Python dependencies
-      run: python3 -m pip install -q -r functional_tests/requirements.txt
+    - name: Set up Python tooling
+      run: bun run setup:python
 
     - name: Run functional tests (shard ${{ matrix.shard }}/5)
       run: >
-        TADA_COVERAGE=1 python3 -m pytest functional_tests/
-        -v -n auto --durations=10
+        TADA_COVERAGE=1 bun run test:functional
         --shard ${{ matrix.shard }} --num-shards 5
 
     - name: Upload functional coverage
@@ -125,13 +124,12 @@ jobs:
       with:
         python-version: "3.13"
 
-    - name: Install Python dependencies
-      run: python -m pip install -q -r functional_tests/requirements.txt
+    - name: Set up Python tooling
+      run: bun run setup:python
 
     - name: Run functional tests (shard ${{ matrix.shard }}/5)
       run: >
-        python -m pytest functional_tests/
-        -v -n auto --durations=10
+        bun run test:functional
         --shard ${{ matrix.shard }} --num-shards 5
 
   playwright:
