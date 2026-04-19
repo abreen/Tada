@@ -76,6 +76,11 @@ test.describe('scroll and hash behavior', () => {
   }) => {
     await page.goto('/markdown.html');
 
+    await page.evaluate(() => window.scrollTo({ top: 500 }));
+    await page.waitForTimeout(100);
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+    expect(scrollBefore).toBeGreaterThan(400);
+
     // Click a TOC link
     const tocLink = page.locator('nav.toc ol a').first();
     await tocLink.click();
@@ -86,6 +91,10 @@ test.describe('scroll and hash behavior', () => {
     // Go back should remove the hash, stay on same page
     await page.goBack();
     await expect(page.locator('h1')).toContainText('Markdown Examples');
+    await expect(page).not.toHaveURL(/#/);
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY), { timeout: 2000 })
+      .toBeGreaterThan(300);
   });
 
   test(':target moves between line-number clicks on the same page', async ({

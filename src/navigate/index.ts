@@ -3,6 +3,7 @@ import {
   clearSearch,
   closeHeaderDetails,
   getCurrentPath,
+  getSavedLocationScroll,
   getHistoryIndex,
   getSavedScroll,
   initNavigation,
@@ -107,7 +108,13 @@ export default function mountNavigate(window: Window): () => void {
   function handlePopState(event: PopStateEvent) {
     const newPath = window.location.pathname + window.location.search;
     if (newPath === getCurrentPath()) {
-      // Same page, different hash: scroll to the target
+      const savedY = getSavedLocationScroll(newPath + window.location.hash);
+      if (typeof savedY === 'number') {
+        window.scrollTo({ top: savedY });
+        return;
+      }
+
+      // Same page, different hash: fall back to the fragment target
       const hash = window.location.hash.slice(1);
       if (hash) {
         const el = window.document.getElementById(hash);

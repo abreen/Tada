@@ -7,6 +7,7 @@ let historyIndex = 0;
 let currentPath = '';
 
 const scrollByIndex = new Map<number, number>();
+const scrollByLocation = new Map<string, number>();
 
 type Direction = 'forward' | 'back';
 
@@ -122,17 +123,26 @@ function cleanupViewTransitionNames(document: Document): void {
   }
 }
 
+function getLocationKey(window: Window): string {
+  return (
+    window.location.pathname + window.location.search + window.location.hash
+  );
+}
+
 export function initNavigation(window: Window): void {
   currentAbortController = null;
   historyIndex = 0;
   scrollByIndex.clear();
+  scrollByLocation.clear();
   window.history.scrollRestoration = 'manual';
   currentPath = window.location.pathname + window.location.search;
   scrollByIndex.set(historyIndex, window.scrollY);
+  scrollByLocation.set(getLocationKey(window), window.scrollY);
 }
 
 export function saveScrollPosition(window: Window): void {
   scrollByIndex.set(historyIndex, window.scrollY);
+  scrollByLocation.set(getLocationKey(window), window.scrollY);
 }
 
 export function getCurrentPath(): string {
@@ -153,6 +163,12 @@ export function setHistoryIndex(index: number): void {
 
 export function getSavedScroll(index: number): number | undefined {
   return scrollByIndex.get(index);
+}
+
+export function getSavedLocationScroll(
+  locationKey: string,
+): number | undefined {
+  return scrollByLocation.get(locationKey);
 }
 
 export async function navigateToUrl(
@@ -233,6 +249,7 @@ export async function navigateToUrl(
     }
 
     scrollByIndex.set(historyIndex, window.scrollY);
+    scrollByLocation.set(getLocationKey(window), window.scrollY);
   };
 
   const transitionDoc = document as Document & {

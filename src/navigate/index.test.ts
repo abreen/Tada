@@ -774,7 +774,42 @@ describe('popstate handling', () => {
     expect(scrollIntoViewMock).toHaveBeenCalled();
   });
 
-  test('same-page popstate without hash scrolls to top', () => {
+  test('same-page popstate with saved hash scroll restores that position', () => {
+    const win = createDOM('<div id="section">Content</div>', {
+      url: 'http://localhost/page#section',
+    });
+    const scrollTo = setupGlobals(win);
+    Object.defineProperty(win, 'scrollY', {
+      value: 240,
+      writable: true,
+      configurable: true,
+    });
+    mount(win);
+
+    win.dispatchEvent(new win.Event('scroll'));
+    dispatchPopState(win, { navIndex: 0 });
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 240 });
+  });
+
+  test('same-page popstate without hash restores saved scroll', () => {
+    const win = createDOM('', { url: 'http://localhost/page' });
+    const scrollTo = setupGlobals(win);
+    Object.defineProperty(win, 'scrollY', {
+      value: 420,
+      writable: true,
+      configurable: true,
+    });
+    mount(win);
+
+    win.dispatchEvent(new win.Event('scroll'));
+    win.history.pushState({ navIndex: 999 }, '', '/page');
+    dispatchPopState(win, { navIndex: 999 });
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 420 });
+  });
+
+  test('same-page popstate without saved scroll falls back to top', () => {
     const win = createDOM('', { url: 'http://localhost/page' });
     const scrollTo = setupGlobals(win);
     mount(win);
