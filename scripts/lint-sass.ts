@@ -7,6 +7,7 @@ import type { SiteVariables } from '../build/types';
 const packageDir = getPackageDir();
 const configFile = path.join(packageDir, 'stylelint.config.mjs');
 const templatePath = path.join(packageDir, 'templates/_theme.scss');
+const fix = process.argv.includes('--fix');
 const stylelintArgs = [
   'stylelint',
   '--config',
@@ -16,6 +17,10 @@ const stylelintArgs = [
   '--max-warnings',
   '0',
 ];
+
+if (fix) {
+  stylelintArgs.push('--fix');
+}
 
 const lintThemeSiteVariables: SiteVariables = {
   base: 'https://example.com',

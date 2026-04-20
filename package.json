@@ -84,7 +84,11 @@
   },
   "lint-staged": {
     "*.{ts,js}": "prettier --write",
-    "*.scss": "prettier --write",
+    "src/**/*.scss": [
+      "stylelint --fix --config stylelint.config.mjs",
+      "prettier --write"
+    ],
+    "templates/**/*.scss": "prettier --write",
     "*.json": "prettier --write",
     "functional_tests/**/*.py": [
       "bun run scripts/python-module.ts ruff check --fix",
