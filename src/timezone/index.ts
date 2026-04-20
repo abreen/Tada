@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'timezoneSelection';
+const TIMEZONE_SELECT_LABEL = 'Time zone';
 
 type PeriodStyle = [am: string, pm: string];
 
@@ -112,6 +113,13 @@ function init(element: HTMLSelectElement, selectedTz: string) {
   element.value = selectedTz;
   element.hidden = false;
   element.disabled = false;
+  if (
+    !element.hasAttribute('aria-label') &&
+    !element.hasAttribute('aria-labelledby') &&
+    (element.labels?.length ?? 0) === 0
+  ) {
+    element.setAttribute('aria-label', TIMEZONE_SELECT_LABEL);
+  }
 }
 
 function dominantPeriodStyle(
@@ -236,7 +244,7 @@ export default (window: Window) => {
     const resetBtn = window.document.createElement('button');
     resetBtn.type = 'button';
     resetBtn.innerHTML =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
       '<line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
       '<line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
       '</svg>';
@@ -254,8 +262,10 @@ export default (window: Window) => {
     const sync = (val: string) => {
       selectEl.value = val;
       const isDefault = val === defaultTz.value;
-      resetBtn.style.opacity = isDefault ? '0' : '1';
-      resetBtn.style.pointerEvents = isDefault ? 'none' : '';
+      resetBtn.classList.toggle('is-hidden', isDefault);
+      resetBtn.disabled = isDefault;
+      resetBtn.tabIndex = isDefault ? -1 : 0;
+      resetBtn.setAttribute('aria-hidden', String(isDefault));
     };
 
     choosers.push({ sync });

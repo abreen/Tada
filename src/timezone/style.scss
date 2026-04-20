@@ -13,6 +13,12 @@ span.next-prev-day {
   display: inline-flex;
   gap: 4px;
   align-items: center;
+
+  .icon-button.is-hidden {
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
+  }
 }
 
 @media print {

@@ -34,7 +34,9 @@ describe('createGlobals', () => {
   test('renderTimeZoneChooser includes hidden disabled select, inline script, and noscript', () => {
     const g = makeGlobals('index', { defaultTimeZone: 'America/New_York' });
     const html = g.renderTimeZoneChooser();
-    expect(html).toContain('<select class="time-zone" hidden disabled>');
+    expect(html).toContain(
+      '<select class="time-zone" hidden disabled aria-label="Time zone">',
+    );
     expect(html).toContain('<noscript>Times shown in ET.</noscript>');
   });
 });

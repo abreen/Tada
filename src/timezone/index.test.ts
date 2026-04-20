@@ -180,7 +180,7 @@ describe('timezone mount', () => {
 
     const btn = win.document.querySelector('.timezone-wrapper button');
     expect(btn).not.toBeNull();
-    expect(btn!.className).toBe('icon-button');
+    expect(btn!.classList.contains('icon-button')).toBe(true);
   });
 
   test('reset button is initially invisible for default timezone', () => {
@@ -190,8 +190,10 @@ describe('timezone mount', () => {
     const btn = win.document.querySelector(
       '.timezone-wrapper button',
     ) as HTMLButtonElement;
-    expect(btn.style.opacity).toBe('0');
-    expect(btn.style.pointerEvents).toBe('none');
+    expect(btn.classList.contains('is-hidden')).toBe(true);
+    expect(btn.disabled).toBe(true);
+    expect(btn.tabIndex).toBe(-1);
+    expect(btn.getAttribute('aria-hidden')).toBe('true');
   });
 
   test('restores timezone from localStorage', () => {
@@ -211,7 +213,46 @@ describe('timezone mount', () => {
     const btn = win.document.querySelector(
       '.timezone-wrapper button',
     ) as HTMLButtonElement;
-    expect(btn.style.opacity).toBe('1');
+    expect(btn.classList.contains('is-hidden')).toBe(false);
+    expect(btn.disabled).toBe(false);
+    expect(btn.tabIndex).toBe(0);
+    expect(btn.getAttribute('aria-hidden')).toBe('false');
+  });
+
+  test('adds an accessible label to unlabeled timezone selects', () => {
+    const win = createPage(['09:00']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    expect(sel.getAttribute('aria-label')).toBe('Time zone');
+  });
+
+  test('keeps an existing select accessible name', () => {
+    const options = TIMEZONES.map(
+      tz => `<option value="${tz.value}">${tz.label}</option>`,
+    ).join('');
+    const win = dom(
+      `<select class="time-zone" aria-label="Preferred time zone">${options}</select><time datetime="09:00">9:00 a.m.</time>`,
+    ).window;
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    expect(sel.getAttribute('aria-label')).toBe('Preferred time zone');
+  });
+
+  test('marks the reset icon as decorative', () => {
+    const win = createPage(['09:00'], 'America/Chicago');
+    mount(win);
+
+    const svg = win.document.querySelector(
+      '.timezone-wrapper button svg',
+    ) as SVGElement;
+    expect(svg.getAttribute('aria-hidden')).toBe('true');
+    expect(svg.getAttribute('focusable')).toBe('false');
   });
 
   test('changing select updates time elements', () => {

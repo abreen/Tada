@@ -43,7 +43,7 @@ export default function createGlobals(
     })
     .join('');
   const renderTimeZoneChooser = () =>
-    `<span class="time-zone-label" hidden>Times shown in </span><select class="time-zone" hidden disabled>${options}</select><noscript>Times shown in ${defaultTz.abbreviation}.</noscript>`;
+    `<span class="time-zone-label" hidden>Times shown in </span><select class="time-zone" hidden disabled aria-label="Time zone">${options}</select><noscript>Times shown in ${defaultTz.abbreviation}.</noscript>`;
 
   return {
     isHomePage: subPath === 'index',
