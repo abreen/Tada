@@ -8,7 +8,7 @@ import {
 } from '../validators';
 import { NAVIGATION_EVENT, refreshCurrentPage } from '../navigate/runtime';
 
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = 600_000;
 
 export interface PageUpdateOptions {
   pollIntervalMs?: number;
