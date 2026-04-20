@@ -67,6 +67,12 @@ Install Tada globally:
 bun install --global @abreen/tada
 ```
 
+To update Tada to the latest version:
+
+```
+bun update --global @abreen/tada
+```
+
 ## Quick start
 
 Create a new site:
