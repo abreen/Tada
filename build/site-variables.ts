@@ -12,7 +12,7 @@ const configDir = getProjectDir();
 
 const DEFAULT: Partial<SiteVariables> = {
   basePath: '/',
-  features: { search: true, code: true, favicon: true, footer: true },
+  features: { search: true, favicon: true, footer: true },
 };
 
 const isValid = compileJsonSchema(siteSchema);
@@ -25,17 +25,21 @@ function getJson(filePath: string): Record<string, unknown> {
 
 const PLAIN_TEXT_LANGUAGES = ['plain', 'text', 'txt'] as const;
 
-function isPlainTextLanguage(lang: string): lang is PlainTextLanguage {
+export function isPlainTextLanguage(lang: string): lang is PlainTextLanguage {
   return PLAIN_TEXT_LANGUAGES.some(value => value === lang);
+}
+
+export function isBundledLanguage(lang: string): lang is BundledLanguage {
+  return Object.hasOwn(bundledLanguages, lang);
 }
 
 function isSupportedShikiLanguage(
   lang: string,
 ): lang is BundledLanguage | PlainTextLanguage {
-  return Object.hasOwn(bundledLanguages, lang) || isPlainTextLanguage(lang);
+  return isBundledLanguage(lang) || isPlainTextLanguage(lang);
 }
 
-export function validateCodeLanguages(
+export function validateExtensionToShikiLanguage(
   value: unknown,
   fileName: string,
 ): Record<string, BundledLanguage | PlainTextLanguage> | undefined {
@@ -53,7 +57,7 @@ export function validateCodeLanguages(
     }
     if (!isSupportedShikiLanguage(lang)) {
       throw new Error(
-        `${fileName}: codeLanguages.${ext} "${lang}" is not a supported Shiki language`,
+        `${fileName}: extensionToShikiLanguage.${ext} "${lang}" is not a supported Shiki language`,
       );
     }
     validated[ext] = lang;
@@ -61,14 +65,69 @@ export function validateCodeLanguages(
   return validated;
 }
 
+export function validateShikiLanguages(
+  value: unknown,
+  fileName: string,
+): BundledLanguage[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const validated: BundledLanguage[] = [];
+  for (let i = 0; i < value.length; i++) {
+    const lang = value[i];
+    if (typeof lang !== 'string') {
+      throw new Error(`${fileName}: shikiLanguages[${i}] must be a string`);
+    }
+    if (isPlainTextLanguage(lang)) {
+      throw new Error(
+        `${fileName}: shikiLanguages[${i}] "${lang}" must be a bundled Shiki language`,
+      );
+    }
+    if (!isBundledLanguage(lang)) {
+      throw new Error(
+        `${fileName}: shikiLanguages[${i}] "${lang}" is not a supported Shiki language`,
+      );
+    }
+    validated.push(lang);
+  }
+  return validated;
+}
+
+export function getExtensionToShikiLanguage(
+  siteVariables: SiteVariables,
+): Record<string, BundledLanguage | PlainTextLanguage> {
+  return siteVariables.extensionToShikiLanguage ?? {};
+}
+
+export function getRuntimeBundledShikiLanguages(
+  siteVariables: SiteVariables,
+): BundledLanguage[] {
+  const configured = Object.values(getExtensionToShikiLanguage(siteVariables))
+    .filter(isBundledLanguage)
+    .concat(siteVariables.shikiLanguages ?? []);
+  return [...new Set(configured)];
+}
+
 function getSiteVariables(env: string): SiteVariables {
   const fileName = `site.${env}.json`;
   const fromFile = getJson(fileName);
-  const codeLanguages = validateCodeLanguages(fromFile.codeLanguages, fileName);
+  const extensionToShikiLanguage = validateExtensionToShikiLanguage(
+    fromFile.extensionToShikiLanguage,
+    fileName,
+  );
+  const shikiLanguages = validateShikiLanguages(
+    fromFile.shikiLanguages,
+    fileName,
+  );
   const variables = {
     ...DEFAULT,
     ...fromFile,
-    ...(codeLanguages ? { codeLanguages } : {}),
+    ...(extensionToShikiLanguage ? { extensionToShikiLanguage } : {}),
+    ...(shikiLanguages ? { shikiLanguages } : {}),
     features: {
       ...DEFAULT.features,
       ...((fromFile.features as Record<string, unknown>) || {}),

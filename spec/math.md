@@ -11,7 +11,7 @@ Inline math uses single dollar delimiters: `$E = mc^2$`.
 
 Display math uses double dollar delimiters:
 
-```markdown
+```
 $$\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}$$
 ```
 

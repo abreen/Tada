@@ -23,8 +23,10 @@ Tada reads one of two JSON config files depending on the build mode:
 - **tintHue**: background tint hue, 0 to 360 degrees (default: 20)
 - **tintAmount**: background tint intensity, 0 to 100% (default: 100)
 - **internalDomains**: list of domains treated as internal for link styling
-- **codeLanguages**: maps file extensions to language names (no runtime default;
-  `tada init` sets Java and Python)
+- **extensionToShikiLanguage**: optional map from source-file extensions to the
+  Shiki language used for generated code pages
+- **shikiLanguages**: optional list of bundled Shiki languages allowed in
+  Markdown fences; plain-text fences (`text`, `txt`, `plain`) work without it
 - **vars**: arbitrary key-value pairs accessible in templates as `vars.*`
 
 ## Feature flags
@@ -32,6 +34,5 @@ Tada reads one of two JSON config files depending on the build mode:
 The `features` object toggles optional capabilities:
 
 - **search**: enable Pagefind search indexing (default: true)
-- **code**: enable source code page generation (default: true)
 - **favicon**: generate favicon assets and web manifest (default: true)
 - **footer**: show the Tada footer at the bottom of every page (default: true)

@@ -15,7 +15,9 @@ and uses defaults or values provided as arguments.
 
 A bare mode creates a minimal site with just a single home page and an empty
 public directory. The normal mode copies starter content, navigation, and author
-data from the package.
+data from the package. Bare-mode config files also start with
+`extensionToShikiLanguage: {}` and `shikiLanguages: []`, so source-code pages
+and Markdown fence highlighting remain opt-in.
 
 The generated config files include `site.dev.json` (pointing at localhost) and
 `site.prod.json` (using the provided production URL). Internal domains are

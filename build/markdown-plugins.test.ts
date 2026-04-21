@@ -12,7 +12,7 @@ import { initHighlighter } from './utils/shiki-highlighter';
 import type { SiteVariables } from './types';
 
 beforeAll(async () => {
-  await initHighlighter(['ts', 'text']);
+  await initHighlighter(['ts']);
 });
 
 describe('apply-base-path-plugin', () => {
@@ -20,8 +20,7 @@ describe('apply-base-path-plugin', () => {
     const md = new MarkdownIt({ html: true });
     md.use(applyBasePathPlugin, {
       basePath: '/course/',
-      codeLanguages: { java: 'java' },
-      features: { code: true },
+      extensionToShikiLanguage: { java: 'java' },
     });
 
     const html = md.render(
@@ -46,8 +45,7 @@ describe('apply-base-path-plugin', () => {
     const md = new MarkdownIt({ html: true });
     md.use(applyBasePathPlugin, {
       basePath: '/course/',
-      codeLanguages: {},
-      features: { code: true },
+      extensionToShikiLanguage: {},
     });
 
     const html = md.render(
@@ -66,8 +64,7 @@ describe('apply-base-path-plugin', () => {
     const md = new MarkdownIt({ html: true });
     md.use(applyBasePathPlugin, {
       basePath: '/course/',
-      codeLanguages: {},
-      features: { code: true },
+      extensionToShikiLanguage: {},
     });
 
     const html = md.render(
@@ -89,8 +86,7 @@ describe('apply-base-path-plugin', () => {
     const md = new MarkdownIt({ html: true });
     md.use(applyBasePathPlugin, {
       basePath: '/course/',
-      codeLanguages: {},
-      features: { code: true },
+      extensionToShikiLanguage: {},
     });
 
     const html = md.render(
@@ -122,8 +118,7 @@ describe('apply-base-path-plugin', () => {
     const md = new MarkdownIt({ html: true });
     md.use(applyBasePathPlugin, {
       basePath: '/course/',
-      codeLanguages: {},
-      features: { code: true },
+      extensionToShikiLanguage: {},
     });
 
     const html = md.render(
@@ -139,8 +134,7 @@ describe('apply-base-path-plugin', () => {
     const md = new MarkdownIt({ html: true });
     md.use(applyBasePathPlugin, {
       basePath: '/course/',
-      codeLanguages: {},
-      features: { code: true },
+      extensionToShikiLanguage: {},
     });
 
     const html = md.render(
@@ -156,8 +150,7 @@ describe('apply-base-path-plugin', () => {
     const md = new MarkdownIt({ html: true });
     md.use(applyBasePathPlugin, {
       basePath: '/course/',
-      codeLanguages: {},
-      features: { code: true },
+      extensionToShikiLanguage: {},
     });
 
     const html = md.render(`<a href="/docs" title="1 > 0">Docs</a>`);
@@ -171,8 +164,7 @@ describe('apply-base-path-plugin', () => {
     const md = new MarkdownIt();
     md.use(applyBasePathPlugin, {
       basePath: '/course/',
-      codeLanguages: { java: 'java' },
-      features: { code: true },
+      extensionToShikiLanguage: { java: 'java' },
     });
 
     const html = md.render('[App](./App.java)');
@@ -181,18 +173,31 @@ describe('apply-base-path-plugin', () => {
     expect(html).not.toContain('href="./App.java"');
   });
 
-  test('keeps code file extensions when the code feature is disabled', () => {
+  test('keeps code file extensions when the extension is not mapped', () => {
     const md = new MarkdownIt();
     md.use(applyBasePathPlugin, {
       basePath: '/course',
-      codeLanguages: { java: 'java' },
-      features: { code: false },
+      extensionToShikiLanguage: {},
     });
 
     const html = md.render('[Code](/src/example.java#L1)');
 
     expect(html).toContain('href="/course/src/example.java#L1"');
     expect(html).not.toContain('href="/course/src/example.html#L1"');
+  });
+
+  test('rewrites relative raw html code links when the extension is mapped', () => {
+    const md = new MarkdownIt({ html: true });
+    md.use(applyBasePathPlugin, {
+      basePath: '/course/',
+      extensionToShikiLanguage: { java: 'java' },
+      sourceUrlPath: '/docs/index.html',
+      validTargets: new Set(['/docs/App.java.html']),
+    });
+
+    const html = md.render('<a href="./App.java">App</a>');
+
+    expect(html).toContain('href="./App.java.html"');
   });
 });
 
@@ -401,8 +406,9 @@ describe('custom markdown containers', () => {
         base: '',
         basePath: '/',
         internalDomains: [],
-        codeLanguages: {},
-        features: { search: true, code: true, favicon: false, footer: true },
+        extensionToShikiLanguage: {},
+        shikiLanguages: ['ts'],
+        features: { search: true, favicon: false, footer: true },
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
@@ -536,6 +542,78 @@ describe('custom markdown containers', () => {
   });
 });
 
+describe('markdown fence languages', () => {
+  function createProjectMarkdown({
+    features = { search: true, favicon: false, footer: true },
+    shikiLanguages,
+  }: Partial<SiteVariables> = {}) {
+    return createMarkdown(
+      {
+        base: '',
+        basePath: '/',
+        internalDomains: [],
+        extensionToShikiLanguage: {},
+        shikiLanguages,
+        features,
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+        defaultTimeZone: 'America/New_York',
+      } as SiteVariables,
+      { validatorOptions: { enabled: false }, filePath: 'content/page.md' },
+    );
+  }
+
+  test('highlights bundled fence languages listed in shikiLanguages', () => {
+    const md = createProjectMarkdown({ shikiLanguages: ['ts'] });
+
+    const html = md.render(['```ts', 'const x = 1', '```'].join('\n'));
+
+    expect(html).toContain('<pre class="shiki');
+    expect(html).toContain('const');
+  });
+
+  test('rejects bundled fence languages missing from shikiLanguages', () => {
+    const md = createProjectMarkdown();
+
+    expect(() => md.render(['```ts', 'const x = 1', '```'].join('\n'))).toThrow(
+      'content/page.md: Markdown fence language "ts" is not listed in site.shikiLanguages',
+    );
+  });
+
+  test('rejects invalid fence language strings', () => {
+    const md = createProjectMarkdown();
+
+    expect(() =>
+      md.render(['```not-a-language', 'hello', '```'].join('\n')),
+    ).toThrow(
+      'content/page.md: Markdown fence language "not-a-language" is not a supported Shiki language',
+    );
+  });
+
+  test('allows plain-text fence aliases without shikiLanguages', () => {
+    const md = createProjectMarkdown();
+
+    for (const lang of ['text', 'txt', 'plain']) {
+      const html = md.render([`~~~${lang}`, 'hello', '~~~'].join('\n'));
+      expect(html).toContain('<pre class="shiki');
+      expect(html).toContain('hello');
+    }
+  });
+
+  test('highlights fences even when no code-page mappings are configured', () => {
+    const md = createProjectMarkdown({
+      features: { search: true, favicon: false, footer: true },
+      shikiLanguages: ['ts'],
+    });
+
+    const html = md.render(['```ts', 'const x = 1', '```'].join('\n'));
+
+    expect(html).toContain('<pre class="shiki');
+    expect(html).toContain('const');
+  });
+});
+
 describe('hidden_fence rule', () => {
   function createProjectMarkdown() {
     return createMarkdown(
@@ -543,8 +621,8 @@ describe('hidden_fence rule', () => {
         base: '',
         basePath: '/',
         internalDomains: [],
-        codeLanguages: {},
-        features: { search: true, code: true, favicon: false, footer: true },
+        extensionToShikiLanguage: {},
+        features: { search: true, favicon: false, footer: true },
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
@@ -624,8 +702,8 @@ describe('katex plugin', () => {
         base: '',
         basePath: '/',
         internalDomains: [],
-        codeLanguages: {},
-        features: { search: true, code: true, favicon: false, footer: true },
+        extensionToShikiLanguage: {},
+        features: { search: true, favicon: false, footer: true },
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
@@ -751,8 +829,8 @@ describe('footnote rendering', () => {
         base: '',
         basePath: '/',
         internalDomains: [],
-        codeLanguages: {},
-        features: { search: true, code: true, favicon: false, footer: true },
+        extensionToShikiLanguage: {},
+        features: { search: true, favicon: false, footer: true },
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',

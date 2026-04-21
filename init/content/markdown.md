@@ -92,7 +92,7 @@ By default, MarkdownIt supports [the table syntax from GitHub "flavored" Markdow
 
 Here's a basic table:
 
-```markdown
+```
 | Syntax | Description  |
 | ------ | ------------ |
 | Cell   | Another cell |
@@ -102,7 +102,7 @@ Here's a basic table:
 You can omit the starting and ending vertical pipes, and the pipes don't have
 to perfectly match on every line:
 
-```markdown
+```
 Syntax | Description
 --- | ---
 Cell | Another cell
@@ -197,7 +197,7 @@ Binary tree
 Each term (bolded) of the definition list gets its own `id` attribute, like
 headings, so you may [link directly to a definition](#binary-tree):
 
-```text
+```
 /example.html#binary-tree
 ```
 
@@ -256,7 +256,7 @@ Testing <dfn>definition</dfn> style
 
 You can specify a custom title:
 
-```markdown
+```
 !!! warning Double-check your answers
 No partial credit is offered for these questions, double-check your answers!
 !!!
@@ -275,7 +275,7 @@ table of contents alongside headings.
 
 Use
 
-```markdown
+```
 ??? question What is a base case? Give an example.
 
 The <dfn>base case</dfn> is the simplest version of the problem that can be
@@ -302,7 +302,7 @@ different background.
 
 Use
 
-```markdown
+```
 ::: section
 
 ### Submitting your work
@@ -337,7 +337,7 @@ Email the files you changed to the course staff.
 
 Use
 
-```markdown
+```
 +++
 Content in the first column (on the left)...
 +++

@@ -6,8 +6,8 @@ import type { SiteVariables } from '../types';
  * authors can interpolate site variables (like `<%= vars.fullCourseName %>`)
  * in their source code. The template context mirrors the one used for JSON
  * data files in `build/templates.ts`: `vars` and `site`. Invoked from
- * `renderCodePageAsset` and `renderCopiedContentAsset` only when
- * `features.code` is enabled.
+ * `renderCodePageAsset` and `renderCopiedContentAsset` for source files whose
+ * extension is mapped in `site.extensionToShikiLanguage`.
  */
 export function applySourceTemplate(
   source: string,

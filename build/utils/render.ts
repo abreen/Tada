@@ -3,10 +3,10 @@ import path from 'path';
 import _ from 'lodash';
 import type MarkdownIt from 'markdown-it';
 import { stripHtml } from 'string-strip-html';
-import { isFeatureEnabled } from '../features';
 import { makeLogger } from '../log';
 import { B } from '../colors';
 import createGlobals from '../globals';
+import { getExtensionToShikiLanguage } from '../site-variables';
 import { render, json } from '../templates';
 import { validateParentLink } from '../validate-config-links';
 import {
@@ -284,14 +284,20 @@ export function renderCodePageAsset({
   distDir,
   siteVariables,
   assetFiles,
+  validInternalTargets,
+  literateJavaOutputPaths,
 }: RenderCodePageOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
   const applyBasePath = createApplyBasePath(siteVariables);
-  const lang = siteVariables.codeLanguages![ext.slice(1).toLowerCase()];
+  const lang =
+    getExtensionToShikiLanguage(siteVariables)[ext.slice(1).toLowerCase()];
   const rawSource = fs.readFileSync(filePath, 'utf-8');
   const sourceCode = applySourceTemplate(rawSource, siteVariables, filePath);
   const pageDirPath = toPosix(path.relative(contentDir, dir));
+  const sourceUrlPath = normalizeOutputPath(
+    `/${toUrlPath(path.relative(contentDir, filePath))}.html`,
+  );
 
   log.info`Rendering code page ${B`${subPath + ext}`}`;
   const content = renderCodeWithComments(
@@ -299,6 +305,9 @@ export function renderCodePageAsset({
     lang,
     siteVariables,
     pageDirPath,
+    sourceUrlPath,
+    validInternalTargets,
+    literateJavaOutputPaths,
   );
   const codeFilePath = applyBasePath(
     normalizeOutputPath(`/${toUrlPath(path.relative(contentDir, filePath))}`),
@@ -353,10 +362,6 @@ export function renderCopiedContentAsset({
   const relPath = toContentAssetPath(contentDir, filePath);
 
   log.info`${label} ${B`${relPath}`}`;
-
-  if (!isFeatureEnabled(siteVariables, 'code')) {
-    return [{ assetPath: relPath, content: fs.readFileSync(filePath) }];
-  }
 
   const rawSource = fs.readFileSync(filePath, 'utf-8');
   const templated = applySourceTemplate(rawSource, siteVariables, filePath);
@@ -419,14 +424,13 @@ function renderPlainTextContent(
 } {
   const sourceUrlPath = `/${subPath}.html`;
   const md = createMarkdown(siteVariables, {
+    filePath,
     validatorOptions: {
       enabled: validateInternalLinks,
       filePath,
       sourceUrlPath,
       validTargets: validInternalTargets,
-      codeExtensions: isFeatureEnabled(siteVariables, 'code')
-        ? Object.keys(siteVariables.codeLanguages!)
-        : [],
+      codeExtensions: Object.keys(getExtensionToShikiLanguage(siteVariables)),
       onValidLink: (targetPath: string) => {
         dependencyCollector?.internalTargets?.add(targetPath);
       },
@@ -597,13 +601,12 @@ export function renderLiterateJavaPageAsset({
   // with Shiki-highlighted code blocks and optional JDI output columns
   const sourceUrlPath = `/${subPath}.java.html`;
   const md = createMarkdown(siteVariables, {
+    filePath,
     validatorOptions: {
       filePath,
       sourceUrlPath,
       validTargets: validInternalTargets,
-      codeExtensions: isFeatureEnabled(siteVariables, 'code')
-        ? Object.keys(siteVariables.codeLanguages!)
-        : [],
+      codeExtensions: Object.keys(getExtensionToShikiLanguage(siteVariables)),
       onValidLink: (targetPath: string) => {
         dependencyCollector?.internalTargets?.add(targetPath);
       },

@@ -13,7 +13,8 @@ The value of `vars.foobar` is <%= vars.foobar %>.
 You can add any variables you want to the `site.dev.json` and `site.prod.json`
 files under the `"vars"` property and access them using Lodash template syntax
 from Markdown files, HTML files, and source code. (Lodash template subtitution
-only works in source code files when `features.code` is `true`.)
+only works in source code files whose extension is listed in
+`extensionToShikiLanguage`.)
 
 ## Slides
 
@@ -35,8 +36,9 @@ you should see a result for page 2 of `lecture1.pdf`.
   - [A direct link](./Pair.java) to the source code
 
 !!! note
-Syntax highlighting is controlled by the `codeLanguages` configuration object
-and is generated at build time by [Shiki](https://shiki.style).
+Code pages and code blocks are highlighted by [Shiki](https://shiki.style).
+A source code file's extension must be present in the config file under
+`extensionToShikiLanguage` to be converted into a code page.
 !!!
 
 ## Review questions

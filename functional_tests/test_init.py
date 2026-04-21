@@ -72,6 +72,14 @@ class TestInitBare:
         assert (site_dir / 'site.dev.json').exists()
         assert (site_dir / 'site.prod.json').exists()
 
+    def test_bare_configs_disable_code_pages_by_default(self, site_dir):
+        dev = json.loads((site_dir / 'site.dev.json').read_text())
+        prod = json.loads((site_dir / 'site.prod.json').read_text())
+        assert dev['extensionToShikiLanguage'] == {}
+        assert dev['shikiLanguages'] == []
+        assert prod['extensionToShikiLanguage'] == {}
+        assert prod['shikiLanguages'] == []
+
     def test_creates_minimal_content(self, site_dir):
         content_dir = site_dir / 'content'
         assert content_dir.is_dir()

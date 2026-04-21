@@ -134,28 +134,26 @@ describe('validateInternalLinks', () => {
     expect(() => md.render('[CDN](//cdn.example.com/lib.js)')).not.toThrow();
   });
 
-  test('throws for .java.html link when code feature is disabled', () => {
-    // When features.code is false, codeExtensions is [] and no code pages
-    // are generated. Only the raw .java file exists as a valid target.
+  test('throws for .java.html link when the extension is not mapped', () => {
     const md = createMd(['/src/Rectangle.java'], { codeExtensions: [] });
     expect(() => md.render('[Rect](/src/Rectangle.java.html)')).toThrow(
       'broken internal link',
     );
   });
 
-  test('throws for .py.html link when code feature is disabled', () => {
+  test('throws for .py.html link when the extension is not mapped', () => {
     const md = createMd(['/src/demo.py'], { codeExtensions: [] });
     expect(() => md.render('[Demo](/src/demo.py.html)')).toThrow(
       'broken internal link',
     );
   });
 
-  test('allows .java link to raw file when code feature is disabled', () => {
+  test('allows .java link to raw file when the extension is not mapped', () => {
     const md = createMd(['/src/Rectangle.java'], { codeExtensions: [] });
     expect(() => md.render('[Rect](/src/Rectangle.java)')).not.toThrow();
   });
 
-  test('allows .java link to public file when code feature is enabled', () => {
+  test('allows .java link to public file even when the extension is mapped', () => {
     // Public files with code extensions are copied as-is; only the raw
     // path exists in valid targets, not the .html version.
     const md = createMd(['/Test.java'], { codeExtensions: ['java'] });

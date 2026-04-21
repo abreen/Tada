@@ -3,7 +3,7 @@ import type MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import { JSDOM } from 'jsdom';
 import { createApplyBasePath } from './utils/paths';
-import { isFeatureEnabled } from './features';
+import { getExtensionToShikiLanguage } from './site-variables';
 import { isInternalLink } from './utils/link';
 import { makeLogger } from './log';
 import type { SiteVariables } from './types';
@@ -63,7 +63,6 @@ export default function applyBasePathPlugin(
   pluginOptions: ApplyBasePathOptions = {},
 ): void {
   const applyBasePath = createApplyBasePath(siteVariables);
-  const rewriteCodeLinks = isFeatureEnabled(siteVariables, 'code');
   const literateJavaOutputPaths = pluginOptions.literateJavaOutputPaths;
   const sourceUrlPath = pluginOptions.sourceUrlPath;
   const validTargets = pluginOptions.validTargets;
@@ -79,26 +78,24 @@ export default function applyBasePathPlugin(
     const suffix = match ? match[2] : '';
     let modifiedPath = pathname;
 
-    if (rewriteCodeLinks) {
-      for (const ext of Object.keys(siteVariables.codeLanguages ?? {})) {
-        if (modifiedPath.endsWith(`.${ext}`)) {
-          if (literateJavaOutputPaths && sourceUrlPath) {
-            const resolved = resolveAgainstSource(modifiedPath);
-            if (literateJavaOutputPaths.has(resolved)) {
-              break;
-            }
+    for (const ext of Object.keys(getExtensionToShikiLanguage(siteVariables))) {
+      if (modifiedPath.endsWith(`.${ext}`)) {
+        if (literateJavaOutputPaths && sourceUrlPath) {
+          const resolved = resolveAgainstSource(modifiedPath);
+          if (literateJavaOutputPaths.has(resolved)) {
+            break;
           }
-          // Only rewrite if the .html version exists. Public files with
-          // code extensions are copied as-is and have no .html page.
-          if (validTargets && sourceUrlPath) {
-            const resolved = resolveAgainstSource(modifiedPath);
-            if (!validTargets.has(`${resolved}.html`)) {
-              break;
-            }
-          }
-          modifiedPath += '.html';
-          break;
         }
+        // Only rewrite if the .html version exists. Public files with
+        // code extensions are copied as-is and have no .html page.
+        if (validTargets && sourceUrlPath) {
+          const resolved = resolveAgainstSource(modifiedPath);
+          if (!validTargets.has(`${resolved}.html`)) {
+            break;
+          }
+        }
+        modifiedPath += '.html';
+        break;
       }
     }
 
@@ -137,10 +134,13 @@ export default function applyBasePathPlugin(
         const dom = new JSDOM(`<body>${token.content}__tada__</a></body>`);
         const anchor = dom.window.document.body.querySelector('a[href]');
         const href = anchor?.getAttribute('href');
-        if (anchor && href && href.startsWith('/')) {
-          const afterApply = applyBasePath(href);
-          log.debug`Applying base path to raw HTML anchor: ${href} -> ${afterApply}`;
-          anchor.setAttribute('href', afterApply);
+        if (anchor && href && isInternalLink(href)) {
+          const rewrittenHref = rewriteInternalHref(href);
+          const finalHref = href.startsWith('/')
+            ? applyBasePath(rewrittenHref)
+            : rewrittenHref;
+          log.debug`Rewriting raw HTML anchor: ${href} -> ${finalHref}`;
+          anchor.setAttribute('href', finalHref);
           token.content = serializeStartTag(anchor);
         }
       } else {
@@ -150,10 +150,13 @@ export default function applyBasePathPlugin(
 
         for (const anchor of document.body.querySelectorAll('a[href]')) {
           const href = anchor.getAttribute('href');
-          if (href && href.startsWith('/')) {
-            const afterApply = applyBasePath(href);
-            log.debug`Applying base path to raw HTML anchor: ${href} -> ${afterApply}`;
-            anchor.setAttribute('href', afterApply);
+          if (href && isInternalLink(href)) {
+            const rewrittenHref = rewriteInternalHref(href);
+            const finalHref = href.startsWith('/')
+              ? applyBasePath(rewrittenHref)
+              : rewrittenHref;
+            log.debug`Rewriting raw HTML anchor: ${href} -> ${finalHref}`;
+            anchor.setAttribute('href', finalHref);
             changed = true;
           }
         }

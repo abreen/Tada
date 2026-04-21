@@ -23,10 +23,12 @@ Relative links are not prefixed with the base path.
 
 ### Links to code
 
-When the code feature is enabled, links to source files (e.g., `.java`, `.py`)
-in the content directory are rewritten to point to the generated `.html` page.
-This rewriting applies to both absolute and relative links. Files with code
-extensions in `public/` are copied as-is and their links are not rewritten.
+When an extension is present in `extensionToShikiLanguage`, links to matching
+source files (e.g., `.java`, `.py`) in the content directory are rewritten to
+point to the generated `.html` page. This rewriting applies to both absolute
+and relative links, including raw HTML `<a href>` attributes within Markdown.
+Files with code extensions in `public/` are copied as-is and their links are
+not rewritten.
 
 
 ## External link marking

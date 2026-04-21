@@ -4,15 +4,9 @@
   "properties": {
     "features": {
       "type": "object",
-      "default": {
-        "search": true,
-        "code": true,
-        "favicon": true,
-        "footer": true
-      },
+      "default": { "search": true, "favicon": true, "footer": true },
       "properties": {
         "search": { "type": "boolean", "default": true },
-        "code": { "type": "boolean", "default": true },
         "favicon": { "type": "boolean", "default": true },
         "footer": { "type": "boolean", "default": true }
       },
@@ -55,10 +49,11 @@
     },
     "defaultTimeZone": { "type": "string" },
     "vars": { "type": "object" },
-    "codeLanguages": {
+    "extensionToShikiLanguage": {
       "type": "object",
       "additionalProperties": { "type": "string" }
-    }
+    },
+    "shikiLanguages": { "type": "array", "items": { "type": "string" } }
   },
   "additionalProperties": false
 }

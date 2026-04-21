@@ -157,7 +157,7 @@ describe('renderCodeWithComments', () => {
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
       defaultTimeZone: 'America/New_York',
-      features: { search: true, code: true, favicon: true, footer: true },
+      features: { search: true, favicon: true, footer: true },
     } as SiteVariables);
 
     expect(html).toContain('<span class="code-row">');
@@ -177,7 +177,7 @@ describe('renderCodeWithComments', () => {
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
       defaultTimeZone: 'America/New_York',
-      features: { search: true, code: true, favicon: true, footer: true },
+      features: { search: true, favicon: true, footer: true },
     } as SiteVariables);
 
     expect(html).toContain(
@@ -194,13 +194,14 @@ describe('renderCodeWithComments', () => {
       {
         base: 'https://example.edu',
         basePath: '/course',
-        codeLanguages: { java: 'java', py: 'python' },
+        extensionToShikiLanguage: { java: 'java', py: 'python' },
+        shikiLanguages: ['java', 'python'],
         internalDomains: [],
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
         defaultTimeZone: 'America/New_York',
-        features: { search: true, code: true, favicon: true, footer: true },
+        features: { search: true, favicon: true, footer: true },
       } as SiteVariables,
       'lectures/01',
     );
@@ -208,6 +209,59 @@ describe('renderCodeWithComments', () => {
     expect(html).toContain(
       'https://example.edu/course/lectures/01/rect.py.html',
     );
+  });
+
+  test('does not rewrite raw HTML prose links to raw public source files', () => {
+    const source = '/// <a href="./Pair.java">Pair</a>\npublic class Foo {}\n';
+    const html = renderCodeWithComments(
+      source,
+      'java',
+      {
+        base: 'https://example.edu',
+        basePath: '/course',
+        extensionToShikiLanguage: { java: 'java', py: 'python' },
+        shikiLanguages: ['java', 'python'],
+        internalDomains: [],
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+        defaultTimeZone: 'America/New_York',
+        features: { search: true, favicon: true, footer: true },
+      } as SiteVariables,
+      'lectures/01',
+      '/lectures/01/Foo.java.html',
+      new Set(['/lectures/01/Pair.java']),
+    );
+
+    expect(html).toContain('href="./Pair.java"');
+    expect(html).not.toContain('href="./Pair.java.html"');
+  });
+
+  test('does not rewrite raw HTML prose links to literate Java source downloads', () => {
+    const source = '/// <a href="./Pair.java">Pair</a>\npublic class Foo {}\n';
+    const html = renderCodeWithComments(
+      source,
+      'java',
+      {
+        base: 'https://example.edu',
+        basePath: '/course',
+        extensionToShikiLanguage: { java: 'java', py: 'python' },
+        shikiLanguages: ['java', 'python'],
+        internalDomains: [],
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+        defaultTimeZone: 'America/New_York',
+        features: { search: true, favicon: true, footer: true },
+      } as SiteVariables,
+      'lectures/01',
+      '/lectures/01/Foo.java.html',
+      new Set(['/lectures/01/Pair.java.html']),
+      new Set(['/lectures/01/Pair.java']),
+    );
+
+    expect(html).toContain('href="./Pair.java"');
+    expect(html).not.toContain('href="./Pair.java.html"');
   });
 
   test('does not substitute <%= %> by itself (templating happens in renderCodePageAsset)', () => {
@@ -220,7 +274,7 @@ describe('renderCodeWithComments', () => {
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
       defaultTimeZone: 'America/New_York',
-      features: { search: true, code: true, favicon: true, footer: true },
+      features: { search: true, favicon: true, footer: true },
       vars: { fullCourseName: 'CS 0' },
     } as SiteVariables);
 
@@ -234,13 +288,14 @@ describe('rewriteProseLinks', () => {
   const siteVariables = {
     base: 'https://example.edu',
     basePath: '/course',
-    codeLanguages: { java: 'java', py: 'python' },
+    extensionToShikiLanguage: { java: 'java', py: 'python' },
+    shikiLanguages: ['java', 'python'],
     internalDomains: [],
     title: 'Test',
     titlePostfix: ' - Test',
     themeColor: 'steelblue',
     defaultTimeZone: 'America/New_York',
-    features: { search: true, code: true, favicon: true, footer: true },
+    features: { search: true, favicon: true, footer: true },
   } as SiteVariables;
 
   test('rewrites relative link with base + basePath', () => {

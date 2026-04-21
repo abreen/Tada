@@ -10,8 +10,9 @@ const siteVariables = {
   themeColor: 'steelblue',
   defaultTimeZone: 'America/New_York',
   internalDomains: [],
-  codeLanguages: { java: 'java', py: 'python' },
-  features: { search: true, code: true, favicon: true, footer: true },
+  extensionToShikiLanguage: { java: 'java', py: 'python' },
+  shikiLanguages: ['java', 'python'],
+  features: { search: true, favicon: true, footer: true },
   vars: { fullCourseName: 'CS 0, Intro to CS' },
 } as SiteVariables;
 

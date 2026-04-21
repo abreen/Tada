@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from conftest import init_site, run_tada, set_site_config
+from conftest import init_site, run_tada
 
 
 class TestBrokenNavLink:
@@ -114,13 +114,11 @@ class TestLinkToPublicIndexHtml:
 
 
 class TestLinkToPublicCodeFile:
-    """A link to a code-extension file in public/ is valid when features.code is on."""
+    """A link to a code-extension file in public/ is valid."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
-
-        set_site_config(site, {'features': {'code': True}})
 
         (site / 'public' / 'Test.java').write_text('public class Test {}\n')
         (site / 'content' / 'page.md').write_text(

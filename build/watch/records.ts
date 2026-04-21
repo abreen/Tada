@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { getExtensionToShikiLanguage } from '../site-variables';
 import {
   renderCodePageAsset,
   renderCopiedContentAsset,
@@ -87,12 +88,11 @@ export function renderContentRecord({
   persistOutputs?: boolean;
 }): TadaSourceRecord {
   const deps = createDependencyCollector();
-  const codeExtensions = Object.keys(siteVariables.codeLanguages || {}).map(
-    ext => ext.toLowerCase(),
-  );
+  const codeExtensions = Object.keys(
+    getExtensionToShikiLanguage(siteVariables),
+  ).map(ext => ext.toLowerCase());
   const ext = path.extname(filePath).slice(1).toLowerCase();
   const assets: Asset[] = [];
-  const codeEnabled = siteVariables.features.code !== false;
 
   if (isLiterateJava(filePath)) {
     assets.push(
@@ -128,18 +128,18 @@ export function renderContentRecord({
         }),
       );
     } else if (codeExtensions.includes(ext)) {
-      if (codeEnabled) {
-        assets.push(
-          ...renderCodePageAsset({
-            filePath,
-            contentDir: scan.contentDir,
-            distDir: outputDir,
-            siteVariables,
-            assetFiles,
-            dependencyCollector: deps.collector,
-          }),
-        );
-      }
+      assets.push(
+        ...renderCodePageAsset({
+          filePath,
+          contentDir: scan.contentDir,
+          distDir: outputDir,
+          siteVariables,
+          validInternalTargets: scan.validTargets,
+          assetFiles,
+          literateJavaOutputPaths: scan.literateJavaOutputPaths,
+          dependencyCollector: deps.collector,
+        }),
+      );
       assets.push(
         ...renderCopiedContentAsset({
           filePath,

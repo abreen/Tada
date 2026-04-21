@@ -72,7 +72,9 @@ def set_site_config(site_dir, overrides, config_file='site.dev.json'):
     config_path = site_dir / config_file
     config = json.loads(config_path.read_text())
     for key, value in overrides.items():
-        if isinstance(value, dict) and isinstance(config.get(key), dict):
+        if value == {}:
+            config[key] = {}
+        elif isinstance(value, dict) and isinstance(config.get(key), dict):
             config[key].update(value)
         else:
             config[key] = value

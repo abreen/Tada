@@ -1,5 +1,6 @@
 import path from 'path';
 import type { SiteVariables } from './types';
+import { getExtensionToShikiLanguage } from './site-variables';
 import { getContentDir, getBuildContentFiles, isPartial } from './util';
 import { compileTemplates, getJsonDataDir, JSON_DATA_FILES } from './templates';
 import { B } from './colors';
@@ -47,7 +48,7 @@ export class ContentChangeDetector {
     const normalizedContentDir = path.resolve(contentDir) + path.sep;
     const buildContentFiles = getBuildContentFiles(
       contentDir,
-      Object.keys(this.siteVariables.codeLanguages || {}),
+      Object.keys(getExtensionToShikiLanguage(this.siteVariables)),
     );
 
     // Detect structural changes (files added or deleted)

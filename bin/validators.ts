@@ -66,6 +66,8 @@ export function createSiteConfig({
   basePath,
   internalDomains,
   features,
+  extensionToShikiLanguage,
+  shikiLanguages,
 }: SiteConfigInput): SiteVariables {
   return {
     title,
@@ -76,7 +78,8 @@ export function createSiteConfig({
     basePath,
     internalDomains,
     defaultTimeZone,
-    codeLanguages: { java: 'java', py: 'python' },
+    extensionToShikiLanguage,
+    shikiLanguages,
     themeColor,
     tintHue: Number(tintHue),
     tintAmount: Number(tintAmount),

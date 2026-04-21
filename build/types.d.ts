@@ -16,7 +16,11 @@ export interface SiteVariables {
   internalDomains?: string[];
   defaultTimeZone: string;
   features: FeatureConfig;
-  codeLanguages?: Record<string, BundledLanguage | PlainTextLanguage>;
+  extensionToShikiLanguage?: Record<
+    string,
+    BundledLanguage | PlainTextLanguage
+  >;
+  shikiLanguages?: BundledLanguage[];
   tintHue?: number;
   tintAmount?: number;
   vars?: Record<string, unknown>;
@@ -24,7 +28,6 @@ export interface SiteVariables {
 
 export type FeatureConfig = {
   search: boolean;
-  code: boolean;
   favicon: boolean;
   footer: boolean;
 };
@@ -106,6 +109,8 @@ export interface RenderCodePageOptions {
   distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
+  validInternalTargets: Set<string>;
+  literateJavaOutputPaths?: Set<string>;
   dependencyCollector?: RenderDependencyCollector;
 }
 
@@ -282,4 +287,6 @@ export interface SiteConfigInput {
   basePath: string;
   internalDomains: string[];
   features: FeatureConfig;
+  extensionToShikiLanguage: Record<string, BundledLanguage | PlainTextLanguage>;
+  shikiLanguages: BundledLanguage[];
 }

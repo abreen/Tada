@@ -45,7 +45,7 @@ class TestWatchConfig:
 
     def test_config_change_rebuild_rejects_output_path_conflict(self, tmp_path):
         site_dir = init_site(tmp_path, bare=True)
-        set_site_config(site_dir, {'features': {'code': False}})
+        set_site_config(site_dir, {'extensionToShikiLanguage': {}})
         public_file = site_dir / 'public' / 'Test.java.html'
         public_file.write_text('<p>From public</p>\n')
         code_file = site_dir / 'content' / 'Test.java'
@@ -59,7 +59,7 @@ class TestWatchConfig:
             assert dist_file.exists()
             before_text = dist_file.read_text()
 
-            set_site_config(site_dir, {'features': {'code': True}})
+            set_site_config(site_dir, {'extensionToShikiLanguage': {'java': 'java'}})
 
             wp.wait_for_error()
             assert wp.proc.poll() is None

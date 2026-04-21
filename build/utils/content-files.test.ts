@@ -183,7 +183,7 @@ describe('getValidInternalTargets', () => {
     fs.writeFileSync(path.join(tempDir, 'public', 'test.txt'), '');
 
     const contentDir = path.join(tempDir, 'content');
-    const targets = getValidInternalTargets(contentDir, [], [], false);
+    const targets = getValidInternalTargets(contentDir, [], []);
 
     expect(targets.has('/test.txt')).toBe(true);
   });
@@ -194,7 +194,7 @@ describe('getValidInternalTargets', () => {
     fs.writeFileSync(path.join(coverageDir, 'index.html'), '');
 
     const contentDir = path.join(tempDir, 'content');
-    const targets = getValidInternalTargets(contentDir, [], [], false);
+    const targets = getValidInternalTargets(contentDir, [], []);
 
     expect(targets.has('/coverage/index.html')).toBe(true);
     expect(targets.has('/coverage/')).toBe(false);
@@ -207,7 +207,7 @@ describe('getValidInternalTargets', () => {
     fs.writeFileSync(path.join(subDir, 'style.css'), '');
 
     const contentDir = path.join(tempDir, 'content');
-    const targets = getValidInternalTargets(contentDir, [], [], false);
+    const targets = getValidInternalTargets(contentDir, [], []);
 
     expect(targets.has('/assets/style.css')).toBe(true);
   });

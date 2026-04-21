@@ -8,7 +8,8 @@ import markdownItFootnote from 'markdown-it-footnote';
 import markdownItDeflist from 'markdown-it-deflist';
 import markdownItContainer from 'markdown-it-container';
 import textToId, { deduplicateId } from '../text-to-id';
-import { getHighlighter, highlightCode } from './shiki-highlighter';
+import { highlightCode } from './shiki-highlighter';
+import { isBundledLanguage, isPlainTextLanguage } from '../site-variables';
 import headingSubtitlePlugin from '../heading-subtitle-plugin';
 import deflistIdPlugin from '../deflist-id-plugin';
 import externalLinksPlugin from '../external-links-plugin';
@@ -27,6 +28,7 @@ const QUESTION_PATTERN = /^question\s+(.+)$/;
 
 interface CreateMarkdownOptions {
   validatorOptions?: Record<string, unknown>;
+  filePath?: string;
   literateJavaOutputPaths?: Set<string>;
   sourceUrlPath?: string;
   validTargets?: Set<string>;
@@ -58,6 +60,7 @@ export function createMarkdown(
 ): MarkdownIt {
   const {
     validatorOptions = {},
+    filePath,
     literateJavaOutputPaths,
     sourceUrlPath,
     validTargets,
@@ -352,10 +355,23 @@ export function createMarkdown(
     const token = tokens[idx];
     const lang = token.info.trim().split(/\s+/)[0] || 'text';
     const code = token.content;
-    const highlighter = getHighlighter();
-    const useLang = highlighter.getLoadedLanguages().includes(lang)
-      ? lang
-      : 'text';
+    let useLang: string;
+
+    if (isPlainTextLanguage(lang)) {
+      useLang = 'text';
+    } else if (isBundledLanguage(lang)) {
+      if (!(siteVariables.shikiLanguages ?? []).includes(lang)) {
+        throw new Error(
+          `${filePath ?? 'Markdown'}: Markdown fence language "${lang}" is not listed in site.shikiLanguages`,
+        );
+      }
+      useLang = lang;
+    } else {
+      throw new Error(
+        `${filePath ?? 'Markdown'}: Markdown fence language "${lang}" is not a supported Shiki language`,
+      );
+    }
+
     return highlightCode(code, useLang);
   };
 

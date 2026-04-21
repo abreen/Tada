@@ -18,7 +18,7 @@ default comment color, for stylistic consistency with the rest of the site.
 
 A heading can include a subtitle separated by ` # `:
 
-```markdown
+```
 ## Main Title # Subtitle
 ```
 
@@ -29,7 +29,7 @@ The subtitle renders in a distinct style after the main heading text.
 
 Block-level callouts for notes and warnings:
 
-```markdown
+```
 !!! note
 This is a note.
 !!!
@@ -44,7 +44,7 @@ This is a warning with a custom title.
 
 Collapsible Q&A sections that reveal the answer on click:
 
-```markdown
+```
 ??? question What is X?
 The answer is here.
 ???
@@ -53,7 +53,7 @@ The answer is here.
 
 ## Collapsible details
 
-```markdown
+```
 <<< details Summary text
 Hidden content here.
 <<<
@@ -64,7 +64,7 @@ Hidden content here.
 
 Generic section wrappers:
 
-```markdown
+```
 ::: section
 Content grouped into a section.
 :::
@@ -75,7 +75,7 @@ Content grouped into a section.
 
 Arrange content in two equal columns:
 
-```markdown
+```
 +++
 First column content.
 +++

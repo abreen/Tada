@@ -3,6 +3,7 @@ import path from 'path';
 import { parse as parseJava } from 'java-parser';
 import { JSDOM } from 'jsdom';
 import { makeLogger } from '../log';
+import { getExtensionToShikiLanguage } from '../site-variables';
 import { highlightCode } from './shiki-highlighter';
 import externalLinksPlugin from '../external-links-plugin';
 import applyBasePathPlugin from '../apply-base-path-plugin';
@@ -61,7 +62,9 @@ export function rewriteProseLinks(
   pageDirPath: string,
 ): string[] {
   const applyBasePath = createApplyBasePath(siteVariables);
-  const codeExtensions = Object.keys(siteVariables.codeLanguages ?? {});
+  const codeExtensions = Object.keys(
+    getExtensionToShikiLanguage(siteVariables),
+  );
 
   function rewriteCodeExt(p: string): string {
     for (const ext of codeExtensions) {
@@ -501,8 +504,15 @@ export function renderCodeWithComments(
   lang: string,
   siteVariables: SiteVariables,
   pageDirPath?: string,
+  sourceUrlPath?: string,
+  validTargets?: Set<string>,
+  literateJavaOutputPaths?: Set<string>,
 ): string {
-  const md = createCodeMarkdown(siteVariables);
+  const md = createCodeMarkdown(siteVariables, {
+    sourceUrlPath,
+    validTargets,
+    literateJavaOutputPaths,
+  });
   const lines = splitLines(sourceCode);
 
   // Group lines into segments

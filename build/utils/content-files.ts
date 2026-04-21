@@ -55,7 +55,6 @@ export function getContentSourceOutputRelPaths(
   contentDir: string,
   filePath: string,
   codeExtensions: string[],
-  codeEnabled: boolean,
 ): Set<string> {
   const processedExtSet = new Set(getProcessedExtensions(codeExtensions));
   const relPath = toPosix(path.relative(contentDir, filePath));
@@ -94,9 +93,7 @@ export function getContentSourceOutputRelPaths(
   );
   if (codeExtensionSet.has(ext)) {
     outputs.add(relPath);
-    if (codeEnabled) {
-      outputs.add(`${relPath}.html`);
-    }
+    outputs.add(`${relPath}.html`);
   }
 
   return outputs;
@@ -105,7 +102,6 @@ export function getContentSourceOutputRelPaths(
 export function getContentOutputRelPaths(
   contentDir: string,
   codeExtensions: string[],
-  codeEnabled: boolean,
 ): Set<string> {
   const buildContentFiles = getBuildContentFiles(contentDir, codeExtensions);
   const codeExtensionSet = new Set(
@@ -131,9 +127,7 @@ export function getContentOutputRelPaths(
 
     if (codeExtensionSet.has(ext.slice(1))) {
       outputs.add(relPath);
-      if (codeEnabled) {
-        outputs.add(`${relPath}.html`);
-      }
+      outputs.add(`${relPath}.html`);
     }
   }
 
@@ -195,7 +189,6 @@ export function getValidInternalTargets(
   contentDir: string,
   contentFiles: string[],
   codeExtensions: string[],
-  codeEnabled: boolean,
 ): Set<string> {
   const targets = new Set<string>();
   const codeExtensionSet = new Set(
@@ -220,9 +213,7 @@ export function getValidInternalTargets(
     } else if (extensionIsMarkdown(ext) || ext === '.html') {
       addGeneratedRouteAliases(targets, `/${subPath}.html`);
     } else if (codeExtensionSet.has(ext.slice(1))) {
-      if (codeEnabled) {
-        addGeneratedRouteAliases(targets, `/${relPath}.html`);
-      }
+      addGeneratedRouteAliases(targets, `/${relPath}.html`);
       targets.add(normalizeOutputPath(`/${relPath}`));
     }
   }

@@ -332,7 +332,9 @@ async function initCommand(args: string[]): Promise<void> {
     base: 'http://localhost:8080',
     basePath: '/',
     internalDomains: ['localhost'],
-    features: { search: true, code: true, favicon: false, footer: true },
+    features: { search: true, favicon: false, footer: true },
+    extensionToShikiLanguage: bare ? {} : { java: 'java', py: 'python' },
+    shikiLanguages: bare ? [] : ['java', 'python', 'html'],
   });
 
   const prodConfig = createSiteConfig({
@@ -345,7 +347,9 @@ async function initCommand(args: string[]): Promise<void> {
     base: prodBase,
     basePath: prodBasePath,
     internalDomains: [prodDomain],
-    features: { search: true, code: true, favicon: true, footer: true },
+    features: { search: true, favicon: true, footer: true },
+    extensionToShikiLanguage: bare ? {} : { java: 'java', py: 'python' },
+    shikiLanguages: bare ? [] : ['java', 'python', 'html'],
   });
 
   fs.writeFileSync(

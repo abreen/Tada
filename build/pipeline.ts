@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { getDevSiteVariables, getProdSiteVariables } from './site-variables';
+import { getExtensionToShikiLanguage } from './site-variables';
 import { compileTemplates } from './templates';
 import {
   getDistDir,
@@ -70,7 +71,7 @@ export async function runPipeline(
 
   const publicRelPaths = copyPublicFiles(publicDir, distDir);
   const processedExtensions = getProcessedExtensions(
-    Object.keys(siteVariables.codeLanguages || {}),
+    Object.keys(getExtensionToShikiLanguage(siteVariables)),
   );
   copyContentAssets(contentDir, distDir, processedExtensions, publicRelPaths);
 

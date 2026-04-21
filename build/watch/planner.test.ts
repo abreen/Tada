@@ -62,7 +62,7 @@ function makeSnapshot(overrides: Partial<TadaSnapshot> = {}): TadaSnapshot {
       titlePostfix: ' - Site',
       themeColor: 'black',
       defaultTimeZone: 'America/New_York',
-      features: { search: true, code: true, favicon: true, footer: true },
+      features: { search: true, favicon: true, footer: true },
     },
     assetFiles: [],
     navData: [],

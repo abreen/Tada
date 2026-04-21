@@ -9,7 +9,7 @@ const baseSite: SiteVariables = {
   titlePostfix: ' - Test',
   themeColor: 'hsl(195 70% 40%)',
   defaultTimeZone: 'America/New_York',
-  features: { search: true, code: true, favicon: true, footer: true },
+  features: { search: true, favicon: true, footer: true },
 };
 
 function makeGlobals(subPath = 'index', site: Partial<SiteVariables> = {}) {

@@ -1,9 +1,9 @@
 # Code Pages
 
-When the code feature is enabled, source code files in the content directory are
-rendered as browsable, syntax-highlighted HTML pages. The set of recognized file
-extensions is configured via `codeLanguages` in the site config (Java and Python
-by default).
+Source code files in the content directory are rendered as browsable,
+syntax-highlighted HTML pages when their extension is configured in
+`extensionToShikiLanguage`. If that field is omitted or empty, Tada does not
+generate code pages for source files.
 
 Each code page includes:
 
@@ -37,14 +37,14 @@ to the generated HTML page instead of the raw source file
 
 ## Template substitution
 
-When the code feature is enabled, source code files are run through the Lodash
-template engine before the code page is rendered and before the downloadable
-copy is written. Template holes use the same `<%= %>`, `<% %>`, and `<%- %>`
-delimiters as the rest of Tada and have access to `vars` and `site`. This lets
-authors interpolate site configuration values directly into their source code,
-for example a course name embedded in a header comment.
+Mapped source code files are run through the Lodash template engine before the
+code page is rendered and before the downloadable copy is written. Template
+holes use the same `<%= %>`, `<% %>`, and `<%- %>` delimiters as the rest of
+Tada and have access to `vars` and `site`. This lets authors interpolate site
+configuration values directly into their source code, for example a course name
+embedded in a header comment.
 
 Substitution runs before Java prose link rewriting, so an interpolated value
 may contain a Markdown link that is then rewritten to a full URL as usual.
-When `features.code` is false, source files are copied unchanged and no
-substitution is performed.
+When an extension is not mapped in `extensionToShikiLanguage`, source files are
+copied unchanged and no substitution is performed.

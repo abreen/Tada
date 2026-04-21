@@ -172,7 +172,9 @@ describe('createSiteConfig', () => {
     base: 'https://example.edu',
     basePath: '/',
     internalDomains: ['example.edu'],
-    features: { search: true, code: true, favicon: false, footer: true },
+    features: { search: true, favicon: false, footer: true },
+    extensionToShikiLanguage: { java: 'java', py: 'python' },
+    shikiLanguages: ['java', 'python', 'html'],
   };
 
   test('returns an object with all expected keys', () => {
@@ -185,8 +187,9 @@ describe('createSiteConfig', () => {
       basePath: '/',
       internalDomains: ['example.edu'],
       defaultTimeZone: 'America/New_York',
-      features: { search: true, code: true, favicon: false, footer: true },
-      codeLanguages: { java: 'java', py: 'python' },
+      features: { search: true, favicon: false, footer: true },
+      extensionToShikiLanguage: { java: 'java', py: 'python' },
+      shikiLanguages: ['java', 'python', 'html'],
       vars: {},
     });
   });
@@ -201,5 +204,15 @@ describe('createSiteConfig', () => {
     const config = createSiteConfig({ ...base, tintHue: '0', tintAmount: '0' });
     expect(config.tintHue).toBe(0);
     expect(config.tintAmount).toBe(0);
+  });
+
+  test('allows callers to override code-page defaults', () => {
+    const config = createSiteConfig({
+      ...base,
+      extensionToShikiLanguage: {},
+      shikiLanguages: [],
+    });
+    expect(config.extensionToShikiLanguage).toEqual({});
+    expect(config.shikiLanguages).toEqual([]);
   });
 });

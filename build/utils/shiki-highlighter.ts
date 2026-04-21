@@ -41,6 +41,9 @@ async function createThemeWithCommentOverride(
 export async function initHighlighter(
   langs: Array<BundledLanguage | PlainTextLanguage>,
 ): Promise<void> {
+  const langsWithFallback = [
+    ...new Set<BundledLanguage | PlainTextLanguage>(['text', ...langs]),
+  ];
   if (!highlighter) {
     log.debug`Initializing syntax highlighter`;
     const { createHighlighter } = await import('shiki');
@@ -48,11 +51,11 @@ export async function initHighlighter(
       createThemeWithCommentOverride('github-light', 'tada-github-light'),
       createThemeWithCommentOverride('github-dark', 'tada-github-dark'),
     ]);
-    highlighter = await createHighlighter({ themes, langs });
+    highlighter = await createHighlighter({ themes, langs: langsWithFallback });
     return;
   }
 
-  const missingLangs = langs.filter(
+  const missingLangs = langsWithFallback.filter(
     lang => !highlighter!.getLoadedLanguages().includes(lang),
   );
   if (missingLangs.length > 0) {

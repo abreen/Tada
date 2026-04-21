@@ -48,12 +48,12 @@ def _write_marker_code_files(site):
 
 
 class TestCodeFeatureDisabled:
-    """When features.code is false, code files are not rendered as HTML pages."""
+    """When no source-code extensions are mapped, code files stay raw."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
         site = _init_code_site(tmp_path)
-        set_site_config(site, {'features': {'code': False}})
+        set_site_config(site, {'extensionToShikiLanguage': {}})
         yield site
 
     def test_no_html_for_java_file(self, built_dev_site):
@@ -92,17 +92,17 @@ class TestCodeFeatureDisabled:
         assert 'demo.py.html' not in html
 
     def test_literate_java_page_still_rendered(self, built_dev_site):
-        """Pair.java.md should still produce Pair.java.html when code is disabled."""
+        """Pair.java.md should still produce Pair.java.html when no mappings exist."""
         dist = built_dev_site / 'dist'
         assert (dist / 'lectures' / '01' / 'Pair.java.html').exists()
 
     def test_literate_java_source_still_generated(self, built_dev_site):
-        """Pair.java.md should still produce Pair.java when code is disabled."""
+        """Pair.java.md should still produce Pair.java when no mappings exist."""
         dist = built_dev_site / 'dist'
         assert (dist / 'lectures' / '01' / 'Pair.java').exists()
 
     def test_code_html_link_rejected(self, site_dir):
-        """A link to Foo.java.html should fail when features.code is false."""
+        """A link to Foo.java.html should fail when .java is not mapped."""
         content = site_dir / 'content' / 'test'
         content.mkdir(parents=True)
         (content / 'Foo.java').write_text('public class Foo {}\n')
@@ -114,17 +114,19 @@ class TestCodeFeatureDisabled:
         assert 'broken internal link' in output
 
     def test_exit_code_zero(self, site_dir):
-        """Build should succeed even with code feature disabled."""
+        """Build should succeed even when no code-page mappings are configured."""
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode == 0
 
 
 class TestCodeFeatureEnabled:
-    """When features.code is true, code files are rendered as HTML pages."""
+    """Mapped source-code extensions produce rendered HTML pages."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
-        yield _init_code_site(tmp_path)
+        site = _init_code_site(tmp_path)
+        set_site_config(site, {'extensionToShikiLanguage': {'java': 'java', 'py': 'python'}})
+        yield site
 
     def test_java_file_rendered_as_html(self, built_dev_site):
         """Rectangle.java should produce Rectangle.java.html."""
@@ -175,6 +177,15 @@ class TestCodeProseLinksRewritten:
                 'https://example.edu',
             ],
         )
+        set_site_config(
+            site,
+            {'extensionToShikiLanguage': {'java': 'java', 'py': 'python'}},
+        )
+        set_site_config(
+            site,
+            {'extensionToShikiLanguage': {'java': 'java', 'py': 'python'}},
+            config_file='site.prod.json',
+        )
 
         # Add a Java file with /// links
         code_dir = site / 'content' / 'lectures' / '01'
@@ -209,7 +220,7 @@ class TestCodeProseLinksRewritten:
 
 
 class TestCodeSourceTemplating:
-    """When features.code is true, source code files in content/ are run
+    """When source-code extensions are mapped, files in content/ are run
     through the Lodash template engine before the code page and the
     downloadable copy are written."""
 
@@ -217,6 +228,7 @@ class TestCodeSourceTemplating:
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
         set_site_config(site, {'vars': {'foobar': MARKER}})
+        set_site_config(site, {'extensionToShikiLanguage': {'java': 'java', 'py': 'python'}})
         _write_marker_code_files(site)
         yield site
 
@@ -247,27 +259,25 @@ class TestCodeSourceTemplating:
 
 
 class TestCodeSourceTemplatingDisabled:
-    """When features.code is false, source code files are copied as-is."""
+    """When source-code extensions are not mapped, source files are copied as-is."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
-        set_site_config(
-            site,
-            {'features': {'code': False}, 'vars': {'foobar': MARKER}},
-        )
+        set_site_config(site, {'vars': {'foobar': MARKER}})
+        set_site_config(site, {'extensionToShikiLanguage': {}})
         _write_marker_code_files(site)
         yield site
 
     def test_py_download_is_literal_source(self, built_dev_site):
-        """When features.code is false, the raw <%= %> syntax is preserved
+        """When no source-code extensions are mapped, the raw <%= %> syntax is preserved
         and the marker value is NOT substituted."""
         py = (built_dev_site / 'dist' / 'marker' / 'marker.py').read_text()
         assert '<%= vars.foobar %>' in py
         assert MARKER not in py
 
     def test_java_download_is_literal_source(self, built_dev_site):
-        """When features.code is false, the raw <%= %> syntax is preserved
+        """When no source-code extensions are mapped, the raw <%= %> syntax is preserved
         and the marker value is NOT substituted."""
         java = (built_dev_site / 'dist' / 'marker' / 'Marker.java').read_text()
         assert '<%= vars.foobar %>' in java

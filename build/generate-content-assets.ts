@@ -1,8 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import type { BundledLanguage } from 'shiki';
 import { makeLogger } from './log';
-import { isFeatureEnabled } from './features';
+import {
+  getExtensionToShikiLanguage,
+  getRuntimeBundledShikiLanguages,
+} from './site-variables';
 import { validateConfigLinks } from './validate-config-links';
 import { json } from './templates';
 import { initHighlighter } from './utils/shiki-highlighter';
@@ -23,7 +25,6 @@ import type {
   Asset,
   ContentRenderOptions,
   ContentRenderResult,
-  PlainTextLanguage,
   TraceToolAvailability,
   WatchState,
 } from './types';
@@ -32,7 +33,6 @@ const log = makeLogger(import.meta.url);
 
 export class ContentRenderer {
   private siteVariables: SiteVariables;
-  private loggedCodeDisabled: boolean;
   private sourceFileCache: Map<string, Asset[]>;
   private lastBuildFiles: Set<string>;
   private javacAvailable: boolean | undefined;
@@ -49,7 +49,6 @@ export class ContentRenderer {
 
   constructor(siteVariables: SiteVariables) {
     this.siteVariables = siteVariables;
-    this.loggedCodeDisabled = false;
     this.sourceFileCache = new Map();
     this.lastBuildFiles = new Set();
   }
@@ -59,15 +58,7 @@ export class ContentRenderer {
   }
 
   async initHighlighter(): Promise<void> {
-    const configuredLangs: Array<BundledLanguage | PlainTextLanguage> =
-      Object.values(this.siteVariables.codeLanguages || {});
-    const langs = [
-      ...new Set<BundledLanguage | PlainTextLanguage>([
-        'text',
-        ...configuredLangs,
-      ]),
-    ];
-    await initHighlighter(langs);
+    await initHighlighter(getRuntimeBundledShikiLanguages(this.siteVariables));
   }
 
   getDirtySourceFiles(
@@ -102,7 +93,7 @@ export class ContentRenderer {
 
   isCopiedAssetSource(filePath: string): boolean {
     const ext = path.extname(filePath).toLowerCase();
-    const codeExtensions = this.siteVariables.codeLanguages || {};
+    const codeExtensions = getExtensionToShikiLanguage(this.siteVariables);
     return Object.prototype.hasOwnProperty.call(codeExtensions, ext.slice(1));
   }
 
@@ -150,22 +141,19 @@ export class ContentRenderer {
       return assets;
     }
 
-    const codeExtensions = this.siteVariables.codeLanguages || {};
+    const codeExtensions = getExtensionToShikiLanguage(this.siteVariables);
     if (ext.slice(1) in codeExtensions) {
-      if (isFeatureEnabled(this.siteVariables, 'code')) {
-        assets.push(
-          ...renderCodePageAsset({
-            filePath,
-            contentDir,
-            distDir,
-            siteVariables: this.siteVariables,
-            assetFiles,
-          }),
-        );
-      } else if (!this.loggedCodeDisabled) {
-        log.info`Not generating source code pages due to site.features.code = false`;
-        this.loggedCodeDisabled = true;
-      }
+      assets.push(
+        ...renderCodePageAsset({
+          filePath,
+          contentDir,
+          distDir,
+          siteVariables: this.siteVariables,
+          validInternalTargets,
+          assetFiles,
+          literateJavaOutputPaths,
+        }),
+      );
     }
 
     return assets;
@@ -254,7 +242,7 @@ export class ContentRenderer {
     const contentDir: string = getContentDir();
     const buildContentFiles: string[] = getBuildContentFiles(
       contentDir,
-      Object.keys(this.siteVariables.codeLanguages || {}),
+      Object.keys(getExtensionToShikiLanguage(this.siteVariables)),
     );
     const buildFileSet = new Set<string>(buildContentFiles);
     const dirtySourceFiles = this.getDirtySourceFiles(
@@ -268,8 +256,7 @@ export class ContentRenderer {
     const validInternalTargets = getValidInternalTargets(
       contentDir,
       buildContentFiles,
-      Object.keys(this.siteVariables.codeLanguages || {}),
-      isFeatureEnabled(this.siteVariables, 'code'),
+      Object.keys(getExtensionToShikiLanguage(this.siteVariables)),
     );
     const literateJavaOutputPaths = new Set<string>();
     for (const filePath of buildContentFiles) {

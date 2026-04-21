@@ -210,12 +210,13 @@ Example site configuration JSON file:
   "symbol": "CS 0",
   "themeColor": "hsl(351 70% 40%)",
   "tintAmount": 0,
-  "features": { "search": true, "code": true, "favicon": true },
+  "features": { "search": true, "favicon": true },
   "base": "https://example.edu",
   "basePath": "/cs0",
   "internalDomains": ["example.edu"],
   "defaultTimeZone": "America/New_York",
-  "codeLanguages": { "java": "java", "py": "python" },
+  "extensionToShikiLanguage": { "java": "java", "py": "python" },
+  "shikiLanguages": ["java", "python"],
   "vars": {
     "staffEmail": "staff@example.edu"
   }
@@ -232,13 +233,13 @@ Example site configuration JSON file:
 | `tintAmount` | *Optional*, percentage (0-100) of tint to apply (default `100`) |
 | `faviconSymbol` | *Optional*, the text to use instead of `symbol` in the favicon |
 | `features.search` | Enable search UI and Pagefind index generation |
-| `features.code` | Enable generated source-code HTML pages for configured code extensions |
 | `features.favicon` | Enable automatically generated favicons |
 | `features.footer` | Show the Tada footer at the bottom of every page |
 | `base` | Full base URL of the deployed site, used for metadata and URL generation |
 | `basePath` | URL prefix for deployment under a subpath (e.g., `"/cs101"`), use `"/"` at root |
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |
-| `codeLanguages` | Map file extension to Shiki language (e.g., `"java": "java"`) |
+| `extensionToShikiLanguage` | *Optional*, map from source-file extension to the Shiki language used for generated code pages and copied-source processing |
+| `shikiLanguages` | *Optional*, list of Shiki languages permitted in code blocks |
 | `faviconColor` | *Optional*, background color for favicon (defaults to `themeColor`) |
 | `faviconFontWeight` | *Optional*, font weight used for favicon text (default `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content as `vars.*` (e.g., `<%= vars.staffEmail %>`) |

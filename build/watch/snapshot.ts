@@ -8,7 +8,7 @@ import {
   shouldSkipContentFile,
   toPosix,
 } from '../util';
-import { isFeatureEnabled } from '../features';
+import { getExtensionToShikiLanguage } from '../site-variables';
 import {
   extensionIsMarkdown,
   getProcessedExtensions,
@@ -106,9 +106,9 @@ function buildReverseMap(
 
 function getProcessedExts(siteVariables: SiteVariables): Set<string> {
   return new Set(
-    getProcessedExtensions(Object.keys(siteVariables.codeLanguages || {})).map(
-      ext => ext.toLowerCase(),
-    ),
+    getProcessedExtensions(
+      Object.keys(getExtensionToShikiLanguage(siteVariables)),
+    ).map(ext => ext.toLowerCase()),
   );
 }
 
@@ -144,13 +144,11 @@ function getContentOutputPathsForSource({
   filePath,
   processedExts,
   buildContent,
-  codeEnabled,
 }: {
   contentDir: string;
   filePath: string;
   processedExts: Set<string>;
   buildContent: boolean;
-  codeEnabled: boolean;
 }): Set<string> {
   const relPath = toPosix(path.relative(contentDir, filePath));
   const parsed = path.parse(relPath);
@@ -181,9 +179,7 @@ function getContentOutputPathsForSource({
   }
 
   outputs.add(relPath);
-  if (codeEnabled) {
-    outputs.add(`${relPath}.html`);
-  }
+  outputs.add(`${relPath}.html`);
   return outputs;
 }
 
@@ -193,14 +189,12 @@ function getTargetPathsForSource({
   filePath,
   processedExts,
   buildContent,
-  codeEnabled,
 }: {
   kind: 'content' | 'public';
   rootDir: string;
   filePath: string;
   processedExts: Set<string>;
   buildContent: boolean;
-  codeEnabled: boolean;
 }): Set<string> {
   const targets = new Set<string>();
   const relPath = toPosix(path.relative(rootDir, filePath));
@@ -238,9 +232,7 @@ function getTargetPathsForSource({
     return targets;
   }
 
-  if (codeEnabled) {
-    addGeneratedRouteAliases(targets, `/${relPath}.html`);
-  }
+  addGeneratedRouteAliases(targets, `/${relPath}.html`);
   targets.add(normalizeOutputPath(`/${relPath}`));
   return targets;
 }
@@ -258,7 +250,6 @@ export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
   const publicDir = getPublicDir();
   const distDir = getDistDir();
   const processedExts = getProcessedExts(siteVariables);
-  const codeEnabled = isFeatureEnabled(siteVariables, 'code');
   const contentFiles = new Set(walkFiles(contentDir).sort());
   const publicFiles = new Set(walkFiles(publicDir).sort());
   const buildContentFiles = new Set<string>();
@@ -286,7 +277,6 @@ export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
       filePath,
       processedExts,
       buildContent,
-      codeEnabled,
     });
     sourceOutputPaths.set(filePath, outputs);
     for (const outputPath of outputs) {
@@ -299,7 +289,6 @@ export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
       filePath,
       processedExts,
       buildContent,
-      codeEnabled,
     });
     sourceTargetPaths.set(filePath, targets);
     for (const target of targets) {
@@ -317,7 +306,6 @@ export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
       filePath,
       processedExts,
       buildContent: false,
-      codeEnabled,
     });
     sourceTargetPaths.set(filePath, targets);
     for (const target of targets) {
@@ -349,7 +337,6 @@ export function updateProjectScan(
   const contentDir = getContentDir();
   const publicDir = getPublicDir();
   const distDir = getDistDir();
-  const codeEnabled = isFeatureEnabled(snapshot.siteVariables, 'code');
   const contentFiles = new Set(snapshot.contentFiles);
   const buildContentFiles = new Set(snapshot.buildContentFiles);
   const publicFiles = new Set(snapshot.publicFiles);
@@ -412,7 +399,6 @@ export function updateProjectScan(
         filePath: sourcePath,
         processedExts: snapshot.processedExts,
         buildContent,
-        codeEnabled,
       });
       sourceOutputPaths.set(sourcePath, outputs);
       for (const outputPath of outputs) {
@@ -427,7 +413,6 @@ export function updateProjectScan(
           filePath: sourcePath,
           processedExts: snapshot.processedExts,
           buildContent,
-          codeEnabled,
         }),
       );
       continue;
@@ -445,7 +430,6 @@ export function updateProjectScan(
         filePath: sourcePath,
         processedExts: snapshot.processedExts,
         buildContent: false,
-        codeEnabled,
       }),
     );
   }
