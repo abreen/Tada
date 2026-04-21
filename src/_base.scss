@@ -19,7 +19,7 @@ h4,
 h5,
 h6 {
   font-family: var(--heading-font);
-  line-height: 1.3;
+  line-height: var(--heading-line-height);
   -webkit-break-after: avoid;
   break-after: avoid;
 }
