@@ -12,7 +12,7 @@ import { initHighlighter } from './utils/shiki-highlighter';
 import type { SiteVariables } from './types';
 
 beforeAll(async () => {
-  await initHighlighter(['ts', 'text', 'plaintext']);
+  await initHighlighter(['ts', 'text']);
 });
 
 describe('apply-base-path-plugin', () => {

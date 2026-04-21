@@ -4,8 +4,8 @@ import type {
   BundledTheme,
   ThemeRegistrationAny,
 } from 'shiki';
-import { bundledLanguages } from 'shiki';
 import { makeLogger } from '../log';
+import type { PlainTextLanguage } from '../types';
 
 const log = makeLogger(import.meta.url);
 const COMMENT_COLOR = 'var(--fg2-color)';
@@ -21,10 +21,6 @@ const COMMENT_SCOPES = [
 
 let highlighter: HighlighterGeneric<BundledLanguage, BundledTheme> | null =
   null;
-
-function isBundledLanguage(lang: string): lang is BundledLanguage {
-  return Object.hasOwn(bundledLanguages, lang);
-}
 
 async function createThemeWithCommentOverride(
   themeName: 'github-light' | 'github-dark',
@@ -42,9 +38,9 @@ async function createThemeWithCommentOverride(
   };
 }
 
-export async function initHighlighter(langs: string[]): Promise<void> {
-  const bundledLangs = langs.filter(isBundledLanguage);
-
+export async function initHighlighter(
+  langs: Array<BundledLanguage | PlainTextLanguage>,
+): Promise<void> {
   if (!highlighter) {
     log.debug`Initializing syntax highlighter`;
     const { createHighlighter } = await import('shiki');
@@ -52,11 +48,11 @@ export async function initHighlighter(langs: string[]): Promise<void> {
       createThemeWithCommentOverride('github-light', 'tada-github-light'),
       createThemeWithCommentOverride('github-dark', 'tada-github-dark'),
     ]);
-    highlighter = await createHighlighter({ themes, langs: bundledLangs });
+    highlighter = await createHighlighter({ themes, langs });
     return;
   }
 
-  const missingLangs = bundledLangs.filter(
+  const missingLangs = langs.filter(
     lang => !highlighter!.getLoadedLanguages().includes(lang),
   );
   if (missingLangs.length > 0) {

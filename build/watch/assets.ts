@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import type { BundledLanguage } from 'shiki';
 import { bundle } from '../bundle';
 import { copyFonts } from '../generate-fonts';
 import { copyKatexAssets } from '../generate-katex-assets';
@@ -7,6 +8,7 @@ import { generateFavicons } from '../generate-favicon';
 import { generateWebAppManifest } from '../generate-web-app-manifest';
 import { getPackageDir, toPosix } from '../util';
 import { initHighlighter } from '../utils/shiki-highlighter';
+import type { PlainTextLanguage } from '../types';
 import type { SiteVariables } from '../types';
 
 const RELOAD_CLIENT_PATH = path.resolve(
@@ -27,11 +29,12 @@ export function removeDirIfExists(dir: string): void {
 export async function ensureHighlighter(
   siteVariables: SiteVariables,
 ): Promise<void> {
+  const configuredLangs: Array<BundledLanguage | PlainTextLanguage> =
+    Object.values(siteVariables.codeLanguages || {});
   const langs = [
-    ...new Set([
-      'plaintext',
+    ...new Set<BundledLanguage | PlainTextLanguage>([
       'text',
-      ...Object.values(siteVariables.codeLanguages || {}),
+      ...configuredLangs,
     ]),
   ];
   await initHighlighter(langs);

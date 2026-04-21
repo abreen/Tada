@@ -1,8 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import { bundledLanguages } from 'shiki';
+import type { BundledLanguage } from 'shiki';
 import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { getProjectDir } from './utils/paths';
-import type { SiteVariables } from './types';
+import type { PlainTextLanguage, SiteVariables } from './types';
 import siteSchema from '../schema/site.schema.json' with { type: 'json' };
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 
@@ -21,12 +23,52 @@ function getJson(filePath: string): Record<string, unknown> {
   );
 }
 
+const PLAIN_TEXT_LANGUAGES = ['plain', 'text', 'txt'] as const;
+
+function isPlainTextLanguage(lang: string): lang is PlainTextLanguage {
+  return PLAIN_TEXT_LANGUAGES.some(value => value === lang);
+}
+
+function isSupportedShikiLanguage(
+  lang: string,
+): lang is BundledLanguage | PlainTextLanguage {
+  return Object.hasOwn(bundledLanguages, lang) || isPlainTextLanguage(lang);
+}
+
+export function validateCodeLanguages(
+  value: unknown,
+  fileName: string,
+): Record<string, BundledLanguage | PlainTextLanguage> | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const validated: Record<string, BundledLanguage | PlainTextLanguage> = {};
+  for (const [ext, lang] of Object.entries(value)) {
+    if (typeof lang !== 'string') {
+      continue;
+    }
+    if (!isSupportedShikiLanguage(lang)) {
+      throw new Error(
+        `${fileName}: codeLanguages.${ext} "${lang}" is not a supported Shiki language`,
+      );
+    }
+    validated[ext] = lang;
+  }
+  return validated;
+}
+
 function getSiteVariables(env: string): SiteVariables {
   const fileName = `site.${env}.json`;
   const fromFile = getJson(fileName);
+  const codeLanguages = validateCodeLanguages(fromFile.codeLanguages, fileName);
   const variables = {
     ...DEFAULT,
     ...fromFile,
+    ...(codeLanguages ? { codeLanguages } : {}),
     features: {
       ...DEFAULT.features,
       ...((fromFile.features as Record<string, unknown>) || {}),

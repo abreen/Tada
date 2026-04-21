@@ -1,3 +1,7 @@
+import type { BundledLanguage } from 'shiki';
+
+export type PlainTextLanguage = 'text' | 'txt' | 'plain';
+
 /** Site configuration loaded from site.dev.json or site.prod.json */
 export interface SiteVariables {
   base: string;
@@ -12,7 +16,7 @@ export interface SiteVariables {
   internalDomains?: string[];
   defaultTimeZone: string;
   features: FeatureConfig;
-  codeLanguages?: Record<string, string>;
+  codeLanguages?: Record<string, BundledLanguage | PlainTextLanguage>;
   tintHue?: number;
   tintAmount?: number;
   vars?: Record<string, unknown>;

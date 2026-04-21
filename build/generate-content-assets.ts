@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import type { BundledLanguage } from 'shiki';
 import { makeLogger } from './log';
 import { isFeatureEnabled } from './features';
 import { validateConfigLinks } from './validate-config-links';
@@ -22,6 +23,7 @@ import type {
   Asset,
   ContentRenderOptions,
   ContentRenderResult,
+  PlainTextLanguage,
   TraceToolAvailability,
   WatchState,
 } from './types';
@@ -57,11 +59,12 @@ export class ContentRenderer {
   }
 
   async initHighlighter(): Promise<void> {
+    const configuredLangs: Array<BundledLanguage | PlainTextLanguage> =
+      Object.values(this.siteVariables.codeLanguages || {});
     const langs = [
-      ...new Set([
-        'plaintext',
+      ...new Set<BundledLanguage | PlainTextLanguage>([
         'text',
-        ...Object.values(this.siteVariables.codeLanguages || {}),
+        ...configuredLangs,
       ]),
     ];
     await initHighlighter(langs);

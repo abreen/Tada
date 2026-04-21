@@ -8,7 +8,7 @@ import {
 import type { SiteVariables } from './types';
 
 beforeAll(async () => {
-  await initHighlighter(['java', 'text', 'plaintext']);
+  await initHighlighter(['java', 'text']);
 });
 
 describe('extractJavaMethodToc', () => {
@@ -212,7 +212,7 @@ describe('renderCodeWithComments', () => {
 
   test('does not substitute <%= %> by itself (templating happens in renderCodePageAsset)', () => {
     const source = '# Supplied as part of <%= vars.fullCourseName %>\n';
-    const html = renderCodeWithComments(source, 'plaintext', {
+    const html = renderCodeWithComments(source, 'text', {
       base: '',
       basePath: '/',
       internalDomains: [],
