@@ -3,7 +3,7 @@ import path from 'path';
 import { parse as parseJava } from 'java-parser';
 import { JSDOM } from 'jsdom';
 import { makeLogger } from '../log';
-import { getHighlighter } from './shiki-highlighter';
+import { highlightCode } from './shiki-highlighter';
 import externalLinksPlugin from '../external-links-plugin';
 import applyBasePathPlugin from '../apply-base-path-plugin';
 import { createApplyBasePath } from './paths';
@@ -473,12 +473,7 @@ export function renderCodeSegment(
   let lineHtml: string[] | undefined;
 
   try {
-    const highlighter = getHighlighter();
-    const html = highlighter.codeToHtml(source, {
-      lang,
-      themes: { light: 'github-light', dark: 'github-dark' },
-      defaultColor: false,
-    });
+    const html = highlightCode(source, lang);
     const fragment = JSDOM.fragment(html);
     const inner = (fragment.querySelector('code') as HTMLElement).innerHTML;
     lineHtml = splitHighlightedHtmlIntoLines(inner, lines.length);

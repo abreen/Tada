@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, test } from 'bun:test';
 import MarkdownIt from 'markdown-it';
 import deflist from 'markdown-it-deflist';
 import applyBasePathPlugin from './apply-base-path-plugin';
@@ -8,7 +8,12 @@ import headingSubtitlePlugin from './heading-subtitle-plugin';
 import columnsPlugin from './columns-plugin';
 import { createMarkdown, footnoteLabel } from './utils/markdown';
 import { stripHtmlComments, injectKatexStylesheet } from './utils/render';
+import { initHighlighter } from './utils/shiki-highlighter';
 import type { SiteVariables } from './types';
+
+beforeAll(async () => {
+  await initHighlighter(['ts', 'text', 'plaintext']);
+});
 
 describe('apply-base-path-plugin', () => {
   test('rewrites internal links, images, and raw html sources', () => {
@@ -418,6 +423,19 @@ describe('custom markdown containers', () => {
     expect(html).toContain('<div class="content">');
     expect(html).toContain('<p>Hello</p>');
     expect(html).toContain('</div></details>');
+  });
+
+  test('renders comment tokens with fg2 color in fenced code blocks', () => {
+    const md = createProjectMarkdown();
+
+    const html = md.render(
+      ['```ts', '// note', 'const x = 1', '```'].join('\n'),
+    );
+
+    expect(html).toContain(
+      'style="--shiki-light:var(--fg2-color);--shiki-dark:var(--fg2-color)"',
+    );
+    expect(html).toContain('// note');
   });
 
   test('renders collapsible details blocks with inline Markdown in summary', () => {

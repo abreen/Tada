@@ -168,6 +168,24 @@ describe('renderCodeWithComments', () => {
     expect(html).toContain('<code class="shiki language-java">');
   });
 
+  test('renders code comments with fg2 color', () => {
+    const html = renderCodeWithComments('// note\nint x = 1;\n', 'java', {
+      base: '',
+      basePath: '/',
+      internalDomains: [],
+      title: 'Test',
+      titlePostfix: ' - Test',
+      themeColor: 'steelblue',
+      defaultTimeZone: 'America/New_York',
+      features: { search: true, code: true, favicon: true, footer: true },
+    } as SiteVariables);
+
+    expect(html).toContain(
+      'style="--shiki-light:var(--fg2-color);--shiki-dark:var(--fg2-color)"',
+    );
+    expect(html).toContain('// note');
+  });
+
   test('data-prose-source contains rewritten links when pageDirPath is provided', () => {
     const source = '/// See [rect](./rect.py)\npublic class Foo {}\n';
     const html = renderCodeWithComments(

@@ -8,7 +8,7 @@ import markdownItFootnote from 'markdown-it-footnote';
 import markdownItDeflist from 'markdown-it-deflist';
 import markdownItContainer from 'markdown-it-container';
 import textToId, { deduplicateId } from '../text-to-id';
-import { getHighlighter } from './shiki-highlighter';
+import { getHighlighter, highlightCode } from './shiki-highlighter';
 import headingSubtitlePlugin from '../heading-subtitle-plugin';
 import deflistIdPlugin from '../deflist-id-plugin';
 import externalLinksPlugin from '../external-links-plugin';
@@ -356,11 +356,7 @@ export function createMarkdown(
     const useLang = highlighter.getLoadedLanguages().includes(lang)
       ? lang
       : 'text';
-    return highlighter.codeToHtml(code, {
-      lang: useLang,
-      themes: { light: 'github-light', dark: 'github-dark' },
-      defaultColor: false,
-    });
+    return highlightCode(code, useLang);
   };
 
   return markdown;

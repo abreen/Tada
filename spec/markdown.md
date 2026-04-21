@@ -6,8 +6,12 @@ several extensions.
 
 ## Syntax highlighting
 
-Fenced code blocks with a language identifier are syntax-highlighted at build
-time. Supported languages are determined by the site config.
+Code blocks with a language identifier are syntax-highlighted at build time.
+Supported languages are determined by the site config.
+
+Syntax highlighting is done by [Shiki](https://shiki.style/). Comments are
+rendered with the site's secondary foreground color instead of the theme's
+default comment color, for stylistic consistency with the rest of the site.
 
 
 ## Heading subtitles

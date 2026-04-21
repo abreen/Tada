@@ -356,6 +356,7 @@ including lists:
 +++
 Here's a paragraph in the second column. We'll use a code block on this side:
 ```java
+// Return true if the number is odd
 static boolean isOdd(int n) {
   return n % 2 == 1;
 }
