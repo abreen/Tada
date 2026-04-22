@@ -10,4 +10,5 @@ The navigation is validated against a JSON schema at build time. Internal links
 are also validated against the set of known pages; a broken link fails the build.
 Internal paths in `nav.json` must be root-relative (start with `/`) because they
 are rendered site-wide from templates, not relative to any individual page.
-Disabled links are exempt because they produce no `href` in the rendered HTML.
+Disabled links render as non-clickable UI without an `href`, so they do not
+participate in link validation or reachability.

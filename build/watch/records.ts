@@ -16,6 +16,7 @@ import type {
   TraceToolAvailability,
 } from '../types';
 import {
+  collectSourceHtmlAnalysis,
   collectSourceOutputs,
   type TadaProjectScan,
   type TadaSourceRecord,
@@ -157,6 +158,7 @@ export function renderContentRecord({
     deps.generatedOutputPaths,
     outputDir,
   );
+  const htmlAnalysisByOutputPath = collectSourceHtmlAnalysis(assets);
   if (persistOutputs) {
     writeAssets(outputDir, outputs);
   }
@@ -165,6 +167,7 @@ export function renderContentRecord({
     sourcePath: filePath,
     kind: 'content',
     outputs,
+    htmlAnalysisByOutputPath,
     partialDeps: deps.partials,
     traceDeps: deps.traceFiles,
     internalTargets: deps.internalTargets,
@@ -182,6 +185,7 @@ export function createPublicRecord(
     sourcePath: filePath,
     kind: 'public',
     outputs: new Map([[relPath, fs.readFileSync(filePath)]]),
+    htmlAnalysisByOutputPath: new Map(),
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),

@@ -110,14 +110,13 @@ export class TadaWatchRuntime {
               !this.pagefindRunner ||
               this.pagefindSiteVariablesKey !== siteVariablesKey
             ) {
-              this.pagefindRunner = new WatchPagefindRunner(
-                event.meta.siteVariables,
-              );
+              this.pagefindRunner = new WatchPagefindRunner();
               this.pagefindSiteVariablesKey = siteVariablesKey;
             }
             this.pagefindRunner.update(
               this.distDir,
               event.meta.htmlAssetsByPath,
+              event.meta.htmlAnalysisByPath,
             );
             setImmediate(() => this.pagefindRunner!.run());
           } else {

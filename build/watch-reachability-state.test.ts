@@ -2,70 +2,72 @@ import { describe, expect, test } from 'bun:test';
 import { collectReachableSiteAssets } from './reachability';
 import WatchReachabilityState from './watch-reachability-state';
 
-function createReader(htmlByPath: Map<string, string>) {
+function createReader(
+  analysisByPath: Map<string, { outgoingTargets: Set<string> }>,
+) {
   const calls: string[] = [];
 
   return {
     calls,
-    read(assetPath: string): string {
+    read(assetPath: string) {
       calls.push(assetPath);
-      if (!htmlByPath.has(assetPath)) {
-        throw new Error(`Missing HTML asset: ${assetPath}`);
+      if (!analysisByPath.has(assetPath)) {
+        throw new Error(`Missing HTML analysis: ${assetPath}`);
       }
-      return htmlByPath.get(assetPath)!;
+      return analysisByPath.get(assetPath)!;
     },
   };
 }
 
-function createState(htmlEntries: Record<string, string>) {
-  const htmlByPath = new Map(Object.entries(htmlEntries));
-  const reader = createReader(htmlByPath);
+function createState(
+  analysisEntries: Record<string, { outgoingTargets: Set<string> }>,
+) {
+  const analysisByPath = new Map(Object.entries(analysisEntries));
+  const reader = createReader(analysisByPath);
   const state = new WatchReachabilityState();
 
-  state.setKnownAssets(new Set(htmlByPath.keys()));
+  state.setKnownAssets(new Set(analysisByPath.keys()));
   state.rebuild(assetPath => reader.read(assetPath));
 
-  return { htmlByPath, reader, state };
+  return { analysisByPath, reader, state };
 }
 
 describe('WatchReachabilityState', () => {
   test('rebuild matches full traversal reachability', () => {
-    const htmlByPath = new Map([
-      ['index.html', '<a href="/about/">About</a>'],
-      ['about/index.html', '<a href="/deep/">Deep</a>'],
-      ['deep/index.html', '<p>Deep</p>'],
-      ['orphan/index.html', '<p>Orphan</p>'],
+    const htmlAnalysisByPath = new Map([
+      ['index.html', { outgoingTargets: new Set<string>(['/about/']) }],
+      ['about/index.html', { outgoingTargets: new Set<string>(['/deep/']) }],
+      ['deep/index.html', { outgoingTargets: new Set<string>() }],
+      ['orphan/index.html', { outgoingTargets: new Set<string>() }],
     ]);
-    const reader = createReader(htmlByPath);
+    const reader = createReader(htmlAnalysisByPath);
     const state = new WatchReachabilityState();
 
-    state.setKnownAssets(new Set(htmlByPath.keys()));
+    state.setKnownAssets(new Set(htmlAnalysisByPath.keys()));
     state.rebuild(assetPath => reader.read(assetPath));
 
     expect(state.getReachablePaths()).toEqual(
-      collectReachableSiteAssets({ htmlAssetsByPath: htmlByPath })
-        .reachableHtmlPaths,
+      collectReachableSiteAssets({ htmlAnalysisByPath }).reachableHtmlPaths,
     );
   });
 
   test('incremental update adds a newly linked subtree', () => {
-    const { htmlByPath, reader, state } = createState({
-      'index.html': '<a href="/about/">About</a>',
-      'about/index.html': '<p>About</p>',
-      'hidden/index.html': '<a href="/bonus/">Bonus</a>',
-      'bonus/index.html': '<p>Bonus</p>',
+    const { analysisByPath, reader, state } = createState({
+      'index.html': { outgoingTargets: new Set<string>(['/about/']) },
+      'about/index.html': { outgoingTargets: new Set<string>() },
+      'hidden/index.html': { outgoingTargets: new Set<string>(['/bonus/']) },
+      'bonus/index.html': { outgoingTargets: new Set<string>() },
     });
 
     reader.calls.length = 0;
-    htmlByPath.set(
-      'about/index.html',
-      '<a href="/hidden/">Reveal hidden subtree</a>',
-    );
-    state.setKnownAssets(new Set(htmlByPath.keys()));
+    analysisByPath.set('about/index.html', {
+      outgoingTargets: new Set<string>(['/hidden/']),
+    });
+    state.setKnownAssets(new Set(analysisByPath.keys()));
     state.applyIncremental({
       changedAssetPaths: new Set(['about/index.html']),
       removedAssetPaths: new Set(),
-      readHtmlForAsset: assetPath => reader.read(assetPath),
+      readAnalysisForAsset: assetPath => reader.read(assetPath),
     });
 
     expect(reader.calls).toEqual(['about/index.html']);
@@ -78,20 +80,22 @@ describe('WatchReachabilityState', () => {
   });
 
   test('incremental update removes a subtree when its only parent stops linking to it', () => {
-    const { htmlByPath, reader, state } = createState({
-      'index.html': '<a href="/about/">About</a>',
-      'about/index.html': '<a href="/hidden/">Hidden</a>',
-      'hidden/index.html': '<a href="/bonus/">Bonus</a>',
-      'bonus/index.html': '<p>Bonus</p>',
+    const { analysisByPath, reader, state } = createState({
+      'index.html': { outgoingTargets: new Set<string>(['/about/']) },
+      'about/index.html': { outgoingTargets: new Set<string>(['/hidden/']) },
+      'hidden/index.html': { outgoingTargets: new Set<string>(['/bonus/']) },
+      'bonus/index.html': { outgoingTargets: new Set<string>() },
     });
 
     reader.calls.length = 0;
-    htmlByPath.set('about/index.html', '<p>About</p>');
-    state.setKnownAssets(new Set(htmlByPath.keys()));
+    analysisByPath.set('about/index.html', {
+      outgoingTargets: new Set<string>(),
+    });
+    state.setKnownAssets(new Set(analysisByPath.keys()));
     state.applyIncremental({
       changedAssetPaths: new Set(['about/index.html']),
       removedAssetPaths: new Set(),
-      readHtmlForAsset: assetPath => reader.read(assetPath),
+      readAnalysisForAsset: assetPath => reader.read(assetPath),
     });
 
     expect(reader.calls).toEqual(['about/index.html']);
@@ -102,19 +106,19 @@ describe('WatchReachabilityState', () => {
   });
 
   test('removing one of two parents keeps the child reachable', () => {
-    const { htmlByPath, reader, state } = createState({
-      'index.html': '<a href="/about/">About</a><a href="/keep/">Keep</a>',
-      'about/index.html': '<a href="/child/">Child</a>',
-      'keep/index.html': '<a href="/child/">Child</a>',
-      'child/index.html': '<p>Child</p>',
+    const { analysisByPath, reader, state } = createState({
+      'index.html': { outgoingTargets: new Set<string>(['/about/', '/keep/']) },
+      'about/index.html': { outgoingTargets: new Set<string>(['/child/']) },
+      'keep/index.html': { outgoingTargets: new Set<string>(['/child/']) },
+      'child/index.html': { outgoingTargets: new Set<string>() },
     });
 
-    htmlByPath.delete('about/index.html');
-    state.setKnownAssets(new Set(htmlByPath.keys()));
+    analysisByPath.delete('about/index.html');
+    state.setKnownAssets(new Set(analysisByPath.keys()));
     state.applyIncremental({
       changedAssetPaths: new Set(),
       removedAssetPaths: new Set(['about/index.html']),
-      readHtmlForAsset: assetPath => reader.read(assetPath),
+      readAnalysisForAsset: assetPath => reader.read(assetPath),
     });
 
     expect(state.getReachablePaths()).toEqual([
@@ -125,11 +129,11 @@ describe('WatchReachabilityState', () => {
   });
 
   test('a supported cycle remains reachable and drops once external support is removed', () => {
-    const { htmlByPath, reader, state } = createState({
-      'index.html': '<a href="/support/">Support</a>',
-      'support/index.html': '<a href="/a/">A</a>',
-      'a/index.html': '<a href="/b/">B</a>',
-      'b/index.html': '<a href="/a/">A</a>',
+    const { analysisByPath, reader, state } = createState({
+      'index.html': { outgoingTargets: new Set<string>(['/support/']) },
+      'support/index.html': { outgoingTargets: new Set<string>(['/a/']) },
+      'a/index.html': { outgoingTargets: new Set<string>(['/b/']) },
+      'b/index.html': { outgoingTargets: new Set<string>(['/a/']) },
     });
 
     expect(state.getReachablePaths()).toEqual([
@@ -140,12 +144,14 @@ describe('WatchReachabilityState', () => {
     ]);
 
     reader.calls.length = 0;
-    htmlByPath.set('support/index.html', '<p>No links</p>');
-    state.setKnownAssets(new Set(htmlByPath.keys()));
+    analysisByPath.set('support/index.html', {
+      outgoingTargets: new Set<string>(),
+    });
+    state.setKnownAssets(new Set(analysisByPath.keys()));
     state.applyIncremental({
       changedAssetPaths: new Set(['support/index.html']),
       removedAssetPaths: new Set(),
-      readHtmlForAsset: assetPath => reader.read(assetPath),
+      readAnalysisForAsset: assetPath => reader.read(assetPath),
     });
 
     expect(reader.calls).toEqual(['support/index.html']);
@@ -156,20 +162,22 @@ describe('WatchReachabilityState', () => {
   });
 
   test('changing an unreachable page updates its graph without reparsing the whole site', () => {
-    const { htmlByPath, reader, state } = createState({
-      'index.html': '<a href="/about/">About</a>',
-      'about/index.html': '<p>About</p>',
-      'hidden/index.html': '<p>Hidden</p>',
-      'bonus/index.html': '<p>Bonus</p>',
+    const { analysisByPath, reader, state } = createState({
+      'index.html': { outgoingTargets: new Set<string>(['/about/']) },
+      'about/index.html': { outgoingTargets: new Set<string>() },
+      'hidden/index.html': { outgoingTargets: new Set<string>() },
+      'bonus/index.html': { outgoingTargets: new Set<string>() },
     });
 
     reader.calls.length = 0;
-    htmlByPath.set('hidden/index.html', '<a href="/bonus/">Bonus</a>');
-    state.setKnownAssets(new Set(htmlByPath.keys()));
+    analysisByPath.set('hidden/index.html', {
+      outgoingTargets: new Set<string>(['/bonus/']),
+    });
+    state.setKnownAssets(new Set(analysisByPath.keys()));
     state.applyIncremental({
       changedAssetPaths: new Set(['hidden/index.html']),
       removedAssetPaths: new Set(),
-      readHtmlForAsset: assetPath => reader.read(assetPath),
+      readAnalysisForAsset: assetPath => reader.read(assetPath),
     });
 
     expect(reader.calls).toEqual(['hidden/index.html']);
@@ -179,12 +187,14 @@ describe('WatchReachabilityState', () => {
     ]);
 
     reader.calls.length = 0;
-    htmlByPath.set('about/index.html', '<a href="/hidden/">Hidden</a>');
-    state.setKnownAssets(new Set(htmlByPath.keys()));
+    analysisByPath.set('about/index.html', {
+      outgoingTargets: new Set<string>(['/hidden/']),
+    });
+    state.setKnownAssets(new Set(analysisByPath.keys()));
     state.applyIncremental({
       changedAssetPaths: new Set(['about/index.html']),
       removedAssetPaths: new Set(),
-      readHtmlForAsset: assetPath => reader.read(assetPath),
+      readAnalysisForAsset: assetPath => reader.read(assetPath),
     });
 
     expect(reader.calls).toEqual(['about/index.html']);

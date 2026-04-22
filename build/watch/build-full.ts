@@ -3,6 +3,7 @@ import { getDevSiteVariables } from '../site-variables';
 import { getDistDir } from '../util';
 import type { CompilerBuildResult } from '../../watch/types';
 import {
+  collectHtmlAnalysisByPath,
   collectHtmlAssetsByPath,
   createSnapshot,
   scanProject,
@@ -109,6 +110,9 @@ export async function buildFull({
       },
       meta: {
         htmlAssetsByPath: collectHtmlAssetsByPath(nextSnapshot.contentRecords),
+        htmlAnalysisByPath: collectHtmlAnalysisByPath(
+          nextSnapshot.contentRecords,
+        ),
         siteVariables,
       },
     };

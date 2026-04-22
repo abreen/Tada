@@ -76,10 +76,8 @@ export async function runPipeline(
   copyContentAssets(contentDir, distDir, processedExtensions, publicRelPaths);
 
   // Phase 3: Content rendering
-  const { errors, htmlAssetsByPath } = contentRenderer.processContent({
-    distDir,
-    assetFiles,
-  });
+  const { errors, htmlAssetsByPath, htmlAnalysisByPath } =
+    contentRenderer.processContent({ distDir, assetFiles });
 
   for (const err of errors) {
     log.error`${err.message}`;
@@ -90,7 +88,11 @@ export async function runPipeline(
 
   // Phase 4: Post-processing
   if (isFeatureEnabled(siteVariables, 'search')) {
-    await runPagefind({ siteVariables, distPath: distDir, htmlAssetsByPath });
+    await runPagefind({
+      distPath: distDir,
+      htmlAssetsByPath,
+      htmlAnalysisByPath,
+    });
   }
 
   // Phase 5: Build manifest (production only)

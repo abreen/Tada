@@ -33,9 +33,14 @@ export type FeatureConfig = {
 };
 
 /** A rendered content asset ready to write to dist/ */
+export interface HtmlOutputAnalysis {
+  outgoingTargets: Set<string>;
+}
+
 export interface Asset {
   assetPath: string;
   content: string | Buffer;
+  htmlAnalysis?: HtmlOutputAnalysis;
 }
 
 /** Options for the content rendering pipeline */
@@ -59,6 +64,7 @@ export interface ContentRenderResult {
   removedHtmlAssetPaths: Set<string>;
   removedOutputRelPaths: Set<string>;
   htmlAssetsByPath: Map<string, string>;
+  htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>;
   buildContentFiles: string[];
 }
 

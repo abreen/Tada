@@ -44,11 +44,11 @@ markdown-it percent-encodes link hrefs during parsing (for example,
 `[x](</my notes.md>)` becomes `/my%20notes.md` in the token). Internal lookup
 sets like `validTargets` store raw filesystem-derived paths (for example,
 `/my notes.md`), so code that looks up an incoming href against one of these
-sets must first decode the href. Both `build/utils/final-html.ts` and
-`reachability.ts` follow this convention. Filenames may contain spaces,
-non-ASCII characters, or other URL-unsafe characters; they are written to
-`dist/` with the raw filename and referenced in HTML with a percent-encoded
-form.
+sets must first decode the href. `build/utils/final-html.ts` follows this
+convention when it validates rendered links and records normalized outgoing
+targets for reachability. Filenames may contain spaces, non-ASCII characters,
+or other URL-unsafe characters; they are written to `dist/` with the raw
+filename and referenced in HTML with a percent-encoded form.
 
 Markdown link destinations that contain spaces must be wrapped in angle
 brackets (`[x](</my notes.md>)`) or written with a percent-encoded space

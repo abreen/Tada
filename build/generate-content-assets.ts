@@ -25,11 +25,18 @@ import type {
   Asset,
   ContentRenderOptions,
   ContentRenderResult,
+  HtmlOutputAnalysis,
   TraceToolAvailability,
   WatchState,
 } from './types';
 
 const log = makeLogger(import.meta.url);
+
+function cloneHtmlOutputAnalysis(
+  analysis: HtmlOutputAnalysis,
+): HtmlOutputAnalysis {
+  return { outgoingTargets: new Set(analysis.outgoingTargets) };
+}
 
 export class ContentRenderer {
   private siteVariables: SiteVariables;
@@ -328,13 +335,20 @@ export class ContentRenderer {
     this.writeCachedAssets(distDir, buildContentFiles);
     this.lastBuildFiles = buildFileSet;
 
-    // Collect HTML asset content for Pagefind
+    // Collect HTML asset content and analysis for Pagefind
     const htmlAssetsByPath = new Map<string, string>();
+    const htmlAnalysisByPath = new Map<string, HtmlOutputAnalysis>();
     for (const filePath of buildContentFiles) {
       const assets = this.getCachedAssets(filePath);
       for (const asset of assets) {
         if (asset.assetPath.endsWith('.html')) {
           htmlAssetsByPath.set(asset.assetPath, asset.content as string);
+          if (asset.htmlAnalysis) {
+            htmlAnalysisByPath.set(
+              asset.assetPath,
+              cloneHtmlOutputAnalysis(asset.htmlAnalysis),
+            );
+          }
         }
       }
     }
@@ -345,6 +359,7 @@ export class ContentRenderer {
       removedHtmlAssetPaths,
       removedOutputRelPaths,
       htmlAssetsByPath,
+      htmlAnalysisByPath,
       buildContentFiles,
     };
   }

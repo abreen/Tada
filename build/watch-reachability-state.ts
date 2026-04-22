@@ -1,6 +1,7 @@
-import { collectDirectSiteAssetLinks } from './reachability';
+import { collectOutgoingHtmlAssetPaths } from './reachability';
+import type { HtmlOutputAnalysis } from './types';
 
-type ReadHtmlForAsset = (assetPath: string) => string;
+type ReadAnalysisForAsset = (assetPath: string) => HtmlOutputAnalysis;
 
 function cloneSet(values: Iterable<string> | undefined): Set<string> {
   return new Set(values || []);
@@ -9,24 +10,19 @@ function cloneSet(values: Iterable<string> | undefined): Set<string> {
 interface IncrementalOptions {
   changedAssetPaths?: Iterable<string>;
   removedAssetPaths?: Iterable<string>;
-  readHtmlForAsset: ReadHtmlForAsset;
+  readAnalysisForAsset: ReadAnalysisForAsset;
 }
 
 class WatchReachabilityState {
   private rootPath: string;
-  private basePath: string;
   private knownAssets: Set<string>;
   private outgoingBySource: Map<string, Set<string>>;
   private incomingByTarget: Map<string, Set<string>>;
   private reachable: Set<string>;
   private initialized: boolean;
 
-  constructor({
-    rootPath = 'index.html',
-    basePath = '/',
-  }: { rootPath?: string; basePath?: string } = {}) {
+  constructor({ rootPath = 'index.html' }: { rootPath?: string } = {}) {
     this.rootPath = rootPath;
-    this.basePath = basePath;
     this.knownAssets = new Set();
     this.outgoingBySource = new Map();
     this.incomingByTarget = new Map();
@@ -66,7 +62,7 @@ class WatchReachabilityState {
     this.rebuildIncomingByTarget();
   }
 
-  rebuild(readHtmlForAsset: ReadHtmlForAsset): void {
+  rebuild(readAnalysisForAsset: ReadAnalysisForAsset): void {
     if (!this.knownAssets.has(this.rootPath)) {
       throw new Error(`Pagefind reachability root not found: ${this.rootPath}`);
     }
@@ -79,7 +75,7 @@ class WatchReachabilityState {
     for (const sourcePath of knownAssetPaths) {
       const outgoingPaths = this.readOutgoingPaths(
         sourcePath,
-        readHtmlForAsset,
+        readAnalysisForAsset,
       );
       this.outgoingBySource.set(sourcePath, outgoingPaths);
       this.addIncomingEdges(sourcePath, outgoingPaths);
@@ -92,10 +88,10 @@ class WatchReachabilityState {
   applyIncremental({
     changedAssetPaths,
     removedAssetPaths,
-    readHtmlForAsset,
+    readAnalysisForAsset,
   }: IncrementalOptions): void {
     if (!this.initialized) {
-      this.rebuild(readHtmlForAsset);
+      this.rebuild(readAnalysisForAsset);
       return;
     }
 
@@ -136,7 +132,10 @@ class WatchReachabilityState {
 
     const changedAssetList = [...normalizedChanged].sort();
     for (const assetPath of changedAssetList) {
-      const outgoingPaths = this.readOutgoingPaths(assetPath, readHtmlForAsset);
+      const outgoingPaths = this.readOutgoingPaths(
+        assetPath,
+        readAnalysisForAsset,
+      );
       this.replaceOutgoing(assetPath, outgoingPaths);
     }
 
@@ -196,20 +195,14 @@ class WatchReachabilityState {
 
   private readOutgoingPaths(
     sourcePath: string,
-    readHtmlForAsset: ReadHtmlForAsset,
+    readAnalysisForAsset: ReadAnalysisForAsset,
   ): Set<string> {
     if (!this.knownAssets.has(sourcePath)) {
       return new Set();
     }
 
-    const html = readHtmlForAsset(sourcePath);
-    const { htmlAssetPaths } = collectDirectSiteAssetLinks({
-      html,
-      fromAssetPath: sourcePath,
-      knownAssets: this.knownAssets,
-      basePath: this.basePath,
-    });
-    return new Set(htmlAssetPaths);
+    const analysis = readAnalysisForAsset(sourcePath);
+    return new Set(collectOutgoingHtmlAssetPaths(analysis, this.knownAssets));
   }
 
   private addIncomingEdges(

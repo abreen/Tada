@@ -16,12 +16,13 @@ import {
   isPartial,
 } from '../utils/file-types';
 import type { ChangeBatch } from '../../watch/types';
-import type { Asset, SiteVariables } from '../types';
+import type { Asset, HtmlOutputAnalysis, SiteVariables } from '../types';
 
 export interface TadaSourceRecord {
   sourcePath: string;
   kind: 'content' | 'public';
   outputs: Map<string, string | Buffer>;
+  htmlAnalysisByOutputPath?: Map<string, HtmlOutputAnalysis>;
   partialDeps: Set<string>;
   traceDeps: Set<string>;
   internalTargets: Set<string>;
@@ -567,6 +568,28 @@ export function collectSourceOutputs(
   return outputs;
 }
 
+function cloneHtmlOutputAnalysis(
+  analysis: HtmlOutputAnalysis,
+): HtmlOutputAnalysis {
+  return { outgoingTargets: new Set(analysis.outgoingTargets) };
+}
+
+export function collectSourceHtmlAnalysis(
+  assets: Asset[],
+): Map<string, HtmlOutputAnalysis> {
+  const htmlAnalysisByOutputPath = new Map<string, HtmlOutputAnalysis>();
+  for (const asset of assets) {
+    if (!asset.assetPath.endsWith('.html') || !asset.htmlAnalysis) {
+      continue;
+    }
+    htmlAnalysisByOutputPath.set(
+      asset.assetPath,
+      cloneHtmlOutputAnalysis(asset.htmlAnalysis),
+    );
+  }
+  return htmlAnalysisByOutputPath;
+}
+
 export function collectHtmlAssetsByPath(
   contentRecords: Map<string, TadaSourceRecord>,
 ): Map<string, string> {
@@ -579,6 +602,19 @@ export function collectHtmlAssetsByPath(
     }
   }
   return htmlAssetsByPath;
+}
+
+export function collectHtmlAnalysisByPath(
+  contentRecords: Map<string, TadaSourceRecord>,
+): Map<string, HtmlOutputAnalysis> {
+  const htmlAnalysisByPath = new Map<string, HtmlOutputAnalysis>();
+  for (const record of contentRecords.values()) {
+    for (const [outputPath, analysis] of record.htmlAnalysisByOutputPath ||
+      new Map<string, HtmlOutputAnalysis>()) {
+      htmlAnalysisByPath.set(outputPath, cloneHtmlOutputAnalysis(analysis));
+    }
+  }
+  return htmlAnalysisByPath;
 }
 
 export function normalizeInternalTarget(target: string): string {

@@ -7,7 +7,7 @@ import {
   normalizeOutputPath,
 } from './util';
 import { assertMutoolAvailable, extractPdfPages } from './pdf-text';
-import type { SiteVariables } from './types';
+import type { HtmlOutputAnalysis } from './types';
 
 const log = makeLogger(import.meta.url);
 const PAGEFIND_VERBOSE = process.env.TADA_LOG_LEVEL === 'debug';
@@ -89,20 +89,26 @@ interface IndexTargets {
 }
 
 function collectIndexTargets(
-  htmlAssetsByPath: Map<string, string>,
-  siteVariables: SiteVariables,
+  htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>,
   pdfSourceByOutputPath: Map<string, string>,
 ): IndexTargets {
-  if (htmlAssetsByPath.size === 0) {
+  if (htmlAnalysisByPath.size === 0) {
     return { reachableHtmlPaths: [], reachablePdfPaths: [] };
   }
 
-  return collectReachableSiteAssets({
-    htmlAssetsByPath,
-    knownPdfPaths: new Set(pdfSourceByOutputPath.keys()),
-    rootPath: 'index.html',
-    basePath: siteVariables.basePath || '/',
-  });
+  const { reachableHtmlPaths, reachableAssetTargets } =
+    collectReachableSiteAssets({
+      htmlAnalysisByPath,
+      knownAssetTargets: new Set(pdfSourceByOutputPath.keys()),
+      rootPath: 'index.html',
+    });
+
+  return {
+    reachableHtmlPaths,
+    reachablePdfPaths: reachableAssetTargets.filter(target =>
+      pdfSourceByOutputPath.has(target),
+    ),
+  };
 }
 
 interface BuildIndexOptions {
@@ -207,23 +213,22 @@ async function buildIndex({
 }
 
 interface RunPagefindOptions {
-  siteVariables: SiteVariables;
   distPath: string;
   htmlAssetsByPath: Map<string, string>;
+  htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>;
 }
 
 export async function runPagefind({
-  siteVariables,
   distPath,
   htmlAssetsByPath,
+  htmlAnalysisByPath,
 }: RunPagefindOptions): Promise<void> {
   const pdfSourceByOutputPath = getPdfSourceByOutputPath();
   const start = Date.now();
 
   log.debug`Finding reachable pages for search index`;
   const { reachableHtmlPaths, reachablePdfPaths } = collectIndexTargets(
-    htmlAssetsByPath,
-    siteVariables,
+    htmlAnalysisByPath,
     pdfSourceByOutputPath,
   );
 
@@ -250,23 +255,28 @@ export async function runPagefind({
 }
 
 export class WatchPagefindRunner {
-  private siteVariables: SiteVariables;
   private watchRunInProgress: boolean;
   private watchRunQueued: boolean;
   private distPath: string | null;
   private htmlCacheByAssetPath: Map<string, string>;
+  private htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>;
 
-  constructor(siteVariables: SiteVariables) {
-    this.siteVariables = siteVariables;
+  constructor() {
     this.watchRunInProgress = false;
     this.watchRunQueued = false;
     this.distPath = null;
     this.htmlCacheByAssetPath = new Map();
+    this.htmlAnalysisByPath = new Map();
   }
 
-  update(distPath: string, htmlAssetsByPath: Map<string, string>): void {
+  update(
+    distPath: string,
+    htmlAssetsByPath: Map<string, string>,
+    htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>,
+  ): void {
     this.distPath = distPath;
     this.htmlCacheByAssetPath = htmlAssetsByPath;
+    this.htmlAnalysisByPath = htmlAnalysisByPath;
   }
 
   run(): void {
@@ -280,6 +290,7 @@ export class WatchPagefindRunner {
     this.watchRunQueued = false;
     const distPath = this.distPath!;
     const htmlAssetsByPath = new Map(this.htmlCacheByAssetPath);
+    const htmlAnalysisByPath = new Map(this.htmlAnalysisByPath);
     const pdfSourceByOutputPath = getPdfSourceByOutputPath();
     const start = Date.now();
 
@@ -289,8 +300,7 @@ export class WatchPagefindRunner {
     let reachablePdfPaths: string[];
     try {
       ({ reachableHtmlPaths, reachablePdfPaths } = collectIndexTargets(
-        htmlAssetsByPath,
-        this.siteVariables,
+        htmlAnalysisByPath,
         pdfSourceByOutputPath,
       ));
     } catch (err) {

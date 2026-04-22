@@ -1,80 +1,69 @@
 import { describe, expect, test } from 'bun:test';
 import {
-  collectDirectSiteAssetLinks,
   collectReachableSiteAssets,
+  collectReachableHtmlAssets,
 } from './reachability';
 
 describe('reachability', () => {
-  test('collectDirectSiteAssetLinks resolves relative links and ignores excluded links', () => {
-    const result = collectDirectSiteAssetLinks({
-      html: `
-        <a href="../guide.html?x=1#top">Guide</a>
-        <a class="disabled" href="/ignore/">Ignore</a>
-        <a href="https://example.com/">External</a>
-        <a href="#section">Anchor</a>
-        <a href="mailto:test@example.com">Mail</a>
-        <a href="/docs/guide.pdf#page=2">PDF</a>
-      `,
-      fromAssetPath: 'section/index.html',
-      knownAssets: new Set(['guide.html', 'ignore/index.html']),
-      knownPdfPaths: new Set(['/docs/guide.pdf']),
-      basePath: '/',
-    });
-
-    expect(result).toEqual({
-      htmlAssetPaths: ['guide.html'],
-      pdfPaths: ['/docs/guide.pdf'],
-    });
-  });
-
-  test('collectDirectSiteAssetLinks honors basePath and meta refresh', () => {
-    const result = collectDirectSiteAssetLinks({
-      html: `
-        <a href="/course/faq/">FAQ</a>
-        <meta http-equiv="refresh" content="0; url='/course/refresh/'" />
-      `,
-      fromAssetPath: 'index.html',
-      knownAssets: new Set(['faq/index.html', 'refresh/index.html']),
-      basePath: '/course',
-    });
-
-    expect(result).toEqual({
-      htmlAssetPaths: ['faq/index.html', 'refresh/index.html'],
-      pdfPaths: [],
-    });
-  });
-
-  test('collectReachableSiteAssets reuses direct link parsing for html and pdf reachability', () => {
-    const htmlAssetsByPath = new Map([
+  test('collectReachableSiteAssets follows HTML outputs and collects linked internal assets generically', () => {
+    const htmlAnalysisByPath = new Map([
       [
         'index.html',
-        `
-          <a href="/about/">About</a>
-          <a href="/docs/guide.pdf">Guide PDF</a>
-        `,
+        {
+          outgoingTargets: new Set<string>([
+            '/about/',
+            '/docs/guide.pdf',
+            '/img/logo.png',
+          ]),
+        },
       ],
       [
         'about/index.html',
-        `<meta http-equiv="refresh" content="0; url='/redirect/'" />`,
+        { outgoingTargets: new Set<string>(['/deep.html']) },
       ],
-      ['redirect/index.html', '<p>Done</p>'],
-      ['orphan/index.html', '<p>Orphan</p>'],
+      ['deep.html', { outgoingTargets: new Set<string>() }],
+      [
+        'orphan/index.html',
+        { outgoingTargets: new Set<string>(['/hidden.pdf']) },
+      ],
     ]);
 
     const result = collectReachableSiteAssets({
-      htmlAssetsByPath,
-      knownPdfPaths: new Set(['/docs/guide.pdf']),
+      htmlAnalysisByPath,
+      knownAssetTargets: new Set([
+        '/docs/guide.pdf',
+        '/img/logo.png',
+        '/hidden.pdf',
+      ]),
       rootPath: 'index.html',
-      basePath: '/',
     });
 
     expect(result).toEqual({
-      reachableHtmlPaths: [
-        'about/index.html',
-        'index.html',
-        'redirect/index.html',
-      ],
-      reachablePdfPaths: ['/docs/guide.pdf'],
+      reachableHtmlPaths: ['about/index.html', 'deep.html', 'index.html'],
+      reachableAssetTargets: ['/docs/guide.pdf', '/img/logo.png'],
     });
+  });
+
+  test('collectReachableHtmlAssets returns only reachable html outputs', () => {
+    const htmlAnalysisByPath = new Map([
+      ['index.html', { outgoingTargets: new Set<string>(['/about.html']) }],
+      ['about.html', { outgoingTargets: new Set<string>() }],
+      ['orphan.html', { outgoingTargets: new Set<string>() }],
+    ]);
+
+    expect(collectReachableHtmlAssets({ htmlAnalysisByPath })).toEqual([
+      'about.html',
+      'index.html',
+    ]);
+  });
+
+  test('throws when the reachability root is missing', () => {
+    expect(() =>
+      collectReachableSiteAssets({
+        htmlAnalysisByPath: new Map([
+          ['about.html', { outgoingTargets: new Set<string>() }],
+        ]),
+      }),
+    ).toThrow('Pagefind reachability root not found');
   });
 });

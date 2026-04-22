@@ -1,7 +1,6 @@
 import path from 'path';
 import { describe, expect, test } from 'bun:test';
 import { buildIndex, collectIndexTargets } from './pagefind';
-import type { SiteVariables } from './types';
 
 interface FakePagefindCalls {
   htmlFiles?: { sourcePath: string; content: string }[];
@@ -46,14 +45,23 @@ function createFakePagefind(calls: FakePagefindCalls) {
 }
 
 describe('PagefindPlugin', () => {
-  test('collectIndexTargets only includes linked PDFs from reachable HTML pages', () => {
-    const htmlAssetsByPath = new Map([
+  test('collectIndexTargets filters reachable generic asset targets down to PDFs', () => {
+    const htmlAnalysisByPath = new Map([
       [
         'index.html',
-        '<a href="/about/">About</a><a href="/docs/guide.pdf">Guide</a>',
+        {
+          outgoingTargets: new Set<string>([
+            '/about/',
+            '/docs/guide.pdf',
+            '/img/logo.png',
+          ]),
+        },
       ],
-      ['about/index.html', '<p>About</p>'],
-      ['orphan/index.html', '<p>Orphan</p>'],
+      ['about/index.html', { outgoingTargets: new Set<string>() }],
+      [
+        'orphan/index.html',
+        { outgoingTargets: new Set<string>(['/docs/orphan.pdf']) },
+      ],
     ]);
     const pdfSourceByOutputPath = new Map([
       ['/docs/guide.pdf', '/tmp/docs/guide.pdf'],
@@ -61,8 +69,7 @@ describe('PagefindPlugin', () => {
     ]);
 
     const result = collectIndexTargets(
-      htmlAssetsByPath,
-      { base: '', basePath: '/' } as SiteVariables,
+      htmlAnalysisByPath,
       pdfSourceByOutputPath,
     );
 

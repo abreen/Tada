@@ -3,7 +3,11 @@ import { JSDOM } from 'jsdom';
 import { getExtensionToShikiLanguage } from '../site-variables';
 import { createApplyBasePath, normalizeOutputPath } from './paths';
 import { isInternalLink } from './link';
-import type { RenderDependencyCollector, SiteVariables } from '../types';
+import type {
+  HtmlOutputAnalysis,
+  RenderDependencyCollector,
+  SiteVariables,
+} from '../types';
 
 interface FinalizeHtmlPageOptions {
   filePath: string;
@@ -13,6 +17,11 @@ interface FinalizeHtmlPageOptions {
   validInternalTargets: Set<string>;
   literateJavaOutputPaths?: Set<string>;
   dependencyCollector?: RenderDependencyCollector;
+}
+
+interface FinalizedHtmlPage {
+  html: string;
+  analysis: HtmlOutputAnalysis;
 }
 
 function splitHref(href: string): { pathname: string; suffix: string } {
@@ -128,13 +137,14 @@ export function finalizeHtmlPage({
   validInternalTargets,
   literateJavaOutputPaths,
   dependencyCollector,
-}: FinalizeHtmlPageOptions): string {
+}: FinalizeHtmlPageOptions): FinalizedHtmlPage {
   const dom = new JSDOM(html);
   const document = dom.window.document;
   const applyBasePath = createApplyBasePath(siteVariables);
   const codeExtensions = Object.keys(
     getExtensionToShikiLanguage(siteVariables),
   );
+  const analysis: HtmlOutputAnalysis = { outgoingTargets: new Set() };
 
   for (const element of document.querySelectorAll('[href]')) {
     const href = element.getAttribute('href');
@@ -142,8 +152,8 @@ export function finalizeHtmlPage({
       continue;
     }
 
-    const isContentAnchor =
-      element.tagName === 'A' && element.closest('main.body') !== null;
+    const isAnchor = element.tagName === 'A';
+    const isContentAnchor = isAnchor && element.closest('main.body') !== null;
 
     if (isContentAnchor) {
       const { finalHref, resolvedTarget } = resolveAnchorTarget({
@@ -163,6 +173,10 @@ export function finalizeHtmlPage({
       }
 
       if (resolvedTarget) {
+        if (isAnchor) {
+          analysis.outgoingTargets.add(resolvedTarget);
+        }
+
         const directoryIndexPath = getDirectoryIndexPath(resolvedTarget);
         if (
           directoryIndexPath !== resolvedTarget &&
@@ -183,6 +197,14 @@ export function finalizeHtmlPage({
       }
 
       continue;
+    }
+
+    if (isAnchor && isInternalLink(href)) {
+      const { pathname } = splitHref(href);
+      const resolvedTarget = resolvePathname(sourceUrlPath, pathname);
+      if (resolvedTarget) {
+        analysis.outgoingTargets.add(resolvedTarget);
+      }
     }
 
     const rewrittenHref = rewriteAbsoluteHrefWithBasePath(href, applyBasePath);
@@ -210,5 +232,8 @@ export function finalizeHtmlPage({
       }${doctype.systemId ? ` "${doctype.systemId}"` : ''}>`
     : '';
 
-  return `${doctypePrefix}${document.documentElement.outerHTML}`;
+  return {
+    html: `${doctypePrefix}${document.documentElement.outerHTML}`,
+    analysis,
+  };
 }

@@ -8,6 +8,7 @@ import type {
 } from './compiler-types';
 import type { TadaWatchPlan } from './planner';
 import {
+  collectHtmlAnalysisByPath,
   collectHtmlAssetsByPath,
   createSnapshot,
   type TadaSnapshot,
@@ -124,6 +125,9 @@ export async function buildIncremental({
       commit: { kind: 'apply-mutations', rootDir: getDistDir(), mutations },
       meta: {
         htmlAssetsByPath: collectHtmlAssetsByPath(nextSnapshot.contentRecords),
+        htmlAnalysisByPath: collectHtmlAnalysisByPath(
+          nextSnapshot.contentRecords,
+        ),
         siteVariables,
       },
     };

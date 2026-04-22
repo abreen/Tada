@@ -264,7 +264,7 @@ export function renderPlainTextPageAsset({
   if (templateHtml.includes('class="katex"')) {
     html = injectKatexStylesheet(html);
   }
-  html = finalizeHtmlPage({
+  const finalized = finalizeHtmlPage({
     filePath,
     html,
     siteVariables,
@@ -277,7 +277,8 @@ export function renderPlainTextPageAsset({
   return [
     {
       assetPath: toContentAssetPath(contentDir, path.join(dir, `${name}.html`)),
-      content: html,
+      content: finalized.html,
+      htmlAnalysis: finalized.analysis,
     },
   ];
 }
@@ -335,7 +336,7 @@ export function renderCodePageAsset({
     isWatchMode: isWatchMode(assetFiles),
   });
 
-  const html = finalizeHtmlPage({
+  const finalized = finalizeHtmlPage({
     filePath,
     html: injectAssetTags(
       render('code.html', templateParameters) as string,
@@ -355,7 +356,8 @@ export function renderCodePageAsset({
         contentDir,
         path.join(dir, `${name}${ext}.html`),
       ),
-      content: html,
+      content: finalized.html,
+      htmlAnalysis: finalized.analysis,
     },
   ];
 }
@@ -668,7 +670,7 @@ export function renderLiterateJavaPageAsset({
   if (templateHtml.includes('class="katex"')) {
     html = injectKatexStylesheet(html);
   }
-  html = finalizeHtmlPage({
+  const finalized = finalizeHtmlPage({
     filePath,
     html,
     siteVariables,
@@ -684,7 +686,8 @@ export function renderLiterateJavaPageAsset({
         contentDir,
         path.join(dir, `${className}.java.html`),
       ),
-      content: html,
+      content: finalized.html,
+      htmlAnalysis: finalized.analysis,
     },
     {
       assetPath: toContentAssetPath(contentDir, path.join(dir, javaFileName)),

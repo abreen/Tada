@@ -45,13 +45,13 @@ content is not decorated with this feature.
 
 Rendered internal links are checked against the set of known output paths at
 build time. This includes generated pages, assets in `content/`, and files in
-`public/`. Broken links cause the build to fail.
+`public/`. Broken links cause the build to fail. Only rendered `href`
+attributes participate in this validation.
 
 This validation covers:
 
 - Links in rendered page content from Markdown and `.html` sources
-- `internal` links in `nav.json` (but disabled links are skipped; these paths
-  must be root-relative)
+- `internal` links in `nav.json` (these paths must be root-relative)
 - `url` and `avatar` paths in `authors.json` (these paths must be
   root-relative)
 - `parent` breadcrumb links in front matter

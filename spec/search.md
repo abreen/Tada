@@ -6,7 +6,8 @@ each site build using Pagefind.
 ## Indexing
 
 Only pages reachable from the home page are indexed. Reachability is determined
-by a breadth-first traversal of internal links starting from `index.html`.
+by a breadth-first traversal of internal `<a href>` links in generated HTML
+pages, starting from `index.html`.
 If a page is not reachable from `index.html`, it is not included in search
 results.
 
