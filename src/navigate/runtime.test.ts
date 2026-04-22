@@ -15,6 +15,7 @@ import {
 } from './runtime';
 
 const globals = globalThis as Record<string, unknown>;
+const GENERATOR = 'Tada 1.11.1';
 
 let savedFetch: unknown;
 
@@ -35,14 +36,14 @@ function createDOM(
   const url = options?.url ?? 'http://localhost/page';
   const searchValue = options?.searchValue ?? '';
   const dom = new JSDOM(
-    `<html><head><title>Old</title><meta name="generator" content="Tada"></head><body class="default"><header><input class="search quick-search" value="${searchValue}"><details><summary>Menu</summary><nav></nav></details></header><div class="container">${bodyContent}</div></body></html>`,
+    `<html><head><title>Old</title><meta name="generator" content="${GENERATOR}"></head><body class="default"><header><input class="search quick-search" value="${searchValue}"><details><summary>Menu</summary><nav></nav></details></header><div class="container">${bodyContent}</div></body></html>`,
     { url, pretendToBeVisual: true },
   );
   return dom.window;
 }
 
 function createPageHTML() {
-  return `<html><head><title>New</title><meta name="generator" content="Tada"><meta name="description" content="updated"></head><body class="post"><div class="container"><p>Updated</p></div></body></html>`;
+  return `<html><head><title>New</title><meta name="generator" content="${GENERATOR}"><meta name="description" content="updated"></head><body class="post"><div class="container"><p>Updated</p></div></body></html>`;
 }
 
 async function flush() {

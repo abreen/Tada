@@ -40,6 +40,10 @@ URL hash once per-page components have mounted.
 If the fetch fails or returns a non-OK response, the navigator gives up
 and does a normal full-page navigation to the target URL.
 
+The navigator also falls back to a normal full-page navigation when the
+fetched page is missing the Tada generator meta tag or it was generated
+by a different Tada version.
+
 The same fetch, swap, and fallback path is also used when the page update
 toast refreshes the current URL in place. In that case, navigation preserves
 the current scroll position, does not push a new history entry, and does not

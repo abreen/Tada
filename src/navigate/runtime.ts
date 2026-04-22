@@ -219,7 +219,13 @@ export async function navigateToUrl(
     .DOMParser;
   const parser = new DOMParserCtor();
   const newDoc = parser.parseFromString(html, 'text/html');
-  if (!newDoc.querySelector('meta[name="generator"][content="Tada"]')) {
+  const currentGenerator = document
+    .querySelector('meta[name="generator"]')
+    ?.getAttribute('content');
+  const newGenerator = newDoc
+    .querySelector('meta[name="generator"]')
+    ?.getAttribute('content');
+  if (!currentGenerator || !newGenerator || newGenerator !== currentGenerator) {
     window.location.href = url;
     return;
   }

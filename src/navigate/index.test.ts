@@ -27,6 +27,7 @@ type Win = Window & typeof globalThis;
 // Typed accessor for assigning bare globals that performNavigation references
 // (document, window, DOMParser, Event, fetch).
 const globals = globalThis as Record<string, unknown>;
+const GENERATOR = 'Tada 1.11.1';
 
 beforeAll(() => {
   globals.__SITE_BASE_PATH__ = '/';
@@ -69,7 +70,7 @@ function createDOM(
   const url = options?.url ?? 'http://localhost/';
   const headContent =
     options?.headContent ??
-    '<title>Page One</title><meta name="generator" content="Tada"><meta name="description" content="desc one">';
+    `<title>Page One</title><meta name="generator" content="${GENERATOR}"><meta name="description" content="desc one">`;
   const bodyClass = options?.bodyClass ?? 'default toc-is-active';
   const searchVal = options?.searchValue ?? '';
   const html = `<html><head>${headContent}</head><body class="${bodyClass}"><header><input class="search quick-search" value="${searchVal}"><details><summary>Menu</summary><nav></nav></details></header><div class="container">${bodyContent}</div></body></html>`;
@@ -87,6 +88,7 @@ function createPageHTML(options?: {
   ogAuthor?: string;
   stylesheets?: string[];
   noGenerator?: boolean;
+  generator?: string;
 }) {
   const o = {
     title: 'Page Two',
@@ -94,7 +96,9 @@ function createPageHTML(options?: {
     containerContent: '<p>New content</p>',
     ...options,
   };
-  const gen = o.noGenerator ? '' : '<meta name="generator" content="Tada">';
+  const gen = o.noGenerator
+    ? ''
+    : `<meta name="generator" content="${o.generator ?? GENERATOR}">`;
   const desc =
     o.description !== undefined
       ? `<meta name="description" content="${o.description}">`
@@ -551,8 +555,7 @@ describe('updateHead', () => {
 
   test('adds meta tag when old page lacks it', async () => {
     const win = createDOM('<a href="http://localhost/other">Link</a>', {
-      headContent:
-        '<title>Page One</title><meta name="generator" content="Tada">',
+      headContent: `<title>Page One</title><meta name="generator" content="${GENERATOR}">`,
     });
     setupGlobals(win);
     mockFetchReturning(createPageHTML({ author: 'Alice' }));
@@ -583,8 +586,7 @@ describe('updateHead', () => {
 
   test('updates og:title', async () => {
     const win = createDOM('<a href="http://localhost/other">Link</a>', {
-      headContent:
-        '<title>Page One</title><meta name="generator" content="Tada"><meta property="og:title" content="Old">',
+      headContent: `<title>Page One</title><meta name="generator" content="${GENERATOR}"><meta property="og:title" content="Old">`,
     });
     setupGlobals(win);
     mockFetchReturning(createPageHTML({ ogTitle: 'New OG Title' }));
@@ -599,8 +601,7 @@ describe('updateHead', () => {
 
   test('adds og meta tag when old page lacks it', async () => {
     const win = createDOM('<a href="http://localhost/other">Link</a>', {
-      headContent:
-        '<title>Page One</title><meta name="generator" content="Tada">',
+      headContent: `<title>Page One</title><meta name="generator" content="${GENERATOR}">`,
     });
     setupGlobals(win);
     mockFetchReturning(createPageHTML({ ogAuthor: 'Bob' }));
@@ -615,8 +616,7 @@ describe('updateHead', () => {
 
   test('adopts new stylesheets without duplicating existing', async () => {
     const win = createDOM('<a href="http://localhost/other">Link</a>', {
-      headContent:
-        '<title>Page One</title><meta name="generator" content="Tada"><link rel="stylesheet" href="/style.css">',
+      headContent: `<title>Page One</title><meta name="generator" content="${GENERATOR}"><link rel="stylesheet" href="/style.css">`,
     });
     setupGlobals(win);
     mockFetchReturning(
@@ -698,6 +698,23 @@ describe('fetch error paths', () => {
     );
     setupGlobals(win);
     mockFetchReturning(createPageHTML({ noGenerator: true }));
+    mount(win);
+
+    clickLink(win);
+    await flush();
+
+    expect(win.document.querySelector('.container')!.innerHTML).toContain(
+      'Original',
+    );
+    expect(mockTeardown).not.toHaveBeenCalled();
+  });
+
+  test('response from a different Tada version does not swap', async () => {
+    const win = createDOM(
+      '<p>Original</p><a href="http://localhost/other">Link</a>',
+    );
+    setupGlobals(win);
+    mockFetchReturning(createPageHTML({ generator: 'Tada 9.9.9' }));
     mount(win);
 
     clickLink(win);
