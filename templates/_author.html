@@ -1,14 +1,14 @@
 <aside class="author">
   Written by
   <% if (page.author.url) { %>
-  <a href="<%= applyBasePath(page.author.url) %>">
+  <a href="<%= page.author.url %>">
   <% } %>
   <span class="text"><%= page.author.name %></span>
   <% if (page.author.avatar) { %>
   <img
     width="32"
     height="32"
-    src="<%= applyBasePath(page.author.avatar) %>"
+    src="<%= page.author.avatar %>"
     alt="Picture of <%= page.author.name %>"
     class="avatar"
   />

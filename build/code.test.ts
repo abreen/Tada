@@ -211,7 +211,7 @@ describe('renderCodeWithComments', () => {
     );
   });
 
-  test('does not rewrite raw HTML prose links to raw public source files', () => {
+  test('leaves raw HTML prose links unchanged until page finalization', () => {
     const source = '/// <a href="./Pair.java">Pair</a>\npublic class Foo {}\n';
     const html = renderCodeWithComments(
       source,
@@ -229,15 +229,13 @@ describe('renderCodeWithComments', () => {
         features: { search: true, favicon: true, footer: true },
       } as SiteVariables,
       'lectures/01',
-      '/lectures/01/Foo.java.html',
-      new Set(['/lectures/01/Pair.java']),
     );
 
     expect(html).toContain('href="./Pair.java"');
     expect(html).not.toContain('href="./Pair.java.html"');
   });
 
-  test('does not rewrite raw HTML prose links to literate Java source downloads', () => {
+  test('leaves raw HTML prose links to literate Java downloads unchanged before page finalization', () => {
     const source = '/// <a href="./Pair.java">Pair</a>\npublic class Foo {}\n';
     const html = renderCodeWithComments(
       source,
@@ -255,9 +253,6 @@ describe('renderCodeWithComments', () => {
         features: { search: true, favicon: true, footer: true },
       } as SiteVariables,
       'lectures/01',
-      '/lectures/01/Foo.java.html',
-      new Set(['/lectures/01/Pair.java.html']),
-      new Set(['/lectures/01/Pair.java']),
     );
 
     expect(html).toContain('href="./Pair.java"');

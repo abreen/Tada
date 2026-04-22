@@ -6,7 +6,6 @@ import { makeLogger } from '../log';
 import { getExtensionToShikiLanguage } from '../site-variables';
 import { highlightCode } from './shiki-highlighter';
 import externalLinksPlugin from '../external-links-plugin';
-import applyBasePathPlugin from '../apply-base-path-plugin';
 import { createApplyBasePath } from './paths';
 import { splitLines } from './literate-java';
 import type { JavaTocEntry, SiteVariables } from '../types';
@@ -40,13 +39,11 @@ const log = makeLogger(import.meta.url);
 
 const PROSE_LINE = /^\s*\/\/\/(\s|$)/;
 
-function createCodeMarkdown(
-  siteVariables: SiteVariables,
-  options: Record<string, unknown> = {},
-): MarkdownIt {
-  return new MarkdownIt({ html: true, typographer: true })
-    .use(externalLinksPlugin, siteVariables)
-    .use(applyBasePathPlugin, siteVariables, options);
+function createCodeMarkdown(siteVariables: SiteVariables): MarkdownIt {
+  return new MarkdownIt({ html: true, typographer: true }).use(
+    externalLinksPlugin,
+    siteVariables,
+  );
 }
 
 // Matches Markdown links: [text](url)
@@ -504,15 +501,8 @@ export function renderCodeWithComments(
   lang: string,
   siteVariables: SiteVariables,
   pageDirPath?: string,
-  sourceUrlPath?: string,
-  validTargets?: Set<string>,
-  literateJavaOutputPaths?: Set<string>,
 ): string {
-  const md = createCodeMarkdown(siteVariables, {
-    sourceUrlPath,
-    validTargets,
-    literateJavaOutputPaths,
-  });
+  const md = createCodeMarkdown(siteVariables);
   const lines = splitLines(sourceCode);
 
   // Group lines into segments

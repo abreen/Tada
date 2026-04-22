@@ -85,6 +85,17 @@ describe('validateNavLinks', () => {
     expect(validateNavLinks(navData, validTargets)).toEqual([]);
   });
 
+  test('rejects relative internal links', () => {
+    const validTargets = new Set(['/about.html']);
+    const navData = [
+      { title: 'Menu', links: [{ text: 'About', internal: 'about.html' }] },
+    ];
+    const errors = validateNavLinks(navData, validTargets);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('about.html');
+    expect(errors[0]).toContain('must start with "/"');
+  });
+
   test('returns empty array for empty nav data', () => {
     expect(validateNavLinks([], new Set())).toEqual([]);
   });
@@ -164,6 +175,21 @@ describe('validateAuthorLinks', () => {
     const errors = validateAuthorLinks(authorsData, validTargets);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain('bob');
+  });
+
+  test('rejects relative author avatar and url paths', () => {
+    const validTargets = new Set(['/about/alex.html', '/avatars/alex.jpg']);
+    const authorsData = {
+      alex: {
+        name: 'Alex',
+        avatar: 'avatars/alex.jpg',
+        url: 'about/alex.html',
+      },
+    };
+    const errors = validateAuthorLinks(authorsData, validTargets);
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toContain('must start with "/"');
+    expect(errors[1]).toContain('must start with "/"');
   });
 });
 

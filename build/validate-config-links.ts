@@ -12,6 +12,17 @@ interface NavSection {
   links: NavLink[];
 }
 
+function requireRootRelativePath(
+  value: string,
+  errorPrefix: string,
+): string | null {
+  if (value.startsWith('/')) {
+    return null;
+  }
+
+  return `${errorPrefix} must start with "/": "${value}"`;
+}
+
 export function validateNavLinks(
   navData: unknown,
   validTargets: Set<string>,
@@ -25,6 +36,15 @@ export function validateNavLinks(
   for (const section of navData as NavSection[]) {
     for (const link of section.links) {
       if (link.disabled || !link.internal) {
+        continue;
+      }
+
+      const rootRelativeError = requireRootRelativePath(
+        link.internal,
+        `nav.json: internal link in section "${section.title}"`,
+      );
+      if (rootRelativeError) {
+        errors.push(rootRelativeError);
         continue;
       }
 
@@ -58,17 +78,33 @@ export function validateAuthorLinks(
   const authors = authorsData as Record<string, AuthorEntry>;
 
   for (const [key, author] of Object.entries(authors)) {
-    const avatarPath = normalizeOutputPath(author.avatar);
-    if (!validTargets.has(avatarPath)) {
-      errors.push(
-        `authors.json: broken avatar path for "${key}": "${author.avatar}"`,
-      );
+    const avatarRootRelativeError = requireRootRelativePath(
+      author.avatar,
+      `authors.json: avatar path for "${key}"`,
+    );
+    if (avatarRootRelativeError) {
+      errors.push(avatarRootRelativeError);
+    } else {
+      const avatarPath = normalizeOutputPath(author.avatar);
+      if (!validTargets.has(avatarPath)) {
+        errors.push(
+          `authors.json: broken avatar path for "${key}": "${author.avatar}"`,
+        );
+      }
     }
 
     if (author.url) {
-      const urlPath = normalizeOutputPath(author.url);
-      if (!validTargets.has(urlPath)) {
-        errors.push(`authors.json: broken url for "${key}": "${author.url}"`);
+      const urlRootRelativeError = requireRootRelativePath(
+        author.url,
+        `authors.json: url for "${key}"`,
+      );
+      if (urlRootRelativeError) {
+        errors.push(urlRootRelativeError);
+      } else {
+        const urlPath = normalizeOutputPath(author.url);
+        if (!validTargets.has(urlPath)) {
+          errors.push(`authors.json: broken url for "${key}": "${author.url}"`);
+        }
       }
     }
   }

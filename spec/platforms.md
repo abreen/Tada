@@ -44,7 +44,7 @@ markdown-it percent-encodes link hrefs during parsing (for example,
 `[x](</my notes.md>)` becomes `/my%20notes.md` in the token). Internal lookup
 sets like `validTargets` store raw filesystem-derived paths (for example,
 `/my notes.md`), so code that looks up an incoming href against one of these
-sets must first decode the href. Both `validate-internal-links-plugin.ts` and
+sets must first decode the href. Both `build/utils/final-html.ts` and
 `reachability.ts` follow this convention. Filenames may contain spaces,
 non-ASCII characters, or other URL-unsafe characters; they are written to
 `dist/` with the raw filename and referenced in HTML with a percent-encoded

@@ -19,9 +19,9 @@ Templates can access:
 - **content**: the rendered page body
 - **isHomePage**: true when rendering the home page
 
-Utility functions are available for formatting dates, applying the base path to
-URLs, rendering other templates, loading JSON data files, generating CSS class
-strings, and rendering the time zone chooser.
+Utility functions are available for formatting dates, rendering other templates,
+loading JSON data files, generating CSS class strings, and rendering the time
+zone chooser.
 
 Site config values are accessible in templates. Both `nav.json` and
 `authors.json` support template interpolation using these values.

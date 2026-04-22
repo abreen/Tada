@@ -9,7 +9,9 @@ avatar image, linked to the profile URL if provided.
 
 The file is validated against a JSON schema at build time. The `avatar` and `url`
 paths are also validated against the set of known build targets; a broken path
-fails the build.
+fails the build. These paths must be root-relative internal URLs (start with
+`/`) because built-in templates render them directly into every page that uses
+the author entry.
 
 In watch mode, editing `authors.json` rebuilds only pages whose `author` field
 depends on author entries whose data changed. Adding or removing an author

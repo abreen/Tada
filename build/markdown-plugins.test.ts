@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import MarkdownIt from 'markdown-it';
 import deflist from 'markdown-it-deflist';
-import applyBasePathPlugin from './apply-base-path-plugin';
 import deflistIdPlugin from './deflist-id-plugin';
 import externalLinksPlugin from './external-links-plugin';
 import headingSubtitlePlugin from './heading-subtitle-plugin';
@@ -13,192 +12,6 @@ import type { SiteVariables } from './types';
 
 beforeAll(async () => {
   await initHighlighter(['ts']);
-});
-
-describe('apply-base-path-plugin', () => {
-  test('rewrites internal links, images, and raw html sources', () => {
-    const md = new MarkdownIt({ html: true });
-    md.use(applyBasePathPlugin, {
-      basePath: '/course/',
-      extensionToShikiLanguage: { java: 'java' },
-    });
-
-    const html = md.render(
-      [
-        '[Code](/src/example.java?view=1#top)',
-        '',
-        '![Image](/images/pic.png)',
-        '',
-        '<img src="/images/raw.png" alt="Raw">',
-        '',
-        '<a href="/about/">About</a>',
-      ].join('\n'),
-    );
-
-    expect(html).toContain('href="/course/src/example.java.html?view=1#top"');
-    expect(html).toContain('src="/course/images/pic.png"');
-    expect(html).toContain('src="/course/images/raw.png"');
-    expect(html).toContain('href="/course/about/"');
-  });
-
-  test('does not rewrite external or relative raw html links', () => {
-    const md = new MarkdownIt({ html: true });
-    md.use(applyBasePathPlugin, {
-      basePath: '/course/',
-      extensionToShikiLanguage: {},
-    });
-
-    const html = md.render(
-      [
-        '<a href="https://example.com/">External</a>',
-        '',
-        '<a href="relative.html">Relative</a>',
-      ].join('\n'),
-    );
-
-    expect(html).toContain('href="https://example.com/"');
-    expect(html).toContain('href="relative.html"');
-  });
-
-  test('rewrites raw html href and src attributes across quoting styles', () => {
-    const md = new MarkdownIt({ html: true });
-    md.use(applyBasePathPlugin, {
-      basePath: '/course/',
-      extensionToShikiLanguage: {},
-    });
-
-    const html = md.render(
-      [
-        "<a href='/about/'>Single</a>",
-        '',
-        '<img src=/images/raw.png alt=Raw>',
-        '',
-        '<a href="/docs">Double</a>',
-      ].join('\n'),
-    );
-
-    expect(html).toContain('href="/course/about/"');
-    expect(html).toContain('src="/course/images/raw.png"');
-    expect(html).toContain('href="/course/docs"');
-  });
-
-  test('rewrites only real a[href] and img[src] attributes', () => {
-    const md = new MarkdownIt({ html: true });
-    md.use(applyBasePathPlugin, {
-      basePath: '/course/',
-      extensionToShikiLanguage: {},
-    });
-
-    const html = md.render(
-      [
-        '<a href="/docs">Docs</a>',
-        '',
-        '<img src="/images/raw.png" alt="Raw">',
-        '',
-        "<a data-href='/about/'>Data</a>",
-        '',
-        '<a src="/images/raw.png">Not a link attr</a>',
-        '',
-        '<img href="/docs" alt="Not an image src">',
-        '',
-        `<div data-template="<a href='/nested'>x</a>"></div>`,
-      ].join('\n'),
-    );
-
-    expect(html).toContain('href="/course/docs"');
-    expect(html).toContain('src="/course/images/raw.png"');
-    expect(html).toContain("data-href='/about/'");
-    expect(html).toContain('src="/images/raw.png">Not a link attr</a>');
-    expect(html).toContain('href="/docs" alt="Not an image src"');
-    expect(html).toContain('data-template="');
-    expect(html).not.toContain('/course/nested');
-  });
-
-  test('preserves trailing content in raw html tokens that start with img', () => {
-    const md = new MarkdownIt({ html: true });
-    md.use(applyBasePathPlugin, {
-      basePath: '/course/',
-      extensionToShikiLanguage: {},
-    });
-
-    const html = md.render(
-      `<img src="/images/one.png"><img src="/images/two.png"><span>tail</span>`,
-    );
-
-    expect(html).toContain('src="/course/images/one.png"');
-    expect(html).toContain('src="/course/images/two.png"');
-    expect(html).toContain('<span>tail</span>');
-  });
-
-  test('preserves trailing content in raw html tokens that start with a', () => {
-    const md = new MarkdownIt({ html: true });
-    md.use(applyBasePathPlugin, {
-      basePath: '/course/',
-      extensionToShikiLanguage: {},
-    });
-
-    const html = md.render(
-      `<a href="/docs">Docs</a><img src="/images/two.png"><span>tail</span>`,
-    );
-
-    expect(html).toContain('href="/course/docs"');
-    expect(html).toContain('src="/course/images/two.png"');
-    expect(html).toContain('<span>tail</span>');
-  });
-
-  test('rewrites standalone opening anchor tags with > inside quoted attrs', () => {
-    const md = new MarkdownIt({ html: true });
-    md.use(applyBasePathPlugin, {
-      basePath: '/course/',
-      extensionToShikiLanguage: {},
-    });
-
-    const html = md.render(`<a href="/docs" title="1 > 0">Docs</a>`);
-
-    expect(html).toContain('href="/course/docs"');
-    expect(html).toContain('title="1 > 0"');
-    expect(html).not.toContain('</a>Docs</a>');
-  });
-
-  test('rewrites relative code file links without applying base path', () => {
-    const md = new MarkdownIt();
-    md.use(applyBasePathPlugin, {
-      basePath: '/course/',
-      extensionToShikiLanguage: { java: 'java' },
-    });
-
-    const html = md.render('[App](./App.java)');
-
-    expect(html).toContain('href="./App.java.html"');
-    expect(html).not.toContain('href="./App.java"');
-  });
-
-  test('keeps code file extensions when the extension is not mapped', () => {
-    const md = new MarkdownIt();
-    md.use(applyBasePathPlugin, {
-      basePath: '/course',
-      extensionToShikiLanguage: {},
-    });
-
-    const html = md.render('[Code](/src/example.java#L1)');
-
-    expect(html).toContain('href="/course/src/example.java#L1"');
-    expect(html).not.toContain('href="/course/src/example.html#L1"');
-  });
-
-  test('rewrites relative raw html code links when the extension is mapped', () => {
-    const md = new MarkdownIt({ html: true });
-    md.use(applyBasePathPlugin, {
-      basePath: '/course/',
-      extensionToShikiLanguage: { java: 'java' },
-      sourceUrlPath: '/docs/index.html',
-      validTargets: new Set(['/docs/App.java.html']),
-    });
-
-    const html = md.render('<a href="./App.java">App</a>');
-
-    expect(html).toContain('href="./App.java.html"');
-  });
 });
 
 describe('external-links-plugin', () => {
@@ -788,17 +601,10 @@ describe('injectKatexStylesheet', () => {
   test('injects deferred KaTeX stylesheet link into <head>', () => {
     const html =
       '<html><head><meta charset="UTF-8"></head><body></body></html>';
-    const result = injectKatexStylesheet(html, p => p);
+    const result = injectKatexStylesheet(html);
 
     expect(result).toContain('href="/katex/katex.min.css"');
     expect(result).toContain('rel="stylesheet"');
-  });
-
-  test('applies basePath to the stylesheet URL', () => {
-    const html = '<html><head></head><body></body></html>';
-    const result = injectKatexStylesheet(html, p => '/course' + p);
-
-    expect(result).toContain('href="/course/katex/katex.min.css"');
   });
 });
 

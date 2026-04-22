@@ -4,14 +4,10 @@ import path from 'path';
 import _ from 'lodash';
 import { classNames } from './globals';
 
-function renderNav(navData: unknown[], basePath: string = ''): string {
+function renderNav(navData: unknown[]): string {
   const templatePath = path.resolve(import.meta.dir, '../templates/_nav.html');
   const templateStr = fs.readFileSync(templatePath, 'utf-8');
-  return _.template(templateStr)({
-    json: () => navData,
-    cx: classNames,
-    applyBasePath: (p: string) => basePath + p,
-  });
+  return _.template(templateStr)({ json: () => navData, cx: classNames });
 }
 
 describe('_nav.html template', () => {

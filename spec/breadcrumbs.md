@@ -1,8 +1,10 @@
 # Breadcrumbs
 
 A page can display a single breadcrumb link above its title by setting `parent`
-(the target URL) and `parentLabel` (the link text) in its front matter. The
-base path is automatically applied to the URL.
+(the target URL) and `parentLabel` (the link text) in its front matter.
+
+Root-relative `parent` URLs are prefixed with `basePath` in the final HTML.
+Relative `parent` URLs remain relative to the page that declares them.
 
 This provides a simple one-level "back to" navigation, not a full breadcrumb
 trail.

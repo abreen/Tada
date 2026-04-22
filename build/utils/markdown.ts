@@ -13,8 +13,6 @@ import { isBundledLanguage, isPlainTextLanguage } from '../site-variables';
 import headingSubtitlePlugin from '../heading-subtitle-plugin';
 import deflistIdPlugin from '../deflist-id-plugin';
 import externalLinksPlugin from '../external-links-plugin';
-import validateInternalLinksPlugin from '../validate-internal-links-plugin';
-import applyBasePathPlugin from '../apply-base-path-plugin';
 import { tocPlugin } from '../toc-plugin';
 import columnsPlugin from '../columns-plugin';
 import markdownItKatex from '@vscode/markdown-it-katex';
@@ -27,8 +25,8 @@ const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
 const QUESTION_PATTERN = /^question\s+(.+)$/;
 
 interface CreateMarkdownOptions {
-  validatorOptions?: Record<string, unknown>;
   filePath?: string;
+  validatorOptions?: Record<string, unknown>;
   literateJavaOutputPaths?: Set<string>;
   sourceUrlPath?: string;
   validTargets?: Set<string>;
@@ -58,13 +56,7 @@ export function createMarkdown(
   siteVariables: SiteVariables,
   options: CreateMarkdownOptions = {},
 ): MarkdownIt {
-  const {
-    validatorOptions = {},
-    filePath,
-    literateJavaOutputPaths,
-    sourceUrlPath,
-    validTargets,
-  } = options;
+  const { filePath } = options;
   const markdown = new MarkdownIt({ html: true, typographer: true })
     .use(headingSubtitlePlugin)
     .use(markdownItAnchor, { tabIndex: false })
@@ -72,12 +64,6 @@ export function createMarkdown(
     .use(markdownItDeflist)
     .use(deflistIdPlugin)
     .use(externalLinksPlugin, siteVariables)
-    .use(validateInternalLinksPlugin, validatorOptions)
-    .use(applyBasePathPlugin, siteVariables, {
-      literateJavaOutputPaths,
-      sourceUrlPath,
-      validTargets,
-    })
     .use(tocPlugin)
     .use(columnsPlugin)
     .use(markdownItKatex)

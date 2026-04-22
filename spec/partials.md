@@ -45,7 +45,7 @@ output.
 ## Template context
 
 Partials receive the same template parameters as the including page. This
-includes `page`, `site`, `applyBasePath`, and any other functions or variables
+includes `page`, `site`, and any other functions or variables
 available to the page. Partials do not have their own front matter.
 
 ## Build behavior

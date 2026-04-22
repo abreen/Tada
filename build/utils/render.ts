@@ -18,6 +18,7 @@ import {
 import { extensionIsMarkdown } from './file-types';
 import { createTraceHelpers } from './trace';
 import { createIncludeFunction } from './include';
+import { finalizeHtmlPage } from './final-html';
 import {
   createApplyBasePath,
   normalizeOutputPath,
@@ -75,7 +76,6 @@ interface TemplateParametersInput {
   pageVariables: Record<string, unknown>;
   siteVariables: SiteVariables;
   content: string | null;
-  applyBasePath: (subPath: string) => string;
   subPath: string;
   isWatchMode: boolean;
 }
@@ -127,18 +127,18 @@ function createTemplateParameters({
   pageVariables,
   siteVariables,
   content,
-  applyBasePath,
   subPath,
   isWatchMode,
 }: TemplateParametersInput): Record<string, unknown> {
+  const applyBasePath = createApplyBasePath(siteVariables);
   return {
     vars: siteVariables.vars || {},
     ...createGlobals(pageVariables, siteVariables, subPath),
     site: siteVariables,
     page: pageVariables,
     content,
-    applyBasePath,
     isWatchMode,
+    speculationRulesHrefMatches: `${applyBasePath('/')}*`,
     tadaVersion,
   };
 }
@@ -146,14 +146,16 @@ function createTemplateParameters({
 export function injectAssetTags(
   html: string,
   assetFiles: string[],
-  applyBasePath: (subPath: string) => string,
   distDir: string,
 ): string {
   const jsAssets = assetFiles.filter(f => f.endsWith('.js'));
   const cssAssets = assetFiles.filter(f => f.endsWith('.css'));
 
   const scriptTags = jsAssets
-    .map(asset => `<script defer src="${applyBasePath('/' + asset)}"></script>`)
+    .map(
+      asset =>
+        `<script defer src="${normalizeOutputPath('/' + asset)}"></script>`,
+    )
     .join('');
   const criticalAssets = cssAssets.filter(f => f.includes('critical.bundle.'));
   const asyncAssets = cssAssets.filter(f => !f.includes('critical.bundle.'));
@@ -165,7 +167,8 @@ export function injectAssetTags(
     .join('');
   const asyncLinkTags = asyncAssets
     .map(
-      asset => `<link href="${applyBasePath('/' + asset)}" rel="stylesheet">`,
+      asset =>
+        `<link href="${normalizeOutputPath('/' + asset)}" rel="stylesheet">`,
     )
     .join('');
 
@@ -176,7 +179,7 @@ export function injectAssetTags(
     .filter(f => fs.existsSync(path.join(distDir, f)))
     .map(
       f =>
-        `<link rel="preload" href="${applyBasePath('/' + f)}" as="font" type="font/woff2" crossorigin>`,
+        `<link rel="preload" href="${normalizeOutputPath('/' + f)}" as="font" type="font/woff2" crossorigin>`,
     )
     .join('');
 
@@ -188,12 +191,8 @@ export function injectAssetTags(
     .replace('</head>', `${scriptTags}</head>`);
 }
 
-export function injectKatexStylesheet(
-  html: string,
-  applyBasePath: (subPath: string) => string,
-): string {
-  const href = applyBasePath('/katex/katex.min.css');
-  const tag = `<link href="${href}" rel="stylesheet">`;
+export function injectKatexStylesheet(html: string): string {
+  const tag = `<link href="/katex/katex.min.css" rel="stylesheet">`;
   return html.replace('<head>', `<head>${tag}`);
 }
 
@@ -216,7 +215,7 @@ export function renderPlainTextPageAsset({
 }: RenderPlainTextOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
-  const applyBasePath = createApplyBasePath(siteVariables);
+  const sourceUrlPath = normalizeOutputPath(`/${subPath}.html`);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
   const watchMode = isWatchMode(assetFiles);
@@ -224,16 +223,13 @@ export function renderPlainTextPageAsset({
     filePath,
     subPath,
     siteVariables,
-    applyBasePath,
     validInternalTargets,
     watchMode,
     {
-      validateInternalLinks: extensionIsMarkdown(ext.toLowerCase()),
       dependencyCollector,
       traceCache,
       contentDir,
       distDir,
-      literateJavaOutputPaths,
       cachedTraceSourceDir,
       traceToolAvailability,
     },
@@ -256,7 +252,6 @@ export function renderPlainTextPageAsset({
     pageVariables,
     siteVariables,
     content,
-    applyBasePath,
     subPath,
     isWatchMode: watchMode,
   });
@@ -265,10 +260,19 @@ export function renderPlainTextPageAsset({
     `${pageVariables.template}.html`,
     templateParameters,
   ) as string;
-  let html = injectAssetTags(templateHtml, assetFiles, applyBasePath, distDir);
+  let html = injectAssetTags(templateHtml, assetFiles, distDir);
   if (templateHtml.includes('class="katex"')) {
-    html = injectKatexStylesheet(html, applyBasePath);
+    html = injectKatexStylesheet(html);
   }
+  html = finalizeHtmlPage({
+    filePath,
+    html,
+    siteVariables,
+    sourceUrlPath,
+    validInternalTargets,
+    literateJavaOutputPaths,
+    dependencyCollector,
+  });
 
   return [
     {
@@ -286,10 +290,10 @@ export function renderCodePageAsset({
   assetFiles,
   validInternalTargets,
   literateJavaOutputPaths,
+  dependencyCollector,
 }: RenderCodePageOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
-  const applyBasePath = createApplyBasePath(siteVariables);
   const lang =
     getExtensionToShikiLanguage(siteVariables)[ext.slice(1).toLowerCase()];
   const rawSource = fs.readFileSync(filePath, 'utf-8');
@@ -305,12 +309,9 @@ export function renderCodePageAsset({
     lang,
     siteVariables,
     pageDirPath,
-    sourceUrlPath,
-    validInternalTargets,
-    literateJavaOutputPaths,
   );
-  const codeFilePath = applyBasePath(
-    normalizeOutputPath(`/${toUrlPath(path.relative(contentDir, filePath))}`),
+  const codeFilePath = normalizeOutputPath(
+    `/${toUrlPath(path.relative(contentDir, filePath))}`,
   );
   const titleHtml = `<code>${name + ext}</code>`;
   const tocItems = lang === 'java' ? extractJavaMethodToc(sourceCode) : [];
@@ -330,17 +331,23 @@ export function renderCodePageAsset({
     pageVariables,
     siteVariables,
     content,
-    applyBasePath,
     subPath,
     isWatchMode: isWatchMode(assetFiles),
   });
 
-  const html = injectAssetTags(
-    render('code.html', templateParameters) as string,
-    assetFiles,
-    applyBasePath,
-    distDir,
-  );
+  const html = finalizeHtmlPage({
+    filePath,
+    html: injectAssetTags(
+      render('code.html', templateParameters) as string,
+      assetFiles,
+      distDir,
+    ),
+    siteVariables,
+    sourceUrlPath,
+    validInternalTargets,
+    literateJavaOutputPaths,
+    dependencyCollector,
+  });
 
   return [
     {
@@ -386,20 +393,16 @@ function renderPlainTextContent(
   filePath: string,
   subPath: string,
   siteVariables: SiteVariables,
-  applyBasePath: (subPath: string) => string,
   validInternalTargets: Set<string>,
   isWatchMode: boolean,
   {
-    validateInternalLinks = true,
     dependencyCollector,
     traceCache,
     contentDir,
     distDir,
-    literateJavaOutputPaths,
     cachedTraceSourceDir,
     traceToolAvailability,
   }: {
-    validateInternalLinks?: boolean;
     dependencyCollector?: RenderDependencyCollector;
     traceCache?: Map<
       string,
@@ -412,7 +415,6 @@ function renderPlainTextContent(
     >;
     contentDir?: string;
     distDir?: string;
-    literateJavaOutputPaths?: Set<string>;
     cachedTraceSourceDir?: string;
     traceToolAvailability?: TraceToolAvailability;
   } = {},
@@ -422,23 +424,8 @@ function renderPlainTextContent(
   tocItems: unknown[] | null;
   alertIds: string[];
 } {
-  const sourceUrlPath = `/${subPath}.html`;
-  const md = createMarkdown(siteVariables, {
-    filePath,
-    validatorOptions: {
-      enabled: validateInternalLinks,
-      filePath,
-      sourceUrlPath,
-      validTargets: validInternalTargets,
-      codeExtensions: Object.keys(getExtensionToShikiLanguage(siteVariables)),
-      onValidLink: (targetPath: string) => {
-        dependencyCollector?.internalTargets?.add(targetPath);
-      },
-    },
-    literateJavaOutputPaths,
-    sourceUrlPath,
-    validTargets: validInternalTargets,
-  });
+  const md = createMarkdown(siteVariables, { filePath });
+  const applyBasePath = createApplyBasePath(siteVariables);
 
   const ext = path.extname(filePath);
   const raw = fs.readFileSync(filePath, 'utf-8');
@@ -450,7 +437,6 @@ function renderPlainTextContent(
     pageVariables: {},
     siteVariables,
     content: null,
-    applyBasePath,
     subPath,
     isWatchMode,
   });
@@ -487,7 +473,6 @@ function renderPlainTextContent(
     pageVariables: pageVariablesProcessed,
     siteVariables,
     content: strippedContent,
-    applyBasePath,
     subPath,
     isWatchMode,
   });
@@ -553,7 +538,6 @@ export function renderLiterateJavaPageAsset({
   const { dir, name } = path.parse(filePath);
   const className = deriveClassName(filePath);
   const subPath = toPosix(path.relative(contentDir, path.join(dir, className)));
-  const applyBasePath = createApplyBasePath(siteVariables);
 
   log.info`Rendering literate Java page ${B`${name}`}`;
 
@@ -600,21 +584,7 @@ export function renderLiterateJavaPageAsset({
   // Render full markdown with a custom fence rule that replaces fences
   // with Shiki-highlighted code blocks and optional JDI output columns
   const sourceUrlPath = `/${subPath}.java.html`;
-  const md = createMarkdown(siteVariables, {
-    filePath,
-    validatorOptions: {
-      filePath,
-      sourceUrlPath,
-      validTargets: validInternalTargets,
-      codeExtensions: Object.keys(getExtensionToShikiLanguage(siteVariables)),
-      onValidLink: (targetPath: string) => {
-        dependencyCollector?.internalTargets?.add(targetPath);
-      },
-    },
-    literateJavaOutputPaths,
-    sourceUrlPath,
-    validTargets: validInternalTargets,
-  });
+  const md = createMarkdown(siteVariables, { filePath });
   let fenceIndex = 0;
   const defaultFence = md.renderer.rules.fence!;
 
@@ -667,10 +637,8 @@ export function renderLiterateJavaPageAsset({
 
   // Build page variables
   const javaFileName = `${className}.java`;
-  const codeFilePath = applyBasePath(
-    normalizeOutputPath(
-      `/${toUrlPath(path.relative(contentDir, path.join(dir, javaFileName)))}`,
-    ),
+  const codeFilePath = normalizeOutputPath(
+    `/${toUrlPath(path.relative(contentDir, path.join(dir, javaFileName)))}`,
   );
 
   renderInlineField(md, pageVariables, 'title');
@@ -691,16 +659,24 @@ export function renderLiterateJavaPageAsset({
     pageVariables,
     siteVariables,
     content: contentHtml,
-    applyBasePath,
     subPath,
     isWatchMode: isWatchMode(assetFiles),
   });
 
   const templateHtml = render('literate.html', templateParameters) as string;
-  let html = injectAssetTags(templateHtml, assetFiles, applyBasePath, distDir);
+  let html = injectAssetTags(templateHtml, assetFiles, distDir);
   if (templateHtml.includes('class="katex"')) {
-    html = injectKatexStylesheet(html, applyBasePath);
+    html = injectKatexStylesheet(html);
   }
+  html = finalizeHtmlPage({
+    filePath,
+    html,
+    siteVariables,
+    sourceUrlPath,
+    validInternalTargets,
+    literateJavaOutputPaths,
+    dependencyCollector,
+  });
 
   return [
     {
@@ -716,3 +692,5 @@ export function renderLiterateJavaPageAsset({
     },
   ];
 }
+
+export { finalizeHtmlPage } from './final-html';
