@@ -129,6 +129,7 @@ header {
 
     ol a .title {
       font-weight: 500;
+      line-height: var(--heading-line-height);
     }
 
     ol a .title.code-page code {
@@ -178,7 +179,6 @@ header {
         .title {
           font-size: var(--font-size-small);
           font-weight: 500;
-          line-height: var(--heading-line-height);
           color: var(--fg-color);
         }
 
