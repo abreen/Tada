@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
 import { createGlobals } from './globals.test';
+import { createFsModuleMock } from './test-helpers';
 
 type BuildManifest = import('./build-manifest').BuildManifest;
 type ManifestDiff = import('./build-manifest').ManifestDiff;
@@ -164,7 +165,7 @@ const fsMock = {
   },
 };
 
-mock.module('fs', () => ({ default: fsMock, ...fsMock }));
+mock.module('fs', () => createFsModuleMock(fsMock));
 
 mock.module('./globals', () => ({
   globals: createGlobals({

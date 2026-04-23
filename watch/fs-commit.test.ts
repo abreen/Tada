@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type fs from 'fs';
 import { createGlobals } from '../build/globals.test';
+import { createFsModuleMock } from '../build/test-helpers';
 
 const existingPaths = new Set<string>();
 const renameCalls: Array<[string, string]> = [];
@@ -71,7 +72,7 @@ function mockFs(): void {
     },
   };
 
-  mock.module('fs', () => ({ ...mockedFs, default: mockedFs }));
+  mock.module('fs', () => createFsModuleMock(mockedFs));
 }
 
 function mockGlobals(): void {

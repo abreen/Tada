@@ -2,6 +2,7 @@ import type fs from 'fs';
 import path from 'path';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { createGlobals } from './globals.test';
+import { createFsModuleMock } from './test-helpers';
 import {
   classifySourceRenderKind,
   createContentRecord,
@@ -38,7 +39,7 @@ function mockFs(files: Record<string, Buffer>): void {
     return file;
   }) as typeof import('fs').readFileSync;
 
-  mock.module('fs', () => ({ default: { readFileSync }, readFileSync }));
+  mock.module('fs', () => createFsModuleMock({ readFileSync }));
 }
 
 beforeEach(() => {

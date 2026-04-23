@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
 import { createGlobals } from '../globals.test';
+import { createFsModuleMock } from '../test-helpers';
 
 const projectRoot = '/virtual/site';
 const files = new Map<string, string>();
@@ -78,7 +79,7 @@ const fsMock = {
   },
 };
 
-mock.module('fs', () => ({ default: fsMock, ...fsMock }));
+mock.module('fs', () => createFsModuleMock(fsMock));
 
 mock.module('../globals', () => ({
   globals: createGlobals({

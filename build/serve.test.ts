@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type fs from 'fs';
 import path from 'path';
+import { createFsModuleMock } from './test-helpers';
 import { resolvePathname } from './serve';
 
 type MockEntry = { kind: 'dir' | 'file'; mtime?: Date };
@@ -25,7 +26,7 @@ function mockFs(entries: Record<string, MockEntry>): void {
     } as fs.Stats;
   }) as typeof import('fs').statSync;
 
-  mock.module('fs', () => ({ default: { statSync }, statSync }));
+  mock.module('fs', () => createFsModuleMock({ statSync }));
 }
 
 beforeEach(() => {

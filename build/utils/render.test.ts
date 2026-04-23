@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
+import { createFsModuleMock } from '../test-helpers';
 import type { SiteVariables } from '../types';
 
 const files = new Map<string, string>();
@@ -26,7 +27,7 @@ const fsMock = {
   },
 };
 
-mock.module('fs', () => ({ default: fsMock, ...fsMock }));
+mock.module('fs', () => createFsModuleMock(fsMock));
 
 mock.module('../templates', () => ({
   json() {
