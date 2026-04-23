@@ -44,15 +44,18 @@ class TestPdfSearchIndexing:
         pagefind_dir = built_dev_site / 'dist' / 'pagefind'
         assert _pagefind_has_pdf_ref(pagefind_dir, 'lecture1.pdf')
 
-    def test_pagefind_entry_includes_pdf_pages(self, built_dev_site):
+    def test_pagefind_entry_includes_pdf_pages(self, site_dir):
         """The pagefind entry JSON page count should include PDF pages."""
-        entry = json.loads(
-            (built_dev_site / 'dist' / 'pagefind' / 'pagefind-entry.json').read_text()
-        )
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, f'dev build failed: {result.stderr}'
+
+        pagefind_dir = site_dir / 'dist' / 'pagefind'
+        entry = json.loads((pagefind_dir / 'pagefind-entry.json').read_text())
         # The default site has 14 HTML pages. With the PDF (2 pages),
         # the total should be greater than 14.
         total = sum(lang['page_count'] for lang in entry['languages'].values())
-        assert total > 14, f'Expected >14 indexed pages, got {total}'
+        output = result.stdout + result.stderr
+        assert total > 14, f'Expected >14 indexed pages, got {total}\nbuild output:\n{output}'
 
     def test_build_log_mentions_pdf_count(self, site_dir):
         """The build output should mention PDFs when building the index."""
