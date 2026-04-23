@@ -13,3 +13,9 @@ A build runs in five phases:
 
 Development builds write to `dist/`. Production builds write to a versioned
 subdirectory under `dist-prod/` (see [Production Builds](production-builds.md)).
+
+Full builds stage output in a temporary directory and publish it only after all
+phases succeed. If a build fails, it does not publish partial output:
+
+- if there was no previous build output, no new output directory is published
+- if a previous build output exists, it remains unchanged

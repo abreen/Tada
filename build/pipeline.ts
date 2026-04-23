@@ -20,87 +20,110 @@ import { ContentRenderer } from './generate-content-assets';
 import { runPagefind } from './pagefind';
 import { makeLogger, printFlair } from './log';
 import { generateBuildManifest, getNextVersion } from './build-manifest';
+import { scanProject } from './watch/snapshot';
+import { validateConfig } from './watch/validation';
+import { applyCommitPlan } from '../watch/fs-commit';
 import path from 'path';
 
 const log = makeLogger(import.meta.url);
+
+function makeTempOutputDir(targetDir: string): string {
+  const parentDir = path.dirname(targetDir);
+  fs.mkdirSync(parentDir, { recursive: true });
+  return fs.mkdtempSync(
+    path.join(parentDir, `${path.basename(targetDir)}-build-`),
+  );
+}
+
+function removeDirIfExists(dir: string): void {
+  fs.rmSync(dir, { recursive: true, force: true });
+}
 
 export async function runPipeline(
   mode: 'development' | 'production',
 ): Promise<void> {
   const isDev = mode === 'development';
   const siteVariables = isDev ? getDevSiteVariables() : getProdSiteVariables();
-  let distDir: string;
-  let prodVersion: number;
-
-  if (isDev) {
-    distDir = getDistDir();
-  } else {
-    const prodBase = getProdDistDir();
-    prodVersion = getNextVersion(prodBase);
-    distDir = path.join(prodBase, `v${prodVersion}`);
-  }
-
+  const publishDir = isDev
+    ? getDistDir()
+    : path.join(getProdDistDir(), 'v-next');
+  const distDir = makeTempOutputDir(publishDir);
   const contentDir = getContentDir();
   const publicDir = getPublicDir();
+  let published = false;
 
-  // Ensure dist/ exists
-  fs.mkdirSync(distDir, { recursive: true });
+  try {
+    const configDiagnostics = validateConfig(scanProject(siteVariables));
+    if (configDiagnostics.length > 0) {
+      throw new Error(configDiagnostics[0].message);
+    }
 
-  // Phase 1: Setup
-  compileTemplates(siteVariables);
-  const contentRenderer = new ContentRenderer(siteVariables);
-  await contentRenderer.initHighlighter();
+    compileTemplates(siteVariables);
+    const contentRenderer = new ContentRenderer(siteVariables);
+    await contentRenderer.initHighlighter();
 
-  // Phase 2: Bundle + assets (parallel)
-  const parallelTasks: (Promise<unknown> | void)[] = [
-    bundle(siteVariables, { mode, distDir }),
-    copyFonts(distDir),
-    copyKatexAssets(distDir),
-  ];
+    const parallelTasks: (Promise<unknown> | void)[] = [
+      bundle(siteVariables, { mode, distDir }),
+      copyFonts(distDir),
+      copyKatexAssets(distDir),
+    ];
 
-  if (isFeatureEnabled(siteVariables, 'favicon')) {
-    parallelTasks.push(generateFavicons(siteVariables, distDir));
-  }
+    if (isFeatureEnabled(siteVariables, 'favicon')) {
+      parallelTasks.push(generateFavicons(siteVariables, distDir));
+    }
 
-  const results = await Promise.all(parallelTasks);
-  const assetFiles = results[0] as string[]; // bundle output filenames
+    const results = await Promise.all(parallelTasks);
+    const assetFiles = results[0] as string[]; // bundle output filenames
 
-  if (isFeatureEnabled(siteVariables, 'favicon')) {
-    generateWebAppManifest(siteVariables, distDir);
-  }
+    if (isFeatureEnabled(siteVariables, 'favicon')) {
+      generateWebAppManifest(siteVariables, distDir);
+    }
 
-  const publicRelPaths = copyPublicFiles(publicDir, distDir);
-  const processedExtensions = getProcessedExtensions(
-    Object.keys(getExtensionToShikiLanguage(siteVariables)),
-  );
-  copyContentAssets(contentDir, distDir, processedExtensions, publicRelPaths);
+    const publicRelPaths = copyPublicFiles(publicDir, distDir);
+    const processedExtensions = getProcessedExtensions(
+      Object.keys(getExtensionToShikiLanguage(siteVariables)),
+    );
+    copyContentAssets(contentDir, distDir, processedExtensions, publicRelPaths);
 
-  // Phase 3: Content rendering
-  const { errors, htmlAssetsByPath, htmlAnalysisByPath } =
-    contentRenderer.processContent({ distDir, assetFiles });
+    const { errors, htmlAssetsByPath, htmlAnalysisByPath } =
+      contentRenderer.processContent({ distDir, assetFiles });
 
-  for (const err of errors) {
-    log.error`${err.message}`;
-  }
-  if (errors.length > 0) {
-    process.exit(1);
-  }
+    for (const err of errors) {
+      log.error`${err.message}`;
+    }
+    if (errors.length > 0) {
+      throw new Error(errors[0].message);
+    }
 
-  // Phase 4: Post-processing
-  if (isFeatureEnabled(siteVariables, 'search')) {
-    await runPagefind({
-      distPath: distDir,
-      htmlAssetsByPath,
-      htmlAnalysisByPath,
+    if (isFeatureEnabled(siteVariables, 'search')) {
+      await runPagefind({
+        distPath: distDir,
+        htmlAssetsByPath,
+        htmlAnalysisByPath,
+      });
+    }
+
+    let finalOutputDir = getDistDir();
+
+    if (!isDev) {
+      const prodBase = getProdDistDir();
+      const prodVersion = getNextVersion(prodBase);
+      finalOutputDir = path.join(prodBase, `v${prodVersion}`);
+      const manifestPath = path.join(distDir, 'tada.manifest.json');
+      await generateBuildManifest(distDir, manifestPath, prodVersion);
+      log.info`Built dist-prod/v${prodVersion}/`;
+    }
+
+    applyCommitPlan({
+      kind: 'replace-root',
+      stagedPath: distDir,
+      targetPath: finalOutputDir,
     });
+    published = true;
+    printFlair();
+  } finally {
+    if (!published) {
+      removeDirIfExists(distDir);
+    }
   }
-
-  // Phase 5: Build manifest (production only)
-  if (!isDev) {
-    const manifestPath = path.join(distDir, 'tada.manifest.json');
-    await generateBuildManifest(distDir, manifestPath, prodVersion!);
-    log.info`Built dist-prod/v${prodVersion!}/`;
-  }
-
-  printFlair();
 }

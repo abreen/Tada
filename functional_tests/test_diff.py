@@ -23,6 +23,29 @@ class TestDiffErrors:
         assert result.returncode == 1
         assert 'zero or two' in result.stderr
 
+    def test_failed_prod_build_does_not_consume_a_version_or_break_diff(self, site_dir):
+        run_tada('prod', cwd=str(site_dir), check=True)
+
+        page = site_dir / 'content' / 'about.md'
+        page.write_text('---\ntitle: About\n---\n\nFrom markdown.\n')
+        public_file = site_dir / 'public' / 'about.html'
+        public_file.write_text('<p>From public</p>\n')
+
+        failed_build = run_tada('prod', cwd=str(site_dir))
+        assert failed_build.returncode == 1
+        assert not (site_dir / 'dist-prod' / 'v2').exists()
+
+        public_file.unlink()
+
+        second_build = run_tada('prod', cwd=str(site_dir))
+        assert second_build.returncode == 0
+        assert (site_dir / 'dist-prod' / 'v2').is_dir()
+
+        diff = run_tada('diff', cwd=str(site_dir))
+        assert diff.returncode == 0
+        assert 'v1' in diff.stdout
+        assert 'v2' in diff.stdout
+
 
 class TestDiffNoChanges:
     def test_no_changes_between_identical_builds(self, site_dir):

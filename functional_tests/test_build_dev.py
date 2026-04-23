@@ -114,3 +114,36 @@ class TestDevBuildErrors:
         result = run_tada('dev', cwd=str(tmp_path))
         assert result.returncode == 1
         assert 'site.dev.json' in result.stderr
+
+    def test_processed_content_conflict_with_public_fails_without_publishing(self, site_dir):
+        first_build = run_tada('dev', cwd=str(site_dir))
+        assert first_build.returncode == 0
+
+        index_html = site_dir / 'dist' / 'index.html'
+        before_html = index_html.read_text()
+
+        page = site_dir / 'content' / 'about.md'
+        page.write_text('---\ntitle: About\n---\n\nFrom markdown.\n')
+        public_file = site_dir / 'public' / 'about.html'
+        public_file.write_text('<p>From public</p>\n')
+
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 1
+        assert 'same path' in result.stderr
+        assert index_html.read_text() == before_html
+        assert not (site_dir / 'dist' / 'about.html').exists()
+
+    def test_rebuild_removes_deleted_page_outputs(self, site_dir):
+        page = site_dir / 'content' / 'about.md'
+        page.write_text('---\ntitle: About\n---\n\nAbout page.\n')
+
+        first_build = run_tada('dev', cwd=str(site_dir))
+        assert first_build.returncode == 0
+        about_html = site_dir / 'dist' / 'about.html'
+        assert about_html.exists()
+
+        page.unlink()
+
+        second_build = run_tada('dev', cwd=str(site_dir))
+        assert second_build.returncode == 0
+        assert not about_html.exists()
