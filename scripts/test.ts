@@ -2,22 +2,14 @@ import { $ } from 'bun';
 import { runPythonModuleSync } from '../python/module';
 
 const suite = process.argv[2] ?? 'all';
-const bunQuiet = ['--only-failures'];
-const pytestFlags = [
-  '-q',
-  '--no-header',
-  '--tb=line',
-  '--maxfail=1',
-  '-n=auto',
-];
-const playwrightQuiet = ['--reporter=dot', '--quiet'];
+const pytestFlags = ['-v', '--tb=line', '--maxfail=1', '-n=auto'];
 
 async function runUnit(extra: string[] = []) {
-  await $`bun test ${bunQuiet} ${extra}`.throws(true);
+  await $`bun test ${extra}`.throws(true);
 }
 
 async function runPlaywright() {
-  await $`bunx playwright test ${playwrightQuiet}`.throws(true);
+  await $`bunx playwright test`.throws(true);
 }
 
 async function runFunctional(extra: string[] = []) {
