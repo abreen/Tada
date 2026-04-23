@@ -24,11 +24,13 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 - Lint: `bun run lint`
 - Lint Sass: `bun run lint:sass`
 - Typecheck: `bun run typecheck`
-- Run unit tests: `bun test`
-- Run a single unit test: `bun test build/code.test.ts`
+- Run unit tests: `bun run test:unit`
+- Run a single unit test: `bun run test:unit build/code.test.ts`
+- Run Playwright tests: `bun run test:playwright`
 - Run functional tests: `bun run test:functional`
 - Run functional tests with extra pytest args: `bun run test:functional -k watch`
-- Run Playwright tests: `bun run test:playwright`
+
+Do not use `bun test`, instead do `bun run test:unit`.
 
 ## Unit test rules
 

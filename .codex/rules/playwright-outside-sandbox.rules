@@ -1,0 +1,8 @@
+prefix_rule(
+    pattern = ["bun", "run", "test:playwright"],
+    decision = "allow",
+    justification = "Allow Playwright runs that need to leave the sandbox",
+    match = [
+        "bun run test:playwright",
+    ],
+)

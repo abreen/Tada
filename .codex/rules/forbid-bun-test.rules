@@ -1,0 +1,5 @@
+prefix_rule(
+    pattern = ["bun", "test"],
+    decision = "forbidden",
+    justification = "Use `bun run test:unit` instead of `bun test`",
+)

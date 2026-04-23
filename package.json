@@ -38,6 +38,7 @@
     "lint:sass": "bun run scripts/lint-sass.ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"**/*.{ts,js,scss,json}\"",
+    "test:unit": "bun run scripts/test.ts unit",
     "test:playwright": "bun run scripts/test.ts playwright",
     "test:functional": "bun run scripts/test.ts functional",
     "test:all": "bun run scripts/test.ts all",
