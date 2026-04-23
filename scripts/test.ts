@@ -13,7 +13,7 @@ function shouldUseQuietFlags(): boolean {
 
 const useQuietFlags = shouldUseQuietFlags();
 const bunTestFlags = useQuietFlags ? ['--dots'] : [];
-const playwrightFlags = useQuietFlags ? ['--quiet'] : [];
+const playwrightFlags = useQuietFlags ? ['--reporter=dot'] : [];
 const pytestFlags = ['--tb=line', '--maxfail=1', '-n=auto'];
 if (useQuietFlags) {
   pytestFlags.unshift('-q');
