@@ -12,9 +12,7 @@ import {
   setCurrentPath,
   setHistoryIndex,
 } from './runtime';
-import { globals, type Globals } from '../globals';
-
-type NavigateGlobals = Pick<Globals, 'getSiteBasePath' | 'setLocationHash'>;
+import { globals } from '../globals';
 
 function findAnchor(event: MouseEvent): HTMLAnchorElement | null {
   const target = event.target as HTMLElement | null;
@@ -42,7 +40,6 @@ function shouldIgnoreClick(
 }
 
 export default function mountNavigate(window: Window): () => void {
-  const runtimeGlobals: NavigateGlobals = globals;
   initNavigation(window);
 
   // Track scroll position on every scroll event. We keep the latest
@@ -65,11 +62,7 @@ export default function mountNavigate(window: Window): () => void {
     }
 
     if (
-      !isEligibleLink(
-        anchor.href,
-        window.location.origin,
-        runtimeGlobals.getSiteBasePath(),
-      )
+      !isEligibleLink(anchor.href, window.location.origin, __SITE_BASE_PATH__)
     ) {
       return;
     }
@@ -85,7 +78,7 @@ export default function mountNavigate(window: Window): () => void {
       clearSearch(window.document);
       closeHeaderDetails(window.document);
       if (url.hash) {
-        runtimeGlobals.setLocationHash(window, url.hash);
+        globals.setLocationHash(window, url.hash);
       }
       return;
     }

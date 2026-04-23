@@ -1,16 +1,13 @@
 import path from 'path';
-import { globals, type Globals } from '../globals';
+import { globals } from '../globals';
 import type { SiteVariables } from '../types';
-
-type PathGlobals = Pick<Globals, 'cwd'>;
 
 export function getPackageDir(): string {
   return path.resolve(import.meta.dir, '..', '..');
 }
 
 export function getProjectDir(): string {
-  const runtimeGlobals: PathGlobals = globals;
-  return runtimeGlobals.cwd();
+  return globals.cwd();
 }
 
 export function getContentDir(): string {

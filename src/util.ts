@@ -1,7 +1,3 @@
-import { globals, type Globals } from './globals';
-
-type UtilGlobals = Pick<Globals, 'getSiteBasePath'>;
-
 export function debounce<T extends (...args: unknown[]) => void>(
   win: Window,
   fn: T,
@@ -34,15 +30,12 @@ export function getElement(
   return el as HTMLElement;
 }
 
-function applyBasePathWithGlobals(
-  subPath: string,
-  globals: UtilGlobals,
-): string {
+function applyBasePathWithBasePath(subPath: string, basePath: string): string {
   if (!subPath.startsWith('/')) {
     throw new Error('invalid internal path, must start with "/": ' + subPath);
   }
 
-  let path = globals.getSiteBasePath();
+  let path = basePath;
   if (path.endsWith('/')) {
     path = path.slice(0, -1);
   }
@@ -50,7 +43,7 @@ function applyBasePathWithGlobals(
 }
 
 export function applyBasePath(subPath: string): string {
-  return applyBasePathWithGlobals(subPath, globals);
+  return applyBasePathWithBasePath(subPath, __SITE_BASE_PATH__);
 }
 
 export function scheduleTask(win: Window, fn: () => void) {

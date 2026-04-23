@@ -6,7 +6,7 @@ import {
   hasResponseValidatorsChanged,
   type ResponseValidators,
 } from '../validators';
-import { globals, type Globals } from '../globals';
+import { globals } from '../globals';
 
 const MAX_RESULTS = 24;
 
@@ -49,12 +49,7 @@ type State = {
   totalResults: number;
 };
 
-type SearchGlobals = Pick<
-  Globals,
-  'fetch' | 'getSiteBasePath' | 'getSiteTitlePostfix' | 'importModule' | 'now'
->;
-
-async function doSearch(state: State, window: Window, globals: SearchGlobals) {
+async function doSearch(state: State, window: Window) {
   if (pagefind == null) {
     return;
   }
@@ -69,7 +64,7 @@ async function doSearch(state: State, window: Window, globals: SearchGlobals) {
   const slice = search.results.slice(0, MAX_RESULTS);
   const data = await Promise.all(slice.map(r => r.data()));
 
-  const titlePostfix = globals.getSiteTitlePostfix();
+  const titlePostfix = __SITE_TITLE_POSTFIX__;
   const results: Result[] = data.map((d: PagefindResult) => {
     let title: string = d.meta?.title ?? d.url;
     if (titlePostfix && title.endsWith(titlePostfix)) {
@@ -278,7 +273,6 @@ function render(
 
 export default (window: Window) => {
   const { document } = window;
-  const runtimeGlobals: SearchGlobals = globals;
   const input = document.querySelector(
     'input.quick-search',
   ) as HTMLInputElement | null;
@@ -302,13 +296,13 @@ export default (window: Window) => {
       return;
     }
 
-    pagefind = (await runtimeGlobals.importModule(
+    pagefind = (await globals.importModule(
       applyBasePath('/pagefind/pagefind.js'),
     )) as Pagefind;
 
     await pagefind.init();
 
-    const res = await runtimeGlobals.fetch(
+    const res = await globals.fetch(
       applyBasePath('/pagefind/pagefind-entry.json'),
       { cache: 'no-cache' },
     );
@@ -319,13 +313,13 @@ export default (window: Window) => {
   }
 
   async function checkForIndexUpdate() {
-    if (indexCheckInFlight || runtimeGlobals.now() - lastIndexCheck < 3000) {
+    if (indexCheckInFlight || globals.now() - lastIndexCheck < 3000) {
       return;
     }
-    lastIndexCheck = runtimeGlobals.now();
+    lastIndexCheck = globals.now();
     indexCheckInFlight = true;
     try {
-      const res = await runtimeGlobals.fetch(
+      const res = await globals.fetch(
         applyBasePath('/pagefind/pagefind-entry.json'),
         { method: 'HEAD', cache: 'no-cache' },
       );
@@ -360,7 +354,7 @@ export default (window: Window) => {
     if (state.showResults) {
       render(input!, resultsContainer, state, true);
     }
-    await doSearch(state, window, runtimeGlobals);
+    await doSearch(state, window);
     if (!state.showResults) {
       return;
     }

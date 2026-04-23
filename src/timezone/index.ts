@@ -1,5 +1,3 @@
-import { globals, type Globals } from '../globals';
-
 const STORAGE_KEY = 'timezoneSelection';
 const TIMEZONE_SELECT_LABEL = 'Time zone';
 
@@ -13,11 +11,6 @@ const PERIOD_PATTERNS: { pattern: RegExp; style: PeriodStyle }[] = [
   { pattern: /[ap]\.m\./, style: ['a.m.', 'p.m.'] },
   { pattern: /[ap]m/, style: ['am', 'pm'] },
 ];
-
-type TimezoneGlobals = Pick<
-  Globals,
-  'getSiteDefaultTimezone' | 'getSiteTimezones'
->;
 
 export function detectPeriodStyle(text: string): PeriodStyle | null {
   for (const { pattern, style } of PERIOD_PATTERNS) {
@@ -92,16 +85,12 @@ function getOffsetMinutes(tz: string, date: Date): number {
   return (utcTs - date.getTime()) / 60000;
 }
 
-function getTimezones(globals: TimezoneGlobals): TimeZone[] {
-  const source = globals.getSiteTimezones();
-  return source.map(tz => ({ ...tz }));
+function getTimezones(): TimeZone[] {
+  return __SITE_TIMEZONES__.map(tz => ({ ...tz }));
 }
 
-function getDefaultTimezone(
-  timezones: TimeZone[],
-  globals: TimezoneGlobals,
-): TimeZone {
-  return timezones.find(tz => tz.value === globals.getSiteDefaultTimezone())!;
+function getDefaultTimezone(timezones: TimeZone[]): TimeZone {
+  return timezones.find(tz => tz.value === __SITE_DEFAULT_TIMEZONE__)!;
 }
 
 function computeOffsets(timezones: TimeZone[], baseDate: Date) {
@@ -144,9 +133,8 @@ function dominantPeriodStyle(
 }
 
 export default (window: Window) => {
-  const runtimeGlobals: TimezoneGlobals = globals;
-  const timezones = getTimezones(runtimeGlobals);
-  const defaultTz = getDefaultTimezone(timezones, runtimeGlobals);
+  const timezones = getTimezones();
+  const defaultTz = getDefaultTimezone(timezones);
   const resetTitle = `Reset time zone to ${defaultTz.abbreviation} (default)`;
 
   // determine initial time zone (from storage or default)

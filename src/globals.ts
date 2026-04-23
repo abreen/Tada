@@ -12,12 +12,7 @@ export interface Globals {
     callback: ResizeObserverCallback,
   ) => Pick<ResizeObserver, 'disconnect' | 'observe'>;
   fetch: FetchFunction;
-  getSiteBasePath: () => string;
-  getSiteDefaultTimezone: () => string;
-  getSiteTimezones: () => TimeZone[];
-  getSiteTitlePostfix: () => string;
   importModule: ImportModuleFunction;
-  isDev: () => boolean;
   isDocumentHidden: (document: Document) => boolean;
   now: () => number;
   setLocationHash: LocationMutationFunction;
@@ -34,23 +29,8 @@ export const globals: Globals = {
   fetch(input: RequestInfo | URL, init?: RequestInit) {
     return fetch(input, init);
   },
-  getSiteBasePath() {
-    return __SITE_BASE_PATH__;
-  },
-  getSiteDefaultTimezone() {
-    return __SITE_DEFAULT_TIMEZONE__;
-  },
-  getSiteTimezones() {
-    return __SITE_TIMEZONES__;
-  },
-  getSiteTitlePostfix() {
-    return __SITE_TITLE_POSTFIX__;
-  },
   importModule(specifier) {
     return import(specifier);
-  },
-  isDev() {
-    return typeof __IS_DEV__ !== 'undefined' && __IS_DEV__;
   },
   isDocumentHidden(document) {
     return document.hidden;

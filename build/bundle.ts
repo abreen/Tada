@@ -69,7 +69,6 @@ function createDefine(
   isDev = false,
 ): Record<string, string> {
   return {
-    __SITE_BASE__: JSON.stringify(siteVariables.base),
     __SITE_BASE_PATH__: JSON.stringify(siteVariables.basePath),
     __SITE_TITLE_POSTFIX__: JSON.stringify(siteVariables.titlePostfix),
     __SITE_DEFAULT_TIMEZONE__: JSON.stringify(siteVariables.defaultTimeZone),

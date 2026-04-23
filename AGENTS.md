@@ -32,10 +32,12 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 
 ## Unit test rules
 
+- Never rely on JSDOM to test browser behavior like navigation, instead use a Playwright test
 - Never read or modify real files/directories in a unit test
-- If you need to test filesystem behavior, write a functional test (see `functional_tests/`)
+- If you need to test filesystem behavior, write a functional test
 - Never mock globals; instead mock the `globals.ts` module (either `build/globals.ts` or `src/globals.ts`)
-- Never rely on JSDOM to test browser-specific behavior like navigation, instead use a Playwright test
+- In `src/`, dunder variables like `__IS_DEV__` and `__SITE_BASE_PATH__` are replaced at build time; they are the only exception to the globals rule
+- The dunder variables are initialized for unit tests in `test/unit-test-preload.ts`; tests can set them on `globalThis` when needed
 
 ## Code style/formatting
 

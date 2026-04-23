@@ -20,7 +20,6 @@ import mountTop from './top';
 import mountNavigate from './navigate';
 import mountPageUpdate from './page-update';
 import { mountPerPageComponents } from './navigate/lifecycle';
-import { globals } from './globals';
 
 import { scheduleTask, formatDuration } from './util';
 
@@ -79,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error(`Failed to mount ${name} component:`, reason);
   }
 
-  if (globals.isDev()) {
+  if (__IS_DEV__) {
     const diff = window.performance.now() - startTime;
     console.info(`Components mounted in ${formatDuration(diff)}`);
   }

@@ -36,10 +36,6 @@ const browserGlobalRules = [
     name: 'ResizeObserver',
     message: 'Use src/globals.ts instead of the global ResizeObserver.',
   },
-  {
-    name: '__IS_DEV__',
-    message: 'Use src/globals.ts instead of reading __IS_DEV__ directly.',
-  },
 ];
 
 const browserGlobalPropertyRules = [
@@ -88,11 +84,6 @@ const browserGlobalPropertyRules = [
     object: 'globalThis',
     property: 'ResizeObserver',
     message: 'Use src/globals.ts instead of the global ResizeObserver.',
-  },
-  {
-    object: 'globalThis',
-    property: '__IS_DEV__',
-    message: 'Use src/globals.ts instead of reading __IS_DEV__ directly.',
   },
 ];
 

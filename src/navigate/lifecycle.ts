@@ -5,7 +5,6 @@ import mountTimeZone from '../timezone';
 import mountCode from '../code';
 import mountTrace from '../trace';
 import mountPrint from '../print';
-import { globals } from '../globals';
 import { scheduleTask } from '../util';
 
 const PER_PAGE_COMPONENTS: Record<
@@ -40,7 +39,7 @@ export async function mountPerPageComponents(
           }
           resolve();
         } catch (err) {
-          if (globals.isDev()) {
+          if (__IS_DEV__) {
             console.error(`Failed to mount ${name} component:`, String(err));
           }
           reject();

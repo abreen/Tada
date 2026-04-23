@@ -12,22 +12,7 @@ export function createGlobals(overrides: Partial<Globals> = {}): Globals {
       return { disconnect() {}, observe() {} };
     },
     fetch: defaultFetch,
-    getSiteBasePath() {
-      return '/';
-    },
-    getSiteDefaultTimezone() {
-      return 'UTC';
-    },
-    getSiteTimezones() {
-      return [];
-    },
-    getSiteTitlePostfix() {
-      return '';
-    },
     importModule: async () => ({}),
-    isDev() {
-      return false;
-    },
     isDocumentHidden() {
       return false;
     },

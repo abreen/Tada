@@ -1,6 +1,6 @@
 [test]
 pathIgnorePatterns = ["playwright/**"]
-preload = ["./build/unit-test-preload.ts"]
+preload = ["./test/unit-test-preload.ts"]
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage/unit"
 coverageSkipTestFiles = true

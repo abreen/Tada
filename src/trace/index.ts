@@ -1,5 +1,5 @@
 import type { TraceManifest, TraceChunkEntry } from './types';
-import { globals, type Globals } from '../globals';
+import { globals } from '../globals';
 
 interface WidgetState {
   manifest: TraceManifest;
@@ -15,8 +15,6 @@ interface WidgetElements {
   diagram: HTMLElement;
 }
 
-type TraceGlobals = Pick<Globals, 'fetch'>;
-
 function getStep(state: WidgetState): TraceChunkEntry {
   const chunkIndex = Math.floor(state.currentStep / state.manifest.chunkSize);
   const offset = state.currentStep % state.manifest.chunkSize;
@@ -31,7 +29,6 @@ async function loadChunk(
   state: WidgetState,
   manifestUrl: string,
   chunkIndex: number,
-  globals: TraceGlobals,
 ): Promise<void> {
   if (state.chunks.has(chunkIndex)) {
     return;
@@ -48,13 +45,12 @@ async function goToStep(
   manifestUrl: string,
   stepIndex: number,
   doc: Document,
-  globals: TraceGlobals,
 ): Promise<void> {
   stepIndex = Math.max(0, Math.min(stepIndex, state.manifest.totalSteps - 1));
   const lastChunk = Math.floor(stepIndex / state.manifest.chunkSize);
   const loads: Promise<void>[] = [];
   for (let i = 0; i <= lastChunk; i++) {
-    loads.push(loadChunk(state, manifestUrl, i, globals));
+    loads.push(loadChunk(state, manifestUrl, i));
   }
   await Promise.all(loads);
   state.currentStep = stepIndex;
@@ -174,11 +170,7 @@ function renderWidgetState(
   }
 }
 
-async function initWidget(
-  root: HTMLElement,
-  doc: Document,
-  globals: TraceGlobals,
-): Promise<void> {
+async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
   const manifestUrl = root.dataset.traceManifest;
   if (!manifestUrl) {
     return;
@@ -197,7 +189,7 @@ async function initWidget(
 
   const state: WidgetState = { manifest, chunks: new Map(), currentStep: 0 };
 
-  await loadChunk(state, manifestUrl, 0, globals);
+  await loadChunk(state, manifestUrl, 0);
 
   const entry = getStep(state);
 
@@ -212,23 +204,16 @@ async function initWidget(
   const nextBtn = controls.querySelector('.trace-next') as HTMLButtonElement;
   const lastBtn = controls.querySelector('.trace-last') as HTMLButtonElement;
   firstBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, 0, doc, globals),
+    goToStep(state, elements, manifestUrl, 0, doc),
   );
   prevBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, state.currentStep - 1, doc, globals),
+    goToStep(state, elements, manifestUrl, state.currentStep - 1, doc),
   );
   nextBtn.addEventListener('click', () =>
-    goToStep(state, elements, manifestUrl, state.currentStep + 1, doc, globals),
+    goToStep(state, elements, manifestUrl, state.currentStep + 1, doc),
   );
   lastBtn.addEventListener('click', () =>
-    goToStep(
-      state,
-      elements,
-      manifestUrl,
-      manifest.totalSteps - 1,
-      doc,
-      globals,
-    ),
+    goToStep(state, elements, manifestUrl, manifest.totalSteps - 1, doc),
   );
 
   const btns = [firstBtn, prevBtn, nextBtn, lastBtn];
@@ -263,13 +248,12 @@ async function initWidget(
 
 export default function mountTrace(window: Window): void {
   const widgets = window.document.querySelectorAll('.trace-widget');
-  const runtimeGlobals: TraceGlobals = globals;
 
   if (widgets.length === 0) {
     return;
   }
 
   for (const widget of widgets) {
-    initWidget(widget as HTMLElement, window.document, runtimeGlobals);
+    initWidget(widget as HTMLElement, window.document);
   }
 }

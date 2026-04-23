@@ -1,6 +1,5 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
-import { createGlobals } from '../globals.test';
 import mount, { detectPeriodStyle, to12Hour, normalizeHM } from './index';
 
 const TIMEZONES: TimeZone[] = [
@@ -8,20 +7,6 @@ const TIMEZONES: TimeZone[] = [
   { value: 'America/Chicago', label: 'US Central', abbreviation: 'CT' },
   { value: 'America/Los_Angeles', label: 'US Pacific', abbreviation: 'PT' },
 ];
-
-function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
-  mock.module('../globals', () => ({
-    globals: createGlobals({
-      getSiteDefaultTimezone() {
-        return 'America/New_York';
-      },
-      getSiteTimezones() {
-        return TIMEZONES;
-      },
-      ...overrides,
-    }),
-  }));
-}
 
 function dom(bodyHtml: string) {
   return new JSDOM(`<body>${bodyHtml}</body>`, { url: 'http://localhost/' });
@@ -52,7 +37,8 @@ function parseHM(hhmm: string): [number, number] {
 }
 
 beforeEach(() => {
-  mockGlobals();
+  globalThis.__SITE_DEFAULT_TIMEZONE__ = 'America/New_York';
+  globalThis.__SITE_TIMEZONES__ = TIMEZONES.map(tz => ({ ...tz }));
 });
 
 describe('detectPeriodStyle', () => {
