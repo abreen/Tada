@@ -1,0 +1,8 @@
+prefix_rule(
+    pattern = ["bun", "run", "test:all"],
+    decision = "allow",
+    justification = "Allow full test suite runs to leave the sandbox",
+    match = [
+        "bun run test:all",
+    ],
+)
