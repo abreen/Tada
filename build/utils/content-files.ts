@@ -1,13 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import { parseFrontMatterAndContent } from './front-matter';
 import {
-  getProcessedExtensions,
-  extensionIsMarkdown,
-  isLiterateJava,
-  isPartial,
-} from './file-types';
-import { getPublicDir, normalizeOutputPath, toPosix } from './paths';
+  getProcessedExts,
+  getSourceOutputPaths,
+  getSourceTargetPaths,
+  isBuildContentSource,
+  shouldSkipContentFile,
+} from '../source-model';
+import { getPublicDir, toPosix } from './paths';
 
 function walkFiles(dir: string): string[] {
   return fs.readdirSync(dir).flatMap(file => {
@@ -31,23 +31,14 @@ export function getContentFiles(
   });
 }
 
-export function shouldSkipContentFile(filePath: string): boolean {
-  const ext = path.extname(filePath).toLowerCase();
-  if (!(extensionIsMarkdown(ext) || ext === '.html')) {
-    return false;
-  }
-
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const { pageVariables } = parseFrontMatterAndContent(raw, ext);
-  return pageVariables?.skip === true;
-}
-
 export function getBuildContentFiles(
   contentDir: string,
   codeExtensions: string[],
 ): string[] {
-  return getContentFiles(contentDir, codeExtensions).filter(
-    filePath => !isPartial(filePath) && !shouldSkipContentFile(filePath),
+  const processedExts = getProcessedExts(codeExtensions);
+
+  return getContentFiles(contentDir, codeExtensions).filter(filePath =>
+    isBuildContentSource(filePath, processedExts),
   );
 }
 
@@ -56,47 +47,17 @@ export function getContentSourceOutputRelPaths(
   filePath: string,
   codeExtensions: string[],
 ): Set<string> {
-  const processedExtSet = new Set(getProcessedExtensions(codeExtensions));
-  const relPath = toPosix(path.relative(contentDir, filePath));
-  const ext = path.extname(filePath).slice(1).toLowerCase();
-  const parsed = path.parse(relPath);
-  const outputs = new Set<string>();
-
-  if (!processedExtSet.has(ext)) {
-    outputs.add(relPath);
-    return outputs;
-  }
-
+  const processedExts = getProcessedExts(codeExtensions);
   const buildContentFiles = new Set(
     getBuildContentFiles(contentDir, codeExtensions),
   );
-  if (!buildContentFiles.has(filePath)) {
-    return outputs;
-  }
 
-  if (isLiterateJava(filePath)) {
-    outputs.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
-    outputs.add(toPosix(path.join(parsed.dir, parsed.name)));
-    return outputs;
-  }
-
-  if (
-    extensionIsMarkdown(parsed.ext.toLowerCase()) ||
-    parsed.ext.toLowerCase() === '.html'
-  ) {
-    outputs.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
-    return outputs;
-  }
-
-  const codeExtensionSet = new Set(
-    codeExtensions.map(value => value.toLowerCase()),
-  );
-  if (codeExtensionSet.has(ext)) {
-    outputs.add(relPath);
-    outputs.add(`${relPath}.html`);
-  }
-
-  return outputs;
+  return getSourceOutputPaths({
+    contentDir,
+    filePath,
+    processedExts,
+    buildContent: buildContentFiles.has(filePath),
+  });
 }
 
 export function getContentOutputRelPaths(
@@ -104,61 +65,29 @@ export function getContentOutputRelPaths(
   codeExtensions: string[],
 ): Set<string> {
   const buildContentFiles = getBuildContentFiles(contentDir, codeExtensions);
-  const codeExtensionSet = new Set(
-    codeExtensions.map(ext => ext.toLowerCase()),
-  );
+  const processedExts = getProcessedExts(codeExtensions);
   const outputs = new Set<string>();
 
   for (const filePath of buildContentFiles) {
-    const relPath = toPosix(path.relative(contentDir, filePath));
-    const parsed = path.parse(relPath);
-    const ext = parsed.ext.toLowerCase();
-
-    if (isLiterateJava(filePath)) {
-      outputs.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
-      outputs.add(toPosix(path.join(parsed.dir, parsed.name)));
-      continue;
-    }
-
-    if (extensionIsMarkdown(ext) || ext === '.html') {
-      outputs.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
-      continue;
-    }
-
-    if (codeExtensionSet.has(ext.slice(1))) {
-      outputs.add(relPath);
-      outputs.add(`${relPath}.html`);
+    for (const outputPath of getSourceOutputPaths({
+      contentDir,
+      filePath,
+      processedExts,
+      buildContent: true,
+    })) {
+      outputs.add(outputPath);
     }
   }
 
-  const processedExtSet = new Set(getProcessedExtensions(codeExtensions));
   for (const filePath of walkFiles(contentDir)) {
     const ext = path.extname(filePath).slice(1).toLowerCase();
-    if (processedExtSet.has(ext)) {
+    if (processedExts.has(ext)) {
       continue;
     }
     outputs.add(toPosix(path.relative(contentDir, filePath)));
   }
 
   return outputs;
-}
-
-function addGeneratedRouteAliases(
-  pathSet: Set<string>,
-  outputPath: string,
-): void {
-  const normalizedPath = normalizeOutputPath(outputPath);
-  pathSet.add(normalizedPath);
-
-  if (!normalizedPath.endsWith('/index.html')) {
-    return;
-  }
-
-  const base = normalizedPath.slice(0, -'index.html'.length);
-  pathSet.add(base);
-  if (base.endsWith('/') && base.length > 1) {
-    pathSet.add(base.slice(0, -1));
-  }
 }
 
 function getPublicFiles(publicDir: string): string[] {
@@ -191,49 +120,51 @@ export function getValidInternalTargets(
   codeExtensions: string[],
 ): Set<string> {
   const targets = new Set<string>();
-  const codeExtensionSet = new Set(
-    codeExtensions.map(ext => ext.toLowerCase()),
-  );
+  const processedExts = getProcessedExts(codeExtensions);
 
   for (const filePath of contentFiles) {
-    if (isPartial(filePath)) {
-      continue;
-    }
-    const relPath = path.relative(contentDir, filePath);
-    const parsed = path.parse(relPath);
-    const ext = parsed.ext.toLowerCase();
-    const subPath = toPosix(path.join(parsed.dir, parsed.name));
-
-    if (isLiterateJava(filePath)) {
-      // parsed.name is e.g. "VowelCounter.java"; the output page is
-      // VowelCounter.java.html and the source file is VowelCounter.java
-      const javaSubPath = toPosix(path.join(parsed.dir, parsed.name));
-      addGeneratedRouteAliases(targets, `/${javaSubPath}.html`);
-      targets.add(normalizeOutputPath(`/${javaSubPath}`));
-    } else if (extensionIsMarkdown(ext) || ext === '.html') {
-      addGeneratedRouteAliases(targets, `/${subPath}.html`);
-    } else if (codeExtensionSet.has(ext.slice(1))) {
-      addGeneratedRouteAliases(targets, `/${relPath}.html`);
-      targets.add(normalizeOutputPath(`/${relPath}`));
+    for (const targetPath of getSourceTargetPaths({
+      kind: 'content',
+      rootDir: contentDir,
+      filePath,
+      processedExts,
+      buildContent: true,
+    })) {
+      targets.add(targetPath);
     }
   }
 
   // Include non-processed assets in content/ that are copied directly to dist/.
-  const processedExtSet = new Set(getProcessedExtensions(codeExtensions));
   for (const filePath of walkFiles(contentDir)) {
     const ext = path.extname(filePath).slice(1).toLowerCase();
-    if (processedExtSet.has(ext)) {
+    if (processedExts.has(ext)) {
       continue;
     }
-    const relPath = path.relative(contentDir, filePath);
-    targets.add(normalizeOutputPath(`/${relPath}`));
+    for (const targetPath of getSourceTargetPaths({
+      kind: 'content',
+      rootDir: contentDir,
+      filePath,
+      processedExts,
+      buildContent: false,
+    })) {
+      targets.add(targetPath);
+    }
   }
 
   const publicDir = getPublicDir();
   for (const filePath of getPublicFiles(publicDir)) {
-    const relPath = path.relative(publicDir, filePath);
-    targets.add(normalizeOutputPath(`/${relPath}`));
+    for (const targetPath of getSourceTargetPaths({
+      kind: 'public',
+      rootDir: publicDir,
+      filePath,
+      processedExts,
+      buildContent: true,
+    })) {
+      targets.add(targetPath);
+    }
   }
 
   return targets;
 }
+
+export { shouldSkipContentFile };

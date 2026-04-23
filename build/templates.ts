@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
+import {
+  PROJECT_DATA_FILES as JSON_DATA_FILES,
+  REQUIRED_PROJECT_DATA_FILES,
+} from './config-files';
 import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { makeLogger } from './log';
 import { getPackageDir, getProjectDir } from './utils/paths';
@@ -21,14 +25,6 @@ const validators: Record<string, ValidateFunction> = {};
 // Keeps track of template call tree
 const renderStack: string[] = [];
 let errorStack: string[] | null = null;
-
-// JSON data files that live in the user's config directory
-const REQUIRED_JSON_DATA_FILES: string[] = ['nav.json'];
-const OPTIONAL_JSON_DATA_FILES: string[] = ['authors.json'];
-const JSON_DATA_FILES: string[] = [
-  ...REQUIRED_JSON_DATA_FILES,
-  ...OPTIONAL_JSON_DATA_FILES,
-];
 
 function getHtmlTemplatesDir(): string {
   return path.resolve(getPackageDir(), 'templates');
@@ -102,7 +98,7 @@ export function compileTemplates(
   for (const fileName of JSON_DATA_FILES) {
     const filePath = path.join(jsonDir, fileName);
     if (!fs.existsSync(filePath)) {
-      if (REQUIRED_JSON_DATA_FILES.includes(fileName)) {
+      if (REQUIRED_PROJECT_DATA_FILES.includes(fileName)) {
         throw new Error(`Missing required config file: ${filePath}`);
       }
       continue;

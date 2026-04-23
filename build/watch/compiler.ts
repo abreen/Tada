@@ -1,4 +1,10 @@
 import path from 'path';
+import {
+  AUTHORS_JSON_FILE,
+  NAV_JSON_FILE,
+  getProjectDataFilePath,
+  getSiteConfigPath,
+} from '../config-files';
 import { getDevSiteVariables } from '../site-variables';
 import { getJsonDataDir } from '../templates';
 import { getContentDir, getPublicDir } from '../util';
@@ -18,7 +24,8 @@ import type {
 } from './compiler-types';
 import { checkTraceToolAvailability, isTraceSourceFile } from '../utils/trace';
 import { createTadaWatchPlan, type TadaWatchPlan } from './planner';
-import { scanProject, type TadaSnapshot, updateProjectScan } from './snapshot';
+import { scanProject, updateProjectScan } from '../source-model';
+import type { TadaSnapshot } from './snapshot';
 
 export function invalidateTraceCacheForBatch(
   traceCache: TraceCache,
@@ -32,9 +39,11 @@ export function invalidateTraceCacheForBatch(
   }
 }
 
-export class TadaWatchCompiler
-  implements WatchCompiler<TadaSnapshot, TadaWatchPlan, TadaBuildMeta>
-{
+export class TadaWatchCompiler implements WatchCompiler<
+  TadaSnapshot,
+  TadaWatchPlan,
+  TadaBuildMeta
+> {
   private wsPort: number;
   private traceCache: TraceCache;
   private traceOptions: WatchTraceOptions;
@@ -50,9 +59,9 @@ export class TadaWatchCompiler
     const publicDir = getPublicDir();
     const jsonDataDir = path.resolve(getJsonDataDir());
     const configFilePaths = new Set([
-      path.resolve('site.dev.json'),
-      path.resolve(jsonDataDir, 'nav.json'),
-      path.resolve(jsonDataDir, 'authors.json'),
+      path.resolve(getSiteConfigPath('.', 'dev')),
+      path.resolve(getProjectDataFilePath(jsonDataDir, NAV_JSON_FILE)),
+      path.resolve(getProjectDataFilePath(jsonDataDir, AUTHORS_JSON_FILE)),
     ]);
 
     return [

@@ -1,4 +1,5 @@
 import type { BundledLanguage } from 'shiki';
+import type { TadaProjectScan } from './source-model';
 
 export type PlainTextLanguage = 'text' | 'txt' | 'plain';
 
@@ -47,6 +48,7 @@ export interface Asset {
 export interface ContentRenderOptions {
   distDir: string;
   assetFiles: string[];
+  scan: TadaProjectScan;
   watchState?: WatchState;
 }
 

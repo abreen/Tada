@@ -1,4 +1,11 @@
 export {
+  addGeneratedRouteAliases,
+  getProcessedExts,
+  getSourceOutputPaths,
+  getSourceTargetPaths,
+  isBuildContentSource,
+} from './source-model';
+export {
   getBuildContentFiles,
   getContentFiles,
   getContentOutputRelPaths,
@@ -21,6 +28,7 @@ export {
 } from './utils/paths';
 export {
   injectAssetTags,
+  preparePageTemplateHtml,
   renderCodePageAsset,
   renderCopiedContentAsset,
   renderLiterateJavaPageAsset,

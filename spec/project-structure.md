@@ -20,3 +20,11 @@ root. If a file in `content/` and a file in `public/` would produce the same
 output path, the build fails.
 
 The output directory is `dist/` for development builds.
+
+Within the Tada package itself, the shared build/watch source pipeline is split
+between:
+
+- `build/source-model.ts` for scanning project files and tracking source-to-
+  output ownership, valid link targets, and processed content classification
+- `build/source-records.ts` for rendering or copying one source into concrete
+  outputs plus dependency metadata consumed by builds and watch snapshots

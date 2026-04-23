@@ -19,3 +19,17 @@ phases succeed. If a build fails, it does not publish partial output:
 
 - if there was no previous build output, no new output directory is published
 - if a previous build output exists, it remains unchanged
+
+## Shared Build Internals
+
+The build and watch pipelines share the same source-discovery model.
+
+- `build/source-model.ts` scans `content/` and `public/`, classifies which
+  content files are processed, and records output ownership, valid internal
+  link targets, and generated route aliases
+- `build/source-records.ts` turns individual content or public sources into
+  source records containing rendered/copied outputs plus dependency metadata
+  such as partial, trace, internal-target, and author relationships
+
+Production builds use that shared scan-and-record layer during full builds, and
+watch mode reuses the same layer for incremental planning and recompilation.

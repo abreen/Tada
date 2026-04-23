@@ -1,13 +1,7 @@
 import fs from 'fs';
 import { getDevSiteVariables, getProdSiteVariables } from './site-variables';
-import { getExtensionToShikiLanguage } from './site-variables';
 import { compileTemplates } from './templates';
-import {
-  getDistDir,
-  getProdDistDir,
-  getContentDir,
-  getPublicDir,
-} from './utils/paths';
+import { getDistDir, getProdDistDir } from './utils/paths';
 import { isFeatureEnabled } from './features';
 import { bundle } from './bundle';
 import { copyFonts } from './generate-fonts';
@@ -15,12 +9,11 @@ import { copyKatexAssets } from './generate-katex-assets';
 import { generateFavicons } from './generate-favicon';
 import { generateWebAppManifest } from './generate-web-app-manifest';
 import { copyPublicFiles, copyContentAssets } from './copy';
-import { getProcessedExtensions } from './utils/file-types';
 import { ContentRenderer } from './generate-content-assets';
 import { runPagefind } from './pagefind';
 import { makeLogger, printFlair } from './log';
 import { generateBuildManifest, getNextVersion } from './build-manifest';
-import { scanProject } from './watch/snapshot';
+import { scanProject } from './source-model';
 import { validateConfig } from './watch/validation';
 import { applyCommitPlan } from '../watch/fs-commit';
 import path from 'path';
@@ -44,16 +37,15 @@ export async function runPipeline(
 ): Promise<void> {
   const isDev = mode === 'development';
   const siteVariables = isDev ? getDevSiteVariables() : getProdSiteVariables();
+  const scan = scanProject(siteVariables);
   const publishDir = isDev
     ? getDistDir()
     : path.join(getProdDistDir(), 'v-next');
   const distDir = makeTempOutputDir(publishDir);
-  const contentDir = getContentDir();
-  const publicDir = getPublicDir();
   let published = false;
 
   try {
-    const configDiagnostics = validateConfig(scanProject(siteVariables));
+    const configDiagnostics = validateConfig(scan);
     if (configDiagnostics.length > 0) {
       throw new Error(configDiagnostics[0].message);
     }
@@ -79,14 +71,16 @@ export async function runPipeline(
       generateWebAppManifest(siteVariables, distDir);
     }
 
-    const publicRelPaths = copyPublicFiles(publicDir, distDir);
-    const processedExtensions = getProcessedExtensions(
-      Object.keys(getExtensionToShikiLanguage(siteVariables)),
+    const publicRelPaths = copyPublicFiles(scan.publicDir, distDir);
+    copyContentAssets(
+      scan.contentDir,
+      distDir,
+      [...scan.processedExts],
+      publicRelPaths,
     );
-    copyContentAssets(contentDir, distDir, processedExtensions, publicRelPaths);
 
     const { errors, htmlAssetsByPath, htmlAnalysisByPath } =
-      contentRenderer.processContent({ distDir, assetFiles });
+      contentRenderer.processContent({ distDir, assetFiles, scan });
 
     for (const err of errors) {
       log.error`${err.message}`;

@@ -1,5 +1,6 @@
 import { compileTemplates, json } from '../templates';
 import { getDistDir } from '../util';
+import { createContentRecord, createPublicRecord } from '../source-records';
 import type { CompilerBuildResult } from '../../watch/types';
 import type {
   TadaBuildMeta,
@@ -18,9 +19,9 @@ import {
   ensureHighlighter,
   makeTempBuildDir,
   removeDirIfExists,
+  writeAssets,
 } from './assets';
 import { computeMutations } from './mutations';
-import { createPublicRecord, renderContentRecord } from './records';
 import {
   diagnosticsFromMessages,
   validateConfig,
@@ -63,7 +64,7 @@ export async function buildIncremental({
 
     for (const sourcePath of plan.contentToRender) {
       nextContentRecords.delete(sourcePath);
-      const record = renderContentRecord({
+      const record = createContentRecord({
         filePath: sourcePath,
         siteVariables,
         scan: plan.scan,
@@ -72,9 +73,9 @@ export async function buildIncremental({
         traceCache,
         traceToolAvailability: traceOptions.toolAvailability,
         cachedTraceSourceDir: getDistDir(),
-        persistOutputs: false,
       });
       if (record.outputs.size > 0) {
+        writeAssets(outputDir, record.outputs);
         nextContentRecords.set(sourcePath, record);
       }
     }

@@ -196,6 +196,22 @@ export function injectKatexStylesheet(html: string): string {
   return html.replace('<head>', `<head>${tag}`);
 }
 
+export function preparePageTemplateHtml({
+  templateHtml,
+  assetFiles,
+  distDir,
+}: {
+  templateHtml: string;
+  assetFiles: string[];
+  distDir: string;
+}): string {
+  let html = injectAssetTags(templateHtml, assetFiles, distDir);
+  if (templateHtml.includes('class="katex"')) {
+    html = injectKatexStylesheet(html);
+  }
+  return html;
+}
+
 function toContentAssetPath(contentDir: string, filePath: string): string {
   return toPosix(path.relative(contentDir, filePath));
 }
@@ -260,13 +276,9 @@ export function renderPlainTextPageAsset({
     `${pageVariables.template}.html`,
     templateParameters,
   ) as string;
-  let html = injectAssetTags(templateHtml, assetFiles, distDir);
-  if (templateHtml.includes('class="katex"')) {
-    html = injectKatexStylesheet(html);
-  }
   const finalized = finalizeHtmlPage({
     filePath,
-    html,
+    html: preparePageTemplateHtml({ templateHtml, assetFiles, distDir }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,
@@ -666,13 +678,9 @@ export function renderLiterateJavaPageAsset({
   });
 
   const templateHtml = render('literate.html', templateParameters) as string;
-  let html = injectAssetTags(templateHtml, assetFiles, distDir);
-  if (templateHtml.includes('class="katex"')) {
-    html = injectKatexStylesheet(html);
-  }
   const finalized = finalizeHtmlPage({
     filePath,
-    html,
+    html: preparePageTemplateHtml({ templateHtml, assetFiles, distDir }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,

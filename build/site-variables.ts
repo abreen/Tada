@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { bundledLanguages } from 'shiki';
 import type { BundledLanguage } from 'shiki';
+import { getSiteConfigFile, type SiteEnv } from './config-files';
 import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { getProjectDir } from './utils/paths';
 import type { PlainTextLanguage, SiteVariables } from './types';
@@ -112,8 +113,8 @@ export function getRuntimeBundledShikiLanguages(
   return [...new Set(configured)];
 }
 
-function getSiteVariables(env: string): SiteVariables {
-  const fileName = `site.${env}.json`;
+function getSiteVariables(env: SiteEnv): SiteVariables {
+  const fileName = getSiteConfigFile(env);
   const fromFile = getJson(fileName);
   const extensionToShikiLanguage = validateExtensionToShikiLanguage(
     fromFile.extensionToShikiLanguage,

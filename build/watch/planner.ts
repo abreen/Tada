@@ -1,5 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import {
+  AUTHORS_JSON_FILE,
+  NAV_JSON_FILE,
+  getProjectDataFilePath,
+  getSiteConfigPath,
+} from '../config-files';
 import { getJsonDataDir } from '../templates';
 import type { ChangeBatch } from '../../watch/types';
 import type { TadaProjectScan, TadaSnapshot } from './snapshot';
@@ -71,9 +77,13 @@ export function createTadaWatchPlan({
   const contentToRemove = new Set<string>();
   const publicToRemove = new Set<string>();
   const jsonDataDir = getJsonDataDir();
-  const siteConfigPath = path.resolve('site.dev.json');
-  const navPath = path.resolve(jsonDataDir, 'nav.json');
-  const authorsPath = path.resolve(jsonDataDir, 'authors.json');
+  const siteConfigPath = path.resolve(getSiteConfigPath('.', 'dev'));
+  const navPath = path.resolve(
+    getProjectDataFilePath(jsonDataDir, NAV_JSON_FILE),
+  );
+  const authorsPath = path.resolve(
+    getProjectDataFilePath(jsonDataDir, AUTHORS_JSON_FILE),
+  );
 
   if (!snapshot) {
     return {

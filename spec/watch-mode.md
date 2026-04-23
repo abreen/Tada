@@ -156,5 +156,19 @@ Watch mode is split into:
 
 - a reusable file-watching engine that batches changes, schedules rebuilds,
   commits staged output updates, and preserves the last successful snapshot
-- a Tada adapter that decides which sources need to be rebuilt and how those
-  outputs map into `dist/`
+- a Tada watch adapter built on the same source model and source record layers
+  used by full builds
+
+The Tada-specific watch pieces are:
+
+- `build/source-model.ts`, which scans `content/` and `public/` and keeps the
+  shared view of source ownership, output paths, valid internal targets, and
+  processed-versus-copied content sources
+- `build/source-records.ts`, which renders or copies one source at a time into
+  a source record with outputs plus dependency metadata used by incremental
+  rebuild planning
+- `build/watch/planner.ts`, which compares the previous snapshot with the
+  updated source model to choose a full or incremental rebuild and determine
+  which records must be re-rendered or removed
+- `build/watch/compiler.ts`, which runs that plan and publishes the updated
+  snapshot after a successful rebuild

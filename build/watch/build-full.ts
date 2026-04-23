@@ -1,15 +1,16 @@
 import { compileTemplates, json } from '../templates';
 import { getDevSiteVariables } from '../site-variables';
+import { createContentRecord, createPublicRecord } from '../source-records';
 import { getDistDir } from '../util';
 import type { CompilerBuildResult } from '../../watch/types';
 import {
   collectHtmlAnalysisByPath,
   collectHtmlAssetsByPath,
   createSnapshot,
-  scanProject,
   type TadaSourceRecord,
   type TadaSnapshot,
 } from './snapshot';
+import { scanProject } from '../source-model';
 import type {
   TadaBuildMeta,
   TraceCache,
@@ -23,7 +24,6 @@ import {
   removeDirIfExists,
   writeAssets,
 } from './assets';
-import { createPublicRecord, renderContentRecord } from './records';
 import {
   diagnosticsFromMessages,
   validateConfig,
@@ -62,7 +62,7 @@ export async function buildFull({
 
     const contentRecords = new Map<string, TadaSourceRecord>();
     for (const filePath of scan.contentFiles) {
-      const record = renderContentRecord({
+      const record = createContentRecord({
         filePath,
         siteVariables,
         scan,
@@ -73,6 +73,7 @@ export async function buildFull({
         cachedTraceSourceDir: distDir,
       });
       if (record.outputs.size > 0) {
+        writeAssets(outputDir, record.outputs);
         contentRecords.set(filePath, record);
       }
     }

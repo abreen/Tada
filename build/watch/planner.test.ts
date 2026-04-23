@@ -173,4 +173,41 @@ describe('createTadaWatchPlan', () => {
     expect([...plan.contentToRender]).toEqual([contentPath]);
     expect([...plan.publicToRemove]).toEqual([publicPath]);
   });
+
+  test('re-renders copied content after public handoff removal', () => {
+    const contentPath = sitePath('content', 'assets', 'logo.svg');
+    const publicPath = sitePath('public', 'assets', 'logo.svg');
+    const snapshot = makeSnapshot({
+      contentRecords: new Map([
+        [contentPath, makeRecord(contentPath, ['assets/logo.svg'])],
+      ]),
+      publicRecords: new Map([
+        [
+          publicPath,
+          makeRecord(publicPath, ['assets/logo.svg'], { kind: 'public' }),
+        ],
+      ]),
+      outputOwners: new Map([
+        ['assets/logo.svg', { kind: 'public', sourcePath: publicPath }],
+      ]),
+    });
+    const scan = makeScan({
+      contentFiles: new Set([contentPath]),
+      contentOwners: new Map([['assets/logo.svg', contentPath]]),
+      sourceOutputPaths: new Map([[contentPath, new Set(['assets/logo.svg'])]]),
+      sourceTargetPaths: new Map([
+        [contentPath, new Set(['/assets/logo.svg'])],
+      ]),
+      validTargets: new Set(['/assets/logo.svg']),
+    });
+
+    const plan = createTadaWatchPlan({
+      snapshot,
+      batch: makeBatch([{ path: publicPath, kind: 'unlink' }]),
+      scan,
+    });
+
+    expect([...plan.contentToRender]).toEqual([contentPath]);
+    expect([...plan.publicToRemove]).toEqual([publicPath]);
+  });
 });

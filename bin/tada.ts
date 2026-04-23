@@ -19,6 +19,14 @@ import {
   getVersions,
   pruneOldVersions,
 } from '../build/build-manifest';
+import {
+  AUTHORS_JSON_FILE,
+  NAV_JSON_FILE,
+  getProjectDataFilePath,
+  getSiteConfigFile,
+  getSiteConfigPath,
+  type SiteEnv,
+} from '../build/config-files';
 
 const { version } = packageJson;
 
@@ -26,10 +34,11 @@ const SYSTEM_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const packageDir = path.resolve(import.meta.dir, '..');
 
-function requireSiteConfig(env: string): void {
-  const configPath = path.resolve(process.cwd(), `site.${env}.json`);
+function requireSiteConfig(env: SiteEnv): void {
+  const configPath = getSiteConfigPath(process.cwd(), env);
+  const configFile = getSiteConfigFile(env);
   if (!fs.existsSync(configPath)) {
-    console.error(`Error: Missing config file: site.${env}.json`);
+    console.error(`Error: Missing config file: ${configFile}`);
     process.exit(1);
   }
 }
@@ -353,12 +362,12 @@ async function initCommand(args: string[]): Promise<void> {
   });
 
   fs.writeFileSync(
-    path.join(projectDir, 'site.dev.json'),
+    getSiteConfigPath(projectDir, 'dev'),
     JSON.stringify(devConfig, null, 2) + '\n',
   );
 
   fs.writeFileSync(
-    path.join(projectDir, 'site.prod.json'),
+    getSiteConfigPath(projectDir, 'prod'),
     JSON.stringify(prodConfig, null, 2) + '\n',
   );
 
@@ -370,7 +379,7 @@ async function initCommand(args: string[]): Promise<void> {
     );
     fs.mkdirSync(path.join(projectDir, 'public'), { recursive: true });
     fs.writeFileSync(
-      path.join(projectDir, 'nav.json'),
+      getProjectDataFilePath(projectDir, NAV_JSON_FILE),
       JSON.stringify(
         [
           {
@@ -385,7 +394,7 @@ async function initCommand(args: string[]): Promise<void> {
   } else {
     // Create nav and authors data files in the project root
     fs.writeFileSync(
-      path.join(projectDir, 'nav.json'),
+      getProjectDataFilePath(projectDir, NAV_JSON_FILE),
       JSON.stringify(
         [
           {
@@ -421,7 +430,7 @@ async function initCommand(args: string[]): Promise<void> {
       ) + '\n',
     );
     fs.writeFileSync(
-      path.join(projectDir, 'authors.json'),
+      getProjectDataFilePath(projectDir, AUTHORS_JSON_FILE),
       JSON.stringify(
         { alex: { name: 'Alex Breen', avatar: '/avatars/alex.jpg' } },
         null,

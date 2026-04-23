@@ -1,34 +1,21 @@
 import fs from 'fs';
 import path from 'path';
 import { makeLogger } from './log';
-import {
-  getExtensionToShikiLanguage,
-  getRuntimeBundledShikiLanguages,
-} from './site-variables';
+import { getRuntimeBundledShikiLanguages } from './site-variables';
+import { createContentRecord } from './source-records';
 import { validateConfigLinks } from './validate-config-links';
 import { json } from './templates';
 import { initHighlighter } from './utils/shiki-highlighter';
-import {
-  getBuildContentFiles,
-  getContentDir,
-  getValidInternalTargets,
-  renderCodePageAsset,
-  renderCopiedContentAsset,
-  renderLiterateJavaPageAsset,
-  renderPlainTextPageAsset,
-} from './util';
-import { isLiterateJava } from './utils/file-types';
 import { checkTraceToolAvailability, isTraceSourceFile } from './utils/trace';
-import { toPosix } from './utils/paths';
 import type {
   SiteVariables,
-  Asset,
   ContentRenderOptions,
   ContentRenderResult,
   HtmlOutputAnalysis,
   TraceToolAvailability,
   WatchState,
 } from './types';
+import type { TadaSourceRecord } from './watch/snapshot';
 
 const log = makeLogger(import.meta.url);
 
@@ -40,7 +27,7 @@ function cloneHtmlOutputAnalysis(
 
 export class ContentRenderer {
   private siteVariables: SiteVariables;
-  private sourceFileCache: Map<string, Asset[]>;
+  private sourceFileCache: Map<string, TadaSourceRecord>;
   private lastBuildFiles: Set<string>;
   private javacAvailable: boolean | undefined;
   private traceToolAvailability: TraceToolAvailability | undefined;
@@ -60,8 +47,8 @@ export class ContentRenderer {
     this.lastBuildFiles = new Set();
   }
 
-  private getCachedAssets(filePath: string): Asset[] {
-    return this.sourceFileCache.get(filePath) ?? [];
+  private getCachedRecord(filePath: string): TadaSourceRecord | undefined {
+    return this.sourceFileCache.get(filePath);
   }
 
   async initHighlighter(): Promise<void> {
@@ -98,124 +85,47 @@ export class ContentRenderer {
     return dirtySourceFiles;
   }
 
-  isCopiedAssetSource(filePath: string): boolean {
-    const ext = path.extname(filePath).toLowerCase();
-    const codeExtensions = getExtensionToShikiLanguage(this.siteVariables);
-    return Object.prototype.hasOwnProperty.call(codeExtensions, ext.slice(1));
-  }
-
-  renderSourceAssets(
-    filePath: string,
-    contentDir: string,
-    distDir: string,
-    validInternalTargets: Set<string>,
-    assetFiles: string[],
-    literateJavaOutputPaths: Set<string>,
-  ): Asset[] {
-    const ext = path.extname(filePath).toLowerCase();
-    const assets: Asset[] = [];
-
-    if (isLiterateJava(filePath)) {
-      assets.push(
-        ...renderLiterateJavaPageAsset({
-          filePath,
-          contentDir,
-          distDir,
-          siteVariables: this.siteVariables,
-          assetFiles,
-          skipExecution: !this.javacAvailable,
-          validInternalTargets,
-          literateJavaOutputPaths,
-        }),
-      );
-      return assets;
-    }
-
-    if (ext === '.html' || ext === '.md' || ext === '.markdown') {
-      assets.push(
-        ...renderPlainTextPageAsset({
-          filePath,
-          contentDir,
-          distDir,
-          siteVariables: this.siteVariables,
-          validInternalTargets,
-          assetFiles,
-          literateJavaOutputPaths,
-          traceCache: this.traceCache,
-          traceToolAvailability: this.traceToolAvailability,
-        }),
-      );
-      return assets;
-    }
-
-    const codeExtensions = getExtensionToShikiLanguage(this.siteVariables);
-    if (ext.slice(1) in codeExtensions) {
-      assets.push(
-        ...renderCodePageAsset({
-          filePath,
-          contentDir,
-          distDir,
-          siteVariables: this.siteVariables,
-          validInternalTargets,
-          assetFiles,
-          literateJavaOutputPaths,
-        }),
-      );
-    }
-
-    return assets;
-  }
-
-  renderCopiedSourceAssets(filePath: string, contentDir: string): Asset[] {
-    if (!this.isCopiedAssetSource(filePath)) {
-      return [];
-    }
-
-    return renderCopiedContentAsset({
-      filePath,
-      contentDir,
-      siteVariables: this.siteVariables,
-    });
-  }
-
   updateSourceCache(
     filePath: string,
-    assets: Asset[],
+    record: TadaSourceRecord,
     changedOutputRelPaths: Set<string>,
     removedOutputRelPaths: Set<string>,
     changedHtmlAssetPaths: Set<string>,
     removedHtmlAssetPaths: Set<string>,
   ): void {
-    const previousAssets = this.getCachedAssets(filePath);
-    const nextAssetPaths = new Set(assets.map(asset => asset.assetPath));
+    const previousRecord = this.getCachedRecord(filePath);
+    const nextOutputPaths = new Set(record.outputs.keys());
 
-    for (const asset of previousAssets) {
-      if (nextAssetPaths.has(asset.assetPath)) {
+    for (const outputPath of previousRecord?.outputs.keys() ?? []) {
+      if (nextOutputPaths.has(outputPath)) {
         continue;
       }
-      removedOutputRelPaths.add(asset.assetPath);
-      if (asset.assetPath.endsWith('.html')) {
-        removedHtmlAssetPaths.add(asset.assetPath);
+      removedOutputRelPaths.add(outputPath);
+      if (outputPath.endsWith('.html')) {
+        removedHtmlAssetPaths.add(outputPath);
       }
     }
 
-    for (const asset of assets) {
-      changedOutputRelPaths.add(asset.assetPath);
-      if (asset.assetPath.endsWith('.html')) {
-        changedHtmlAssetPaths.add(asset.assetPath);
+    for (const outputPath of record.outputs.keys()) {
+      changedOutputRelPaths.add(outputPath);
+      if (outputPath.endsWith('.html')) {
+        changedHtmlAssetPaths.add(outputPath);
       }
     }
 
-    this.sourceFileCache.set(filePath, assets);
+    this.sourceFileCache.set(filePath, record);
   }
 
   writeCachedAssets(distDir: string, buildContentFiles: string[]): void {
     for (const filePath of buildContentFiles) {
-      const assets = this.getCachedAssets(filePath);
-      for (const asset of assets) {
-        const outPath = path.join(distDir, asset.assetPath);
+      const record = this.getCachedRecord(filePath);
+      if (!record) {
+        continue;
+      }
+      for (const [outputPath, content] of record.outputs) {
+        const outPath = path.join(distDir, outputPath);
         fs.mkdirSync(path.dirname(outPath), { recursive: true });
-        fs.writeFileSync(outPath, asset.content);
+        fs.writeFileSync(outPath, content);
       }
     }
   }
@@ -230,11 +140,11 @@ export class ContentRenderer {
         continue;
       }
 
-      const previousAssets = this.getCachedAssets(filePath);
-      for (const asset of previousAssets) {
-        removedOutputRelPaths.add(asset.assetPath);
-        if (asset.assetPath.endsWith('.html')) {
-          removedHtmlAssetPaths.add(asset.assetPath);
+      const previousRecord = this.getCachedRecord(filePath);
+      for (const outputPath of previousRecord?.outputs.keys() ?? []) {
+        removedOutputRelPaths.add(outputPath);
+        if (outputPath.endsWith('.html')) {
+          removedHtmlAssetPaths.add(outputPath);
         }
       }
       this.sourceFileCache.delete(filePath);
@@ -244,13 +154,10 @@ export class ContentRenderer {
   processContent({
     distDir,
     assetFiles,
+    scan,
     watchState,
   }: ContentRenderOptions): ContentRenderResult {
-    const contentDir: string = getContentDir();
-    const buildContentFiles: string[] = getBuildContentFiles(
-      contentDir,
-      Object.keys(getExtensionToShikiLanguage(this.siteVariables)),
-    );
+    const buildContentFiles = [...scan.buildContentFiles];
     const buildFileSet = new Set<string>(buildContentFiles);
     const dirtySourceFiles = this.getDirtySourceFiles(
       buildContentFiles,
@@ -260,19 +167,7 @@ export class ContentRenderer {
     const removedOutputRelPaths = new Set<string>();
     const changedHtmlAssetPaths = new Set<string>();
     const removedHtmlAssetPaths = new Set<string>();
-    const validInternalTargets = getValidInternalTargets(
-      contentDir,
-      buildContentFiles,
-      Object.keys(getExtensionToShikiLanguage(this.siteVariables)),
-    );
-    const literateJavaOutputPaths = new Set<string>();
-    for (const filePath of buildContentFiles) {
-      if (isLiterateJava(filePath)) {
-        const parsed = path.parse(path.relative(contentDir, filePath));
-        const javaPath = toPosix(path.join(parsed.dir, parsed.name));
-        literateJavaOutputPaths.add(`/${javaPath}`);
-      }
-    }
+    const validInternalTargets = scan.validTargets;
 
     const errors: Error[] = [];
 
@@ -305,26 +200,25 @@ export class ContentRenderer {
     }
 
     for (const filePath of dirtySourceFiles) {
-      let assets: Asset[];
+      let record: TadaSourceRecord;
       try {
-        assets = [
-          ...this.renderSourceAssets(
-            filePath,
-            contentDir,
-            distDir,
-            validInternalTargets,
-            assetFiles,
-            literateJavaOutputPaths,
-          ),
-          ...this.renderCopiedSourceAssets(filePath, contentDir),
-        ];
+        record = createContentRecord({
+          filePath,
+          siteVariables: this.siteVariables,
+          scan,
+          assetFiles,
+          outputDir: distDir,
+          traceCache: this.traceCache,
+          traceToolAvailability: this.traceToolAvailability,
+          skipLiterateJavaExecution: !this.javacAvailable,
+        });
       } catch (err) {
         errors.push(err as Error);
         continue;
       }
       this.updateSourceCache(
         filePath,
-        assets,
+        record,
         changedOutputRelPaths,
         removedOutputRelPaths,
         changedHtmlAssetPaths,
@@ -339,16 +233,18 @@ export class ContentRenderer {
     const htmlAssetsByPath = new Map<string, string>();
     const htmlAnalysisByPath = new Map<string, HtmlOutputAnalysis>();
     for (const filePath of buildContentFiles) {
-      const assets = this.getCachedAssets(filePath);
-      for (const asset of assets) {
-        if (asset.assetPath.endsWith('.html')) {
-          htmlAssetsByPath.set(asset.assetPath, asset.content as string);
-          if (asset.htmlAnalysis) {
-            htmlAnalysisByPath.set(
-              asset.assetPath,
-              cloneHtmlOutputAnalysis(asset.htmlAnalysis),
-            );
-          }
+      const record = this.getCachedRecord(filePath);
+      if (!record) {
+        continue;
+      }
+      for (const [outputPath, content] of record.outputs) {
+        if (!outputPath.endsWith('.html') || typeof content !== 'string') {
+          continue;
+        }
+        htmlAssetsByPath.set(outputPath, content);
+        const analysis = record.htmlAnalysisByOutputPath?.get(outputPath);
+        if (analysis) {
+          htmlAnalysisByPath.set(outputPath, cloneHtmlOutputAnalysis(analysis));
         }
       }
     }

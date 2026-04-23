@@ -1,28 +1,35 @@
 import fs from 'fs';
 import path from 'path';
-import { getExtensionToShikiLanguage } from '../site-variables';
+import { getExtensionToShikiLanguage } from './site-variables';
 import {
   renderCodePageAsset,
   renderCopiedContentAsset,
   renderLiterateJavaPageAsset,
   renderPlainTextPageAsset,
   toPosix,
-} from '../util';
-import { extensionIsMarkdown, isLiterateJava } from '../utils/file-types';
+} from './util';
+import { extensionIsMarkdown, isLiterateJava } from './utils/file-types';
 import type {
   Asset,
   RenderDependencyCollector,
   SiteVariables,
   TraceToolAvailability,
-} from '../types';
+} from './types';
+import type { TadaProjectScan } from './source-model';
 import {
   collectSourceHtmlAnalysis,
   collectSourceOutputs,
-  type TadaProjectScan,
   type TadaSourceRecord,
-} from './snapshot';
-import type { TraceCache } from './compiler-types';
-import { writeAssets } from './assets';
+} from './watch/snapshot';
+import type { TraceCache } from './watch/compiler-types';
+
+export type TadaSourceRenderKind =
+  | 'skip'
+  | 'plain-text-page'
+  | 'literate-java'
+  | 'code-page'
+  | 'content-copy'
+  | 'public-copy';
 
 function createDependencyCollector(): {
   collector: RenderDependencyCollector;
@@ -58,6 +65,19 @@ function createDependencyCollector(): {
   };
 }
 
+function createEmptyContentRecord(filePath: string): TadaSourceRecord {
+  return {
+    sourcePath: filePath,
+    kind: 'content',
+    outputs: new Map(),
+    htmlAnalysisByOutputPath: new Map(),
+    partialDeps: new Set(),
+    traceDeps: new Set(),
+    internalTargets: new Set(),
+    generatedOutputPaths: new Set(),
+  };
+}
+
 function createRawContentAsset(filePath: string, contentDir: string): Asset[] {
   return [
     {
@@ -67,7 +87,49 @@ function createRawContentAsset(filePath: string, contentDir: string): Asset[] {
   ];
 }
 
-export function renderContentRecord({
+export function classifySourceRenderKind({
+  filePath,
+  scan,
+  siteVariables,
+}: {
+  filePath: string;
+  scan: TadaProjectScan;
+  siteVariables: SiteVariables;
+}): TadaSourceRenderKind {
+  if (scan.publicFiles.has(filePath)) {
+    return 'public-copy';
+  }
+
+  if (!scan.contentFiles.has(filePath)) {
+    return 'skip';
+  }
+
+  const ext = path.extname(filePath).slice(1).toLowerCase();
+  const lowerExt = path.extname(filePath).toLowerCase();
+  if (!scan.processedExts.has(ext)) {
+    return 'content-copy';
+  }
+
+  if (!scan.buildContentFiles.has(filePath)) {
+    return 'skip';
+  }
+
+  if (isLiterateJava(filePath)) {
+    return 'literate-java';
+  }
+
+  if (extensionIsMarkdown(lowerExt) || lowerExt === '.html') {
+    return 'plain-text-page';
+  }
+
+  if (Object.hasOwn(getExtensionToShikiLanguage(siteVariables), ext)) {
+    return 'code-page';
+  }
+
+  return 'skip';
+}
+
+export function createContentRecord({
   filePath,
   siteVariables,
   scan,
@@ -76,43 +138,47 @@ export function renderContentRecord({
   traceCache,
   traceToolAvailability,
   cachedTraceSourceDir,
-  persistOutputs = true,
+  skipLiterateJavaExecution,
 }: {
   filePath: string;
   siteVariables: SiteVariables;
   scan: TadaProjectScan;
   assetFiles: string[];
   outputDir: string;
-  traceCache: TraceCache;
-  traceToolAvailability: TraceToolAvailability;
+  traceCache?: TraceCache;
+  traceToolAvailability?: TraceToolAvailability;
   cachedTraceSourceDir?: string;
-  persistOutputs?: boolean;
+  skipLiterateJavaExecution?: boolean;
 }): TadaSourceRecord {
+  const renderKind = classifySourceRenderKind({
+    filePath,
+    scan,
+    siteVariables,
+  });
+  if (renderKind === 'skip' || renderKind === 'public-copy') {
+    return createEmptyContentRecord(filePath);
+  }
+
   const deps = createDependencyCollector();
-  const codeExtensions = Object.keys(
-    getExtensionToShikiLanguage(siteVariables),
-  ).map(ext => ext.toLowerCase());
-  const ext = path.extname(filePath).slice(1).toLowerCase();
   const assets: Asset[] = [];
 
-  if (isLiterateJava(filePath)) {
-    assets.push(
-      ...renderLiterateJavaPageAsset({
-        filePath,
-        contentDir: scan.contentDir,
-        distDir: outputDir,
-        siteVariables,
-        assetFiles,
-        validInternalTargets: scan.validTargets,
-        literateJavaOutputPaths: scan.literateJavaOutputPaths,
-        dependencyCollector: deps.collector,
-      }),
-    );
-  } else if (scan.buildContentFiles.has(filePath)) {
-    if (
-      extensionIsMarkdown(path.extname(filePath).toLowerCase()) ||
-      path.extname(filePath).toLowerCase() === '.html'
-    ) {
+  switch (renderKind) {
+    case 'literate-java':
+      assets.push(
+        ...renderLiterateJavaPageAsset({
+          filePath,
+          contentDir: scan.contentDir,
+          distDir: outputDir,
+          siteVariables,
+          assetFiles,
+          skipExecution: skipLiterateJavaExecution,
+          validInternalTargets: scan.validTargets,
+          literateJavaOutputPaths: scan.literateJavaOutputPaths,
+          dependencyCollector: deps.collector,
+        }),
+      );
+      break;
+    case 'plain-text-page':
       assets.push(
         ...renderPlainTextPageAsset({
           filePath,
@@ -128,7 +194,8 @@ export function renderContentRecord({
           traceToolAvailability,
         }),
       );
-    } else if (codeExtensions.includes(ext)) {
+      break;
+    case 'code-page':
       assets.push(
         ...renderCodePageAsset({
           filePath,
@@ -148,26 +215,17 @@ export function renderContentRecord({
           siteVariables,
         }),
       );
-    }
-  } else if (!scan.processedExts.has(ext)) {
-    assets.push(...createRawContentAsset(filePath, scan.contentDir));
-  }
-
-  const outputs = collectSourceOutputs(
-    assets,
-    deps.generatedOutputPaths,
-    outputDir,
-  );
-  const htmlAnalysisByOutputPath = collectSourceHtmlAnalysis(assets);
-  if (persistOutputs) {
-    writeAssets(outputDir, outputs);
+      break;
+    case 'content-copy':
+      assets.push(...createRawContentAsset(filePath, scan.contentDir));
+      break;
   }
 
   return {
     sourcePath: filePath,
     kind: 'content',
-    outputs,
-    htmlAnalysisByOutputPath,
+    outputs: collectSourceOutputs(assets, deps.generatedOutputPaths, outputDir),
+    htmlAnalysisByOutputPath: collectSourceHtmlAnalysis(assets),
     partialDeps: deps.partials,
     traceDeps: deps.traceFiles,
     internalTargets: deps.internalTargets,
