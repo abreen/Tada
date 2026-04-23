@@ -3,7 +3,7 @@ import path from 'path';
 import { createGlobals } from './globals.test';
 import type { SiteVariables } from './types';
 
-const projectRoot = '/virtual/site';
+const projectRoot = path.resolve(path.sep, 'virtual', 'site');
 const files = new Map<string, string>();
 const directories = new Set<string>();
 

@@ -5,7 +5,7 @@ import { resolvePathname } from './serve';
 
 type MockEntry = { kind: 'dir' | 'file'; mtime?: Date };
 
-const DIST_DIR = '/virtual/dist';
+const DIST_DIR = path.resolve(path.sep, 'virtual', 'dist');
 const DEFAULT_MTIME = new Date('2025-01-01T00:00:00.000Z');
 
 function mockFs(entries: Record<string, MockEntry>): void {

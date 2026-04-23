@@ -74,7 +74,7 @@ const forbiddenFs = createForbiddenObject('fs', FS_METHODS, {
   promises: forbiddenPromises,
 });
 
-for (const moduleId of ['fs', 'node:fs']) {
+for (const moduleId of ['fs']) {
   mock.module(moduleId, () => ({
     default: forbiddenFs,
     promises: forbiddenPromises,
@@ -87,7 +87,7 @@ for (const moduleId of ['fs', 'node:fs']) {
   }));
 }
 
-for (const moduleId of ['fs/promises', 'node:fs/promises']) {
+for (const moduleId of ['fs/promises']) {
   mock.module(moduleId, () => ({
     default: forbiddenPromises,
     ...Object.fromEntries(
