@@ -5,7 +5,7 @@ import type MarkdownIt from 'markdown-it';
 import { stripHtml } from 'string-strip-html';
 import { makeLogger } from '../log';
 import { B } from '../colors';
-import createGlobals from '../globals';
+import createTemplateGlobals from '../template-globals';
 import { getExtensionToShikiLanguage } from '../site-variables';
 import { render, json } from '../templates';
 import { validateParentLink } from '../validate-config-links';
@@ -133,7 +133,7 @@ function createTemplateParameters({
   const applyBasePath = createApplyBasePath(siteVariables);
   return {
     vars: siteVariables.vars || {},
-    ...createGlobals(pageVariables, siteVariables, subPath),
+    ...createTemplateGlobals(pageVariables, siteVariables, subPath),
     site: siteVariables,
     page: pageVariables,
     content,

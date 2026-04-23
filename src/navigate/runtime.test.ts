@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
+import { createGlobals } from '../globals.test';
 
 const mockTeardown = mock(() => {});
 const mockMount = mock(async () => mockTeardown);
@@ -14,20 +15,11 @@ import {
   refreshCurrentPage,
 } from './runtime';
 
-const globals = globalThis as Record<string, unknown>;
 const GENERATOR = 'Tada 1.11.1';
 
-let savedFetch: unknown;
-
-beforeEach(() => {
-  savedFetch = globalThis.fetch;
-  mockTeardown.mockClear();
-  mockMount.mockClear();
-});
-
-afterEach(() => {
-  globalThis.fetch = savedFetch as typeof fetch;
-});
+function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
+  mock.module('../globals', () => ({ globals: createGlobals(overrides) }));
+}
 
 function createDOM(
   bodyContent = '<p>Original</p>',
@@ -46,11 +38,21 @@ function createPageHTML() {
   return `<html><head><title>New</title><meta name="generator" content="${GENERATOR}"><meta name="description" content="updated"></head><body class="post"><div class="container"><p>Updated</p></div></body></html>`;
 }
 
+function htmlResponse(html: string): Response {
+  return new Response(html, { status: 200 });
+}
+
 async function flush() {
   for (let i = 0; i < 6; i++) {
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 }
+
+beforeEach(() => {
+  mockGlobals();
+  mockTeardown.mockClear();
+  mockMount.mockClear();
+});
 
 describe('refreshCurrentPage', () => {
   test('refreshes the current URL in place without pushing history', async () => {
@@ -68,10 +70,7 @@ describe('refreshCurrentPage', () => {
 
     initNavigation(win);
 
-    globals.fetch = mock(async () => ({
-      ok: true,
-      text: async () => createPageHTML(),
-    }));
+    mockGlobals({ fetch: mock(async () => htmlResponse(createPageHTML())) });
 
     const navigationHandler = mock(() => {});
     win.addEventListener(NAVIGATION_EVENT, navigationHandler);
@@ -103,10 +102,7 @@ describe('refreshCurrentPage', () => {
 
     initNavigation(win);
 
-    globals.fetch = mock(async () => ({
-      ok: true,
-      text: async () => createPageHTML(),
-    }));
+    mockGlobals({ fetch: mock(async () => htmlResponse(createPageHTML())) });
 
     await refreshCurrentPage(win);
     await flush();
@@ -136,10 +132,7 @@ describe('refreshCurrentPage', () => {
 
     initNavigation(win);
 
-    globals.fetch = mock(async () => ({
-      ok: true,
-      text: async () => createPageHTML(),
-    }));
+    mockGlobals({ fetch: mock(async () => htmlResponse(createPageHTML())) });
 
     await refreshCurrentPage(win);
     await flush();

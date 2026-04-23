@@ -1,5 +1,6 @@
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
+import { createGlobals } from '../globals.test';
 import type { TraceManifest, TraceChunkEntry } from './types';
 import mount from './index';
 
@@ -62,18 +63,22 @@ function createWindow(html: string) {
   return dom.window;
 }
 
-let originalFetch: typeof globalThis.fetch;
+function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
+  mock.module('../globals', () => ({ globals: createGlobals(overrides) }));
+}
 
 function setupFetch(responses: Record<string, unknown>): void {
   const map = new Map(Object.entries(responses));
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const url = typeof input === 'string' ? input : input.toString();
-    const data = map.get(url);
-    if (data === undefined) {
-      throw new Error(`Unexpected fetch: ${url}`);
-    }
-    return { ok: true, json: async () => data } as Response;
-  }) as typeof fetch;
+  mockGlobals({
+    fetch: async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const data = map.get(url);
+      if (data === undefined) {
+        throw new Error(`Unexpected fetch: ${url}`);
+      }
+      return { ok: true, json: async () => data } as Response;
+    },
+  });
 }
 
 async function flush(): Promise<void> {
@@ -91,11 +96,7 @@ function setupDefaultFetch(): void {
 
 describe('trace', () => {
   beforeEach(() => {
-    originalFetch = globalThis.fetch;
-  });
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
+    mockGlobals();
   });
 
   test('returns early when no trace widgets exist', () => {
@@ -122,14 +123,16 @@ describe('trace', () => {
 
   test('fetches manifest and first chunk on init', async () => {
     const fetched: string[] = [];
-    globalThis.fetch = (async (input: RequestInfo | URL) => {
-      const url = typeof input === 'string' ? input : input.toString();
-      fetched.push(url);
-      if (url.includes('manifest.json')) {
-        return { ok: true, json: async () => defaultManifest } as Response;
-      }
-      return { ok: true, json: async () => defaultChunk } as Response;
-    }) as typeof fetch;
+    mockGlobals({
+      fetch: async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        fetched.push(url);
+        if (url.includes('manifest.json')) {
+          return { ok: true, json: async () => defaultManifest } as Response;
+        }
+        return { ok: true, json: async () => defaultChunk } as Response;
+      },
+    });
 
     const win = createWindow(widgetHtml());
     mount(win);
@@ -435,17 +438,19 @@ describe('trace', () => {
       { line: 1, svg: '<svg>s3</svg>' },
     ]);
 
-    globalThis.fetch = (async (input: RequestInfo | URL) => {
-      const url = typeof input === 'string' ? input : input.toString();
-      fetched.push(url);
-      if (url.includes('manifest.json')) {
-        return { ok: true, json: async () => manifest } as Response;
-      }
-      if (url.includes('chunk-0')) {
-        return { ok: true, json: async () => chunk0 } as Response;
-      }
-      return { ok: true, json: async () => chunk1 } as Response;
-    }) as typeof fetch;
+    mockGlobals({
+      fetch: async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        fetched.push(url);
+        if (url.includes('manifest.json')) {
+          return { ok: true, json: async () => manifest } as Response;
+        }
+        if (url.includes('chunk-0')) {
+          return { ok: true, json: async () => chunk0 } as Response;
+        }
+        return { ok: true, json: async () => chunk1 } as Response;
+      },
+    });
 
     const win = createWindow(widgetHtml());
     mount(win);
@@ -518,9 +523,9 @@ describe('trace', () => {
   });
 
   test('stays disabled when manifest fetch fails', async () => {
-    globalThis.fetch = (async () => {
-      return { ok: false, status: 404 } as Response;
-    }) as unknown as typeof fetch;
+    mockGlobals({
+      fetch: async () => ({ ok: false, status: 404 }) as Response,
+    });
 
     const win = createWindow(widgetHtml());
     mount(win);
@@ -531,9 +536,11 @@ describe('trace', () => {
   });
 
   test('stays disabled when manifest fetch throws', async () => {
-    globalThis.fetch = (async () => {
-      throw new TypeError('Failed to fetch');
-    }) as unknown as typeof fetch;
+    mockGlobals({
+      fetch: async () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
 
     const win = createWindow(widgetHtml());
     mount(win);

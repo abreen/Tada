@@ -1,27 +1,31 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { createGlobals } from './globals.test';
 import { makeLogger, getFlair } from './log';
+
+function mockGlobals(
+  overrides: Partial<import('./globals').Globals> = {},
+): void {
+  mock.module('./globals', () => ({ globals: createGlobals(overrides) }));
+}
 
 function captureOutput(fn: () => void): { stdout: string; stderr: string } {
   let stdout = '';
   let stderr = '';
-  const origStdout = process.stdout.write;
-  const origStderr = process.stderr.write;
-  process.stdout.write = ((chunk: string) => {
-    stdout += chunk;
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string) => {
-    stderr += chunk;
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    fn();
-  } finally {
-    process.stdout.write = origStdout;
-    process.stderr.write = origStderr;
-  }
+  mockGlobals({
+    stderrWrite(chunk) {
+      stderr += chunk;
+    },
+    stdoutWrite(chunk) {
+      stdout += chunk;
+    },
+  });
+  fn();
   return { stdout, stderr };
 }
+
+beforeEach(() => {
+  mockGlobals();
+});
 
 describe('makeLogger', () => {
   test('creates a logger with default info level', () => {

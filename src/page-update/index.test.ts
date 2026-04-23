@@ -1,30 +1,16 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
+import { createGlobals } from '../globals.test';
 import mount, { mountPageUpdate } from './index';
 import { NAVIGATION_EVENT } from '../navigate/runtime';
 
-const globals = globalThis as Record<string, unknown>;
-
-let savedFetch: unknown;
-
-beforeEach(() => {
-  savedFetch = globalThis.fetch;
-});
-
-afterEach(() => {
-  globalThis.fetch = savedFetch as typeof fetch;
-});
+function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
+  mock.module('../globals', () => ({ globals: createGlobals(overrides) }));
+}
 
 function create(url = 'http://localhost/page?view=full') {
   const dom = new JSDOM('<body></body>', { url, pretendToBeVisual: true });
   return dom.window;
-}
-
-function setDocumentHidden(document: Document, state: { hidden: boolean }) {
-  Object.defineProperty(document, 'hidden', {
-    configurable: true,
-    get: () => state.hidden,
-  });
 }
 
 function responseWithHeaders(headers: Record<string, string>, ok = true) {
@@ -43,6 +29,10 @@ async function flush() {
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 }
+
+beforeEach(() => {
+  mockGlobals();
+});
 
 describe('page-update mount', () => {
   test('creates a floating toast container', () => {
@@ -64,9 +54,11 @@ describe('page-update mount', () => {
 describe('page-update behavior', () => {
   test('uses the first validator as the baseline without showing the toast', async () => {
     const win = create();
-    globals.fetch = mock(async () =>
-      responseWithHeaders({ ETag: '"v1"', 'Last-Modified': 'old' }),
-    );
+    mockGlobals({
+      fetch: mock(async () =>
+        responseWithHeaders({ ETag: '"v1"', 'Last-Modified': 'old' }),
+      ),
+    });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     await flush();
@@ -83,9 +75,11 @@ describe('page-update behavior', () => {
   test('shows the toast when the validator changes', async () => {
     const win = create();
     let count = 0;
-    globals.fetch = mock(async () => {
-      count += 1;
-      return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
+    mockGlobals({
+      fetch: mock(async () => {
+        count += 1;
+        return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
+      }),
     });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
@@ -105,11 +99,13 @@ describe('page-update behavior', () => {
   test('falls back to Last-Modified when ETag is missing', async () => {
     const win = create();
     let count = 0;
-    globals.fetch = mock(async () => {
-      count += 1;
-      return responseWithHeaders({
-        'Last-Modified': count === 1 ? 'old' : 'new',
-      });
+    mockGlobals({
+      fetch: mock(async () => {
+        count += 1;
+        return responseWithHeaders({
+          'Last-Modified': count === 1 ? 'old' : 'new',
+        });
+      }),
     });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
@@ -128,7 +124,7 @@ describe('page-update behavior', () => {
 
   test('stays silent when no validators are present', async () => {
     const win = create();
-    globals.fetch = mock(async () => responseWithHeaders({}));
+    mockGlobals({ fetch: mock(async () => responseWithHeaders({})) });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     await flush();
@@ -147,9 +143,11 @@ describe('page-update behavior', () => {
   test('dismiss hides the toast for the same detected validator', async () => {
     const win = create();
     let count = 0;
-    globals.fetch = mock(async () => {
-      count += 1;
-      return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
+    mockGlobals({
+      fetch: mock(async () => {
+        count += 1;
+        return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
+      }),
     });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
@@ -176,17 +174,21 @@ describe('page-update behavior', () => {
   test('shows the toast again when a later validator differs from a dismissed one', async () => {
     const win = create();
     const visibility = { hidden: false };
-    setDocumentHidden(win.document, visibility);
     let count = 0;
-    globals.fetch = mock(async () => {
-      count += 1;
-      if (count === 1) {
-        return responseWithHeaders({ ETag: '"v1"' });
-      }
-      if (count < 4) {
-        return responseWithHeaders({ ETag: '"v2"' });
-      }
-      return responseWithHeaders({ ETag: '"v3"' });
+    mockGlobals({
+      fetch: mock(async () => {
+        count += 1;
+        if (count === 1) {
+          return responseWithHeaders({ ETag: '"v1"' });
+        }
+        if (count < 4) {
+          return responseWithHeaders({ ETag: '"v2"' });
+        }
+        return responseWithHeaders({ ETag: '"v3"' });
+      }),
+      isDocumentHidden() {
+        return visibility.hidden;
+      },
     });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 1000 });
@@ -221,9 +223,11 @@ describe('page-update behavior', () => {
   test('reload uses the injected refresh function', async () => {
     const win = create();
     let count = 0;
-    globals.fetch = mock(async () => {
-      count += 1;
-      return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
+    mockGlobals({
+      fetch: mock(async () => {
+        count += 1;
+        return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
+      }),
     });
 
     const refreshPage = mock(async () => {});
@@ -246,10 +250,13 @@ describe('page-update behavior', () => {
   test('stops polling while hidden and checks immediately when visible again', async () => {
     const win = create();
     const visibility = { hidden: false };
-    setDocumentHidden(win.document, visibility);
-
     const fetchMock = mock(async () => responseWithHeaders({ ETag: '"v1"' }));
-    globals.fetch = fetchMock;
+    mockGlobals({
+      fetch: fetchMock,
+      isDocumentHidden() {
+        return visibility.hidden;
+      },
+    });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 1000 });
     await flush();
@@ -273,9 +280,11 @@ describe('page-update behavior', () => {
   test('resets state after internal navigation', async () => {
     const win = create();
     let count = 0;
-    globals.fetch = mock(async () => {
-      count += 1;
-      return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
+    mockGlobals({
+      fetch: mock(async () => {
+        count += 1;
+        return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
+      }),
     });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
@@ -304,7 +313,9 @@ describe('page-update behavior', () => {
 
   test('cleanup removes the toast container', () => {
     const win = create();
-    globals.fetch = mock(async () => responseWithHeaders({ ETag: '"v1"' }));
+    mockGlobals({
+      fetch: mock(async () => responseWithHeaders({ ETag: '"v1"' })),
+    });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     cleanup?.();

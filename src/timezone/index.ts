@@ -1,3 +1,5 @@
+import { globals, type Globals } from '../globals';
+
 const STORAGE_KEY = 'timezoneSelection';
 const TIMEZONE_SELECT_LABEL = 'Time zone';
 
@@ -11,6 +13,11 @@ const PERIOD_PATTERNS: { pattern: RegExp; style: PeriodStyle }[] = [
   { pattern: /[ap]\.m\./, style: ['a.m.', 'p.m.'] },
   { pattern: /[ap]m/, style: ['am', 'pm'] },
 ];
+
+type TimezoneGlobals = Pick<
+  Globals,
+  'getSiteDefaultTimezone' | 'getSiteTimezones'
+>;
 
 export function detectPeriodStyle(text: string): PeriodStyle | null {
   for (const { pattern, style } of PERIOD_PATTERNS) {
@@ -85,26 +92,20 @@ function getOffsetMinutes(tz: string, date: Date): number {
   return (utcTs - date.getTime()) / 60000;
 }
 
-// Read lazily so tests can set __SITE_TIMEZONES__ before the first call.
-// Cache the result so mutations (like computeOffsets adding offsetMinutes)
-// persist across calls. The bundler inlines __SITE_TIMEZONES__ as a JSON
-// literal, so each raw access would create a fresh array.
-let _timezones: TimeZone[] | null = null;
-function getTimezones(): TimeZone[] {
-  if (_timezones === null) {
-    _timezones =
-      typeof __SITE_TIMEZONES__ !== 'undefined' ? __SITE_TIMEZONES__ : [];
-  }
-  return _timezones;
+function getTimezones(globals: TimezoneGlobals): TimeZone[] {
+  const source = globals.getSiteTimezones();
+  return source.map(tz => ({ ...tz }));
 }
 
-function getDefaultTimezone() {
-  const value = __SITE_DEFAULT_TIMEZONE__;
-  return getTimezones().find(tz => tz.value === value)!;
+function getDefaultTimezone(
+  timezones: TimeZone[],
+  globals: TimezoneGlobals,
+): TimeZone {
+  return timezones.find(tz => tz.value === globals.getSiteDefaultTimezone())!;
 }
 
-function computeOffsets(baseDate: Date) {
-  getTimezones().forEach(tz => {
+function computeOffsets(timezones: TimeZone[], baseDate: Date) {
+  timezones.forEach(tz => {
     tz.offsetMinutes = getOffsetMinutes(tz.value, baseDate);
   });
 }
@@ -143,14 +144,16 @@ function dominantPeriodStyle(
 }
 
 export default (window: Window) => {
-  const defaultTz = getDefaultTimezone();
+  const runtimeGlobals: TimezoneGlobals = globals;
+  const timezones = getTimezones(runtimeGlobals);
+  const defaultTz = getDefaultTimezone(timezones, runtimeGlobals);
   const resetTitle = `Reset time zone to ${defaultTz.abbreviation} (default)`;
 
   // determine initial time zone (from storage or default)
   let initialTz = defaultTz.value;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored && getTimezones().some(t => t.value === stored)) {
+    if (stored && timezones.some(t => t.value === stored)) {
       initialTz = stored;
     }
   } catch {
@@ -158,7 +161,7 @@ export default (window: Window) => {
   }
 
   const now = new Date();
-  computeOffsets(now);
+  computeOffsets(timezones, now);
   const defaultOffset = defaultTz.offsetMinutes ?? 0;
 
   // Snapshot the original AM/PM style from each <time> element's text
@@ -173,7 +176,7 @@ export default (window: Window) => {
   const pagePeriodStyle = dominantPeriodStyle(periodStyles);
 
   function updateTimes(targetTz: string) {
-    const target = getTimezones().find(t => t.value === targetTz) || defaultTz;
+    const target = timezones.find(t => t.value === targetTz) || defaultTz;
     const targetOffset = target.offsetMinutes ?? 0;
     const deltaMinutes = targetOffset - defaultOffset;
 

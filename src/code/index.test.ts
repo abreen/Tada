@@ -1,15 +1,7 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  test,
-} from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
+import { createGlobals } from '../globals.test';
 import mount from './index';
-
-const originalResizeObserver = globalThis.ResizeObserver;
 
 const resizeObserverState = {
   disconnectCalls: 0,
@@ -17,28 +9,23 @@ const resizeObserverState = {
   unobserveCalls: 0,
 };
 
-beforeAll(() => {
-  (globalThis as Record<string, unknown>).ResizeObserver = class {
-    observe(_target: Element) {
-      resizeObserverState.observeCalls += 1;
-    }
-    unobserve(_target: Element) {
-      resizeObserverState.unobserveCalls += 1;
-    }
-    disconnect() {
-      resizeObserverState.disconnectCalls += 1;
-    }
-  };
-});
-
-afterAll(() => {
-  if (originalResizeObserver === undefined) {
-    delete (globalThis as Record<string, unknown>).ResizeObserver;
-    return;
-  }
-
-  globalThis.ResizeObserver = originalResizeObserver;
-});
+function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
+  mock.module('../globals', () => ({
+    globals: createGlobals({
+      createResizeObserver() {
+        return {
+          observe(_target: Element) {
+            resizeObserverState.observeCalls += 1;
+          },
+          disconnect() {
+            resizeObserverState.disconnectCalls += 1;
+          },
+        };
+      },
+      ...overrides,
+    }),
+  }));
+}
 
 function create(html: string) {
   const dom = new JSDOM(`<body class="code">${html}</body>`);
@@ -84,6 +71,10 @@ afterEach(() => {
   resizeObserverState.observeCalls = 0;
   resizeObserverState.unobserveCalls = 0;
   resizeObserverState.disconnectCalls = 0;
+});
+
+beforeEach(() => {
+  mockGlobals();
 });
 
 describe('code', () => {

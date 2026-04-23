@@ -1,60 +1,84 @@
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
-import fs from 'fs';
-import os from 'os';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import type fs from 'fs';
 import path from 'path';
 import { resolvePathname } from './serve';
 
-let tmpDir: string;
+type MockEntry = { kind: 'dir' | 'file'; mtime?: Date };
 
-beforeAll(() => {
-  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'serve-test-'));
-  fs.writeFileSync(path.join(tmpDir, 'index.html'), '<h1>hello</h1>');
-  fs.mkdirSync(path.join(tmpDir, 'sub'));
-  fs.writeFileSync(path.join(tmpDir, 'sub', 'page.html'), '<p>page</p>');
-});
+const DIST_DIR = '/virtual/dist';
+const DEFAULT_MTIME = new Date('2025-01-01T00:00:00.000Z');
 
-afterAll(() => {
-  fs.rmSync(tmpDir, { recursive: true });
+function mockFs(entries: Record<string, MockEntry>): void {
+  const statSync = ((filePath: fs.PathLike) => {
+    const resolvedPath = path.resolve(String(filePath));
+    const entry = entries[resolvedPath];
+    if (!entry) {
+      const error = new Error(
+        `ENOENT: ${resolvedPath}`,
+      ) as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    }
+    return {
+      isFile: () => entry.kind === 'file',
+      mtime: entry.mtime ?? DEFAULT_MTIME,
+    } as fs.Stats;
+  }) as typeof import('fs').statSync;
+
+  mock.module('fs', () => ({ default: { statSync }, statSync }));
+}
+
+beforeEach(() => {
+  mockFs({
+    [path.join(DIST_DIR, 'index.html')]: { kind: 'file' },
+    [path.join(DIST_DIR, 'sub')]: { kind: 'dir' },
+    [path.join(DIST_DIR, 'sub', 'page.html')]: { kind: 'file' },
+  });
 });
 
 describe('resolvePathname', () => {
   test('resolves a file at the root', () => {
-    const result = resolvePathname(tmpDir, '/index.html');
+    const result = resolvePathname(DIST_DIR, '/index.html');
     expect(result).not.toBeNull();
-    expect(result!.filePath).toBe(path.join(tmpDir, 'index.html'));
+    expect(result!.filePath).toBe(path.join(DIST_DIR, 'index.html'));
     expect(result!.mtime).toBeInstanceOf(Date);
   });
 
   test('resolves a file in a subdirectory', () => {
-    const result = resolvePathname(tmpDir, '/sub/page.html');
+    const result = resolvePathname(DIST_DIR, '/sub/page.html');
     expect(result).not.toBeNull();
-    expect(result!.filePath).toBe(path.join(tmpDir, 'sub', 'page.html'));
+    expect(result!.filePath).toBe(path.join(DIST_DIR, 'sub', 'page.html'));
   });
 
   test('returns null for nonexistent file', () => {
-    expect(resolvePathname(tmpDir, '/missing.html')).toBeNull();
+    expect(resolvePathname(DIST_DIR, '/missing.html')).toBeNull();
   });
 
   test('returns null for directory', () => {
-    expect(resolvePathname(tmpDir, '/sub')).toBeNull();
+    expect(resolvePathname(DIST_DIR, '/sub')).toBeNull();
   });
 
   test('returns null for path traversal', () => {
-    expect(resolvePathname(tmpDir, '/../etc/passwd')).toBeNull();
+    expect(resolvePathname(DIST_DIR, '/../etc/passwd')).toBeNull();
   });
 
   test('returns null for encoded path traversal', () => {
-    expect(resolvePathname(tmpDir, '/%2e%2e/etc/passwd')).toBeNull();
+    expect(resolvePathname(DIST_DIR, '/%2e%2e/etc/passwd')).toBeNull();
   });
 
   test('returns null for invalid URL encoding', () => {
-    expect(resolvePathname(tmpDir, '/%ZZ')).toBeNull();
+    expect(resolvePathname(DIST_DIR, '/%ZZ')).toBeNull();
   });
 
   test('decodes percent-encoded path', () => {
-    fs.writeFileSync(path.join(tmpDir, 'spaced file.html'), 'ok');
-    const result = resolvePathname(tmpDir, '/spaced%20file.html');
+    mockFs({
+      [path.join(DIST_DIR, 'index.html')]: { kind: 'file' },
+      [path.join(DIST_DIR, 'sub')]: { kind: 'dir' },
+      [path.join(DIST_DIR, 'sub', 'page.html')]: { kind: 'file' },
+      [path.join(DIST_DIR, 'spaced file.html')]: { kind: 'file' },
+    });
+    const result = resolvePathname(DIST_DIR, '/spaced%20file.html');
     expect(result).not.toBeNull();
-    expect(result!.filePath).toBe(path.join(tmpDir, 'spaced file.html'));
+    expect(result!.filePath).toBe(path.join(DIST_DIR, 'spaced file.html'));
   });
 });

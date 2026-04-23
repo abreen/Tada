@@ -1,4 +1,5 @@
 import { debounce, removeClass } from '../util';
+import { globals, type Globals } from '../globals';
 
 /** Show the "Back to top" button once the user is past this scroll position */
 const SHOW_THRESHOLD_PX = 250;
@@ -6,7 +7,10 @@ const SHOW_THRESHOLD_PX = 250;
 /** Debounce time (maximum amount of time to wait before updates) */
 const LATENCY_MS = 50;
 
+type TopGlobals = Pick<Globals, 'setLocationHash'>;
+
 export default (window: Window) => {
+  const runtimeGlobals: TopGlobals = globals;
   const mountParent =
     (window.document.getElementById(
       'to-top-container',
@@ -30,10 +34,7 @@ export default (window: Window) => {
     e.preventDefault();
     const cleanUrl = window.location.pathname + window.location.search;
     if (window.location.hash) {
-      // Clear the hash via fragment navigation so :target clears and
-      // hashchange fires. location.hash = '' may leave a trailing '#';
-      // strip it with replaceState.
-      window.location.hash = '';
+      runtimeGlobals.setLocationHash(window, '');
       window.history.replaceState(null, '', cleanUrl);
     } else {
       window.history.replaceState(null, '', cleanUrl);

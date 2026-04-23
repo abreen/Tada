@@ -1,9 +1,15 @@
 import fs from 'fs';
 import path from 'path';
+import { globals, type Globals } from './globals';
 import { toPosix } from './utils/paths';
 
 const EXCLUDED_DIRS = new Set(['pagefind']);
 const EXCLUDED_FILES = new Set(['tada.manifest.json']);
+
+type ManifestGlobals = Pick<
+  Globals,
+  'createSha256Hasher' | 'now' | 'readFileArrayBuffer' | 'toISOString'
+>;
 
 export interface BuildManifest {
   schema: 1;
@@ -51,8 +57,12 @@ export function diffManifests(
 }
 
 export async function hashFile(filePath: string): Promise<string> {
-  const buffer = await Bun.file(filePath).arrayBuffer();
-  const hasher = new Bun.CryptoHasher('sha256');
+  const runtimeGlobals: Pick<
+    ManifestGlobals,
+    'createSha256Hasher' | 'readFileArrayBuffer'
+  > = globals;
+  const buffer = await runtimeGlobals.readFileArrayBuffer(filePath);
+  const hasher = runtimeGlobals.createSha256Hasher();
   hasher.update(buffer);
   return hasher.digest('hex');
 }
@@ -120,11 +130,12 @@ export async function generateBuildManifest(
   manifestPath: string,
   buildVersion: number,
 ): Promise<void> {
+  const runtimeGlobals: Pick<ManifestGlobals, 'now' | 'toISOString'> = globals;
   const files = await walkAndHash(distDir);
   const manifest: BuildManifest = {
     schema: 1,
     build: buildVersion,
-    buildTime: new Date().toISOString(),
+    buildTime: runtimeGlobals.toISOString(runtimeGlobals.now()),
     files,
   };
   fs.mkdirSync(path.dirname(manifestPath), { recursive: true });

@@ -6,6 +6,7 @@ import {
   hasResponseValidatorsChanged,
   type ResponseValidators,
 } from '../validators';
+import { globals, type Globals } from '../globals';
 
 const MAX_RESULTS = 24;
 
@@ -48,7 +49,12 @@ type State = {
   totalResults: number;
 };
 
-async function doSearch(state: State) {
+type SearchGlobals = Pick<
+  Globals,
+  'fetch' | 'getSiteBasePath' | 'getSiteTitlePostfix' | 'importModule' | 'now'
+>;
+
+async function doSearch(state: State, window: Window, globals: SearchGlobals) {
   if (pagefind == null) {
     return;
   }
@@ -63,7 +69,7 @@ async function doSearch(state: State) {
   const slice = search.results.slice(0, MAX_RESULTS);
   const data = await Promise.all(slice.map(r => r.data()));
 
-  const titlePostfix = __SITE_TITLE_POSTFIX__;
+  const titlePostfix = globals.getSiteTitlePostfix();
   const results: Result[] = data.map((d: PagefindResult) => {
     let title: string = d.meta?.title ?? d.url;
     if (titlePostfix && title.endsWith(titlePostfix)) {
@@ -272,6 +278,7 @@ function render(
 
 export default (window: Window) => {
   const { document } = window;
+  const runtimeGlobals: SearchGlobals = globals;
   const input = document.querySelector(
     'input.quick-search',
   ) as HTMLInputElement | null;
@@ -295,15 +302,16 @@ export default (window: Window) => {
       return;
     }
 
-    pagefind = (await import(
-      applyBasePath('/pagefind/pagefind.js')
+    pagefind = (await runtimeGlobals.importModule(
+      applyBasePath('/pagefind/pagefind.js'),
     )) as Pagefind;
 
     await pagefind.init();
 
-    const res = await fetch(applyBasePath('/pagefind/pagefind-entry.json'), {
-      cache: 'no-cache',
-    });
+    const res = await runtimeGlobals.fetch(
+      applyBasePath('/pagefind/pagefind-entry.json'),
+      { cache: 'no-cache' },
+    );
 
     if (res.ok) {
       entryValidators = getResponseValidators(res);
@@ -311,16 +319,16 @@ export default (window: Window) => {
   }
 
   async function checkForIndexUpdate() {
-    if (indexCheckInFlight || Date.now() - lastIndexCheck < 3000) {
+    if (indexCheckInFlight || runtimeGlobals.now() - lastIndexCheck < 3000) {
       return;
     }
-    lastIndexCheck = Date.now();
+    lastIndexCheck = runtimeGlobals.now();
     indexCheckInFlight = true;
     try {
-      const res = await fetch(applyBasePath('/pagefind/pagefind-entry.json'), {
-        method: 'HEAD',
-        cache: 'no-cache',
-      });
+      const res = await runtimeGlobals.fetch(
+        applyBasePath('/pagefind/pagefind-entry.json'),
+        { method: 'HEAD', cache: 'no-cache' },
+      );
       if (!res.ok) {
         return;
       }
@@ -352,7 +360,7 @@ export default (window: Window) => {
     if (state.showResults) {
       render(input!, resultsContainer, state, true);
     }
-    await doSearch(state);
+    await doSearch(state, window, runtimeGlobals);
     if (!state.showResults) {
       return;
     }

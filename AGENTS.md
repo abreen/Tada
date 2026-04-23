@@ -30,7 +30,12 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 - Run functional tests with extra pytest args: `bun run test:functional -k watch`
 - Run Playwright tests: `bun run test:playwright`
 
-Do not add unit tests that create, modify or delete files/directories. Instead, write functional tests.
+## Unit test rules
+
+- Never read or modify real files/directories in a unit test
+- If you need to test filesystem behavior, write a functional test (see `functional_tests/`)
+- Never mock globals; instead mock the `globals.ts` module (either `build/globals.ts` or `src/globals.ts`)
+- Never rely on JSDOM to test browser-specific behavior like navigation, instead use a Playwright test
 
 ## Code style/formatting
 

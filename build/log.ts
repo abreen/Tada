@@ -1,20 +1,14 @@
 import { inspect } from 'node:util';
 import path from 'path';
 import { Gi, L, Ri, P, Yi, Li } from './colors';
+import { globals, type Globals } from './globals';
 import type { Logger } from './types';
 import FLAIR_STRINGS from './flair.json' with { type: 'json' };
 
 const LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 
 type LogLevel = (typeof LEVELS)[number];
-
-const ENV_LOG_LEVEL = process.env.TADA_LOG_LEVEL;
-
-if (ENV_LOG_LEVEL && !LEVELS.includes(ENV_LOG_LEVEL as LogLevel)) {
-  throw new Error(
-    `Invalid TADA_LOG_LEVEL "${ENV_LOG_LEVEL}", must be one of: ${LEVELS.join(', ')}`,
-  );
-}
+type LogGlobals = Pick<Globals, 'getEnv' | 'stderrWrite' | 'stdoutWrite'>;
 
 function shouldLog(loggerLevel: string, level: string): boolean {
   return (
@@ -32,20 +26,35 @@ function validateLevel(level: string): void {
 
 function print(
   strings: string[],
+  globals: LogGlobals,
   stream: 'stdout' | 'stderr' = 'stdout',
   end: string = '\n',
 ): void {
   for (const s of strings) {
-    process[stream].write(s);
+    if (stream === 'stderr') {
+      globals.stderrWrite(s);
+    } else {
+      globals.stdoutWrite(s);
+    }
   }
-  process[stream].write(end);
+  if (stream === 'stderr') {
+    globals.stderrWrite(end);
+  } else {
+    globals.stdoutWrite(end);
+  }
 }
 
 export function makeLogger(name: string, logLevel: string = 'info'): Logger {
+  const envLogLevel = globals.getEnv('TADA_LOG_LEVEL');
+  if (envLogLevel && !LEVELS.includes(envLogLevel as LogLevel)) {
+    throw new Error(
+      `Invalid TADA_LOG_LEVEL "${envLogLevel}", must be one of: ${LEVELS.join(', ')}`,
+    );
+  }
   validateLevel(logLevel);
 
-  if (ENV_LOG_LEVEL) {
-    logLevel = ENV_LOG_LEVEL;
+  if (envLogLevel) {
+    logLevel = envLogLevel;
   }
 
   if (name) {
@@ -74,29 +83,29 @@ export function makeLogger(name: string, logLevel: string = 'info'): Logger {
     },
     debug(strings: TemplateStringsArray, ...args: unknown[]) {
       if (shouldLog(this.minLogLevel, 'debug')) {
-        print(getArgs('debug', strings, args, L), 'stderr');
+        print(getArgs('debug', strings, args, L), globals, 'stderr');
       }
     },
     info(strings: TemplateStringsArray, ...args: unknown[]) {
       if (shouldLog(this.minLogLevel, 'info')) {
-        print(getArgs('info', strings, args, Li));
+        print(getArgs('info', strings, args, Li), globals);
       }
     },
     warn(strings: TemplateStringsArray, ...args: unknown[]) {
       if (shouldLog(this.minLogLevel, 'warn')) {
-        print(getArgs('warn', strings, args, Yi));
+        print(getArgs('warn', strings, args, Yi), globals);
       }
     },
     error(strings: TemplateStringsArray, ...args: unknown[]) {
       if (shouldLog(this.minLogLevel, 'error')) {
-        print(getArgs('error', strings, args, Ri));
+        print(getArgs('error', strings, args, Ri), globals);
       }
     },
     event(strings: TemplateStringsArray, ...args: unknown[]) {
-      print(getArgs('event', strings, args, Gi));
+      print(getArgs('event', strings, args, Gi), globals);
     },
     followup(strings: string[]) {
-      print(strings);
+      print(strings, globals);
     },
   };
 

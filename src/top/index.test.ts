@@ -1,6 +1,22 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
-import mount from './index';
+import { createGlobals } from '../globals.test';
+
+function mockGlobals(overrides: Record<string, unknown> = {}) {
+  mock.module('../globals', () => ({
+    globals: createGlobals(overrides as never),
+  }));
+}
+
+let mount: typeof import('./index').default;
+
+beforeAll(async () => {
+  ({ default: mount } = await import('./index'));
+});
+
+beforeEach(() => {
+  mockGlobals();
+});
 
 function create(html = '', url = 'http://localhost/') {
   const dom = new JSDOM(`<body>${html}</body>`, { url });
@@ -125,6 +141,26 @@ describe('top', () => {
     // then replaceState strips any trailing '#' from the URL.
     expect(win.location.hash).toBe('');
     expect(replaced).toEqual(['/page']);
+  });
+
+  test('onclick clears hash through setLocationHash global when hash is present', () => {
+    const win = create('', 'http://localhost/page#section');
+    const setLocationHash = mock((targetWindow: Window, hash: string) => {
+      targetWindow.location.hash = hash;
+    });
+    mockGlobals({ setLocationHash });
+    mount(win);
+
+    const link = win.document.querySelector('a.button') as HTMLAnchorElement;
+    win.scrollTo = (() => {}) as typeof win.scrollTo;
+
+    const event = new win.MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
+    link.dispatchEvent(event);
+
+    expect(setLocationHash).toHaveBeenCalledWith(win, '');
   });
 
   test('onclick uses replaceState when no hash', () => {

@@ -1,11 +1,26 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
+import { createGlobals } from './globals.test';
 import { formatDuration, removeClass, getElement, applyBasePath } from './util';
+
+function mockGlobals(basePath = '/'): void {
+  mock.module('./globals', () => ({
+    globals: createGlobals({
+      getSiteBasePath() {
+        return basePath;
+      },
+    }),
+  }));
+}
 
 function create(html: string) {
   const dom = new JSDOM(`<body>${html}</body>`);
   return dom.window;
 }
+
+beforeEach(() => {
+  mockGlobals('/');
+});
 
 describe('formatDuration', () => {
   test('formats sub-millisecond values', () => {
@@ -135,22 +150,22 @@ describe('getElement', () => {
 
 describe('applyBasePath', () => {
   test('prepends the base path to a subpath', () => {
-    (globalThis as Record<string, unknown>).__SITE_BASE_PATH__ = '/docs/';
+    mockGlobals('/docs/');
     expect(applyBasePath('/page.html')).toBe('/docs/page.html');
   });
 
   test('handles base path without trailing slash', () => {
-    (globalThis as Record<string, unknown>).__SITE_BASE_PATH__ = '/docs';
+    mockGlobals('/docs');
     expect(applyBasePath('/page.html')).toBe('/docs/page.html');
   });
 
   test('handles root base path', () => {
-    (globalThis as Record<string, unknown>).__SITE_BASE_PATH__ = '/';
+    mockGlobals('/');
     expect(applyBasePath('/page.html')).toBe('/page.html');
   });
 
   test('throws for subpath not starting with /', () => {
-    (globalThis as Record<string, unknown>).__SITE_BASE_PATH__ = '/docs';
+    mockGlobals('/docs');
     expect(() => applyBasePath('page.html')).toThrow(
       'invalid internal path, must start with "/"',
     );

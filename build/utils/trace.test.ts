@@ -1,23 +1,41 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import fs from 'fs';
-import os from 'os';
+import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
-import { chunkTraceOutput } from './trace-core';
-import { parseIgnoreFields } from './trace-java';
-import { isTraceSourceFile } from './trace';
 import type { TraceManifest } from '../types';
 
+const files = new Map<string, string>();
+
+const fsMock = {
+  mkdirSync() {},
+  writeFileSync(filePath: string, content: string) {
+    files.set(path.resolve(filePath), content);
+  },
+};
+
+mock.module('fs', () => ({ default: fsMock, ...fsMock }));
+
+let chunkTraceOutput: typeof import('./trace-core').chunkTraceOutput;
+let isTraceSourceFile: typeof import('./trace').isTraceSourceFile;
+let parseIgnoreFields: typeof import('./trace-java').parseIgnoreFields;
+
+beforeAll(async () => {
+  ({ chunkTraceOutput } = await import('./trace-core'));
+  ({ isTraceSourceFile } = await import('./trace'));
+  ({ parseIgnoreFields } = await import('./trace-java'));
+});
+
+beforeEach(() => {
+  files.clear();
+});
+
+function readJson<T>(filePath: string): T {
+  const content = files.get(path.resolve(filePath));
+  if (content === undefined) {
+    throw new Error(`Missing file: ${filePath}`);
+  }
+  return JSON.parse(content) as T;
+}
+
 describe('chunkTraceOutput', () => {
-  let tempDir: string;
-
-  beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-trace-test-'));
-  });
-
-  afterEach(() => {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  });
-
   test('chunks JSONL output into files and writes manifest', () => {
     const lines = [];
     for (let i = 0; i < 5; i++) {
@@ -32,7 +50,7 @@ describe('chunkTraceOutput', () => {
       );
     }
     const output = lines.join('\n') + '\n';
-    const outputDir = path.join(tempDir, '_traces', 'Test');
+    const outputDir = '/virtual/_traces/Test';
 
     const manifest = chunkTraceOutput(
       output,
@@ -42,25 +60,18 @@ describe('chunkTraceOutput', () => {
       { chunkSize: 3 },
     );
 
-    // Should create 2 chunks (3 + 2)
-    const chunk0 = JSON.parse(
-      fs.readFileSync(path.join(outputDir, 'chunk-0.json'), 'utf-8'),
-    );
-    const chunk1 = JSON.parse(
-      fs.readFileSync(path.join(outputDir, 'chunk-1.json'), 'utf-8'),
-    );
+    const chunk0 = readJson<unknown[]>(path.join(outputDir, 'chunk-0.json'));
+    const chunk1 = readJson<unknown[]>(path.join(outputDir, 'chunk-1.json'));
     expect(chunk0).toHaveLength(3);
     expect(chunk1).toHaveLength(2);
 
-    // Chunks now contain TraceChunkEntry objects with precomputed SVG
-    expect(chunk0[0].svg).toContain('<svg');
+    expect((chunk0[0] as { svg: string }).svg).toContain('<svg');
     expect(chunk0[0]).toHaveProperty('line');
     expect(chunk0[0]).toHaveProperty('stdout');
 
-    // Manifest (returned value and file on disk should both be correct)
-    const manifestFile = JSON.parse(
-      fs.readFileSync(path.join(outputDir, 'manifest.json'), 'utf-8'),
-    ) as TraceManifest;
+    const manifestFile = readJson<TraceManifest>(
+      path.join(outputDir, 'manifest.json'),
+    );
     expect(manifest.totalSteps).toBe(5);
     expect(manifest.chunkSize).toBe(3);
     expect(manifestFile.sourceFile).toBe('Test.java');
@@ -77,7 +88,7 @@ describe('chunkTraceOutput', () => {
       heap: {},
       stdout: 'hello\n',
     });
-    const outputDir = path.join(tempDir, '_traces', 'Test');
+    const outputDir = '/virtual/_traces/Test';
 
     const manifest = chunkTraceOutput(
       line,
@@ -88,8 +99,8 @@ describe('chunkTraceOutput', () => {
     );
 
     expect(manifest.totalSteps).toBe(1);
-    const chunk0 = JSON.parse(
-      fs.readFileSync(path.join(outputDir, 'chunk-0.json'), 'utf-8'),
+    const chunk0 = readJson<Array<{ stdout: string }>>(
+      path.join(outputDir, 'chunk-0.json'),
     );
     expect(chunk0).toHaveLength(1);
     expect(chunk0[0].stdout).toBe('hello\n');
@@ -144,7 +155,6 @@ class B {
 
   test('maps repeated lines to multiple step indices', () => {
     const lines = [];
-    // Simulate a loop: line 3 executes at steps 0, 1, 2
     for (let i = 0; i < 3; i++) {
       lines.push(
         JSON.stringify({
@@ -156,7 +166,7 @@ class B {
         }),
       );
     }
-    const outputDir = path.join(tempDir, '_traces', 'Test');
+    const outputDir = '/virtual/_traces/Test';
 
     const manifest = chunkTraceOutput(
       lines.join('\n'),

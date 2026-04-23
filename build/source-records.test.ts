@@ -1,6 +1,7 @@
-import fs from 'fs';
+import type fs from 'fs';
 import path from 'path';
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { createGlobals } from './globals.test';
 import {
   classifySourceRenderKind,
   createContentRecord,
@@ -26,6 +27,24 @@ const siteVariables = {
 function sitePath(...parts: string[]): string {
   return path.join(SITE_ROOT, ...parts);
 }
+
+function mockFs(files: Record<string, Buffer>): void {
+  const readFileSync = ((filePath: fs.PathLike) => {
+    const resolvedPath = path.resolve(String(filePath));
+    const file = files[resolvedPath];
+    if (!file) {
+      throw new Error(`Unexpected readFileSync: ${resolvedPath}`);
+    }
+    return file;
+  }) as typeof import('fs').readFileSync;
+
+  mock.module('fs', () => ({ default: { readFileSync }, readFileSync }));
+}
+
+beforeEach(() => {
+  mockFs({});
+  mock.module('./globals', () => ({ globals: createGlobals() }));
+});
 
 function makeScan(overrides: Partial<TadaProjectScan> = {}): TadaProjectScan {
   return {
@@ -151,6 +170,8 @@ describe('createContentRecord', () => {
   test('copies raw content assets without invoking page rendering', () => {
     const contentDir = path.resolve('init/public');
     const filePath = path.join(contentDir, 'test.txt');
+    const fileContent = Buffer.from('copied raw asset');
+    mockFs({ [path.resolve(filePath)]: fileContent });
     const scan = makeScan({ contentDir, contentFiles: new Set([filePath]) });
 
     const record = createContentRecord({
@@ -163,9 +184,7 @@ describe('createContentRecord', () => {
 
     expect(record.sourcePath).toBe(filePath);
     expect(record.kind).toBe('content');
-    expect(record.outputs).toEqual(
-      new Map([['test.txt', fs.readFileSync(filePath)]]),
-    );
+    expect(record.outputs).toEqual(new Map([['test.txt', fileContent]]));
     expect(record.htmlAnalysisByOutputPath).toEqual(new Map());
     expect(record.partialDeps).toEqual(new Set());
     expect(record.traceDeps).toEqual(new Set());
@@ -179,13 +198,15 @@ describe('createPublicRecord', () => {
   test('reads public files into output records', () => {
     const publicDir = path.resolve('init/public');
     const filePath = path.join(publicDir, 'test.txt');
+    const fileContent = Buffer.from('copied public asset');
+    mockFs({ [path.resolve(filePath)]: fileContent });
 
     const record = createPublicRecord(filePath, publicDir);
 
     expect(record).toEqual({
       sourcePath: filePath,
       kind: 'public',
-      outputs: new Map([['test.txt', fs.readFileSync(filePath)]]),
+      outputs: new Map([['test.txt', fileContent]]),
       htmlAnalysisByOutputPath: new Map(),
       partialDeps: new Set(),
       traceDeps: new Set(),

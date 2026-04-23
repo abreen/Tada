@@ -1,16 +1,39 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
-import {
-  getPackageDir,
-  getProjectDir,
-  getContentDir,
-  getDistDir,
-  getPublicDir,
-  createApplyBasePath,
-  normalizeOutputPath,
-  toUrlPath,
-} from './paths';
+import { createGlobals } from '../globals.test';
 import type { SiteVariables } from '../types';
+
+const projectDir = '/virtual/project';
+
+mock.module('../globals', () => ({
+  globals: createGlobals({
+    cwd() {
+      return projectDir;
+    },
+  }),
+}));
+
+let getPackageDir: typeof import('./paths').getPackageDir;
+let getProjectDir: typeof import('./paths').getProjectDir;
+let getContentDir: typeof import('./paths').getContentDir;
+let getDistDir: typeof import('./paths').getDistDir;
+let getPublicDir: typeof import('./paths').getPublicDir;
+let createApplyBasePath: typeof import('./paths').createApplyBasePath;
+let normalizeOutputPath: typeof import('./paths').normalizeOutputPath;
+let toUrlPath: typeof import('./paths').toUrlPath;
+
+beforeAll(async () => {
+  ({
+    getPackageDir,
+    getProjectDir,
+    getContentDir,
+    getDistDir,
+    getPublicDir,
+    createApplyBasePath,
+    normalizeOutputPath,
+    toUrlPath,
+  } = await import('./paths'));
+});
 
 describe('getPackageDir', () => {
   test('returns an absolute path', () => {
@@ -18,15 +41,13 @@ describe('getPackageDir', () => {
   });
 
   test('points to repo root (contains package.json)', () => {
-    const dir = getPackageDir();
-    const pkg = path.join(dir, 'package.json');
-    expect(Bun.file(pkg).size).toBeGreaterThan(0);
+    expect(getPackageDir()).toBe(path.resolve(import.meta.dir, '..', '..'));
   });
 });
 
 describe('getProjectDir', () => {
-  test('returns process.cwd()', () => {
-    expect(getProjectDir()).toBe(process.cwd());
+  test('returns the globals cwd()', () => {
+    expect(getProjectDir()).toBe(projectDir);
   });
 });
 

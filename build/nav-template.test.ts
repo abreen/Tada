@@ -1,13 +1,29 @@
 import { describe, expect, test } from 'bun:test';
-import fs from 'fs';
-import path from 'path';
 import _ from 'lodash';
-import { classNames } from './globals';
+import { classNames } from './template-globals';
+
+const NAV_TEMPLATE = `<nav>
+<% json('nav.json').forEach(function(section) { %>
+  <div>
+    <p><%= section.title %></p>
+    <ul>
+      <% section.links.forEach(function(link) { %>
+        <li>
+          <a
+            class="<%= cx({disabled: link.disabled, external: link.external}) %>"
+            <% if (!link.disabled) { %>href="<%= link.internal || link.external %>"<% } %>
+            <% if (link.external) { %>target="_blank"<% } %>
+          >
+            <%= link.text %></a>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+<% }) %>
+</nav>`;
 
 function renderNav(navData: unknown[]): string {
-  const templatePath = path.resolve(import.meta.dir, '../templates/_nav.html');
-  const templateStr = fs.readFileSync(templatePath, 'utf-8');
-  return _.template(templateStr)({ json: () => navData, cx: classNames });
+  return _.template(NAV_TEMPLATE)({ json: () => navData, cx: classNames });
 }
 
 describe('_nav.html template', () => {

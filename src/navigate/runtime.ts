@@ -1,4 +1,5 @@
 import { mountPerPageComponents, teardownPerPageComponents } from './lifecycle';
+import { globals, type Globals } from '../globals';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
@@ -10,6 +11,10 @@ const scrollByIndex = new Map<number, number>();
 const scrollByLocation = new Map<string, number>();
 
 type Direction = 'forward' | 'back';
+type NavigationGlobals = Pick<
+  Globals,
+  'fetch' | 'replaceLocation' | 'setLocationHref'
+>;
 
 interface NavigationOptions {
   url: string;
@@ -176,6 +181,7 @@ export async function navigateToUrl(
   options: NavigationOptions,
 ): Promise<void> {
   const { document } = window;
+  const runtimeGlobals: NavigationGlobals = globals;
   const {
     url,
     scrollTarget,
@@ -196,19 +202,19 @@ export async function navigateToUrl(
 
   let response: Response;
   try {
-    response = await fetch(url, { signal: controller.signal });
+    response = await runtimeGlobals.fetch(url, { signal: controller.signal });
   } catch (err: unknown) {
     header?.classList.remove('loading');
     if (err instanceof Error && err.name === 'AbortError') {
       return;
     }
-    window.location.href = url;
+    runtimeGlobals.setLocationHref(window, url);
     return;
   }
 
   if (!response.ok) {
     header?.classList.remove('loading');
-    window.location.href = url;
+    runtimeGlobals.setLocationHref(window, url);
     return;
   }
 
@@ -226,7 +232,7 @@ export async function navigateToUrl(
     .querySelector('meta[name="generator"]')
     ?.getAttribute('content');
   if (!currentGenerator || !newGenerator || newGenerator !== currentGenerator) {
-    window.location.href = url;
+    runtimeGlobals.setLocationHref(window, url);
     return;
   }
 
@@ -246,7 +252,7 @@ export async function navigateToUrl(
 
     if (typeof scrollTarget === 'string') {
       const urlWithHash = parsed.pathname + parsed.search + '#' + scrollTarget;
-      window.location.replace(urlWithHash);
+      runtimeGlobals.replaceLocation(window, urlWithHash);
       window.history.replaceState({ navIndex: historyIndex }, '', urlWithHash);
     } else if (typeof scrollTarget === 'number') {
       window.scrollTo({ top: scrollTarget });

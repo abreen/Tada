@@ -7,8 +7,11 @@ import {
   type ResponseValidators,
 } from '../validators';
 import { NAVIGATION_EVENT, refreshCurrentPage } from '../navigate/runtime';
+import { globals, type Globals } from '../globals';
 
 const POLL_INTERVAL_MS = 600_000;
+
+type PageUpdateGlobals = Pick<Globals, 'fetch' | 'isDev' | 'isDocumentHidden'>;
 
 export interface PageUpdateOptions {
   pollIntervalMs?: number;
@@ -67,6 +70,7 @@ export function mountPageUpdate(
 
   const pollIntervalMs = options.pollIntervalMs ?? POLL_INTERVAL_MS;
   const refreshPage = options.refreshPage ?? refreshCurrentPage;
+  const runtimeGlobals: PageUpdateGlobals = globals;
   const { container, toast, reloadButton, dismissButton } =
     createToast(document);
 
@@ -96,7 +100,7 @@ export function mountPageUpdate(
 
   function scheduleNextCheck() {
     clearTimer();
-    if (document.hidden) {
+    if (runtimeGlobals.isDocumentHidden(document)) {
       return;
     }
     timer = window.setTimeout(() => {
@@ -107,17 +111,20 @@ export function mountPageUpdate(
   async function fetchValidators(
     path: string,
   ): Promise<ResponseValidators | null> {
-    if (typeof __IS_DEV__ !== 'undefined' && __IS_DEV__) {
+    if (runtimeGlobals.isDev()) {
       console.log(
-        `[page-update] HEAD ${path} visibility=${document.visibilityState} focus=${document.hasFocus()}`,
+        `[page-update] HEAD ${path} hidden=${runtimeGlobals.isDocumentHidden(document)} visibility=${document.visibilityState} focus=${document.hasFocus()}`,
       );
     }
 
-    const res = await fetch(path, { method: 'HEAD', cache: 'no-cache' });
+    const res = await runtimeGlobals.fetch(path, {
+      method: 'HEAD',
+      cache: 'no-cache',
+    });
 
-    if (typeof __IS_DEV__ !== 'undefined' && __IS_DEV__) {
+    if (runtimeGlobals.isDev()) {
       console.log(
-        `[page-update] HEAD ${path} -> ${res.status} etag=${res.headers.get('ETag')} last-modified=${res.headers.get('Last-Modified')} visibility=${document.visibilityState} focus=${document.hasFocus()}`,
+        `[page-update] HEAD ${path} -> ${res.status} etag=${res.headers.get('ETag')} last-modified=${res.headers.get('Last-Modified')} hidden=${runtimeGlobals.isDocumentHidden(document)} visibility=${document.visibilityState} focus=${document.hasFocus()}`,
       );
     }
 
@@ -170,7 +177,10 @@ export function mountPageUpdate(
       // best-effort
     } finally {
       checkInFlight = false;
-      if (rerunAfterCurrentCheck && !document.hidden) {
+      if (
+        rerunAfterCurrentCheck &&
+        !runtimeGlobals.isDocumentHidden(document)
+      ) {
         rerunAfterCurrentCheck = false;
         shouldRerun = true;
       } else {
@@ -191,20 +201,20 @@ export function mountPageUpdate(
     hasBaseline = false;
     hideToast();
     clearTimer();
-    if (!document.hidden) {
+    if (!runtimeGlobals.isDocumentHidden(document)) {
       void checkForUpdate();
     }
   }
 
   function handleVisibilityChange() {
-    if (typeof __IS_DEV__ !== 'undefined' && __IS_DEV__) {
+    if (runtimeGlobals.isDev()) {
       console.log(
-        `[page-update] visibilitychange hidden=${document.hidden} visibility=${document.visibilityState} focus=${document.hasFocus()}`,
+        `[page-update] visibilitychange hidden=${runtimeGlobals.isDocumentHidden(document)} visibility=${document.visibilityState} focus=${document.hasFocus()}`,
       );
     }
 
     clearTimer();
-    if (document.hidden) {
+    if (runtimeGlobals.isDocumentHidden(document)) {
       return;
     }
 
@@ -212,7 +222,7 @@ export function mountPageUpdate(
   }
 
   function handleNavigation() {
-    if (typeof __IS_DEV__ !== 'undefined' && __IS_DEV__) {
+    if (runtimeGlobals.isDev()) {
       console.log(
         `[page-update] navigation path=${window.location.pathname} visibility=${document.visibilityState} focus=${document.hasFocus()}`,
       );
@@ -227,7 +237,7 @@ export function mountPageUpdate(
   }
 
   function handleWindowFocus() {
-    if (typeof __IS_DEV__ !== 'undefined' && __IS_DEV__) {
+    if (runtimeGlobals.isDev()) {
       console.log(
         `[page-update] window focus visibility=${document.visibilityState} focus=${document.hasFocus()}`,
       );
@@ -235,7 +245,7 @@ export function mountPageUpdate(
   }
 
   function handleWindowBlur() {
-    if (typeof __IS_DEV__ !== 'undefined' && __IS_DEV__) {
+    if (runtimeGlobals.isDev()) {
       console.log(
         `[page-update] window blur visibility=${document.visibilityState} focus=${document.hasFocus()}`,
       );
@@ -253,8 +263,8 @@ export function mountPageUpdate(
   window.addEventListener('blur', handleWindowBlur);
   window.addEventListener(NAVIGATION_EVENT, handleNavigation);
 
-  if (!document.hidden) {
-    if (typeof __IS_DEV__ !== 'undefined' && __IS_DEV__) {
+  if (!runtimeGlobals.isDocumentHidden(document)) {
+    if (runtimeGlobals.isDev()) {
       console.log(
         `[page-update] mount path=${currentPath} interval=${pollIntervalMs} visibility=${document.visibilityState} focus=${document.hasFocus()}`,
       );

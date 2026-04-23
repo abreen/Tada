@@ -1,11 +1,14 @@
 import fs from 'fs';
 import path from 'path';
+import { globals, type Globals } from '../build/globals';
 import type {
   ApplyMutationsCommitPlan,
   CommitPlan,
   FileMutation,
   ReplaceRootCommitPlan,
 } from './types';
+
+type CommitPlanGlobals = Pick<Globals, 'now' | 'pid' | 'sleepSync'>;
 
 const TRANSIENT_RENAME_ERROR_CODES = new Set([
   'EACCES',
@@ -36,7 +39,11 @@ function isTransientRenameError(
   );
 }
 
-function renameWithRetry(sourcePath: string, targetPath: string): void {
+function renameWithRetry(
+  sourcePath: string,
+  targetPath: string,
+  globals: CommitPlanGlobals,
+): void {
   for (let attempt = 0; attempt <= RENAME_RETRY_COUNT; attempt++) {
     try {
       fs.renameSync(sourcePath, targetPath);
@@ -48,7 +55,7 @@ function renameWithRetry(sourcePath: string, targetPath: string): void {
       ) {
         throw error;
       }
-      Bun.sleepSync(RENAME_RETRY_DELAY_MS);
+      globals.sleepSync(RENAME_RETRY_DELAY_MS);
     }
   }
 }
@@ -74,6 +81,7 @@ function applyFileMutation(
   rootDir: string,
   mutation: FileMutation,
   stagedRoot: string,
+  globals: CommitPlanGlobals,
 ): void {
   const targetPath = path.join(rootDir, mutation.path);
   const stagedPath = path.join(stagedRoot, mutation.path);
@@ -82,7 +90,7 @@ function applyFileMutation(
     ensureParentDir(stagedPath);
     fs.writeFileSync(stagedPath, mutation.content);
     ensureParentDir(targetPath);
-    renameWithRetry(stagedPath, targetPath);
+    renameWithRetry(stagedPath, targetPath, globals);
     return;
   }
 
@@ -90,7 +98,10 @@ function applyFileMutation(
   pruneEmptyDirs(rootDir, targetPath);
 }
 
-function applyMutations(plan: ApplyMutationsCommitPlan): void {
+function applyMutations(
+  plan: ApplyMutationsCommitPlan,
+  globals: CommitPlanGlobals,
+): void {
   const stagedRoot = fs.mkdtempSync(path.join(plan.rootDir, '.watch-stage-'));
   try {
     for (const mutation of plan.mutations) {
@@ -102,39 +113,43 @@ function applyMutations(plan: ApplyMutationsCommitPlan): void {
     }
 
     for (const mutation of plan.mutations) {
-      applyFileMutation(plan.rootDir, mutation, stagedRoot);
+      applyFileMutation(plan.rootDir, mutation, stagedRoot, globals);
     }
   } finally {
     removeDirIfExists(stagedRoot);
   }
 }
 
-function replaceRoot(plan: ReplaceRootCommitPlan): void {
+function replaceRoot(
+  plan: ReplaceRootCommitPlan,
+  globals: CommitPlanGlobals,
+): void {
   const { targetPath, stagedPath } = plan;
-  const backupDir = `${targetPath}.bak-${process.pid}-${Date.now()}`;
+  const backupDir = `${targetPath}.bak-${globals.pid()}-${globals.now()}`;
   const targetExists = fs.existsSync(targetPath);
 
   try {
     if (targetExists) {
-      renameWithRetry(targetPath, backupDir);
+      renameWithRetry(targetPath, backupDir, globals);
     }
-    renameWithRetry(stagedPath, targetPath);
+    renameWithRetry(stagedPath, targetPath, globals);
     if (targetExists) {
       removeDirIfExists(backupDir);
     }
   } catch (err) {
     if (!fs.existsSync(targetPath) && fs.existsSync(backupDir)) {
-      renameWithRetry(backupDir, targetPath);
+      renameWithRetry(backupDir, targetPath, globals);
     }
     throw err;
   }
 }
 
 export function applyCommitPlan(plan: CommitPlan): void {
+  const runtimeGlobals: CommitPlanGlobals = globals;
   if (plan.kind === 'replace-root') {
-    replaceRoot(plan);
+    replaceRoot(plan, runtimeGlobals);
     return;
   }
 
-  applyMutations(plan);
+  applyMutations(plan, runtimeGlobals);
 }

@@ -12,6 +12,9 @@ import {
   setCurrentPath,
   setHistoryIndex,
 } from './runtime';
+import { globals, type Globals } from '../globals';
+
+type NavigateGlobals = Pick<Globals, 'getSiteBasePath' | 'setLocationHash'>;
 
 function findAnchor(event: MouseEvent): HTMLAnchorElement | null {
   const target = event.target as HTMLElement | null;
@@ -39,6 +42,7 @@ function shouldIgnoreClick(
 }
 
 export default function mountNavigate(window: Window): () => void {
+  const runtimeGlobals: NavigateGlobals = globals;
   initNavigation(window);
 
   // Track scroll position on every scroll event. We keep the latest
@@ -61,7 +65,11 @@ export default function mountNavigate(window: Window): () => void {
     }
 
     if (
-      !isEligibleLink(anchor.href, window.location.origin, __SITE_BASE_PATH__)
+      !isEligibleLink(
+        anchor.href,
+        window.location.origin,
+        runtimeGlobals.getSiteBasePath(),
+      )
     ) {
       return;
     }
@@ -77,11 +85,7 @@ export default function mountNavigate(window: Window): () => void {
       clearSearch(window.document);
       closeHeaderDetails(window.document);
       if (url.hash) {
-        // location.hash assignment performs a real fragment navigation:
-        // updates :target, fires hashchange (which the TOC listens for),
-        // creates a new history entry, and scrolls to the element.
-        // pushState would do none of those things.
-        window.location.hash = url.hash.slice(1);
+        runtimeGlobals.setLocationHash(window, url.hash);
       }
       return;
     }

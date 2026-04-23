@@ -1,15 +1,11 @@
-import fs from 'fs';
+import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import {
-  addGeneratedRouteAliases,
-  getProcessedExts,
-  getSourceOutputPaths,
-  getSourceTargetPaths,
-  scanProject,
-  updateProjectScan,
-} from './source-model';
+import { createGlobals } from './globals.test';
 import type { SiteVariables } from './types';
+
+const projectRoot = '/virtual/site';
+const files = new Map<string, string>();
+const directories = new Set<string>();
 
 const siteVariables = {
   base: 'http://localhost',
@@ -22,7 +18,152 @@ const siteVariables = {
   extensionToShikiLanguage: { java: 'java', py: 'python' },
 } as SiteVariables;
 
-const initDir = path.resolve(import.meta.dir, '..', 'init');
+function resolvePath(filePath: string): string {
+  return path.resolve(filePath);
+}
+
+function ensureDirectory(dirPath: string): void {
+  let current = resolvePath(dirPath);
+  while (!directories.has(current)) {
+    directories.add(current);
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+}
+
+function writeFile(filePath: string, content: string): void {
+  const resolved = resolvePath(filePath);
+  ensureDirectory(path.dirname(resolved));
+  files.set(resolved, content);
+}
+
+function readDirEntries(dirPath: string): string[] {
+  const resolvedDir = resolvePath(dirPath);
+  if (!directories.has(resolvedDir)) {
+    throw new Error(
+      `ENOENT: no such file or directory, scandir '${resolvedDir}'`,
+    );
+  }
+
+  const entries = new Set<string>();
+  for (const child of directories) {
+    if (path.dirname(child) === resolvedDir && child !== resolvedDir) {
+      entries.add(path.basename(child));
+    }
+  }
+  for (const child of files.keys()) {
+    if (path.dirname(child) === resolvedDir) {
+      entries.add(path.basename(child));
+    }
+  }
+  return [...entries].sort();
+}
+
+const fsMock = {
+  existsSync(filePath: string) {
+    const resolved = resolvePath(filePath);
+    return directories.has(resolved) || files.has(resolved);
+  },
+  readFileSync(filePath: string) {
+    const resolved = resolvePath(filePath);
+    const content = files.get(resolved);
+    if (content === undefined) {
+      throw new Error(`ENOENT: no such file or directory, open '${resolved}'`);
+    }
+    return content;
+  },
+  readdirSync(dirPath: string, options?: { withFileTypes?: boolean }) {
+    const entries = readDirEntries(dirPath);
+    if (!options?.withFileTypes) {
+      return entries;
+    }
+    return entries.map(name => {
+      const fullPath = path.join(resolvePath(dirPath), name);
+      const isDirectory = directories.has(fullPath);
+      return {
+        name,
+        isDirectory: () => isDirectory,
+        isFile: () => !isDirectory,
+      };
+    });
+  },
+  statSync(filePath: string) {
+    const resolved = resolvePath(filePath);
+    if (directories.has(resolved)) {
+      return { isDirectory: () => true, isFile: () => false };
+    }
+    if (files.has(resolved)) {
+      return { isDirectory: () => false, isFile: () => true };
+    }
+    throw new Error(`ENOENT: no such file or directory, stat '${resolved}'`);
+  },
+};
+
+mock.module('fs', () => ({ default: fsMock, ...fsMock }));
+
+mock.module('./globals', () => ({
+  globals: createGlobals({
+    cwd() {
+      return projectRoot;
+    },
+  }),
+}));
+
+let addGeneratedRouteAliases: typeof import('./source-model').addGeneratedRouteAliases;
+let getProcessedExts: typeof import('./source-model').getProcessedExts;
+let getSourceOutputPaths: typeof import('./source-model').getSourceOutputPaths;
+let getSourceTargetPaths: typeof import('./source-model').getSourceTargetPaths;
+let scanProject: typeof import('./source-model').scanProject;
+let updateProjectScan: typeof import('./source-model').updateProjectScan;
+
+beforeAll(async () => {
+  ({
+    addGeneratedRouteAliases,
+    getProcessedExts,
+    getSourceOutputPaths,
+    getSourceTargetPaths,
+    scanProject,
+    updateProjectScan,
+  } = await import('./source-model'));
+});
+
+function seedProject(): void {
+  ensureDirectory(projectRoot);
+  ensureDirectory(path.join(projectRoot, 'content'));
+  ensureDirectory(path.join(projectRoot, 'public'));
+
+  writeFile(
+    path.join(projectRoot, 'content', 'index.md'),
+    'title: Home\n\n# Home',
+  );
+  writeFile(
+    path.join(projectRoot, 'content', 'markdown.md'),
+    'title: Markdown\n\n# Markdown',
+  );
+  writeFile(
+    path.join(projectRoot, 'content', 'lectures', '02', '_pr1.md'),
+    '# Partial',
+  );
+  writeFile(
+    path.join(projectRoot, 'content', 'labs', '00', 'VowelCounter.java.md'),
+    'title: Vowel Counter\n\n```java\nclass VowelCounter {}\n```',
+  );
+  writeFile(
+    path.join(projectRoot, 'content', 'labs', '01', 'SearchTreeDemo.java'),
+    'class SearchTreeDemo {}',
+  );
+  writeFile(path.join(projectRoot, 'public', 'test.txt'), 'test');
+  writeFile(path.join(projectRoot, 'public', 'avatars', 'alex.jpg'), 'jpg');
+}
+
+beforeEach(() => {
+  files.clear();
+  directories.clear();
+  seedProject();
+});
 
 function makeBatch(
   changes: Array<{ path: string; kind: 'add' | 'change' | 'unlink' }>,
@@ -32,14 +173,13 @@ function makeBatch(
 
 describe('getSourceOutputPaths', () => {
   const contentDir = '/tmp/site/content';
-  const processedExts = getProcessedExts(['ts']);
 
   test('derives markdown output paths', () => {
     expect(
       getSourceOutputPaths({
         contentDir,
         filePath: '/tmp/site/content/about.md',
-        processedExts,
+        processedExts: getProcessedExts(['ts']),
         buildContent: true,
       }),
     ).toEqual(new Set(['about.html']));
@@ -50,7 +190,7 @@ describe('getSourceOutputPaths', () => {
       getSourceOutputPaths({
         contentDir,
         filePath: '/tmp/site/content/examples/hello.ts',
-        processedExts,
+        processedExts: getProcessedExts(['ts']),
         buildContent: true,
       }),
     ).toEqual(new Set(['examples/hello.ts', 'examples/hello.ts.html']));
@@ -61,7 +201,7 @@ describe('getSourceOutputPaths', () => {
       getSourceOutputPaths({
         contentDir,
         filePath: '/tmp/site/content/assets/logo.svg',
-        processedExts,
+        processedExts: getProcessedExts(['ts']),
         buildContent: true,
       }),
     ).toEqual(new Set(['assets/logo.svg']));
@@ -69,15 +209,13 @@ describe('getSourceOutputPaths', () => {
 });
 
 describe('getSourceTargetPaths', () => {
-  const processedExts = getProcessedExts(['ts']);
-
   test('adds index aliases for markdown and html content pages', () => {
     expect(
       getSourceTargetPaths({
         kind: 'content',
         rootDir: '/tmp/site/content',
         filePath: '/tmp/site/content/guides/index.md',
-        processedExts,
+        processedExts: getProcessedExts(['ts']),
         buildContent: true,
       }),
     ).toEqual(new Set(['/guides/index.html', '/guides/', '/guides']));
@@ -87,7 +225,7 @@ describe('getSourceTargetPaths', () => {
         kind: 'content',
         rootDir: '/tmp/site/content',
         filePath: '/tmp/site/content/docs/index.html',
-        processedExts,
+        processedExts: getProcessedExts(['ts']),
         buildContent: true,
       }),
     ).toEqual(new Set(['/docs/index.html', '/docs/', '/docs']));
@@ -99,7 +237,7 @@ describe('getSourceTargetPaths', () => {
         kind: 'content',
         rootDir: '/tmp/site/content',
         filePath: '/tmp/site/content/examples/hello.ts',
-        processedExts,
+        processedExts: getProcessedExts(['ts']),
         buildContent: true,
       }),
     ).toEqual(new Set(['/examples/hello.ts.html', '/examples/hello.ts']));
@@ -125,7 +263,7 @@ describe('getSourceTargetPaths', () => {
         kind: 'content',
         rootDir: '/tmp/site/content',
         filePath: '/tmp/site/content/about.md',
-        processedExts,
+        processedExts: getProcessedExts(['ts']),
         buildContent: false,
       }),
     ).toEqual(new Set());
@@ -157,42 +295,36 @@ describe('addGeneratedRouteAliases', () => {
 });
 
 describe('scanProject', () => {
-  let originalCwd: string;
-
-  beforeEach(() => {
-    originalCwd = process.cwd();
-    process.chdir(initDir);
-  });
-
-  afterEach(() => {
-    process.chdir(originalCwd);
-  });
-
   test('scans existing project fixtures into shared owners and targets', () => {
-    const homePath = path.join(initDir, 'content', 'index.md');
+    const homePath = path.join(projectRoot, 'content', 'index.md');
     const partialPath = path.join(
-      initDir,
+      projectRoot,
       'content',
       'lectures',
       '02',
       '_pr1.md',
     );
     const literateJavaPath = path.join(
-      initDir,
+      projectRoot,
       'content',
       'labs',
       '00',
       'VowelCounter.java.md',
     );
     const codePath = path.join(
-      initDir,
+      projectRoot,
       'content',
       'labs',
       '01',
       'SearchTreeDemo.java',
     );
-    const publicPath = path.join(initDir, 'public', 'test.txt');
-    const publicImagePath = path.join(initDir, 'public', 'avatars', 'alex.jpg');
+    const publicPath = path.join(projectRoot, 'public', 'test.txt');
+    const publicImagePath = path.join(
+      projectRoot,
+      'public',
+      'avatars',
+      'alex.jpg',
+    );
     const scan = scanProject(siteVariables);
 
     expect(scan.contentFiles.has(homePath)).toBe(true);
@@ -248,139 +380,82 @@ describe('scanProject', () => {
 });
 
 describe('updateProjectScan', () => {
-  let originalCwd: string;
-
-  beforeEach(() => {
-    originalCwd = process.cwd();
-    process.chdir(initDir);
-  });
-
-  afterEach(() => {
-    process.chdir(originalCwd);
-  });
-
   test('applies add change and unlink updates without mutating the snapshot', () => {
-    const removedContentPath = path.join(initDir, 'content', 'markdown.md');
-    const removedPublicPath = path.join(initDir, 'public', 'test.txt');
+    const removedContentPath = path.join(projectRoot, 'content', 'markdown.md');
+    const removedPublicPath = path.join(projectRoot, 'public', 'test.txt');
     const changedCodePath = path.join(
-      initDir,
+      projectRoot,
       'content',
       'labs',
       '01',
       'SearchTreeDemo.java',
     );
-    const addedContentPath = path.join(initDir, 'content', 'docs', 'index.md');
-    const addedPublicPath = path.join(initDir, 'public', 'assets', 'logo.svg');
+    const addedContentPath = path.join(
+      projectRoot,
+      'content',
+      'docs',
+      'index.md',
+    );
+    const addedPublicPath = path.join(
+      projectRoot,
+      'public',
+      'assets',
+      'logo.svg',
+    );
     const snapshot = scanProject(siteVariables);
-    const mutableFs = fs as {
-      existsSync: typeof fs.existsSync;
-      statSync: typeof fs.statSync;
-      readFileSync: typeof fs.readFileSync;
-    };
-    const originalExistsSync = mutableFs.existsSync;
-    const originalStatSync = mutableFs.statSync;
-    const originalReadFileSync = mutableFs.readFileSync;
 
-    const normalizePathLike = (filePath: string | Buffer | URL): string =>
-      path.resolve(filePath.toString());
+    files.delete(removedContentPath);
+    files.delete(removedPublicPath);
+    writeFile(addedContentPath, 'title: Docs\n\n# Docs');
+    writeFile(addedPublicPath, '<svg></svg>');
+    writeFile(changedCodePath, 'class SearchTreeDemo { int nodes = 1; }');
 
-    mutableFs.existsSync = ((filePath: string | Buffer | URL) => {
-      const resolvedPath = normalizePathLike(filePath);
-      if (
-        resolvedPath === removedContentPath ||
-        resolvedPath === removedPublicPath
-      ) {
-        return false;
-      }
-      if (
-        resolvedPath === addedContentPath ||
-        resolvedPath === addedPublicPath
-      ) {
-        return true;
-      }
-      return originalExistsSync(filePath);
-    }) as unknown as typeof fs.existsSync;
+    const updated = updateProjectScan(
+      snapshot,
+      makeBatch([
+        { path: removedContentPath, kind: 'unlink' },
+        { path: removedPublicPath, kind: 'unlink' },
+        { path: addedContentPath, kind: 'add' },
+        { path: addedPublicPath, kind: 'add' },
+        { path: changedCodePath, kind: 'change' },
+      ]),
+    );
 
-    mutableFs.statSync = ((filePath: string | Buffer | URL) => {
-      const resolvedPath = normalizePathLike(filePath);
-      if (
-        resolvedPath === addedContentPath ||
-        resolvedPath === addedPublicPath
-      ) {
-        return { isFile: () => true } as fs.Stats;
-      }
-      return originalStatSync(filePath);
-    }) as unknown as typeof fs.statSync;
-
-    mutableFs.readFileSync = ((
-      filePath: string | Buffer | URL,
-      encoding?: unknown,
-    ) => {
-      if (
-        normalizePathLike(filePath) === addedContentPath &&
-        encoding === 'utf-8'
-      ) {
-        return '# Docs';
-      }
-      return originalReadFileSync(filePath, encoding as BufferEncoding);
-    }) as unknown as typeof fs.readFileSync;
-
-    try {
-      const updated = updateProjectScan(
-        snapshot,
-        makeBatch([
-          { path: removedContentPath, kind: 'unlink' },
-          { path: removedPublicPath, kind: 'unlink' },
-          { path: addedContentPath, kind: 'add' },
-          { path: addedPublicPath, kind: 'add' },
-          { path: changedCodePath, kind: 'change' },
-        ]),
-      );
-
-      expect(snapshot.contentFiles.has(removedContentPath)).toBe(true);
-      expect(snapshot.publicFiles.has(removedPublicPath)).toBe(true);
-      expect(snapshot.sourceOutputPaths.get(removedContentPath)).toEqual(
-        new Set(['markdown.html']),
-      );
-      expect(updated.contentFiles.has(removedContentPath)).toBe(false);
-      expect(updated.publicFiles.has(removedPublicPath)).toBe(false);
-      expect(updated.contentFiles.has(addedContentPath)).toBe(true);
-      expect(updated.buildContentFiles.has(addedContentPath)).toBe(true);
-      expect(updated.publicFiles.has(addedPublicPath)).toBe(true);
-      expect(updated.sourceOutputPaths.get(removedContentPath)).toBeUndefined();
-      expect(updated.sourceTargetPaths.get(removedContentPath)).toBeUndefined();
-      expect(updated.sourceOutputPaths.get(addedContentPath)).toEqual(
-        new Set(['docs/index.html']),
-      );
-      expect(updated.sourceTargetPaths.get(addedContentPath)).toEqual(
-        new Set(['/docs/index.html', '/docs/', '/docs']),
-      );
-      expect(updated.sourceOutputPaths.get(changedCodePath)).toEqual(
-        new Set([
-          'labs/01/SearchTreeDemo.java',
-          'labs/01/SearchTreeDemo.java.html',
-        ]),
-      );
-      expect(updated.sourceTargetPaths.get(addedPublicPath)).toEqual(
-        new Set(['/assets/logo.svg']),
-      );
-      expect(updated.contentOwners.get('markdown.html')).toBeUndefined();
-      expect(updated.publicOwners.get('test.txt')).toBeUndefined();
-      expect(updated.contentOwners.get('docs/index.html')).toBe(
-        addedContentPath,
-      );
-      expect(updated.publicOwners.get('assets/logo.svg')).toBe(addedPublicPath);
-      expect(updated.validTargets.has('/docs/index.html')).toBe(true);
-      expect(updated.validTargets.has('/docs/')).toBe(true);
-      expect(updated.validTargets.has('/docs')).toBe(true);
-      expect(updated.validTargets.has('/assets/logo.svg')).toBe(true);
-      expect(updated.validTargets.has('/labs/01/SearchTreeDemo.java')).toBe(
-        true,
-      );
-    } finally {
-      mutableFs.existsSync = originalExistsSync;
-      mutableFs.statSync = originalStatSync;
-      mutableFs.readFileSync = originalReadFileSync;
-    }
+    expect(snapshot.contentFiles.has(removedContentPath)).toBe(true);
+    expect(snapshot.publicFiles.has(removedPublicPath)).toBe(true);
+    expect(snapshot.sourceOutputPaths.get(removedContentPath)).toEqual(
+      new Set(['markdown.html']),
+    );
+    expect(updated.contentFiles.has(removedContentPath)).toBe(false);
+    expect(updated.publicFiles.has(removedPublicPath)).toBe(false);
+    expect(updated.contentFiles.has(addedContentPath)).toBe(true);
+    expect(updated.buildContentFiles.has(addedContentPath)).toBe(true);
+    expect(updated.publicFiles.has(addedPublicPath)).toBe(true);
+    expect(updated.sourceOutputPaths.get(removedContentPath)).toBeUndefined();
+    expect(updated.sourceTargetPaths.get(removedContentPath)).toBeUndefined();
+    expect(updated.sourceOutputPaths.get(addedContentPath)).toEqual(
+      new Set(['docs/index.html']),
+    );
+    expect(updated.sourceTargetPaths.get(addedContentPath)).toEqual(
+      new Set(['/docs/index.html', '/docs/', '/docs']),
+    );
+    expect(updated.sourceOutputPaths.get(changedCodePath)).toEqual(
+      new Set([
+        'labs/01/SearchTreeDemo.java',
+        'labs/01/SearchTreeDemo.java.html',
+      ]),
+    );
+    expect(updated.sourceTargetPaths.get(addedPublicPath)).toEqual(
+      new Set(['/assets/logo.svg']),
+    );
+    expect(updated.contentOwners.get('markdown.html')).toBeUndefined();
+    expect(updated.publicOwners.get('test.txt')).toBeUndefined();
+    expect(updated.contentOwners.get('docs/index.html')).toBe(addedContentPath);
+    expect(updated.publicOwners.get('assets/logo.svg')).toBe(addedPublicPath);
+    expect(updated.validTargets.has('/docs/index.html')).toBe(true);
+    expect(updated.validTargets.has('/docs/')).toBe(true);
+    expect(updated.validTargets.has('/docs')).toBe(true);
+    expect(updated.validTargets.has('/assets/logo.svg')).toBe(true);
+    expect(updated.validTargets.has('/labs/01/SearchTreeDemo.java')).toBe(true);
   });
 });

@@ -1,13 +1,6 @@
-import {
-  describe,
-  expect,
-  test,
-  beforeEach,
-  afterEach,
-  beforeAll,
-  mock,
-} from 'bun:test';
-import { JSDOM } from 'jsdom';
+import { describe, expect, test, beforeEach, mock } from 'bun:test';
+import * as jsdom from 'jsdom';
+import { createGlobals } from '../globals.test';
 
 // Mock the lifecycle module so we can track calls
 const mockTeardown = mock(() => {});
@@ -23,39 +16,26 @@ import mount from './index';
 // in createDOM and use this alias everywhere else so the rest of the file
 // is free of explicit casts.
 type Win = Window & typeof globalThis;
+type VirtualConsoleLike = {
+  on: (event: 'jsdomError', handler: (error: Error) => void) => void;
+};
 
-// Typed accessor for assigning bare globals that performNavigation references
-// (document, window, DOMParser, Event, fetch).
-const globals = globalThis as Record<string, unknown>;
 const GENERATOR = 'Tada 1.11.1';
+const JSDOM_NAVIGATION_WARNING =
+  'Not implemented: navigation (except hash changes)';
+const { JSDOM } = jsdom;
+const VirtualConsoleCtor = (
+  jsdom as typeof jsdom & { VirtualConsole: new () => VirtualConsoleLike }
+).VirtualConsole;
 
-beforeAll(() => {
-  globals.__SITE_BASE_PATH__ = '/';
-});
-
-// Save/restore globals that performNavigation references as bare identifiers
-let savedDocument: unknown;
-let savedWindow: unknown;
-let savedFetch: unknown;
-let savedDOMParser: unknown;
-let savedEvent: unknown;
+function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
+  mock.module('../globals', () => ({ globals: createGlobals(overrides) }));
+}
 
 beforeEach(() => {
-  savedDocument = globals.document;
-  savedWindow = globals.window;
-  savedFetch = globalThis.fetch;
-  savedDOMParser = globals.DOMParser;
-  savedEvent = globalThis.Event;
+  mockGlobals();
   mockTeardown.mockClear();
   mockMount.mockClear();
-});
-
-afterEach(() => {
-  globals.document = savedDocument;
-  globals.window = savedWindow;
-  globalThis.fetch = savedFetch as typeof fetch;
-  globals.DOMParser = savedDOMParser;
-  globals.Event = savedEvent;
 });
 
 function createDOM(
@@ -74,7 +54,13 @@ function createDOM(
   const bodyClass = options?.bodyClass ?? 'default toc-is-active';
   const searchVal = options?.searchValue ?? '';
   const html = `<html><head>${headContent}</head><body class="${bodyClass}"><header><input class="search quick-search" value="${searchVal}"><details><summary>Menu</summary><nav></nav></details></header><div class="container">${bodyContent}</div></body></html>`;
-  const dom = new JSDOM(html, { url, pretendToBeVisual: true });
+  const virtualConsole = new VirtualConsoleCtor();
+  virtualConsole.on('jsdomError', (error: Error) => {
+    if (error.message !== JSDOM_NAVIGATION_WARNING) {
+      console.error(error);
+    }
+  });
+  const dom = new JSDOM(html, { url, pretendToBeVisual: true, virtualConsole });
   return dom.window as unknown as Win;
 }
 
@@ -119,19 +105,17 @@ function createPageHTML(options?: {
   return `<html><head><title>${o.title}</title>${gen}${desc}${auth}${ogT}${ogA}${links}</head><body class="${o.bodyClass}"><div class="container">${o.containerContent}</div></body></html>`;
 }
 
+function htmlResponse(html: string, ok = true): Response {
+  return new Response(html, { status: ok ? 200 : 404 });
+}
+
 async function flush(): Promise<void> {
   for (let i = 0; i < 10; i++) {
     await new Promise(r => setTimeout(r, 0));
   }
 }
 
-// Point bare globals (document, window, DOMParser, Event) at the JSDOM window.
-// Returns a mock for scrollTo so tests can assert on it.
 function setupGlobals(win: Win) {
-  globals.document = win.document;
-  globals.window = win;
-  globals.DOMParser = win.DOMParser;
-  globals.Event = win.Event;
   const scrollToMock = mock(() => {});
   Object.defineProperty(win, 'scrollTo', {
     value: scrollToMock,
@@ -140,11 +124,17 @@ function setupGlobals(win: Win) {
   return scrollToMock;
 }
 
-function mockFetchReturning(html: string, ok = true) {
-  globals.fetch = mock(async (_url: string, _init?: RequestInit) => ({
-    ok,
-    text: async () => html,
-  }));
+function mockFetchReturning(
+  html: string,
+  ok = true,
+  overrides: Partial<import('../globals').Globals> = {},
+) {
+  mockGlobals({
+    fetch: mock(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      htmlResponse(html, ok),
+    ),
+    ...overrides,
+  });
 }
 
 function clickLink(win: Win, selector = 'a') {
@@ -325,6 +315,24 @@ describe('same-page hash navigation', () => {
     expect(win.location.hash).toBe('#section');
   });
 
+  test('uses setLocationHash global for same-page hash links', () => {
+    const win = createDOM('<a href="http://localhost/page#section">Link</a>', {
+      url: 'http://localhost/page',
+    });
+    setupGlobals(win);
+    const setLocationHash = mock((targetWindow: Window, hash: string) => {
+      targetWindow.location.hash = hash;
+    });
+    mockGlobals({ setLocationHash } as unknown as Partial<
+      import('../globals').Globals
+    >);
+
+    mount(win);
+    clickLink(win);
+
+    expect(setLocationHash).toHaveBeenCalledWith(win, '#section');
+  });
+
   test('clears search input', () => {
     const win = createDOM('<a href="http://localhost/#section">Link</a>', {
       searchValue: 'hello',
@@ -473,6 +481,25 @@ describe('cross-page navigation', () => {
     expect(win.location.hash).toBe('#heading');
   });
 
+  test('uses replaceLocation global for hash links', async () => {
+    const win = createDOM('<a href="http://localhost/other#heading">Link</a>');
+    setupGlobals(win);
+    const replaceLocation = mock((targetWindow: Window, url: string) => {
+      targetWindow.history.replaceState(targetWindow.history.state, '', url);
+    });
+    mockFetchReturning(createPageHTML(), true, {
+      ...({ replaceLocation } as unknown as Partial<
+        import('../globals').Globals
+      >),
+    });
+    mount(win);
+
+    clickLink(win);
+    await flush();
+
+    expect(replaceLocation).toHaveBeenCalledWith(win, '/other#heading');
+  });
+
   test('clears search before fetch', async () => {
     const win = createDOM('<a href="http://localhost/other">Link</a>', {
       searchValue: 'query',
@@ -480,12 +507,14 @@ describe('cross-page navigation', () => {
     setupGlobals(win);
 
     let searchValueDuringFetch = '';
-    globals.fetch = mock(async () => {
-      const input = win.document.querySelector(
-        'input.search.quick-search',
-      ) as HTMLInputElement;
-      searchValueDuringFetch = input.value;
-      return { ok: true, text: async () => createPageHTML() };
+    mockGlobals({
+      fetch: mock(async () => {
+        const input = win.document.querySelector(
+          'input.search.quick-search',
+        ) as HTMLInputElement;
+        searchValueDuringFetch = input.value;
+        return htmlResponse(createPageHTML());
+      }),
     });
     mount(win);
 
@@ -505,9 +534,11 @@ describe('cross-page navigation', () => {
     details.open = true;
 
     let detailsOpenDuringFetch = true;
-    globals.fetch = mock(async () => {
-      detailsOpenDuringFetch = details.open;
-      return { ok: true, text: async () => createPageHTML() };
+    mockGlobals({
+      fetch: mock(async () => {
+        detailsOpenDuringFetch = details.open;
+        return htmlResponse(createPageHTML());
+      }),
     });
     mount(win);
 
@@ -522,10 +553,12 @@ describe('cross-page navigation', () => {
     setupGlobals(win);
 
     let headerHadLoading = false;
-    globals.fetch = mock(async () => {
-      const header = win.document.querySelector('header');
-      headerHadLoading = header?.classList.contains('loading') ?? false;
-      return { ok: true, text: async () => createPageHTML() };
+    mockGlobals({
+      fetch: mock(async () => {
+        const header = win.document.querySelector('header');
+        headerHadLoading = header?.classList.contains('loading') ?? false;
+        return htmlResponse(createPageHTML());
+      }),
     });
     mount(win);
 
@@ -640,8 +673,10 @@ describe('fetch error paths', () => {
       '<p>Original</p><a href="http://localhost/other">Link</a>',
     );
     setupGlobals(win);
-    globals.fetch = mock(async () => {
-      throw new TypeError('Network error');
+    mockGlobals({
+      fetch: mock(async () => {
+        throw new TypeError('Network error');
+      }),
     });
     mount(win);
 
@@ -654,15 +689,39 @@ describe('fetch error paths', () => {
     expect(mockTeardown).not.toHaveBeenCalled();
   });
 
+  test('network error uses setLocationHref global for fallback navigation', async () => {
+    const win = createDOM(
+      '<p>Original</p><a href="http://localhost/other">Link</a>',
+    );
+    setupGlobals(win);
+    const setLocationHref = mock(() => {});
+    mockGlobals({
+      fetch: mock(async () => {
+        throw new TypeError('Network error');
+      }),
+      ...({ setLocationHref } as unknown as Partial<
+        import('../globals').Globals
+      >),
+    });
+    mount(win);
+
+    clickLink(win);
+    await flush();
+
+    expect(setLocationHref).toHaveBeenCalledWith(win, 'http://localhost/other');
+  });
+
   test('abort error returns silently', async () => {
     const win = createDOM(
       '<p>Original</p><a href="http://localhost/other">Link</a>',
     );
     setupGlobals(win);
-    globals.fetch = mock(async () => {
-      const err = new Error('The operation was aborted.');
-      err.name = 'AbortError';
-      throw err;
+    mockGlobals({
+      fetch: mock(async () => {
+        const err = new Error('The operation was aborted.');
+        err.name = 'AbortError';
+        throw err;
+      }),
     });
     mount(win);
 
@@ -734,29 +793,28 @@ describe('fetch error paths', () => {
 
     let firstSignal: AbortSignal | null = null;
     let callCount = 0;
-    globals.fetch = mock(async (_url: string, init?: RequestInit) => {
-      callCount++;
-      if (callCount === 1) {
-        firstSignal = init?.signal ?? null;
-        // Simulate slow fetch that rejects on abort
-        await new Promise((_resolve, reject) => {
-          if (init?.signal?.aborted) {
-            const err = new Error('Aborted');
-            err.name = 'AbortError';
-            reject(err);
-            return;
-          }
-          init?.signal?.addEventListener('abort', () => {
-            const err = new Error('Aborted');
-            err.name = 'AbortError';
-            reject(err);
+    mockGlobals({
+      fetch: mock(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        callCount++;
+        if (callCount === 1) {
+          firstSignal = init?.signal ?? null;
+          // Simulate slow fetch that rejects on abort
+          await new Promise((_resolve, reject) => {
+            if (init?.signal?.aborted) {
+              const err = new Error('Aborted');
+              err.name = 'AbortError';
+              reject(err);
+              return;
+            }
+            init?.signal?.addEventListener('abort', () => {
+              const err = new Error('Aborted');
+              err.name = 'AbortError';
+              reject(err);
+            });
           });
-        });
-      }
-      return {
-        ok: true,
-        text: async () => createPageHTML({ title: 'Page Two' }),
-      };
+        }
+        return htmlResponse(createPageHTML({ title: 'Page Two' }));
+      }),
     });
     mount(win);
 
@@ -865,38 +923,36 @@ describe('popstate handling', () => {
 
     let backFetchAborted = false;
     let callCount = 0;
-    globals.fetch = mock(async (_url: string, init?: RequestInit) => {
-      callCount++;
-      if (callCount === 1) {
-        return {
-          ok: true,
-          text: async () =>
+    mockGlobals({
+      fetch: mock(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        callCount++;
+        if (callCount === 1) {
+          return htmlResponse(
             createPageHTML({
               title: 'Markdown Examples',
               containerContent: '<p>Markdown</p>',
             }),
-        };
-      }
+          );
+        }
 
-      if (callCount === 2) {
-        await new Promise((_resolve, reject) => {
-          init?.signal?.addEventListener('abort', () => {
-            backFetchAborted = true;
-            const err = new Error('Aborted');
-            err.name = 'AbortError';
-            reject(err);
+        if (callCount === 2) {
+          await new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              backFetchAborted = true;
+              const err = new Error('Aborted');
+              err.name = 'AbortError';
+              reject(err);
+            });
           });
-        });
-      }
+        }
 
-      return {
-        ok: true,
-        text: async () =>
+        return htmlResponse(
           createPageHTML({
             title: 'Markdown Examples',
             containerContent: '<p>Markdown restored</p>',
           }),
-      };
+        );
+      }),
     });
 
     mount(win);

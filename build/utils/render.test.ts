@@ -1,57 +1,74 @@
+import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
-import { describe, expect, mock, test } from 'bun:test';
-import realFs from 'fs';
 import type { SiteVariables } from '../types';
 
-const mockedSourcePath = '/virtual/content/example.ts';
+const files = new Map<string, string>();
 
-mock.module('fs', () => ({
-  default: {
-    ...realFs,
-    readFileSync(filePath: string, encoding?: BufferEncoding) {
-      if (filePath === mockedSourcePath && encoding === 'utf-8') {
-        return 'const answer = 42;\n';
-      }
-      return realFs.readFileSync(filePath, encoding as BufferEncoding);
-    },
-    existsSync(filePath: string) {
-      if (
-        typeof filePath === 'string' &&
-        (filePath.endsWith('inter/InterVariable.woff2') ||
-          filePath.endsWith('google-sans-code/GoogleSansCodeVariable.woff2'))
-      ) {
-        return false;
-      }
-      return realFs.existsSync(filePath);
-    },
+function resolvePath(filePath: string): string {
+  return path.resolve(filePath);
+}
+
+function writeFile(filePath: string, content: string): void {
+  files.set(resolvePath(filePath), content);
+}
+
+const fsMock = {
+  existsSync(filePath: string) {
+    return files.has(resolvePath(filePath));
   },
-}));
+  readFileSync(filePath: string) {
+    const resolved = resolvePath(filePath);
+    const content = files.get(resolved);
+    if (content === undefined) {
+      throw new Error(`ENOENT: no such file or directory, open '${resolved}'`);
+    }
+    return content;
+  },
+};
+
+mock.module('fs', () => ({ default: fsMock, ...fsMock }));
 
 mock.module('../templates', () => ({
-  json: () => undefined,
-  render: (templateName: string) => {
-    if (templateName === 'code.html') {
-      return '<html><head><meta charset="UTF-8"></head><body><span class="katex">code page</span></body></html>';
-    }
-    return '<html><head><meta charset="UTF-8"></head><body></body></html>';
+  json() {
+    return undefined;
+  },
+  render(_fileName: string, params?: Record<string, unknown>) {
+    const content = typeof params?.content === 'string' ? params.content : '';
+    return `<html><head><meta charset="UTF-8"></head><body>${content}</body></html>`;
   },
 }));
 
-mock.module('./final-html', () => ({
-  finalizeHtmlPage: ({ html }: { html: string }) => ({
-    html,
-    analysis: { outgoingTargets: new Set<string>() },
-  }),
+mock.module('./code', () => ({
+  extractJavaMethodToc() {
+    return [];
+  },
+  renderCodeSegment() {
+    return '<pre></pre>';
+  },
+  renderCodeWithComments() {
+    return '<div class="code-body">rendered code</div>';
+  },
+  rewriteProseLinks(lines: string[]) {
+    return lines;
+  },
 }));
 
-const { preparePageTemplateHtml, renderCodePageAsset } =
-  await import('./render');
+let preparePageTemplateHtml: typeof import('./render').preparePageTemplateHtml;
+let renderCodePageAsset: typeof import('./render').renderCodePageAsset;
+
+beforeAll(async () => {
+  ({ preparePageTemplateHtml, renderCodePageAsset } = await import('./render'));
+});
+
+beforeEach(() => {
+  files.clear();
+});
 
 const siteVariables = {
   base: 'http://localhost',
-  basePath: '/',
-  title: 'Site',
-  titlePostfix: ' - Site',
+  basePath: '/course/',
+  title: 'Course',
+  titlePostfix: ' - Course',
   themeColor: 'black',
   defaultTimeZone: 'America/New_York',
   features: { search: true, favicon: true, footer: true },
@@ -66,7 +83,7 @@ describe('preparePageTemplateHtml', () => {
     const result = preparePageTemplateHtml({
       templateHtml,
       assetFiles: ['app.js', 'styles.css'],
-      distDir: '/tmp/render-test-dist',
+      distDir: '/virtual/dist',
     });
 
     expect(result).toContain('<link href="/styles.css" rel="stylesheet">');
@@ -81,7 +98,7 @@ describe('preparePageTemplateHtml', () => {
     const result = preparePageTemplateHtml({
       templateHtml,
       assetFiles: [],
-      distDir: '/tmp/render-test-dist',
+      distDir: '/virtual/dist',
     });
 
     expect(result).toBe(templateHtml);
@@ -90,10 +107,14 @@ describe('preparePageTemplateHtml', () => {
 
 describe('renderCodePageAsset', () => {
   test('does not inject the KaTeX stylesheet into code pages', () => {
+    const contentDir = '/virtual/content';
+    const filePath = path.join(contentDir, 'labs', 'example.ts');
+    writeFile(filePath, 'console.log("hello");');
+
     const [pageAsset] = renderCodePageAsset({
-      filePath: mockedSourcePath,
-      contentDir: path.dirname(path.dirname(mockedSourcePath)),
-      distDir: '/tmp/render-test-dist',
+      filePath,
+      contentDir,
+      distDir: '/virtual/dist',
       siteVariables,
       assetFiles: ['app.js', 'styles.css'],
       validInternalTargets: new Set(),
@@ -102,8 +123,8 @@ describe('renderCodePageAsset', () => {
 
     const html = pageAsset.content.toString();
 
-    expect(html).toContain('<link href="/styles.css" rel="stylesheet">');
-    expect(html).toContain('<script defer src="/app.js"></script>');
+    expect(html).toContain('<link href="/course/styles.css" rel="stylesheet">');
+    expect(html).toContain('<script defer="" src="/course/app.js"></script>');
     expect(html).not.toContain('href="/katex/katex.min.css"');
   });
 });

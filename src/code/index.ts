@@ -1,7 +1,12 @@
+import { globals, type Globals } from '../globals';
+
+type CodeGlobals = Pick<Globals, 'createResizeObserver' | 'fetch'>;
+
 export default async function mount(
   window: Window,
 ): Promise<void | (() => void)> {
   const { document } = window;
+  const runtimeGlobals: CodeGlobals = globals;
   if (!document.body.classList.contains('code')) {
     return;
   }
@@ -66,7 +71,7 @@ export default async function mount(
         const handle = await window.showSaveFilePicker!({
           suggestedName: downloadLink.download,
         });
-        const response = await fetch(downloadLink.href);
+        const response = await runtimeGlobals.fetch(downloadLink.href);
         const writable = await handle.createWritable();
         await writable.write(await response.blob());
         await writable.close();
@@ -111,7 +116,7 @@ export default async function mount(
     syncing = false;
   });
 
-  const resizeObserver = new ResizeObserver(updateScrollbar);
+  const resizeObserver = runtimeGlobals.createResizeObserver(updateScrollbar);
   resizeObserver.observe(codeBody);
   updateScrollbar();
 

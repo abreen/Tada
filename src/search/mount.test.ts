@@ -1,11 +1,23 @@
-import { describe, expect, test, beforeAll } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
+import { createGlobals } from '../globals.test';
 import mountSearch from './index';
 
-beforeAll(() => {
-  (globalThis as Record<string, unknown>).__SITE_BASE_PATH__ = '/';
-  (globalThis as Record<string, unknown>).__SITE_TITLE_POSTFIX__ = '';
-});
+function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
+  const pagefind = {
+    async init() {},
+    async search() {
+      return { results: [] };
+    },
+  };
+  mock.module('../globals', () => ({
+    globals: createGlobals({
+      fetch: mock(async () => ({ ok: false }) as Response),
+      importModule: async () => pagefind,
+      ...overrides,
+    }),
+  }));
+}
 
 const SEARCH_HTML = `
 <header>
@@ -33,6 +45,10 @@ function focusEvent(
   ] as typeof FocusEvent;
   return new FE(type, init);
 }
+
+beforeEach(() => {
+  mockGlobals();
+});
 
 describe('search mount', () => {
   test('returns early when no quick-search input exists', () => {
