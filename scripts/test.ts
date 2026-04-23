@@ -2,14 +2,32 @@ import { $ } from 'bun';
 import { runPythonModuleSync } from '../python/module';
 
 const suite = process.argv[2] ?? 'all';
-const pytestFlags = ['-v', '--tb=line', '--maxfail=1', '-n=auto'];
 
-async function runUnit(extra: string[] = []) {
-  await $`bun test ${extra}`.throws(true);
+function shouldUseQuietFlags(): boolean {
+  return Object.entries(process.env).some(
+    ([key, value]) =>
+      (key === 'CI' || key.endsWith('_CI')) &&
+      (value === '1' || value === 'true'),
+  );
 }
 
-async function runPlaywright() {
-  await $`bunx playwright test`.throws(true);
+const useQuietFlags = shouldUseQuietFlags();
+const bunTestFlags = useQuietFlags ? ['--dots'] : [];
+const playwrightFlags = useQuietFlags ? ['--quiet'] : [];
+const pytestFlags = ['--tb=line', '--maxfail=1', '-n=auto'];
+if (useQuietFlags) {
+  pytestFlags.unshift('-q');
+  pytestFlags.unshift('--no-header');
+} else {
+  pytestFlags.unshift('-v');
+}
+
+async function runUnit(extra: string[] = []) {
+  await $`bun test ${bunTestFlags} ${extra}`.throws(true);
+}
+
+async function runPlaywright(extra: string[] = []) {
+  await $`bunx playwright test ${playwrightFlags} ${extra}`.throws(true);
 }
 
 async function runFunctional(extra: string[] = []) {
@@ -28,7 +46,7 @@ switch (suite) {
     await runUnit(process.argv.slice(3));
     break;
   case 'playwright':
-    await runPlaywright();
+    await runPlaywright(process.argv.slice(3));
     break;
   case 'functional':
     await runFunctional(process.argv.slice(3));
