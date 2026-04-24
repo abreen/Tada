@@ -4,5 +4,6 @@ prefix_rule(
     justification = "Allow Playwright runs that need to leave the sandbox",
     match = [
         "bun run test:playwright",
+        "bun run test:playwright *",
     ],
 )

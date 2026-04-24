@@ -28,7 +28,7 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 - Run a single unit test: `bun run test:unit build/code.test.ts`
 - Run Playwright tests: `bun run test:playwright`
 - Run functional tests: `bun run test:functional`
-- Run functional tests with extra pytest args: `bun run test:functional -k watch`
+- Run a single functional test file: `bun run test:functional functional_tests/test_init.py`
 - Run the entire test suite: `bun run test:all`
 - Run unit & functional tests, collecting coverage: `bun run test:coverage`
 

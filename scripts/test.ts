@@ -31,9 +31,11 @@ async function runPlaywright(extra: string[] = []) {
 }
 
 async function runFunctional(extra: string[] = []) {
+  const testPaths =
+    extra[0]?.startsWith('-') === false ? [] : ['functional_tests/'];
   const exitCode = runPythonModuleSync(
     'pytest',
-    ['functional_tests/', ...pytestFlags, ...extra],
+    [...testPaths, ...pytestFlags, ...extra],
     { stdio: 'inherit', env: { ...process.env, PYTHONUTF8: '1' } },
   );
   if (exitCode !== 0) {

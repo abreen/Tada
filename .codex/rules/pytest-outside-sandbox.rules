@@ -4,5 +4,6 @@ prefix_rule(
     justification = "Allow functional test runs to leave the sandbox",
     match = [
         "bun run test:functional",
+        "bun run test:functional *",
     ],
 )
