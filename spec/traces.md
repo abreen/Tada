@@ -41,3 +41,17 @@ The source panel highlights the current line. The memory diagram is rendered as
 SVG and depicts stack frames with local variables, heap objects (arrays, objects,
 strings), and reference arrows between them. The diagram reads colors from CSS
 custom properties and re-renders on color scheme changes.
+
+## Slides Mode
+
+When a trace widget appears on a page that uses [Slides Mode](slides.md),
+presentation navigation is trace-aware. `ArrowRight`, `ArrowLeft`, `Space`, and
+the single-click advance gesture first try to move the trace widget before
+changing slides.
+
+While presenting, the trace toolbar is hidden and restored when presentation
+ends. If no trace on the active slide can move in the requested direction,
+Slides Mode advances to the next or previous slide as usual. Each time Slides
+Mode starts, ready trace widgets are reset to their first step. The trace SVG
+diagram scales uniformly to match the `125%` presentation sizing and returns to
+its normal size when Slides Mode ends.

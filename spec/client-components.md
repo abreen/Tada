@@ -22,5 +22,9 @@ them in the bundle. Shared utilities are in `src/util.ts`.
 - **Header navigation**: collapsible header with logo, title, and nav links
 - **Page update toast**: floating bottom toast that checks the current page
   for newer validators and offers an in-place refresh
+- **Slides**: page-local presentation mode for Markdown pages with
+  `slides: true`; it reads slide wrapper markup, opens from a `Present` button,
+  and shows one slide at a time with keyboard and click navigation (see
+  [Slides Mode](slides.md))
 - **Traces**: widget that renders execution traces generated at build time and
   renders a stack and heap memory diagram (see [Traces](traces.md))

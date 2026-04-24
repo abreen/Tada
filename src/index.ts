@@ -8,6 +8,7 @@ import './header/style.scss';
 import './print/style.scss';
 import './question/style.scss';
 import './search/style.scss';
+import './slides/style.scss';
 import './timezone/style.scss';
 import './toc/style.scss';
 import './trace/style.scss';

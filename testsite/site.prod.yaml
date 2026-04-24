@@ -1,0 +1,21 @@
+title: Introduction to Computer Science
+titlePostfix: " - Introduction to Computer Science"
+symbol: CS 0
+features: 
+  search: true
+  favicon: true
+  footer: true
+base: https://example.edu
+basePath: /
+internalDomains: 
+  - example.edu
+defaultTimeZone: America/New_York
+extensionToShikiLanguage: 
+  {}
+shikiLanguages: 
+  []
+themeColor: hsl(195 70% 40%)
+tintHue: 20
+tintAmount: 100
+vars: 
+  foobar: 123

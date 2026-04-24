@@ -55,7 +55,11 @@ export function tocPlugin(md: MarkdownIt): void {
       }
 
       // Thematic breaks / dinkuses (only at top level)
-      if (token.type === 'hr' && containerStack.length === 0) {
+      if (
+        token.type === 'hr' &&
+        containerStack.length === 0 &&
+        !state.env?.slides
+      ) {
         items.push({ kind: 'dinkus' });
         continue;
       }

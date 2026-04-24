@@ -355,6 +355,174 @@ describe('custom markdown containers', () => {
   });
 });
 
+describe('markdown slide segmentation', () => {
+  function createSlidesMarkdown() {
+    return createMarkdown(
+      {
+        base: '',
+        basePath: '/',
+        internalDomains: [],
+        extensionToShikiLanguage: {},
+        shikiLanguages: ['ts'],
+        features: { search: true, favicon: false, footer: true },
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+        defaultTimeZone: 'America/New_York',
+      } as SiteVariables,
+      {
+        filePath: 'content/slides.md',
+        slides: true,
+        validatorOptions: { enabled: false },
+      },
+    );
+  }
+
+  test('wraps slide pages in a slide deck and removes hr output', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render(['# One', '', '---', '', '## Two'].join('\n'));
+
+    expect(html).toContain('<div class="slide-deck" data-slides-root>');
+    expect(html).toContain('<div class="slide" data-slide-index="0">');
+    expect(html).toContain('<div class="slide" data-slide-index="1">');
+    expect(html).not.toContain('<hr');
+  });
+
+  test('does not wrap inline renders in slide markup', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.renderInline('What is **three** times four?');
+
+    expect(html).toBe('What is <strong>three</strong> times four?');
+    expect(html).not.toContain('slide-deck');
+  });
+
+  test('renders question prompts normally on slide pages', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render(
+      [
+        '## Slide three',
+        '',
+        '??? question What is three times four?',
+        '',
+        'The answer is twelve.',
+        '',
+        '???',
+      ].join('\n'),
+    );
+
+    expect(html).toContain(
+      '<p class="question-q"><span class="question-label">Q.</span><span>What is three times four?</span></p>',
+    );
+    expect(
+      (html.match(/<div class="slide-deck" data-slides-root>/g) ?? []).length,
+    ).toBe(1);
+  });
+
+  test('does not collect dinkus TOC items in slide mode', () => {
+    const md = createSlidesMarkdown();
+    const env: Record<string, unknown> = {};
+
+    md.render(['# One', '', '---', '', '## Two'].join('\n'), env);
+
+    expect(env.tocItems).toEqual([
+      { kind: 'heading', level: '1', id: 'one', innerHtml: 'One' },
+      { kind: 'heading', level: '2', id: 'two', innerHtml: 'Two' },
+    ]);
+  });
+
+  test('removes raw html hr tags on slide pages', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render(['# One', '', '<hr>', '', '## Two'].join('\n'));
+    const renderedSlides = html.match(/<div class="slide" data-slide-index="/g);
+
+    expect(html).not.toContain('<hr');
+    expect(renderedSlides).toHaveLength(1);
+    expect(html).toContain(
+      '<div class="slide" data-slide-index="0"><h1 id="one">One</h1>',
+    );
+    expect(html).toContain('<h2 id="two">Two</h2>');
+  });
+
+  test('removes inline raw html hr tags embedded in text on slide pages', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render('Text <hr> more');
+
+    expect(html).not.toContain('<hr');
+    expect(html).toContain('<p>Text  more</p>');
+  });
+
+  test('removes embedded raw html hr tags inside single-line html blocks on slide pages', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render('<div><hr></div>');
+
+    expect(html).not.toContain('<hr');
+    expect(html).toContain('<div></div>');
+  });
+
+  test('removes embedded raw html hr tags inside multiline html blocks on slide pages', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render(['<div>', '<hr>', '</div>'].join('\n'));
+
+    expect(html).not.toContain('<hr');
+    expect(html).toContain('<div>\n\n</div>');
+  });
+
+  test('keeps hr-like string literals inside script tags on slide pages', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render('<script>const x = "<hr>";</script>');
+
+    expect(html).toContain('<script>const x = "<hr>";</script>');
+  });
+
+  test('keeps hr-like attribute values on slide pages', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render('<div data-label="<hr>"></div>');
+
+    expect(html).toContain('<div data-label="<hr>"></div>');
+  });
+
+  test('removes real hr elements without corrupting hr-like attribute values on slide pages', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render('<div data-label="<hr>"><hr></div>');
+
+    expect(html).toContain('<div data-label="<hr>"></div>');
+    expect(html).not.toContain('<div data-label=""></div>');
+  });
+
+  test('ignores blank slides from leading trailing and consecutive separators', () => {
+    const md = createSlidesMarkdown();
+    const env: Record<string, unknown> = {};
+
+    const html = md.render(
+      ['---', '', '# One', '', '---', '', '---', '', '## Two', '', '---'].join(
+        '\n',
+      ),
+      env,
+    );
+
+    const renderedSlides = html.match(/<div class="slide" data-slide-index="/g);
+
+    expect(renderedSlides).toHaveLength(2);
+    expect(html).toContain(
+      '<div class="slide" data-slide-index="0"><h1 id="one">One</h1>',
+    );
+    expect(html).toContain(
+      '<div class="slide" data-slide-index="1"><h2 id="two">Two</h2>',
+    );
+    expect(env.slideCount).toBe(2);
+  });
+});
+
 describe('markdown fence languages', () => {
   function createProjectMarkdown({
     features = { search: true, favicon: false, footer: true },

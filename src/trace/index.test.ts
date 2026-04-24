@@ -218,6 +218,73 @@ describe('trace', () => {
     expect(diagram.innerHTML).toBe('<svg>step0</svg>');
   });
 
+  test('scales the current trace SVG when presentation mode starts and restores it on exit', async () => {
+    const chunk = makeChunk([
+      {
+        line: 1,
+        svg: '<svg class="trace-memory" width="100" height="80" viewBox="0 0 100 80"></svg>',
+      },
+    ]);
+    setupFetch({
+      '/trace/manifest.json': makeManifest({ totalSteps: 1 }),
+      '/trace/chunk-0.json': chunk,
+    });
+
+    const win = createWindow(widgetHtml());
+    mount(win);
+    await flush();
+
+    const svg = win.document.querySelector('.trace-memory') as SVGElement;
+    expect(svg.getAttribute('width')).toBe('100');
+    expect(svg.getAttribute('height')).toBe('80');
+
+    win.document.body.classList.add('is-presenting');
+    await flush();
+
+    expect(svg.getAttribute('width')).toBe('125');
+    expect(svg.getAttribute('height')).toBe('100');
+
+    win.document.body.classList.remove('is-presenting');
+    await flush();
+
+    expect(svg.getAttribute('width')).toBe('100');
+    expect(svg.getAttribute('height')).toBe('80');
+  });
+
+  test('scales newly rendered trace SVG steps while presentation mode is active', async () => {
+    const chunk = makeChunk([
+      {
+        line: 1,
+        svg: '<svg class="trace-memory" width="100" height="80" viewBox="0 0 100 80"></svg>',
+      },
+      {
+        line: 2,
+        svg: '<svg class="trace-memory" width="200" height="160" viewBox="0 0 200 160"></svg>',
+      },
+    ]);
+    setupFetch({
+      '/trace/manifest.json': makeManifest({ totalSteps: 2 }),
+      '/trace/chunk-0.json': chunk,
+    });
+
+    const win = createWindow(widgetHtml());
+    win.document.body.classList.add('is-presenting');
+    mount(win);
+    await flush();
+
+    let svg = win.document.querySelector('.trace-memory') as SVGElement;
+    expect(svg.getAttribute('width')).toBe('125');
+    expect(svg.getAttribute('height')).toBe('100');
+
+    const next = win.document.querySelector('.trace-next') as HTMLButtonElement;
+    next.click();
+    await flush();
+
+    svg = win.document.querySelector('.trace-memory') as SVGElement;
+    expect(svg.getAttribute('width')).toBe('250');
+    expect(svg.getAttribute('height')).toBe('200');
+  });
+
   test('renders initial stdout in output', async () => {
     const chunk = makeChunk([
       { line: 1, stdout: 'initial output', svg: '<svg></svg>' },

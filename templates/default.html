@@ -3,6 +3,14 @@
 <div class="main-content">
   <%= render('_heading.html') %>
   <main class="body" data-pagefind-body>
+    <% if (page.slides) { %>
+    <div class="file-header" data-pagefind-ignore>
+      <button type="button" data-slides-present disabled>Present</button>
+      <button type="button" data-slides-present-fullscreen disabled>
+        Present (Full Screen)
+      </button>
+    </div>
+    <% } %>
     <%= content %>
     <%= render('_footer.html') %>
   </main>

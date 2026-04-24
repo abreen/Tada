@@ -140,6 +140,34 @@ describe('renderCodePageAsset', () => {
 });
 
 describe('renderPlainTextPageAsset', () => {
+  test('rejects slides front matter on HTML content pages', () => {
+    const contentDir = '/virtual/content';
+    const filePath = path.join(contentDir, 'slides.html');
+    writeFile(
+      filePath,
+      [
+        '---',
+        'title: HTML Slides',
+        'slides: true',
+        '---',
+        '',
+        '<p>Hello</p>',
+      ].join('\n'),
+    );
+
+    expect(() =>
+      renderPlainTextPageAsset({
+        filePath,
+        contentDir,
+        distDir: '/virtual/dist',
+        siteVariables,
+        validInternalTargets: new Set(),
+        assetFiles: [],
+        literateJavaOutputPaths: new Set(),
+      }),
+    ).toThrow('slides mode is only supported on Markdown pages');
+  });
+
   test('tracks relative breadcrumb parents from the declaring page', () => {
     const contentDir = '/virtual/content';
     const filePath = path.join(contentDir, 'docs', 'topic', 'page.html');

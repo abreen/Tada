@@ -5,6 +5,7 @@ import mountTimeZone from '../timezone';
 import mountCode from '../code';
 import mountTrace from '../trace';
 import mountPrint from '../print';
+import mountSlides from '../slides';
 import { scheduleTask } from '../util';
 
 const PER_PAGE_COMPONENTS: Record<
@@ -17,6 +18,7 @@ const PER_PAGE_COMPONENTS: Record<
   timeZone: mountTimeZone,
   code: mountCode,
   trace: mountTrace,
+  slides: mountSlides,
   print: mountPrint,
 };
 

@@ -448,13 +448,20 @@ function renderPlainTextContent(
   tocItems: unknown[] | null;
   alertIds: string[];
 } {
-  const md = createMarkdown(siteVariables, { filePath });
   const applyBasePath = createApplyBasePath(siteVariables);
 
   const ext = path.extname(filePath);
   const raw = fs.readFileSync(filePath, 'utf-8');
-
   const { pageVariables, content } = parseFrontMatterAndContent(raw, ext);
+  if (pageVariables.slides === true && !extensionIsMarkdown(ext)) {
+    throw new Error(
+      `${filePath}: slides mode is only supported on Markdown pages`,
+    );
+  }
+  const md = createMarkdown(siteVariables, {
+    filePath,
+    slides: pageVariables.slides === true,
+  });
 
   // Handle substitutions inside front matter using siteVariables
   const siteOnlyParams = createTemplateParameters({

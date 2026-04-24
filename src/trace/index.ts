@@ -15,6 +15,8 @@ interface WidgetElements {
   diagram: HTMLElement;
 }
 
+const PRESENTATION_SCALE = 1.25;
+
 function getStep(state: WidgetState): TraceChunkEntry {
   const chunkIndex = Math.floor(state.currentStep / state.manifest.chunkSize);
   const offset = state.currentStep % state.manifest.chunkSize;
@@ -136,6 +138,34 @@ function updateStepControls(
   }
 }
 
+function scaleDiagramSvg(diagram: HTMLElement, doc: Document): void {
+  const svg = diagram.querySelector('.trace-memory') as SVGElement | null;
+  if (!svg) {
+    return;
+  }
+
+  const width = svg.dataset.traceBaseWidth ?? svg.getAttribute('width');
+  const height = svg.dataset.traceBaseHeight ?? svg.getAttribute('height');
+  if (!width || !height) {
+    return;
+  }
+
+  svg.dataset.traceBaseWidth = width;
+  svg.dataset.traceBaseHeight = height;
+
+  const baseWidth = Number.parseFloat(width);
+  const baseHeight = Number.parseFloat(height);
+  if (!Number.isFinite(baseWidth) || !Number.isFinite(baseHeight)) {
+    return;
+  }
+
+  const scale = doc.body.classList.contains('is-presenting')
+    ? PRESENTATION_SCALE
+    : 1;
+  svg.setAttribute('width', String(baseWidth * scale));
+  svg.setAttribute('height', String(baseHeight * scale));
+}
+
 function renderWidgetState(
   state: WidgetState,
   elements: WidgetElements,
@@ -162,6 +192,7 @@ function renderWidgetState(
 
   const prevHeight = elements.diagram.scrollHeight;
   elements.diagram.innerHTML = entry.svg;
+  scaleDiagramSvg(elements.diagram, doc);
 
   // If the diagram grew past the visible area, scroll to show the new content
   if (elements.diagram.scrollHeight > prevHeight) {
@@ -240,20 +271,45 @@ async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
 
   const elements: WidgetElements = { root, source, controls, output, diagram };
 
-  updateStepControls(controls, state.currentStep, manifest.totalSteps, doc);
-
-  diagram.innerHTML = entry.svg;
-  updateSourceHighlight(source, entry.line);
+  renderWidgetState(state, elements, doc);
 }
 
-export default function mountTrace(window: Window): void {
+export default function mountTrace(window: Window): void | (() => void) {
   const widgets = window.document.querySelectorAll('.trace-widget');
 
   if (widgets.length === 0) {
     return;
   }
 
+  const refreshDiagramScales = (): void => {
+    for (const widget of widgets) {
+      const diagram = (widget as HTMLElement).querySelector(
+        '.trace-diagram',
+      ) as HTMLElement | null;
+      if (diagram) {
+        scaleDiagramSvg(diagram, window.document);
+      }
+    }
+  };
+
+  const MutationObserverCtor = (window as Window & typeof globalThis)
+    .MutationObserver;
+  const bodyClassObserver = MutationObserverCtor
+    ? new MutationObserverCtor(() => {
+        refreshDiagramScales();
+      })
+    : null;
+
+  bodyClassObserver?.observe(window.document.body, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+
   for (const widget of widgets) {
     initWidget(widget as HTMLElement, window.document);
   }
+
+  return () => {
+    bodyClassObserver?.disconnect();
+  };
 }

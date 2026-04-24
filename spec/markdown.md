@@ -87,6 +87,27 @@ The three `+++` lines act as opening fence, column separator, and closing fence.
 Each column's content is parsed as full Markdown (headings, lists, code blocks,
 etc.). The output is a CSS Grid container with two equal-width columns.
 
+## Slides
+
+When a Markdown page's front matter sets `slides: true`, top-level thematic
+breaks (`---`) in the page body are treated as slide separators instead of
+rendering as `<hr>` elements. Tada wraps the rendered content in a
+`<div class="slide-deck" data-slides-root>` container and wraps each slide in a
+`<div class="slide" data-slide-index="N">` wrapper.
+
+In the normal page view, those wrappers stay in regular document flow so the
+page still reads like a standard Markdown page. Leading, trailing, and
+consecutive separators do not create empty slides.
+
+Only top-level thematic breaks split slides. Separators nested inside other
+block constructs are omitted instead of starting a new slide. Slide pages also
+suppress literal HTML `<hr>` tags, so the rendered page contains no `<hr>`
+output at all.
+
+Heading collection for the table of contents still works on slide pages, but
+removed separators do not appear as dinkus items. For the browser presentation
+behavior, see [Slides Mode](slides.md).
+
 
 ## Footnotes
 
