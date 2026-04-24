@@ -40,6 +40,11 @@ interface Pagefind {
 
 let pagefind: Pagefind | null = null;
 
+// Unit tests need to clear the module-scoped Pagefind instance between cases.
+export function resetPagefindForTest() {
+  pagefind = null;
+}
+
 type SubResult = { title: string; url: string; excerpt: string };
 
 type State = {
@@ -49,18 +54,18 @@ type State = {
   totalResults: number;
 };
 
-async function doSearch(state: State, window: Window) {
+type SearchState = Pick<State, 'results' | 'totalResults'> | null;
+
+async function doSearch(query: string, window: Window): Promise<SearchState> {
   if (pagefind == null) {
-    return;
+    return null;
   }
 
-  if (!state.value) {
-    state.results = [];
-    state.totalResults = 0;
-    return;
+  if (!query) {
+    return { results: [], totalResults: 0 };
   }
 
-  const search = await pagefind.search(state.value);
+  const search = await pagefind.search(query);
   const slice = search.results.slice(0, MAX_RESULTS);
   const data = await Promise.all(slice.map(r => r.data()));
 
@@ -96,8 +101,7 @@ async function doSearch(state: State, window: Window) {
   });
 
   const grouped = groupPdfResults(results);
-  state.totalResults = grouped.length;
-  state.results = grouped;
+  return { totalResults: grouped.length, results: grouped };
 }
 
 function applyHighlight(
@@ -328,9 +332,11 @@ export default (window: Window) => {
       }
       const newValidators = getResponseValidators(res);
       if (hasResponseValidatorsChanged(entryValidators, newValidators)) {
+        invalidateUpdates();
         pagefind = null;
         await loadPagefind();
-        await update();
+        const updateId = ++latestUpdateId;
+        await update(updateId);
       }
     } catch {
       // best-effort
@@ -350,15 +356,34 @@ export default (window: Window) => {
     totalResults: 0,
   };
 
-  async function update() {
+  let latestUpdateId = 0;
+
+  async function update(updateId: number) {
     if (state.showResults) {
       render(input!, resultsContainer, state, true);
     }
-    await doSearch(state, window);
+    const query = state.value;
+    const nextState = await doSearch(query, window);
+    if (updateId !== latestUpdateId) {
+      return;
+    }
+    if (nextState) {
+      state.results = nextState.results;
+      state.totalResults = nextState.totalResults;
+    }
     if (!state.showResults) {
       return;
     }
     render(input!, resultsContainer, state, false);
+  }
+
+  function queueUpdate() {
+    const updateId = ++latestUpdateId;
+    update(updateId).catch(() => {});
+  }
+
+  function invalidateUpdates() {
+    latestUpdateId += 1;
   }
 
   function hide() {
@@ -376,13 +401,14 @@ export default (window: Window) => {
     }
     state.value = value;
     if (value.length === 0) {
+      invalidateUpdates();
       hide();
       state.results = [];
       state.totalResults = 0;
       return;
     }
     state.showResults = true;
-    update().catch(() => {});
+    queueUpdate();
   }
 
   function handleWindowPointerMove() {
@@ -399,7 +425,7 @@ export default (window: Window) => {
     checkForIndexUpdate().catch(() => {});
     if (!state.showResults) {
       state.showResults = true;
-      update().catch(() => {});
+      queueUpdate();
     }
   }
 

@@ -8,7 +8,17 @@ export default async function mount(
     return;
   }
 
-  document.addEventListener('copy', (e: ClipboardEvent) => {
+  const codeBodyEl = document.querySelector<HTMLElement>('.code-body');
+  const scrollbarEl = document.querySelector<HTMLElement>('.code-scrollbar');
+  if (!codeBodyEl || !scrollbarEl) {
+    return;
+  }
+  const codeBody = codeBodyEl;
+  const scrollbar = scrollbarEl;
+
+  const cleanups: Array<() => void> = [];
+
+  const handleCopy = (e: ClipboardEvent) => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
       return;
@@ -56,13 +66,17 @@ export default async function mount(
 
     e.clipboardData!.setData('text/plain', lines.join('\n'));
     e.preventDefault();
+  };
+  document.addEventListener('copy', handleCopy);
+  cleanups.push(() => {
+    document.removeEventListener('copy', handleCopy);
   });
 
   const downloadLink = document.querySelector<HTMLAnchorElement>(
     '.file-header a[download]',
   );
   if (downloadLink && 'showSaveFilePicker' in window) {
-    downloadLink.addEventListener('click', async (e: MouseEvent) => {
+    const handleDownloadClick = async (e: MouseEvent) => {
       e.preventDefault();
       try {
         const handle = await window.showSaveFilePicker!({
@@ -77,47 +91,59 @@ export default async function mount(
           throw err;
         }
       }
+    };
+    downloadLink.addEventListener('click', handleDownloadClick);
+    cleanups.push(() => {
+      downloadLink.removeEventListener('click', handleDownloadClick);
     });
-  }
-
-  const codeBody = document.querySelector<HTMLElement>('.code-body');
-  const scrollbar = document.querySelector<HTMLElement>('.code-scrollbar');
-  if (!codeBody || !scrollbar) {
-    return;
   }
 
   const inner = scrollbar.firstElementChild as HTMLElement;
   let syncing = false;
 
   function updateScrollbar(): void {
-    const hasOverflow = codeBody!.scrollWidth > codeBody!.clientWidth;
-    scrollbar!.style.display = hasOverflow ? '' : 'none';
-    inner.style.width = codeBody!.scrollWidth + 'px';
+    const hasOverflow = codeBody.scrollWidth > codeBody.clientWidth;
+    scrollbar.style.display = hasOverflow ? '' : 'none';
+    inner.style.width = codeBody.scrollWidth + 'px';
   }
 
-  codeBody.addEventListener('scroll', () => {
+  const handleCodeBodyScroll = () => {
     if (syncing) {
       return;
     }
     syncing = true;
-    scrollbar!.scrollLeft = codeBody!.scrollLeft;
+    scrollbar.scrollLeft = codeBody.scrollLeft;
     syncing = false;
+  };
+  codeBody.addEventListener('scroll', handleCodeBodyScroll);
+  cleanups.push(() => {
+    codeBody.removeEventListener('scroll', handleCodeBodyScroll);
   });
 
-  scrollbar.addEventListener('scroll', () => {
+  const handleScrollbarScroll = () => {
     if (syncing) {
       return;
     }
     syncing = true;
-    codeBody!.scrollLeft = scrollbar!.scrollLeft;
+    codeBody.scrollLeft = scrollbar.scrollLeft;
     syncing = false;
+  };
+  scrollbar.addEventListener('scroll', handleScrollbarScroll);
+  cleanups.push(() => {
+    scrollbar.removeEventListener('scroll', handleScrollbarScroll);
   });
 
   const resizeObserver = globals.createResizeObserver(updateScrollbar);
   resizeObserver.observe(codeBody);
   updateScrollbar();
+  cleanups.push(() => {
+    resizeObserver.disconnect();
+  });
 
   return () => {
-    resizeObserver.disconnect();
+    cleanups
+      .splice(0)
+      .reverse()
+      .forEach(cleanup => cleanup());
   };
 }

@@ -45,6 +45,11 @@ export function normalizeHM(totalMinutes: number) {
   return [h, m] as const;
 }
 
+function getDayShift(totalMinutes: number) {
+  // Negative partial days like -30 minutes should still count as the previous day.
+  return Math.floor(totalMinutes / 1440);
+}
+
 function parseHHMM(hhmm: string) {
   const [h, m] = hhmm.split(':');
   if (h == null || m == null) {
@@ -187,7 +192,7 @@ export default (window: Window) => {
 
       // raw (can be < 0 or > 1439)
       const rawMinutes = baseMinutes + deltaMinutes;
-      const dayShift = Math.floor(rawMinutes / 1440) - (rawMinutes < 0 ? 1 : 0);
+      const dayShift = getDayShift(rawMinutes);
       // Normalize after computing dayShift
       const [h, m] = normalizeHM(rawMinutes);
 

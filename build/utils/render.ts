@@ -8,7 +8,10 @@ import { B } from '../colors';
 import createTemplateGlobals from '../template-globals';
 import { getExtensionToShikiLanguage } from '../site-variables';
 import { render, json } from '../templates';
-import { validateParentLink } from '../validate-config-links';
+import {
+  resolveParentLinkTarget,
+  validateParentLink,
+} from '../validate-config-links';
 import {
   extractJavaMethodToc,
   renderCodeSegment,
@@ -238,6 +241,7 @@ export function renderPlainTextPageAsset({
   const { content, pageVariables, tocItems, alertIds } = renderPlainTextContent(
     filePath,
     subPath,
+    sourceUrlPath,
     siteVariables,
     validInternalTargets,
     watchMode,
@@ -406,6 +410,7 @@ export function renderCopiedContentAsset({
 function renderPlainTextContent(
   filePath: string,
   subPath: string,
+  sourceUrlPath: string,
   siteVariables: SiteVariables,
   validInternalTargets: Set<string>,
   isWatchMode: boolean,
@@ -471,14 +476,17 @@ function renderPlainTextContent(
     pageVariablesProcessed.parent,
     filePath,
     validInternalTargets,
+    sourceUrlPath,
   );
   if (parentError) {
     throw new Error(parentError);
   }
-  if (typeof pageVariablesProcessed.parent === 'string') {
-    dependencyCollector?.internalTargets?.add(
-      normalizeOutputPath(pageVariablesProcessed.parent),
-    );
+  const resolvedParentTarget = resolveParentLinkTarget(
+    pageVariablesProcessed.parent,
+    sourceUrlPath,
+  );
+  if (resolvedParentTarget) {
+    dependencyCollector?.internalTargets?.add(resolvedParentTarget);
   }
 
   const strippedContent = stripHtmlComments(content);

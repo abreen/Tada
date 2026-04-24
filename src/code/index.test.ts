@@ -38,6 +38,64 @@ function getEventCtor(doc: Document): typeof Event {
   ] as typeof Event;
 }
 
+type TrackableEventTarget = EventTarget & {
+  addEventListener: EventTarget['addEventListener'];
+  removeEventListener: EventTarget['removeEventListener'];
+};
+
+function trackEventListeners(target: EventTarget) {
+  const counts = new Map<string, number>();
+  const trackedTarget = target as TrackableEventTarget;
+  const originalAdd = trackedTarget.addEventListener;
+  const originalRemove = trackedTarget.removeEventListener;
+  const callAdd = (
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ) =>
+    originalAdd.call(
+      trackedTarget,
+      type,
+      listener as EventListenerOrEventListenerObject,
+      options,
+    );
+  const callRemove = (
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions,
+  ) =>
+    originalRemove.call(
+      trackedTarget,
+      type,
+      listener as EventListenerOrEventListenerObject,
+      options,
+    );
+
+  trackedTarget.addEventListener = ((type, listener, options) => {
+    if (listener) {
+      counts.set(type, (counts.get(type) ?? 0) + 1);
+    }
+    return callAdd(type, listener, options);
+  }) as typeof trackedTarget.addEventListener;
+
+  trackedTarget.removeEventListener = ((type, listener, options) => {
+    if (listener) {
+      counts.set(type, (counts.get(type) ?? 0) - 1);
+    }
+    return callRemove(type, listener, options);
+  }) as typeof trackedTarget.removeEventListener;
+
+  return {
+    count(type: string) {
+      return counts.get(type) ?? 0;
+    },
+    restore() {
+      trackedTarget.addEventListener = originalAdd;
+      trackedTarget.removeEventListener = originalRemove;
+    },
+  };
+}
+
 function makeCopyEvent(doc: Document): ClipboardEvent {
   // jsdom does not support the DataTransfer constructor, so build a
   // minimal stand-in and attach it to a plain Event.
@@ -85,7 +143,14 @@ describe('code', () => {
 
   test('returns early when no code-body or scrollbar', async () => {
     const win = create('<div>Code page with no code body</div>');
-    await mount(win);
+    const documentTracker = trackEventListeners(win.document);
+
+    const cleanup = await mount(win);
+
+    expect(cleanup).toBeUndefined();
+    expect(documentTracker.count('copy')).toBe(0);
+
+    documentTracker.restore();
   });
 
   test('copy handler exits early when no selection', async () => {
@@ -251,5 +316,84 @@ describe('code', () => {
     cleanup!();
 
     expect(resizeObserverState.disconnectCalls).toBe(1);
+  });
+
+  test('cleanup removes per-mount listeners across remounts', async () => {
+    const win = create(
+      '<div class="file-header"><a download="test.py" href="/test.py">Download</a></div>' +
+        '<div class="code-body"><div class="code-row"><code>x</code></div></div>' +
+        '<div class="code-scrollbar"><div></div></div>',
+    );
+    Object.defineProperty(win, 'showSaveFilePicker', {
+      configurable: true,
+      value: async () => ({
+        async createWritable() {
+          return { async close() {}, async write() {} };
+        },
+      }),
+    });
+
+    const documentTracker = trackEventListeners(win.document);
+    const downloadTracker = trackEventListeners(
+      win.document.querySelector('a[download]')!,
+    );
+    const codeBodyTracker = trackEventListeners(
+      win.document.querySelector('.code-body')!,
+    );
+    const scrollbarTracker = trackEventListeners(
+      win.document.querySelector('.code-scrollbar')!,
+    );
+
+    const cleanup1 = await mount(win);
+
+    expect(documentTracker.count('copy')).toBe(1);
+    expect(downloadTracker.count('click')).toBe(1);
+    expect(codeBodyTracker.count('scroll')).toBe(1);
+    expect(scrollbarTracker.count('scroll')).toBe(1);
+
+    cleanup1!();
+
+    expect(documentTracker.count('copy')).toBe(0);
+    expect(downloadTracker.count('click')).toBe(0);
+    expect(codeBodyTracker.count('scroll')).toBe(0);
+    expect(scrollbarTracker.count('scroll')).toBe(0);
+
+    const cleanup2 = await mount(win);
+
+    expect(documentTracker.count('copy')).toBe(1);
+    expect(downloadTracker.count('click')).toBe(1);
+    expect(codeBodyTracker.count('scroll')).toBe(1);
+    expect(scrollbarTracker.count('scroll')).toBe(1);
+
+    cleanup2!();
+
+    expect(documentTracker.count('copy')).toBe(0);
+    expect(downloadTracker.count('click')).toBe(0);
+    expect(codeBodyTracker.count('scroll')).toBe(0);
+    expect(scrollbarTracker.count('scroll')).toBe(0);
+
+    documentTracker.restore();
+    downloadTracker.restore();
+    codeBodyTracker.restore();
+    scrollbarTracker.restore();
+  });
+
+  test('cleanup detaches the copy handler', async () => {
+    const win = create(
+      '<div class="code-body">' +
+        '<div class="code-row"><code><span data-prose-source="original text">rendered</span></code></div>' +
+        '</div>' +
+        '<div class="code-scrollbar"><div></div></div>',
+    );
+
+    const cleanup = await mount(win);
+
+    cleanup!();
+
+    selectAll(win, win.document.querySelector('.code-body')!);
+    const event = makeCopyEvent(win.document);
+    win.document.dispatchEvent(event);
+
+    expect(event.clipboardData!.getData('text/plain')).toBe('');
   });
 });

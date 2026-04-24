@@ -12,10 +12,14 @@ function dom(bodyHtml: string) {
   return new JSDOM(`<body>${bodyHtml}</body>`, { url: 'http://localhost/' });
 }
 
-function createPage(times: string[], selectedTz?: string) {
-  const options = TIMEZONES.map(
-    tz => `<option value="${tz.value}">${tz.label}</option>`,
-  ).join('');
+function createPage(
+  times: string[],
+  selectedTz?: string,
+  timezones: TimeZone[] = TIMEZONES,
+) {
+  const options = timezones
+    .map(tz => `<option value="${tz.value}">${tz.label}</option>`)
+    .join('');
   const timeEls = times
     .map(t => `<time datetime="${t}">${to12Hour(...parseHM(t))}</time>`)
     .join('\n');
@@ -286,6 +290,46 @@ describe('timezone mount', () => {
     sel.dispatchEvent(new win.Event('change'));
 
     expect(time.classList.contains('is-modified')).toBe(true);
+  });
+
+  test('westward midnight crossings show a previous-day indicator', () => {
+    const win = createPage(['00:30']);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    const time = win.document.querySelector('time') as HTMLTimeElement;
+
+    sel.value = 'America/Los_Angeles';
+    sel.dispatchEvent(new win.Event('change'));
+
+    expect(time.innerHTML).toBe(
+      '9:30 p.m. <span class="next-prev-day">(prev. day)</span>',
+    );
+  });
+
+  test('eastward midnight crossings keep the next-day indicator', () => {
+    const timezones: TimeZone[] = [
+      { value: 'America/New_York', label: 'US Eastern', abbreviation: 'ET' },
+      { value: 'Europe/London', label: 'UK', abbreviation: 'BST' },
+    ];
+    globalThis.__SITE_TIMEZONES__ = timezones.map(tz => ({ ...tz }));
+
+    const win = createPage(['23:30'], undefined, timezones);
+    mount(win);
+
+    const sel = win.document.querySelector(
+      'select.time-zone',
+    ) as HTMLSelectElement;
+    const time = win.document.querySelector('time') as HTMLTimeElement;
+
+    sel.value = 'Europe/London';
+    sel.dispatchEvent(new win.Event('change'));
+
+    expect(time.innerHTML).toBe(
+      '4:30 a.m. <span class="next-prev-day">(next day)</span>',
+    );
   });
 
   test('changing back to default removes is-modified class', () => {

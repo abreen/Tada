@@ -1,3 +1,4 @@
+import path from 'path';
 import { normalizeOutputPath } from './utils/paths';
 
 interface NavLink {
@@ -123,19 +124,53 @@ export function validateConfigLinks(
   ];
 }
 
+function splitHref(href: string): { pathname: string; suffix: string } {
+  const match = href.match(/^([^?#]*)(.*)$/);
+  return { pathname: match ? match[1] : href, suffix: match ? match[2] : '' };
+}
+
 export function validateParentLink(
   parent: unknown,
   filePath: string,
   validTargets: Set<string>,
+  sourceUrlPath: string,
+): string | null {
+  if (typeof parent === 'string' && splitHref(parent).pathname === '') {
+    return `${filePath}: broken parent link: "${parent}"`;
+  }
+
+  const resolvedTarget = resolveParentLinkTarget(parent, sourceUrlPath);
+  if (!resolvedTarget) {
+    return null;
+  }
+
+  if (!validTargets.has(resolvedTarget)) {
+    return `${filePath}: broken parent link: "${parent}"`;
+  }
+
+  return null;
+}
+
+export function resolveParentLinkTarget(
+  parent: unknown,
+  sourceUrlPath: string,
 ): string | null {
   if (!parent || typeof parent !== 'string') {
     return null;
   }
 
-  const normalized = normalizeOutputPath(parent);
-  if (!validTargets.has(normalized)) {
-    return `${filePath}: broken parent link: "${parent}"`;
+  const { pathname } = splitHref(parent);
+  if (!pathname) {
+    return null;
   }
+  const sourceDir = path.posix.dirname(sourceUrlPath);
+  const resolved = pathname.startsWith('/')
+    ? normalizeOutputPath(pathname)
+    : normalizeOutputPath(path.posix.join(sourceDir, pathname));
 
-  return null;
+  try {
+    return normalizeOutputPath(decodeURIComponent(resolved));
+  } catch {
+    return resolved;
+  }
 }

@@ -56,9 +56,11 @@ mock.module('./code', () => ({
 
 let preparePageTemplateHtml: typeof import('./render').preparePageTemplateHtml;
 let renderCodePageAsset: typeof import('./render').renderCodePageAsset;
+let renderPlainTextPageAsset: typeof import('./render').renderPlainTextPageAsset;
 
 beforeAll(async () => {
-  ({ preparePageTemplateHtml, renderCodePageAsset } = await import('./render'));
+  ({ preparePageTemplateHtml, renderCodePageAsset, renderPlainTextPageAsset } =
+    await import('./render'));
 });
 
 beforeEach(() => {
@@ -127,5 +129,75 @@ describe('renderCodePageAsset', () => {
     expect(html).toContain('<link href="/course/styles.css" rel="stylesheet">');
     expect(html).toContain('<script defer="" src="/course/app.js"></script>');
     expect(html).not.toContain('href="/katex/katex.min.css"');
+  });
+});
+
+describe('renderPlainTextPageAsset', () => {
+  test('tracks relative breadcrumb parents from the declaring page', () => {
+    const contentDir = '/virtual/content';
+    const filePath = path.join(contentDir, 'docs', 'topic', 'page.html');
+    writeFile(
+      filePath,
+      [
+        'title: Child page',
+        'parent: ../index.html?view=full#overview',
+        'parentLabel: Docs',
+        '',
+        '<p>Hello</p>',
+      ].join('\n'),
+    );
+
+    const dependencyCollector = { internalTargets: new Set<string>() };
+
+    renderPlainTextPageAsset({
+      filePath,
+      contentDir,
+      distDir: '/virtual/dist',
+      siteVariables,
+      validInternalTargets: new Set(['/docs/index.html']),
+      assetFiles: [],
+      literateJavaOutputPaths: new Set(),
+      dependencyCollector,
+    });
+
+    expect([...dependencyCollector.internalTargets]).toEqual([
+      '/docs/index.html',
+    ]);
+  });
+
+  test('rejects breadcrumb parents without a pathname', () => {
+    const contentDir = '/virtual/content';
+    const filePath = path.join(contentDir, 'docs', 'topic', 'index.html');
+    writeFile(
+      filePath,
+      [
+        'title: Topic index',
+        'parent: ?view=full#overview',
+        'parentLabel: Topic',
+        '',
+        '<p>Hello</p>',
+      ].join('\n'),
+    );
+
+    const dependencyCollector = { internalTargets: new Set<string>() };
+
+    expect(() =>
+      renderPlainTextPageAsset({
+        filePath,
+        contentDir,
+        distDir: '/virtual/dist',
+        siteVariables,
+        validInternalTargets: new Set([
+          '/docs/topic',
+          '/docs/topic/',
+          '/docs/topic/index.html',
+        ]),
+        assetFiles: [],
+        literateJavaOutputPaths: new Set(),
+        dependencyCollector,
+      }),
+    ).toThrow('broken parent link');
+
+    expect([...dependencyCollector.internalTargets]).toEqual([]);
   });
 });
