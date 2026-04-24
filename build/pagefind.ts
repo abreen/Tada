@@ -232,8 +232,6 @@ export async function runPagefind({
     pdfSourceByOutputPath,
   );
 
-  const snapshotReadyAt = Date.now();
-
   let noun = reachableHtmlPaths.length === 1 ? 'page' : 'pages';
   let message = `Building search index for ${reachableHtmlPaths.length} ${noun}`;
   if (reachablePdfPaths.length > 0) {
@@ -251,7 +249,7 @@ export async function runPagefind({
   });
 
   const finishedAt = Date.now();
-  log.debug`Search index built in ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
+  log.debug`Search index built in ${finishedAt - start}ms`;
 }
 
 export class WatchPagefindRunner {
@@ -312,7 +310,6 @@ export class WatchPagefindRunner {
       return;
     }
 
-    const snapshotReadyAt = Date.now();
     log.debug`Building search index in background`;
     buildIndex({
       distPath,
@@ -323,11 +320,11 @@ export class WatchPagefindRunner {
     })
       .then(() => {
         const finishedAt = Date.now();
-        log.debug`Search index ready after ${finishedAt - snapshotReadyAt}ms (${finishedAt - start}ms total)`;
+        log.info`Search index ready after ${finishedAt - start}ms`;
       })
       .catch(err => {
         const failedAt = Date.now();
-        log.warn`Search index failed after ${failedAt - snapshotReadyAt}ms of indexing (${failedAt - start}ms total): ${err.message}`;
+        log.warn`Search index failed after ${failedAt - start}ms: ${err.message}`;
       })
       .finally(() => {
         this.watchRunInProgress = false;
