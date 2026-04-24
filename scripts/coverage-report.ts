@@ -101,6 +101,7 @@ for (const dir of ['build', 'src']) {
     if (
       !entry.isFile() ||
       !entry.name.endsWith('.ts') ||
+      entry.name.endsWith('.d.ts') ||
       entry.name.includes('.test.')
     ) {
       continue;
