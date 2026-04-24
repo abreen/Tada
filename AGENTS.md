@@ -31,6 +31,8 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 - Run functional tests with extra pytest args: `bun run test:functional -k watch`
 - Run the entire test suite: `bun run test:all`
 
+Functional tests are CPU intensive and may take over 2 minutes, even on powerful machines.
+
 ## Unit test rules
 
 - Never rely on JSDOM to test browser behavior like navigation, instead use a Playwright test
