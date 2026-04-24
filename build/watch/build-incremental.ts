@@ -1,4 +1,4 @@
-import { compileTemplates, json } from '../templates';
+import { compileTemplates, config } from '../templates';
 import { getDistDir } from '../util';
 import { createContentRecord, createPublicRecord } from '../source-records';
 import type { CompilerBuildResult } from '../../watch/types';
@@ -25,7 +25,7 @@ import { computeMutations } from './mutations';
 import {
   diagnosticsFromMessages,
   validateConfig,
-  validateJsonLinks,
+  validateProjectConfigLinks,
 } from './validation';
 
 export async function buildIncremental({
@@ -89,14 +89,16 @@ export async function buildIncremental({
     const nextSnapshot = createSnapshot({
       siteVariables,
       assetFiles: snapshot.assetFiles,
-      navData: json('nav.json'),
-      authorsData: json('authors.json'),
+      navData: config('nav'),
+      authorsData: config('authors'),
       scan: plan.scan,
       contentRecords: nextContentRecords,
       publicRecords: nextPublicRecords,
     });
 
-    const linkDiagnostics = validateJsonLinks(nextSnapshot.validTargets);
+    const linkDiagnostics = validateProjectConfigLinks(
+      nextSnapshot.validTargets,
+    );
     if (linkDiagnostics.length > 0) {
       removeDirIfExists(outputDir);
       return { ok: false, diagnostics: linkDiagnostics };

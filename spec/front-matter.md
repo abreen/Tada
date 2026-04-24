@@ -45,7 +45,7 @@ exactly `---`. Both formats produce identical results; choose one per file.
 ## Fields
 
 - **title** (required): page title for `<title>` and the page heading
-- **author**: author handle, resolved against `authors.json`
+- **author**: author handle, resolved against the authors config file
 - **description**: meta description
 - **published**: publication date, displayed below the title
 - **toc**: set to `true` to render a table of contents

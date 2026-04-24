@@ -1,7 +1,12 @@
-import json
-
 import pytest
-from conftest import run_tada
+from conftest import (
+    AUTHORS_CONFIG_FILE,
+    NAV_CONFIG_FILE,
+    SITE_DEV_CONFIG_FILE,
+    SITE_PROD_CONFIG_FILE,
+    load_structured_file,
+    run_tada,
+)
 
 
 class TestInitDefault:
@@ -17,31 +22,31 @@ class TestInitDefault:
         assert site_dir.is_dir()
 
     def test_creates_dev_config(self, site_dir):
-        config_path = site_dir / 'site.dev.json'
+        config_path = site_dir / SITE_DEV_CONFIG_FILE
         assert config_path.exists()
-        config = json.loads(config_path.read_text())
+        config = load_structured_file(config_path)
         assert config['base'] == 'http://localhost:8080'
         assert config['basePath'] == '/'
         assert 'title' in config
 
     def test_creates_prod_config(self, site_dir):
-        config_path = site_dir / 'site.prod.json'
+        config_path = site_dir / SITE_PROD_CONFIG_FILE
         assert config_path.exists()
-        config = json.loads(config_path.read_text())
+        config = load_structured_file(config_path)
         assert 'base' in config
         assert 'basePath' in config
 
     def test_creates_nav_json(self, site_dir):
-        nav_path = site_dir / 'nav.json'
+        nav_path = site_dir / NAV_CONFIG_FILE
         assert nav_path.exists()
-        nav = json.loads(nav_path.read_text())
+        nav = load_structured_file(nav_path)
         assert isinstance(nav, list)
         assert len(nav) > 0
 
     def test_creates_authors_json(self, site_dir):
-        authors_path = site_dir / 'authors.json'
+        authors_path = site_dir / AUTHORS_CONFIG_FILE
         assert authors_path.exists()
-        authors = json.loads(authors_path.read_text())
+        authors = load_structured_file(authors_path)
         assert isinstance(authors, dict)
 
     def test_copies_content_directory(self, site_dir):
@@ -69,12 +74,12 @@ class TestInitBare:
         assert site_dir.is_dir()
 
     def test_creates_configs(self, site_dir):
-        assert (site_dir / 'site.dev.json').exists()
-        assert (site_dir / 'site.prod.json').exists()
+        assert (site_dir / SITE_DEV_CONFIG_FILE).exists()
+        assert (site_dir / SITE_PROD_CONFIG_FILE).exists()
 
     def test_bare_configs_disable_code_pages_by_default(self, site_dir):
-        dev = json.loads((site_dir / 'site.dev.json').read_text())
-        prod = json.loads((site_dir / 'site.prod.json').read_text())
+        dev = load_structured_file(site_dir / SITE_DEV_CONFIG_FILE)
+        prod = load_structured_file(site_dir / SITE_PROD_CONFIG_FILE)
         assert dev['extensionToShikiLanguage'] == {}
         assert dev['shikiLanguages'] == []
         assert prod['extensionToShikiLanguage'] == {}
@@ -93,15 +98,13 @@ class TestInitBare:
         assert len(list(public_dir.rglob('*'))) == 0
 
     def test_creates_minimal_nav(self, site_dir):
-        import json
-
-        nav = json.loads((site_dir / 'nav.json').read_text())
+        nav = load_structured_file(site_dir / NAV_CONFIG_FILE)
         assert len(nav) == 1
         assert len(nav[0]['links']) == 1
         assert nav[0]['links'][0]['text'] == 'Home'
 
     def test_no_authors_json(self, site_dir):
-        assert not (site_dir / 'authors.json').exists()
+        assert not (site_dir / AUTHORS_CONFIG_FILE).exists()
 
 
 class TestInitNoInteractiveFlags:
@@ -115,7 +118,7 @@ class TestInitNoInteractiveFlags:
             cwd=str(tmp_path),
         )
         assert result.returncode == 0
-        config = json.loads((tmp_path / 'testsite' / 'site.prod.json').read_text())
+        config = load_structured_file(tmp_path / 'testsite' / SITE_PROD_CONFIG_FILE)
         assert config['basePath'] == '/test'
 
     def test_prod_base_flag(self, tmp_path):
@@ -128,7 +131,7 @@ class TestInitNoInteractiveFlags:
             cwd=str(tmp_path),
         )
         assert result.returncode == 0
-        config = json.loads((tmp_path / 'testsite' / 'site.prod.json').read_text())
+        config = load_structured_file(tmp_path / 'testsite' / SITE_PROD_CONFIG_FILE)
         assert config['base'] == 'https://myschool.edu'
         assert config['internalDomains'] == ['myschool.edu']
 
@@ -142,7 +145,7 @@ class TestInitNoInteractiveFlags:
             cwd=str(tmp_path),
         )
         assert result.returncode == 0
-        config = json.loads((tmp_path / 'testsite' / 'site.dev.json').read_text())
+        config = load_structured_file(tmp_path / 'testsite' / SITE_DEV_CONFIG_FILE)
         assert config['title'] == 'My Course'
 
     def test_invalid_flag_value_exits_1(self, tmp_path):
@@ -184,8 +187,8 @@ class TestInitNoInteractiveFlags:
             cwd=str(tmp_path),
         )
         assert result.returncode == 0
-        dev = json.loads((tmp_path / 'testsite' / 'site.dev.json').read_text())
-        prod = json.loads((tmp_path / 'testsite' / 'site.prod.json').read_text())
+        dev = load_structured_file(tmp_path / 'testsite' / SITE_DEV_CONFIG_FILE)
+        prod = load_structured_file(tmp_path / 'testsite' / SITE_PROD_CONFIG_FILE)
         assert dev['title'] == 'CS 101'
         assert dev['symbol'] == 'CS 1'
         assert prod['basePath'] == '/cs101'
@@ -199,7 +202,7 @@ class TestInitInteractive:
         result = run_tada('init', 'testsite', cwd=str(tmp_path), input='\n' * 8)
         assert result.returncode == 0, f'init failed: {result.stderr}'
         site = tmp_path / 'testsite'
-        dev = json.loads((site / 'site.dev.json').read_text())
+        dev = load_structured_file(site / SITE_DEV_CONFIG_FILE)
         assert dev['title'] == 'Introduction to Computer Science'
         assert dev['symbol'] == 'CS 0'
         assert dev['base'] == 'http://localhost:8080'
@@ -224,8 +227,8 @@ class TestInitInteractive:
         result = run_tada('init', 'testsite', cwd=str(tmp_path), input=answers)
         assert result.returncode == 0, f'init failed: {result.stderr}'
         site = tmp_path / 'testsite'
-        dev = json.loads((site / 'site.dev.json').read_text())
-        prod = json.loads((site / 'site.prod.json').read_text())
+        dev = load_structured_file(site / SITE_DEV_CONFIG_FILE)
+        prod = load_structured_file(site / SITE_PROD_CONFIG_FILE)
         assert dev['title'] == 'My Course'
         assert dev['symbol'] == 'MC 1'
         assert dev['defaultTimeZone'] == 'America/New_York'
@@ -254,7 +257,7 @@ class TestInitInteractive:
         result = run_tada('init', 'testsite', cwd=str(tmp_path), input=answers)
         assert result.returncode == 0, f'init failed: {result.stderr}'
         assert 'Error' in result.stderr
-        dev = json.loads((tmp_path / 'testsite' / 'site.dev.json').read_text())
+        dev = load_structured_file(tmp_path / 'testsite' / SITE_DEV_CONFIG_FILE)
         assert dev['symbol'] == 'MC 1'
 
     def test_bare_interactive(self, tmp_path):
@@ -264,7 +267,7 @@ class TestInitInteractive:
         site = tmp_path / 'testsite'
         content_files = [f for f in (site / 'content').rglob('*') if f.is_file()]
         assert len(content_files) == 1
-        assert not (site / 'authors.json').exists()
+        assert not (site / AUTHORS_CONFIG_FILE).exists()
 
     def test_prompts_are_shown(self, tmp_path):
         """Each question's prompt text appears on stdout."""

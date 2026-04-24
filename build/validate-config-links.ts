@@ -27,6 +27,7 @@ function requireRootRelativePath(
 export function validateNavLinks(
   navData: unknown,
   validTargets: Set<string>,
+  fileName: string = 'nav.yaml',
 ): string[] {
   if (!Array.isArray(navData)) {
     return [];
@@ -42,7 +43,7 @@ export function validateNavLinks(
 
       const rootRelativeError = requireRootRelativePath(
         link.internal,
-        `nav.json: internal link in section "${section.title}"`,
+        `${fileName}: internal link in section "${section.title}"`,
       );
       if (rootRelativeError) {
         errors.push(rootRelativeError);
@@ -52,7 +53,7 @@ export function validateNavLinks(
       const normalized = normalizeOutputPath(link.internal);
       if (!validTargets.has(normalized)) {
         errors.push(
-          `nav.json: broken internal link in section "${section.title}": "${link.internal}"`,
+          `${fileName}: broken internal link in section "${section.title}": "${link.internal}"`,
         );
       }
     }
@@ -70,6 +71,7 @@ interface AuthorEntry {
 export function validateAuthorLinks(
   authorsData: unknown,
   validTargets: Set<string>,
+  fileName: string = 'authors.yaml',
 ): string[] {
   if (!authorsData || typeof authorsData !== 'object') {
     return [];
@@ -81,7 +83,7 @@ export function validateAuthorLinks(
   for (const [key, author] of Object.entries(authors)) {
     const avatarRootRelativeError = requireRootRelativePath(
       author.avatar,
-      `authors.json: avatar path for "${key}"`,
+      `${fileName}: avatar path for "${key}"`,
     );
     if (avatarRootRelativeError) {
       errors.push(avatarRootRelativeError);
@@ -89,7 +91,7 @@ export function validateAuthorLinks(
       const avatarPath = normalizeOutputPath(author.avatar);
       if (!validTargets.has(avatarPath)) {
         errors.push(
-          `authors.json: broken avatar path for "${key}": "${author.avatar}"`,
+          `${fileName}: broken avatar path for "${key}": "${author.avatar}"`,
         );
       }
     }
@@ -97,14 +99,14 @@ export function validateAuthorLinks(
     if (author.url) {
       const urlRootRelativeError = requireRootRelativePath(
         author.url,
-        `authors.json: url for "${key}"`,
+        `${fileName}: url for "${key}"`,
       );
       if (urlRootRelativeError) {
         errors.push(urlRootRelativeError);
       } else {
         const urlPath = normalizeOutputPath(author.url);
         if (!validTargets.has(urlPath)) {
-          errors.push(`authors.json: broken url for "${key}": "${author.url}"`);
+          errors.push(`${fileName}: broken url for "${key}": "${author.url}"`);
         }
       }
     }
@@ -117,10 +119,14 @@ export function validateConfigLinks(
   validTargets: Set<string>,
   navData: unknown,
   authorsData: unknown,
+  {
+    navFileName = 'nav.yaml',
+    authorsFileName = 'authors.yaml',
+  }: { navFileName?: string; authorsFileName?: string } = {},
 ): string[] {
   return [
-    ...validateNavLinks(navData, validTargets),
-    ...validateAuthorLinks(authorsData, validTargets),
+    ...validateNavLinks(navData, validTargets, navFileName),
+    ...validateAuthorLinks(authorsData, validTargets, authorsFileName),
   ];
 }
 

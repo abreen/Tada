@@ -2,9 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
 import {
-  PROJECT_DATA_FILES as JSON_DATA_FILES,
-  REQUIRED_PROJECT_DATA_FILES,
+  PROJECT_CONFIG_NAMES,
+  getProjectConfigBaseName,
+  type ProjectConfigName,
 } from './config-files';
+import {
+  loadProjectConfig,
+  type LoadedProjectConfigFile,
+} from './config-loader';
 import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { makeLogger } from './log';
 import { getPackageDir, getProjectDir } from './utils/paths';
@@ -16,11 +21,14 @@ const log: Logger = makeLogger(import.meta.url);
 // Store all templates in memory (don't read template files during build)
 const templates: Record<string, string> = {};
 
-// All parsed data (from .json files)
-const jsonData: Record<string, unknown> = {};
+// All parsed project config files
+const projectConfig: Partial<Record<ProjectConfigName, unknown>> = {};
+const loadedProjectConfig: Partial<
+  Record<ProjectConfigName, LoadedProjectConfigFile>
+> = {};
 
-// Compiled JSON Schema for the .json files
-const validators: Record<string, ValidateFunction> = {};
+// Compiled JSON Schema for the project config files
+const validators: Partial<Record<ProjectConfigName, ValidateFunction>> = {};
 
 // Keeps track of template call tree
 const renderStack: string[] = [];
@@ -30,12 +38,16 @@ function getHtmlTemplatesDir(): string {
   return path.resolve(getPackageDir(), 'templates');
 }
 
-function getJsonDataDir(): string {
+function getProjectConfigDir(): string {
   return getProjectDir();
 }
 
-export function json(fileName: string): unknown {
-  return jsonData[fileName];
+export function config(name: ProjectConfigName): unknown {
+  return projectConfig[name];
+}
+
+export function getConfigFileName(name: ProjectConfigName): string | undefined {
+  return loadedProjectConfig[name]?.fileName;
 }
 
 export function render(
@@ -46,8 +58,8 @@ export function render(
     // Allow the template to call render(), it will use our params
     params.render = (otherFileName: string) => render(otherFileName, params);
 
-    // Allow the template to read the JSON files we previously read into memory
-    params.json = json;
+    // Allow templates to read the project config files we previously read into memory
+    params.config = config;
   }
 
   renderStack.push(fileName);
@@ -78,7 +90,11 @@ export function compileTemplates(
   }
 
   Object.keys(templates).forEach(k => delete templates[k]);
-  Object.keys(jsonData).forEach(k => delete jsonData[k]);
+  for (const name of PROJECT_CONFIG_NAMES) {
+    delete projectConfig[name];
+    delete loadedProjectConfig[name];
+    delete validators[name];
+  }
 
   // Load HTML templates from the package
   const htmlDir = getHtmlTemplatesDir();
@@ -93,41 +109,39 @@ export function compileTemplates(
     }
   });
 
-  // Load JSON data files from the project's config directory
-  const jsonDir = getJsonDataDir();
-  for (const fileName of JSON_DATA_FILES) {
-    const filePath = path.join(jsonDir, fileName);
-    if (!fs.existsSync(filePath)) {
-      if (REQUIRED_PROJECT_DATA_FILES.includes(fileName)) {
-        throw new Error(`Missing required config file: ${filePath}`);
-      }
+  // Load project config files from the project's config directory
+  const projectConfigDir = getProjectConfigDir();
+  for (const name of PROJECT_CONFIG_NAMES) {
+    const loaded = loadProjectConfig(projectConfigDir, name, siteVariables);
+    if (!loaded) {
       continue;
     }
 
     // Schema validation
     const schemaDir = path.resolve(getPackageDir(), 'schema');
-    const schemaFile = `${path.parse(fileName).name}.schema.json`;
+    const schemaFile = `${getProjectConfigBaseName(name)}.schema.json`;
     const schemaPath = path.join(schemaDir, schemaFile);
     if (!fs.existsSync(schemaPath)) {
-      throw new Error(`Missing JSON Schema for ${fileName}: ${schemaPath}`);
+      throw new Error(
+        `Missing JSON Schema for ${loaded.fileName}: ${schemaPath}`,
+      );
     }
-    compileAndSetValidator(schemaPath, fileName);
+    compileAndSetValidator(schemaPath, name);
 
-    log.debug`Reading ${fileName}`;
-    jsonData[fileName] = JSON.parse(
-      _.template(fs.readFileSync(filePath, 'utf-8'))({
-        vars: siteVariables.vars || {},
-        site: siteVariables,
-      }),
-    );
+    log.debug`Reading ${loaded.fileName}`;
+    projectConfig[name] = loaded.value;
+    loadedProjectConfig[name] = loaded;
 
-    doValidation(validators[fileName], jsonData[fileName], fileName);
+    doValidation(validators[name]!, projectConfig[name], loaded.fileName);
   }
 }
 
-function compileAndSetValidator(schemaPath: string, fileName: string): void {
+function compileAndSetValidator(
+  schemaPath: string,
+  name: ProjectConfigName,
+): void {
   const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
-  validators[fileName] = compileJsonSchema(schema);
+  validators[name] = compileJsonSchema(schema);
 }
 
-export { getHtmlTemplatesDir, getJsonDataDir, JSON_DATA_FILES };
+export { getHtmlTemplatesDir, getProjectConfigDir };

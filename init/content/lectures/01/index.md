@@ -10,7 +10,7 @@ Here is a sample description of the topics covered at the first lecture.
 
 The value of `vars.foobar` is <%= vars.foobar %>.
 
-You can add any variables you want to the `site.dev.json` and `site.prod.json`
+You can add any variables you want to the `site.dev.yaml` and `site.prod.yaml`
 files under the `"vars"` property and access them using Lodash template syntax
 from Markdown files, HTML files, and source code. (Lodash template subtitution
 only works in source code files whose extension is listed in

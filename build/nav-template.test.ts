@@ -3,7 +3,7 @@ import _ from 'lodash';
 import { classNames } from './template-globals';
 
 const NAV_TEMPLATE = `<nav>
-<% json('nav.json').forEach(function(section) { %>
+<% config('nav').forEach(function(section) { %>
   <div>
     <p><%= section.title %></p>
     <ul>
@@ -23,7 +23,7 @@ const NAV_TEMPLATE = `<nav>
 </nav>`;
 
 function renderNav(navData: unknown[]): string {
-  return _.template(NAV_TEMPLATE)({ json: () => navData, cx: classNames });
+  return _.template(NAV_TEMPLATE)({ config: () => navData, cx: classNames });
 }
 
 describe('_nav.html template', () => {

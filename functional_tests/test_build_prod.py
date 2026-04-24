@@ -1,7 +1,5 @@
-import json
-
 import pytest
-from conftest import init_site, run_tada
+from conftest import SITE_PROD_CONFIG_FILE, init_site, load_structured_file, run_tada
 
 
 class TestProdBuild:
@@ -23,7 +21,7 @@ class TestProdBuild:
         assert not (dist / 'watch-reload-client.bundle.js').exists()
 
     def test_html_uses_prod_base_path(self, built_prod_site):
-        config = json.loads((built_prod_site / 'site.prod.json').read_text())
+        config = load_structured_file(built_prod_site / SITE_PROD_CONFIG_FILE)
         base_path = config['basePath']
         index = built_prod_site / 'dist-prod' / 'v1' / 'index.html'
         html = index.read_text()
@@ -107,4 +105,4 @@ class TestProdBuildErrors:
     def test_missing_config_exits_1(self, tmp_path):
         result = run_tada('prod', cwd=str(tmp_path))
         assert result.returncode == 1
-        assert 'site.prod.json' in result.stderr
+        assert 'site.prod.yaml' in result.stderr

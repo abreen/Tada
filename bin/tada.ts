@@ -20,11 +20,9 @@ import {
   pruneOldVersions,
 } from '../build/build-manifest';
 import {
-  AUTHORS_JSON_FILE,
-  NAV_JSON_FILE,
-  getProjectDataFilePath,
-  getSiteConfigFile,
-  getSiteConfigPath,
+  getDefaultProjectConfigFilePath,
+  getDefaultSiteConfigPath,
+  resolveSiteConfigFile,
   type SiteEnv,
 } from '../build/config-files';
 
@@ -35,10 +33,10 @@ const SYSTEM_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const packageDir = path.resolve(import.meta.dir, '..');
 
 function requireSiteConfig(env: SiteEnv): void {
-  const configPath = getSiteConfigPath(process.cwd(), env);
-  const configFile = getSiteConfigFile(env);
-  if (!fs.existsSync(configPath)) {
-    console.error(`Error: Missing config file: ${configFile}`);
+  try {
+    resolveSiteConfigFile(process.cwd(), env);
+  } catch (error) {
+    console.error(`Error: ${(error as Error).message}`);
     process.exit(1);
   }
 }
@@ -179,6 +177,10 @@ function copyDirRecursive(src: string, dest: string): void {
       fs.copyFileSync(srcPath, destPath);
     }
   }
+}
+
+function stringifyYaml(value: unknown): string {
+  return Bun.YAML.stringify(value, null, 2) + '\n';
 }
 
 const FLAG_TO_KEY: Record<string, string> = {
@@ -359,13 +361,13 @@ async function initCommand(args: string[]): Promise<void> {
   });
 
   fs.writeFileSync(
-    getSiteConfigPath(projectDir, 'dev'),
-    JSON.stringify(devConfig, null, 2) + '\n',
+    getDefaultSiteConfigPath(projectDir, 'dev'),
+    stringifyYaml(devConfig),
   );
 
   fs.writeFileSync(
-    getSiteConfigPath(projectDir, 'prod'),
-    JSON.stringify(prodConfig, null, 2) + '\n',
+    getDefaultSiteConfigPath(projectDir, 'prod'),
+    stringifyYaml(prodConfig),
   );
 
   if (bare) {
@@ -376,63 +378,53 @@ async function initCommand(args: string[]): Promise<void> {
     );
     fs.mkdirSync(path.join(projectDir, 'public'), { recursive: true });
     fs.writeFileSync(
-      getProjectDataFilePath(projectDir, NAV_JSON_FILE),
-      JSON.stringify(
-        [
-          {
-            title: 'Navigation',
-            links: [{ text: 'Home', internal: '/index.html' }],
-          },
-        ],
-        null,
-        2,
-      ) + '\n',
+      getDefaultProjectConfigFilePath(projectDir, 'nav'),
+      stringifyYaml([
+        {
+          title: 'Navigation',
+          links: [{ text: 'Home', internal: '/index.html' }],
+        },
+      ]),
     );
   } else {
     // Create nav and authors data files in the project root
     fs.writeFileSync(
-      getProjectDataFilePath(projectDir, NAV_JSON_FILE),
-      JSON.stringify(
-        [
-          {
-            title: 'Navigation',
-            links: [{ text: 'Home', internal: '/index.html' }],
-          },
-          {
-            title: 'Topics',
-            links: [
-              { text: 'Lectures', internal: '/lectures/index.html' },
-              { text: 'Labs', internal: '/labs/index.html' },
-              {
-                text: 'Problem Sets',
-                internal: '/problem_sets/index.html',
-                disabled: true,
-              },
-            ],
-          },
-          {
-            title: 'Links',
-            links: [
-              { text: 'Zoom', external: 'https://zoom.com' },
-              {
-                text: 'Canvas',
-                external: 'https://www.instructure.com/',
-                disabled: true,
-              },
-            ],
-          },
-        ],
-        null,
-        2,
-      ) + '\n',
+      getDefaultProjectConfigFilePath(projectDir, 'nav'),
+      stringifyYaml([
+        {
+          title: 'Navigation',
+          links: [{ text: 'Home', internal: '/index.html' }],
+        },
+        {
+          title: 'Topics',
+          links: [
+            { text: 'Lectures', internal: '/lectures/index.html' },
+            { text: 'Labs', internal: '/labs/index.html' },
+            {
+              text: 'Problem Sets',
+              internal: '/problem_sets/index.html',
+              disabled: true,
+            },
+          ],
+        },
+        {
+          title: 'Links',
+          links: [
+            { text: 'Zoom', external: 'https://zoom.com' },
+            {
+              text: 'Canvas',
+              external: 'https://www.instructure.com/',
+              disabled: true,
+            },
+          ],
+        },
+      ]),
     );
     fs.writeFileSync(
-      getProjectDataFilePath(projectDir, AUTHORS_JSON_FILE),
-      JSON.stringify(
-        { alex: { name: 'Alex Breen', avatar: '/avatars/alex.jpg' } },
-        null,
-        2,
-      ) + '\n',
+      getDefaultProjectConfigFilePath(projectDir, 'authors'),
+      stringifyYaml({
+        alex: { name: 'Alex Breen', avatar: '/avatars/alex.jpg' },
+      }),
     );
 
     // Copy content/ and public/ from the package

@@ -8,12 +8,17 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 pytest_plugins = ['watch_helpers']
 
 # Resolve the Tada package root (parent of functional_tests/)
 PACKAGE_DIR = Path(__file__).resolve().parent.parent
 TADA_BIN = PACKAGE_DIR / 'bin' / 'tada.ts'
+SITE_DEV_CONFIG_FILE = 'site.dev.yaml'
+SITE_PROD_CONFIG_FILE = 'site.prod.yaml'
+NAV_CONFIG_FILE = 'nav.yaml'
+AUTHORS_CONFIG_FILE = 'authors.yaml'
 
 
 def pytest_addoption(parser):
@@ -53,6 +58,17 @@ def init_site(tmp_path, *, bare=True, extra_args=None):
     return site
 
 
+def load_structured_file(file_path):
+    return yaml.safe_load(file_path.read_text())
+
+
+def write_structured_file(file_path, value):
+    if file_path.suffix == '.json':
+        file_path.write_text(json.dumps(value, indent=2) + '\n')
+    else:
+        file_path.write_text(yaml.safe_dump(value, sort_keys=False))
+
+
 def get_free_ports(n=2):
     """Allocate n free TCP ports by binding to port 0."""
     sockets = []
@@ -67,10 +83,10 @@ def get_free_ports(n=2):
     return ports
 
 
-def set_site_config(site_dir, overrides, config_file='site.dev.json'):
+def set_site_config(site_dir, overrides, config_file=SITE_DEV_CONFIG_FILE):
     """Read a site config file, deep-merge overrides, and write it back."""
     config_path = site_dir / config_file
-    config = json.loads(config_path.read_text())
+    config = load_structured_file(config_path)
     for key, value in overrides.items():
         if value == {}:
             config[key] = {}
@@ -78,7 +94,7 @@ def set_site_config(site_dir, overrides, config_file='site.dev.json'):
             config[key].update(value)
         else:
             config[key] = value
-    config_path.write_text(json.dumps(config, indent=2) + '\n')
+    write_structured_file(config_path, config)
 
 
 COVERAGE_PRELOAD = PACKAGE_DIR / 'scripts' / 'coverage-preload.ts'
@@ -168,12 +184,6 @@ def make_fake_failing_command(directory, name):
     fake.write_text('#!/bin/sh\nexit 1\n')
     fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
     return fake
-
-
-@pytest.fixture
-def tada():
-    """Provides the run_tada helper."""
-    return run_tada
 
 
 @pytest.fixture

@@ -126,7 +126,7 @@ The syntax for links is unchanged from Presto. However,
 - external links (links whose domain is not one of `site.internalDomains`) are
   automatically given `target="_blank"` and special styling
 
-See `config/site.dev.json` and `config/site.prod.json` to change `site.basePath`
+See `site.dev.yaml` and `site.prod.yaml` to change `site.basePath`
 and `site.internalDomains`.
 
 

@@ -118,7 +118,7 @@ Available flags: `--title`, `--symbol`, `--theme-color`, `--tint-hue`,
 
 ### `tada dev`
 
-Build the site for local development (using `site.dev.json`)
+Build the site for local development (using `site.dev.yaml` by default)
 into the `dist/` directory.
 
 ### `tada serve`
@@ -137,7 +137,7 @@ builds (keeps the latest two versions).
 
 ### `tada prod`
 
-Build the site for production (uses `site.prod.json`). Each prod build is
+Build the site for production (uses `site.prod.yaml` by default). Each prod build is
 saved to a versioned directory under `dist-prod/` (e.g., `dist-prod/v1/`,
 `dist-prod/v2/`) with a manifest file that records the SHA-256 hash of every
 output file.
@@ -160,7 +160,7 @@ The output directory will also include a `manifest.json` for the newer build.
 ## Development vs. production builds
 
 `tada dev` and `tada watch` build to the `dist/` directory using
-`site.dev.json` (typically `localhost` URLs). `tada watch` includes a
+`site.dev.*` (typically `localhost` URLs). `tada watch` includes a
 development server with live reload; `tada serve` is a standalone server
 for previewing a `tada dev` build. Dev builds overwrite `dist/` each time.
 
@@ -196,31 +196,39 @@ manually.
 
 Build-time site config lives in:
 
-- `site.dev.json` (used by `tada dev` / `tada watch`)
-- `site.prod.json` (used by `tada prod`)
-- `nav.json` (navigation structure)
-- `authors.json` (author data)
+- `site.dev.yaml` (used by `tada dev` / `tada watch`)
+- `site.prod.yaml` (used by `tada prod`)
+- `nav.yaml` (navigation structure)
+- `authors.yaml` (author data)
 
-Example site configuration JSON file:
+Tada also accepts `.yml` and `.json` for each of these files. Keep only one
+variant for each logical config name; for example, `nav.yaml` and `nav.json`
+in the same site root is an error.
 
-```json
-{
-  "title": "Intro to Computer Science",
-  "titlePostfix": " - CS 0",
-  "symbol": "CS 0",
-  "themeColor": "hsl(351 70% 40%)",
-  "tintAmount": 0,
-  "features": { "search": true, "favicon": true },
-  "base": "https://example.edu",
-  "basePath": "/cs0",
-  "internalDomains": ["example.edu"],
-  "defaultTimeZone": "America/New_York",
-  "extensionToShikiLanguage": { "java": "java", "py": "python" },
-  "shikiLanguages": ["java", "python"],
-  "vars": {
-    "staffEmail": "staff@example.edu"
-  }
-}
+Example site configuration YAML file:
+
+```yaml
+title: Intro to Computer Science
+titlePostfix: " - CS 0"
+symbol: CS 0
+themeColor: hsl(351 70% 40%)
+tintAmount: 0
+features:
+  search: true
+  favicon: true
+base: https://example.edu
+basePath: /cs0
+internalDomains:
+  - example.edu
+defaultTimeZone: America/New_York
+extensionToShikiLanguage:
+  java: java
+  py: python
+shikiLanguages:
+  - java
+  - python
+vars:
+  staffEmail: staff@example.edu
 ```
 
 | Field | Description |
@@ -244,54 +252,45 @@ Example site configuration JSON file:
 | `faviconFontWeight` | *Optional*, font weight used for favicon text (default `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content as `vars.*` (e.g., `<%= vars.staffEmail %>`) |
 
-#### `nav.json`
+#### `nav.yaml`
 
 Defines the site navigation structure. The file contains an array of section
 objects. Each section contains an array of link objects (internal or external,
 and whether the link is disabled). You should specify at least two sections,
 but three or more sections are supported.
 
-```json
-[
-  {
-    "title": "Navigation",
-    "links": [{ "text": "Home", "internal": "/index.html" }]
-  },
-  {
-    "title": "Topics",
-    "links": [
-      { "text": "Lectures", "internal": "/lectures/index.html" },
-      {
-        "text": "Problem Sets",
-        "internal": "/problem_sets/index.html",
-        "disabled": true
-      }
-    ]
-  },
-  {
-    "title": "Links",
-    "links": [
-      { "text": "Zoom", "external": "https://zoom.com" }
-    ]
-  }
-]
+```yaml
+- title: Navigation
+  links:
+    - text: Home
+      internal: /index.html
+- title: Topics
+  links:
+    - text: Lectures
+      internal: /lectures/index.html
+    - text: Problem Sets
+      internal: /problem_sets/index.html
+      disabled: true
+- title: Links
+  links:
+    - text: Zoom
+      external: https://zoom.com
 ```
 
-#### `authors.json`
+#### `authors.yaml`
 
 Maps author handles (used in front matter `author` fields) to display names
 and avatars. Each key is a handle (e.g., `jsmith`) and each value is an object
 with `name`, `avatar`, and optionally `url`.
 
-```json
-{
-  "jsmith": { "name": "Jane Smith", "avatar": "/avatars/jsmith.jpg" },
-  "ajones": {
-    "name": "Alex Jones",
-    "avatar": "/avatars/ajones.jpg",
-    "url": "/staff/ajones.html"
-  }
-}
+```yaml
+jsmith:
+  name: Jane Smith
+  avatar: /avatars/jsmith.jpg
+ajones:
+  name: Alex Jones
+  avatar: /avatars/ajones.jpg
+  url: /staff/ajones.html
 ```
 
 ## Content
@@ -313,7 +312,7 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 |-------|-------------|
 | `title` (required) | Page title (`<title>` tag and page heading) |
 | `skip` | Set to `true` to skip building this page completely |
-| `author` | Author handle (e.g. `jsmith`) resolved to a full object via `authors.json` |
+| `author` | Author handle (e.g. `jsmith`) resolved to a full object via the authors config |
 | `description` | Meta description for the page |
 | `toc` | Set to `true` to show a table of contents |
 | `parent` & `parentLabel` | URL and label for a breadcrumb link displayed above the title |

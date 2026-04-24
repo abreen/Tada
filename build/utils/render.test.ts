@@ -30,8 +30,15 @@ const fsMock = {
 mock.module('fs', () => createFsModuleMock(fsMock));
 
 mock.module('../templates', () => ({
-  json() {
+  compileTemplates() {},
+  config() {
     return undefined;
+  },
+  getConfigFileName() {
+    return undefined;
+  },
+  getProjectConfigDir() {
+    return '/virtual/project';
   },
   render(_fileName: string, params?: Record<string, unknown>) {
     const content = typeof params?.content === 'string' ? params.content : '';

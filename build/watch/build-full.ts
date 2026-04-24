@@ -1,4 +1,4 @@
-import { compileTemplates, json } from '../templates';
+import { compileTemplates, config } from '../templates';
 import { getDevSiteVariables } from '../site-variables';
 import { createContentRecord, createPublicRecord } from '../source-records';
 import { getDistDir } from '../util';
@@ -27,7 +27,7 @@ import {
 import {
   diagnosticsFromMessages,
   validateConfig,
-  validateJsonLinks,
+  validateProjectConfigLinks,
 } from './validation';
 
 export async function buildFull({
@@ -79,7 +79,7 @@ export async function buildFull({
       publicRecords.set(filePath, record);
     }
 
-    const linkDiagnostics = validateJsonLinks(scan.validTargets);
+    const linkDiagnostics = validateProjectConfigLinks(scan.validTargets);
     if (linkDiagnostics.length > 0) {
       removeDirIfExists(outputDir);
       return { ok: false, diagnostics: linkDiagnostics };
@@ -88,8 +88,8 @@ export async function buildFull({
     const nextSnapshot = createSnapshot({
       siteVariables,
       assetFiles,
-      navData: json('nav.json'),
-      authorsData: json('authors.json'),
+      navData: config('nav'),
+      authorsData: config('authors'),
       scan,
       contentRecords,
       publicRecords,

@@ -113,7 +113,7 @@ class TestDevBuildErrors:
     def test_missing_config_exits_1(self, tmp_path):
         result = run_tada('dev', cwd=str(tmp_path))
         assert result.returncode == 1
-        assert 'site.dev.json' in result.stderr
+        assert 'site.dev.yaml' in result.stderr
 
     def test_processed_content_conflict_with_public_fails_without_publishing(self, site_dir):
         first_build = run_tada('dev', cwd=str(site_dir))

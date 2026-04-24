@@ -47,10 +47,11 @@ partial, including transitive includes.
 
 ### Config or data change
 
-Changing `site.dev.json` or `nav.json` triggers a full site rebuild.
+Changing the resolved `site.dev.*` or `nav.*` config file triggers a full site
+rebuild.
 
-Changing `authors.json` rebuilds only pages whose `author` front matter depends
-on author entries whose data changed.
+Changing `authors.*` rebuilds only pages whose `author` front matter depends on
+author entries whose data changed.
 
 ### Adding a file
 

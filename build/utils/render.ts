@@ -7,7 +7,12 @@ import { makeLogger } from '../log';
 import { B } from '../colors';
 import createTemplateGlobals from '../template-globals';
 import { getExtensionToShikiLanguage } from '../site-variables';
-import { render, json } from '../templates';
+import { config } from '../templates';
+import { render } from '../templates';
+import {
+  getProjectConfigBaseName,
+  getSupportedConfigFileNamesText,
+} from '../config-files';
 import {
   resolveParentLinkTarget,
   validateParentLink,
@@ -91,12 +96,12 @@ function resolveAuthor(
   if (!pageVariables.author) {
     return;
   }
-  const authors = json('authors.json') as
+  const authors = config('authors') as
     | Record<string, Record<string, unknown>>
     | undefined;
   if (!authors) {
     throw new Error(
-      `${filePath}: author "${pageVariables.author}" specified but no authors.json found`,
+      `${filePath}: author "${pageVariables.author}" specified but no author config found (tried ${getSupportedConfigFileNamesText(getProjectConfigBaseName('authors'))})`,
     );
   }
   const authorKey = pageVariables.author as string;
@@ -104,7 +109,7 @@ function resolveAuthor(
   const authorEntry = authors[authorKey];
   if (!authorEntry) {
     throw new Error(
-      `${filePath}: unknown author "${authorKey}" (not found in authors.json)`,
+      `${filePath}: unknown author "${authorKey}" (not found in author config)`,
     );
   }
   pageVariables.author = authorEntry;

@@ -19,6 +19,7 @@ data from the package. Bare-mode config files also start with
 `extensionToShikiLanguage: {}` and `shikiLanguages: []`, so source-code pages
 and Markdown fence highlighting remain opt-in.
 
-The generated config files include `site.dev.json` (pointing at localhost) and
-`site.prod.json` (using the provided production URL). Internal domains are
-automatically extracted from the production base URL.
+The generated config files include `site.dev.yaml` (pointing at localhost) and
+`site.prod.yaml` (using the provided production URL). Internal domains are
+automatically extracted from the production base URL. Starter nav and author
+data files are also generated as YAML by default.

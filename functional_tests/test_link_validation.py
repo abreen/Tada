@@ -1,27 +1,31 @@
-import json
-
 import pytest
-from conftest import init_site, run_tada
+from conftest import (
+    NAV_CONFIG_FILE,
+    init_site,
+    load_structured_file,
+    run_tada,
+    write_structured_file,
+)
 
 
 class TestBrokenNavLink:
-    """A broken internal link in nav.json fails the build."""
+    """A broken internal link in the nav config fails the build."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
 
-        nav_path = site / 'nav.json'
-        nav = json.loads(nav_path.read_text())
+        nav_path = site / NAV_CONFIG_FILE
+        nav = load_structured_file(nav_path)
         nav[0]['links'].append({'text': 'Missing', 'internal': '/nonexistent.html'})
-        nav_path.write_text(json.dumps(nav, indent=2) + '\n')
+        write_structured_file(nav_path, nav)
 
         yield site
 
     def test_build_fails(self, site_dir):
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode != 0
-        assert 'nav.json' in result.stdout
+        assert 'nav.yaml' in result.stdout
         assert '/nonexistent.html' in result.stdout
 
 
@@ -147,12 +151,12 @@ class TestDisabledNavLinkSkipped:
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
 
-        nav_path = site / 'nav.json'
-        nav = json.loads(nav_path.read_text())
+        nav_path = site / NAV_CONFIG_FILE
+        nav = load_structured_file(nav_path)
         nav[0]['links'].append(
             {'text': 'Coming Soon', 'internal': '/nonexistent.html', 'disabled': True}
         )
-        nav_path.write_text(json.dumps(nav, indent=2) + '\n')
+        write_structured_file(nav_path, nav)
 
         yield site
 

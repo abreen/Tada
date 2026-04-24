@@ -1,11 +1,9 @@
-import json
-
 import pytest
-from conftest import init_site
+from conftest import NAV_CONFIG_FILE, init_site, write_structured_file
 
 
 class TestNavigationRendering:
-    """nav.json entries produce navigation links in the HTML output."""
+    """Nav config entries produce navigation links in the HTML output."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
@@ -15,24 +13,23 @@ class TestNavigationRendering:
         about_dir.mkdir()
         (about_dir / 'index.md').write_text('---\ntitle: About\n---\n\nAbout page.\n')
 
-        (site / 'nav.json').write_text(
-            json.dumps(
-                [
-                    {
-                        'title': 'Main',
-                        'links': [
-                            {'text': 'Home', 'internal': '/index.html'},
-                            {'text': 'About', 'internal': '/about/index.html'},
-                        ],
-                    },
-                    {
-                        'title': 'External',
-                        'links': [
-                            {'text': 'Example', 'external': 'https://example.com'},
-                        ],
-                    },
-                ]
-            )
+        write_structured_file(
+            site / NAV_CONFIG_FILE,
+            [
+                {
+                    'title': 'Main',
+                    'links': [
+                        {'text': 'Home', 'internal': '/index.html'},
+                        {'text': 'About', 'internal': '/about/index.html'},
+                    ],
+                },
+                {
+                    'title': 'External',
+                    'links': [
+                        {'text': 'Example', 'external': 'https://example.com'},
+                    ],
+                },
+            ],
         )
 
         yield site

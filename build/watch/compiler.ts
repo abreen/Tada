@@ -1,12 +1,11 @@
 import path from 'path';
 import {
-  AUTHORS_JSON_FILE,
-  NAV_JSON_FILE,
-  getProjectDataFilePath,
-  getSiteConfigPath,
+  getProjectConfigBaseName,
+  getSiteConfigBaseName,
+  getSupportedConfigFilePaths,
 } from '../config-files';
 import { getDevSiteVariables } from '../site-variables';
-import { getJsonDataDir } from '../templates';
+import { getProjectConfigDir } from '../templates';
 import { getContentDir, getPublicDir } from '../util';
 import type {
   ChangeBatch,
@@ -55,18 +54,26 @@ export class TadaWatchCompiler implements WatchCompiler<
   getWatchTargets(): WatchTarget[] {
     const contentDir = getContentDir();
     const publicDir = getPublicDir();
-    const jsonDataDir = path.resolve(getJsonDataDir());
+    const projectConfigDir = path.resolve(getProjectConfigDir());
     const configFilePaths = new Set([
-      path.resolve(getSiteConfigPath('.', 'dev')),
-      path.resolve(getProjectDataFilePath(jsonDataDir, NAV_JSON_FILE)),
-      path.resolve(getProjectDataFilePath(jsonDataDir, AUTHORS_JSON_FILE)),
+      ...getSupportedConfigFilePaths('.', getSiteConfigBaseName('dev')).map(
+        filePath => path.resolve(filePath),
+      ),
+      ...getSupportedConfigFilePaths(
+        projectConfigDir,
+        getProjectConfigBaseName('nav'),
+      ).map(filePath => path.resolve(filePath)),
+      ...getSupportedConfigFilePaths(
+        projectConfigDir,
+        getProjectConfigBaseName('authors'),
+      ).map(filePath => path.resolve(filePath)),
     ]);
 
     return [
       { path: contentDir },
       { path: publicDir },
       {
-        path: jsonDataDir,
+        path: projectConfigDir,
         chokidar: { depth: 0 },
         filter: filePath => configFilePaths.has(path.resolve(filePath)),
       },

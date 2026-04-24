@@ -1,9 +1,46 @@
 # Configuration
 
-Tada reads one of two JSON config files depending on the build mode:
+Tada reads one of two site config files depending on the build mode:
 
-- `site.dev.json` for development builds
-- `site.prod.json` for production builds
+- `site.dev.*` for development builds
+- `site.prod.*` for production builds
+
+Supported extensions are `.yaml`, `.yml`, and `.json`. `tada init` generates
+`site.dev.yaml` and `site.prod.yaml` by default.
+
+## Supported config files
+
+Tada supports these logical config inputs:
+
+- `site.dev`
+- `site.prod`
+- `nav`
+- `authors`
+
+Each one is resolved by checking for exactly one matching file among the
+supported extensions. For example, site development config can live in
+`site.dev.yaml`, `site.dev.yml`, or `site.dev.json`.
+
+Selection rules:
+
+- `site.dev`, `site.prod`, and `nav` are required
+- `authors` is optional
+- if no required variant exists, the build fails
+- if more than one variant exists for the same logical config name, the build
+  fails
+
+Tada never prefers YAML over JSON or vice versa when duplicates exist. Keeping
+multiple variants such as `nav.yaml` and `nav.json` in the same site root is an
+error because the source of truth would be ambiguous.
+
+## Defaults
+
+`tada init` generates YAML files by default:
+
+- `site.dev.yaml`
+- `site.prod.yaml`
+- `nav.yaml`
+- `authors.yaml` (when `--bare` is not specified)
 
 ## Required fields
 

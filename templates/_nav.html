@@ -1,5 +1,5 @@
 <nav>
-<% json('nav.json').forEach(function(section) { %>
+<% config('nav').forEach(function(section) { %>
   <div>
     <p><%= section.title %></p>
     <ul>

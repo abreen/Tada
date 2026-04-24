@@ -1,4 +1,5 @@
 pytest>=8.0
 pytest-xdist>=3.0
+PyYAML>=6.0
 ruff>=0.15.0
 websocket-client>=1.0

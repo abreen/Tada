@@ -51,8 +51,8 @@ attributes participate in this validation.
 This validation covers:
 
 - Links in rendered page content from Markdown and `.html` sources
-- `internal` links in `nav.json` (these paths must be root-relative)
-- `url` and `avatar` paths in `authors.json` (these paths must be
+- `internal` links in the nav config (these paths must be root-relative)
+- `url` and `avatar` paths in the authors config (these paths must be
   root-relative)
 - `parent` breadcrumb links in front matter
 

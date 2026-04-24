@@ -20,8 +20,10 @@ Templates can access:
 - **isHomePage**: true when rendering the home page
 
 Utility functions are available for formatting dates, rendering other templates,
-loading JSON data files, generating CSS class strings, and rendering the time
-zone chooser.
+loading project config files, generating CSS class strings, and rendering the
+time zone chooser.
 
-Site config values are accessible in templates. Both `nav.json` and
-`authors.json` support template interpolation using these values.
+Site config values are accessible in templates. You may also use site config
+values in the `nav.*` and `authors.*` config files. In those config files,
+Lodash templating is only supported inside individual values; it cannot
+generate or conditionally modify the YAML/JSON structure itself.

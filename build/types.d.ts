@@ -3,7 +3,7 @@ import type { TadaProjectScan } from './source-model';
 
 export type PlainTextLanguage = 'text' | 'txt' | 'plain';
 
-/** Site configuration loaded from site.dev.json or site.prod.json */
+/** Site configuration loaded from site.dev.yaml/yml/json or site.prod.yaml/yml/json */
 export interface SiteVariables {
   base: string;
   basePath: string;

@@ -1,8 +1,7 @@
-import fs from 'fs';
-import path from 'path';
 import { bundledLanguages } from 'shiki';
 import type { BundledLanguage } from 'shiki';
-import { getSiteConfigFile, type SiteEnv } from './config-files';
+import { getSiteConfigBaseName, type SiteEnv } from './config-files';
+import { loadSiteConfig } from './config-loader';
 import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { getProjectDir } from './utils/paths';
 import type { PlainTextLanguage, SiteVariables } from './types';
@@ -17,12 +16,6 @@ const DEFAULT: Partial<SiteVariables> = {
 };
 
 const isValid = compileJsonSchema(siteSchema);
-
-function getJson(filePath: string): Record<string, unknown> {
-  return JSON.parse(
-    fs.readFileSync(path.resolve(configDir, filePath), 'utf-8'),
-  );
-}
 
 const PLAIN_TEXT_LANGUAGES = ['plain', 'text', 'txt'] as const;
 
@@ -114,8 +107,9 @@ export function getRuntimeBundledShikiLanguages(
 }
 
 function getSiteVariables(env: SiteEnv): SiteVariables {
-  const fileName = getSiteConfigFile(env);
-  const fromFile = getJson(fileName);
+  const loaded = loadSiteConfig(configDir, env);
+  const fileName = loaded.fileName;
+  const fromFile = getValidatedSiteConfigRoot(loaded.value, fileName);
   const extensionToShikiLanguage = validateExtensionToShikiLanguage(
     fromFile.extensionToShikiLanguage,
     fileName,
@@ -167,4 +161,18 @@ export function getDevSiteVariables(): SiteVariables {
 
 export function getProdSiteVariables(): SiteVariables {
   return getSiteVariables('prod');
+}
+
+export { getSiteConfigBaseName };
+
+function getValidatedSiteConfigRoot(
+  value: unknown,
+  fileName: string,
+): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  doValidation(isValid, value, fileName);
+  throw new Error(`${fileName} failed validation`);
 }

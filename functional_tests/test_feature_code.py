@@ -184,7 +184,7 @@ class TestCodeProseLinksRewritten:
         set_site_config(
             site,
             {'extensionToShikiLanguage': {'java': 'java', 'py': 'python'}},
-            config_file='site.prod.json',
+            config_file='site.prod.yaml',
         )
 
         # Add a Java file with /// links

@@ -32,7 +32,7 @@ describe('validateNavLinks', () => {
     const errors = validateNavLinks(navData, validTargets);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain('/missing.html');
-    expect(errors[0]).toContain('nav.json');
+    expect(errors[0]).toContain('nav.yaml');
   });
 
   test('reports multiple broken links', () => {
@@ -127,7 +127,7 @@ describe('validateAuthorLinks', () => {
     const errors = validateAuthorLinks(authorsData, validTargets);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain('/missing.html');
-    expect(errors[0]).toContain('authors.json');
+    expect(errors[0]).toContain('authors.yaml');
     expect(errors[0]).toContain('alex');
   });
 
@@ -222,7 +222,7 @@ describe('validateConfigLinks', () => {
     expect(validateConfigLinks(validTargets, navData, authorsData)).toEqual([]);
   });
 
-  test('handles missing authors.json gracefully', () => {
+  test('handles missing authors config gracefully', () => {
     const validTargets = new Set(['/about.html']);
     const navData = [
       { title: 'Menu', links: [{ text: 'About', internal: '/about.html' }] },

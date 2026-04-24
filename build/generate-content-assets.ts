@@ -4,7 +4,7 @@ import { makeLogger } from './log';
 import { getRuntimeBundledShikiLanguages } from './site-variables';
 import { createContentRecord } from './source-records';
 import { validateConfigLinks } from './validate-config-links';
-import { json } from './templates';
+import { config, getConfigFileName } from './templates';
 import { initHighlighter } from './utils/shiki-highlighter';
 import { checkTraceToolAvailability, isTraceSourceFile } from './utils/trace';
 import type {
@@ -173,8 +173,12 @@ export class ContentRenderer {
 
     const configLinkErrors = validateConfigLinks(
       validInternalTargets,
-      json('nav.json'),
-      json('authors.json'),
+      config('nav'),
+      config('authors'),
+      {
+        navFileName: getConfigFileName('nav'),
+        authorsFileName: getConfigFileName('authors'),
+      },
     );
     for (const msg of configLinkErrors) {
       errors.push(new Error(msg));

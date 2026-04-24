@@ -1,11 +1,9 @@
-import json
-
 import pytest
-from conftest import init_site, run_tada
+from conftest import AUTHORS_CONFIG_FILE, init_site, run_tada, write_structured_file
 
 
 class TestAuthorsFeature:
-    """Tests for the authors.json feature."""
+    """Tests for the authors config feature."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
@@ -17,20 +15,19 @@ class TestAuthorsFeature:
         (images_dir / 'jdoe.png').write_bytes(b'\x89PNG\r\n\x1a\n')
         (images_dir / 'asmith.png').write_bytes(b'\x89PNG\r\n\x1a\n')
 
-        # Create authors.json in the config directory
-        (site / 'authors.json').write_text(
-            json.dumps(
-                {
-                    'jdoe': {
-                        'name': 'Jane Doe',
-                        'avatar': '/images/jdoe.png',
-                    },
-                    'asmith': {
-                        'name': 'Alice Smith',
-                        'avatar': '/images/asmith.png',
-                    },
-                }
-            )
+        # Create authors.yaml in the config directory
+        write_structured_file(
+            site / AUTHORS_CONFIG_FILE,
+            {
+                'jdoe': {
+                    'name': 'Jane Doe',
+                    'avatar': '/images/jdoe.png',
+                },
+                'asmith': {
+                    'name': 'Alice Smith',
+                    'avatar': '/images/asmith.png',
+                },
+            },
         )
 
         yield site
@@ -58,7 +55,7 @@ class TestAuthorsFeature:
         assert '/images/jdoe.png' in html
 
     def test_unknown_author_fails_build(self, site_dir):
-        """Referencing an author not in authors.json should fail the build."""
+        """Referencing an author not in the authors config should fail the build."""
         (site_dir / 'content' / 'index.md').write_text(
             '---\ntitle: Home\nauthor: nobody\n---\n\nContent.\n'
         )
@@ -68,7 +65,7 @@ class TestAuthorsFeature:
         assert 'nobody' in output
 
     def test_author_without_authors_json_fails(self, tmp_path):
-        """Using author front matter without an authors.json should fail."""
+        """Using author front matter without an authors config should fail."""
         site = init_site(tmp_path, bare=True)
 
         (site / 'content' / 'index.md').write_text(
@@ -77,7 +74,7 @@ class TestAuthorsFeature:
         result = run_tada('dev', cwd=str(site))
         assert result.returncode != 0
         output = result.stdout + result.stderr
-        assert 'authors.json' in output
+        assert 'authors.yaml' in output
 
     def test_page_without_author_still_builds(self, site_dir):
         """Pages without an author field should build fine."""

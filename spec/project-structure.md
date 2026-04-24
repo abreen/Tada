@@ -3,10 +3,10 @@
 A Tada site has this layout:
 
 ```
-site.dev.json         Development config
-site.prod.json        Production config
-nav.json              Navigation links
-authors.json          Author metadata
+site.dev.yaml         Development config
+site.prod.yaml        Production config
+nav.yaml              Navigation links
+authors.yaml          Author metadata
 content/              Pages and assets
   index.md            Home page (required)
   ...

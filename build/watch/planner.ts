@@ -1,12 +1,11 @@
-import fs from 'fs';
 import path from 'path';
 import {
-  AUTHORS_JSON_FILE,
-  NAV_JSON_FILE,
-  getProjectDataFilePath,
-  getSiteConfigPath,
+  getProjectConfigBaseName,
+  getSiteConfigBaseName,
+  getSupportedConfigFilePaths,
 } from '../config-files';
-import { getJsonDataDir } from '../templates';
+import { loadProjectConfig } from '../config-loader';
+import { getProjectConfigDir } from '../templates';
 import type { ChangeBatch } from '../../watch/types';
 import type { TadaProjectScan, TadaSnapshot } from './snapshot';
 
@@ -17,13 +16,6 @@ export interface TadaWatchPlan {
   publicToRender: Set<string>;
   contentToRemove: Set<string>;
   publicToRemove: Set<string>;
-}
-
-function readJsonFile(filePath: string): unknown {
-  if (!fs.existsSync(filePath)) {
-    return undefined;
-  }
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 }
 
 export function diffAuthorKeys(previous: unknown, next: unknown): Set<string> {
@@ -76,13 +68,23 @@ export function createTadaWatchPlan({
   const publicToRender = new Set<string>();
   const contentToRemove = new Set<string>();
   const publicToRemove = new Set<string>();
-  const jsonDataDir = getJsonDataDir();
-  const siteConfigPath = path.resolve(getSiteConfigPath('.', 'dev'));
-  const navPath = path.resolve(
-    getProjectDataFilePath(jsonDataDir, NAV_JSON_FILE),
+  const projectConfigDir = getProjectConfigDir();
+  const siteConfigPaths = new Set(
+    getSupportedConfigFilePaths('.', getSiteConfigBaseName('dev')).map(
+      filePath => path.resolve(filePath),
+    ),
   );
-  const authorsPath = path.resolve(
-    getProjectDataFilePath(jsonDataDir, AUTHORS_JSON_FILE),
+  const navPaths = new Set(
+    getSupportedConfigFilePaths(
+      projectConfigDir,
+      getProjectConfigBaseName('nav'),
+    ).map(filePath => path.resolve(filePath)),
+  );
+  const authorsPaths = new Set(
+    getSupportedConfigFilePaths(
+      projectConfigDir,
+      getProjectConfigBaseName('authors'),
+    ).map(filePath => path.resolve(filePath)),
   );
 
   if (!snapshot) {
@@ -98,7 +100,7 @@ export function createTadaWatchPlan({
 
   for (const change of batch.changes) {
     const resolvedPath = path.resolve(change.path);
-    if (resolvedPath === siteConfigPath || resolvedPath === navPath) {
+    if (siteConfigPaths.has(resolvedPath) || navPaths.has(resolvedPath)) {
       return {
         kind: 'full',
         scan,
@@ -112,8 +114,12 @@ export function createTadaWatchPlan({
 
   for (const change of batch.changes) {
     const resolvedPath = path.resolve(change.path);
-    if (resolvedPath === authorsPath) {
-      const nextAuthorsData = readJsonFile(authorsPath);
+    if (authorsPaths.has(resolvedPath)) {
+      const nextAuthorsData = loadProjectConfig(
+        projectConfigDir,
+        'authors',
+        snapshot.siteVariables,
+      )?.value;
       if (snapshot.authorsData === undefined || nextAuthorsData === undefined) {
         return {
           kind: 'full',

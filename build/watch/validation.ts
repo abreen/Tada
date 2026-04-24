@@ -1,6 +1,6 @@
 import { B } from '../colors';
 import { makeLogger } from '../log';
-import { json } from '../templates';
+import { config, getConfigFileName } from '../templates';
 import { validateConfigLinks } from '../validate-config-links';
 import type { WatchDiagnostic } from '../../watch/types';
 import { assertNoOutputPathConflicts, type TadaProjectScan } from './snapshot';
@@ -27,10 +27,13 @@ export function validateConfig(scan: TadaProjectScan): WatchDiagnostic[] {
   ];
 }
 
-export function validateJsonLinks(
+export function validateProjectConfigLinks(
   validTargets: Set<string>,
 ): WatchDiagnostic[] {
   return diagnosticsFromMessages(
-    validateConfigLinks(validTargets, json('nav.json'), json('authors.json')),
+    validateConfigLinks(validTargets, config('nav'), config('authors'), {
+      navFileName: getConfigFileName('nav'),
+      authorsFileName: getConfigFileName('authors'),
+    }),
   );
 }

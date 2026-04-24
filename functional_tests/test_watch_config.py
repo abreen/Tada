@@ -1,7 +1,14 @@
-import json
-
 import pytest
-from conftest import init_site, run_tada, set_site_config
+from conftest import (
+    AUTHORS_CONFIG_FILE,
+    NAV_CONFIG_FILE,
+    SITE_DEV_CONFIG_FILE,
+    init_site,
+    load_structured_file,
+    run_tada,
+    set_site_config,
+    write_structured_file,
+)
 from watch_helpers import WatchProcess
 
 
@@ -129,10 +136,10 @@ class TestWatchBadConfigAtStart:
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
 
-        config_path = site / 'site.dev.json'
-        config = json.loads(config_path.read_text())
+        config_path = site / SITE_DEV_CONFIG_FILE
+        config = load_structured_file(config_path)
         del config['title']
-        config_path.write_text(json.dumps(config, indent=2) + '\n')
+        write_structured_file(config_path, config)
 
         yield site
 
@@ -161,10 +168,10 @@ class TestWatchConfigBreakAndRecover:
         index_html = site_dir / 'dist' / 'index.html'
         before_text = index_html.read_text()
 
-        config_path = site_dir / 'site.dev.json'
-        config = json.loads(config_path.read_text())
+        config_path = site_dir / SITE_DEV_CONFIG_FILE
+        config = load_structured_file(config_path)
         del config['title']
-        config_path.write_text(json.dumps(config, indent=2) + '\n')
+        write_structured_file(config_path, config)
 
         watch.wait_for_error()
         assert watch.proc.poll() is None
@@ -174,17 +181,17 @@ class TestWatchConfigBreakAndRecover:
         index_html = site_dir / 'dist' / 'index.html'
         before_html = index_html.read_text()
 
-        config_path = site_dir / 'site.dev.json'
-        config = json.loads(config_path.read_text())
+        config_path = site_dir / SITE_DEV_CONFIG_FILE
+        config = load_structured_file(config_path)
         original_title = config['title']
         del config['title']
-        config_path.write_text(json.dumps(config, indent=2) + '\n')
+        write_structured_file(config_path, config)
 
         watch.wait_for_error()
         assert watch.proc.poll() is None
 
         config['title'] = original_title
-        config_path.write_text(json.dumps(config, indent=2) + '\n')
+        write_structured_file(config_path, config)
 
         watch.wait_for_successful_rebuild()
         assert index_html.read_text() == before_html
@@ -193,26 +200,26 @@ class TestWatchConfigBreakAndRecover:
 class TestWatchConfigFileDetection:
     """Deleting/moving & re-adding config files re-builds and doesn't crash."""
 
-    def test_editing_nav_json_updates_nav_output(self, watch, site_dir):
+    def test_editing_nav_yaml_updates_nav_output(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
         before_html = index_html.read_text()
         before_mtime = index_html.stat().st_mtime
 
-        nav_path = site_dir / 'nav.json'
-        nav = json.loads(nav_path.read_text())
+        nav_path = site_dir / NAV_CONFIG_FILE
+        nav = load_structured_file(nav_path)
         nav[0]['links'].append({'text': 'Docs', 'internal': '/index.html'})
-        nav_path.write_text(json.dumps(nav, indent=2) + '\n')
+        write_structured_file(nav_path, nav)
 
         watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
         after_html = index_html.read_text()
         assert 'Docs' in after_html
         assert after_html != before_html
 
-    def test_deleting_nav_json_triggers_error_then_restore_recovers(self, watch, site_dir):
+    def test_deleting_nav_yaml_triggers_error_then_restore_recovers(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
         before_html = index_html.read_text()
 
-        nav_path = site_dir / 'nav.json'
+        nav_path = site_dir / NAV_CONFIG_FILE
         nav_backup = nav_path.read_text()
         nav_path.unlink()
 
@@ -223,10 +230,10 @@ class TestWatchConfigFileDetection:
         watch.wait_for_successful_rebuild()
         assert index_html.read_text() == before_html
 
-    def test_missing_nav_json_at_start_then_create_recovers(self, tmp_path):
+    def test_missing_nav_yaml_at_start_then_create_recovers(self, tmp_path):
         site_dir = init_site(tmp_path, bare=True)
 
-        nav_path = site_dir / 'nav.json'
+        nav_path = site_dir / NAV_CONFIG_FILE
         nav_backup = nav_path.read_text()
         nav_path.unlink()
 
@@ -248,7 +255,7 @@ class TestWatchConfigFileDetection:
         index_html = site_dir / 'dist' / 'index.html'
         before_html = index_html.read_text()
 
-        config_path = site_dir / 'site.dev.json'
+        config_path = site_dir / SITE_DEV_CONFIG_FILE
         config_backup = config_path.read_text()
         config_path.unlink()
 
@@ -259,7 +266,7 @@ class TestWatchConfigFileDetection:
         watch.wait_for_successful_rebuild()
         assert index_html.read_text() == before_html
 
-    def test_creating_authors_json_builds_pages_that_require_it(self, watch, site_dir):
+    def test_creating_authors_yaml_builds_pages_that_require_it(self, watch, site_dir):
         avatar_dir = site_dir / 'public' / 'avatars'
         avatar_dir.mkdir(parents=True)
         (avatar_dir / 'jdoe.png').write_bytes(b'')
@@ -274,9 +281,9 @@ class TestWatchConfigFileDetection:
         assert watch.proc.poll() is None
         assert not author_html.exists()
 
-        authors_path = site_dir / 'authors.json'
-        authors_path.write_text(
-            json.dumps({'jdoe': {'name': 'Jane Doe', 'avatar': '/avatars/jdoe.png'}}) + '\n'
+        authors_path = site_dir / AUTHORS_CONFIG_FILE
+        write_structured_file(
+            authors_path, {'jdoe': {'name': 'Jane Doe', 'avatar': '/avatars/jdoe.png'}}
         )
 
         watch.wait_for_rebuild(author_html, 'exists')
@@ -284,7 +291,7 @@ class TestWatchConfigFileDetection:
         assert 'Jane Doe' in html
         assert '/avatars/jdoe.png' in html
 
-    def test_editing_authors_json_only_rebuilds_author_pages(self, watch, site_dir):
+    def test_editing_authors_yaml_only_rebuilds_author_pages(self, watch, site_dir):
         avatar = site_dir / 'public' / 'avatar.png'
         avatar.write_bytes(b'avatar')
         watch.wait_for_rebuild(site_dir / 'dist' / 'avatar.png', 'exists')
@@ -292,10 +299,8 @@ class TestWatchConfigFileDetection:
         index_html = site_dir / 'dist' / 'index.html'
         before_index_mtime = index_html.stat().st_mtime
 
-        authors_path = site_dir / 'authors.json'
-        authors_path.write_text(
-            json.dumps({'alex': {'name': 'Alex', 'avatar': '/avatar.png'}}) + '\n'
-        )
+        authors_path = site_dir / AUTHORS_CONFIG_FILE
+        write_structured_file(authors_path, {'alex': {'name': 'Alex', 'avatar': '/avatar.png'}})
         watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_index_mtime)
 
         author_page = site_dir / 'content' / 'author_page.md'
@@ -311,15 +316,15 @@ class TestWatchConfigFileDetection:
         before_author_mtime = author_html.stat().st_mtime
         before_plain_snapshot = watch.snapshot(plain_html)
 
-        authors = json.loads(authors_path.read_text())
+        authors = load_structured_file(authors_path)
         authors['alex']['name'] = 'Alex Updated'
-        authors_path.write_text(json.dumps(authors, indent=2) + '\n')
+        write_structured_file(authors_path, authors)
 
         watch.wait_for_rebuild(author_html, 'modified', before_mtime=before_author_mtime)
         assert 'Alex Updated' in author_html.read_text()
         assert watch.snapshot(plain_html) == before_plain_snapshot
 
-    def test_editing_authors_json_rebuilds_literate_java_author_pages(self, watch, site_dir):
+    def test_editing_authors_yaml_rebuilds_literate_java_author_pages(self, watch, site_dir):
         avatar = site_dir / 'public' / 'avatar.png'
         avatar.write_bytes(b'avatar')
         watch.wait_for_rebuild(site_dir / 'dist' / 'avatar.png', 'exists')
@@ -327,10 +332,8 @@ class TestWatchConfigFileDetection:
         index_html = site_dir / 'dist' / 'index.html'
         before_index_mtime = index_html.stat().st_mtime
 
-        authors_path = site_dir / 'authors.json'
-        authors_path.write_text(
-            json.dumps({'alex': {'name': 'Alex', 'avatar': '/avatar.png'}}) + '\n'
-        )
+        authors_path = site_dir / AUTHORS_CONFIG_FILE
+        write_structured_file(authors_path, {'alex': {'name': 'Alex', 'avatar': '/avatar.png'}})
         watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_index_mtime)
 
         java_page = site_dir / 'content' / 'AuthorExample.java.md'
@@ -359,9 +362,9 @@ class TestWatchConfigFileDetection:
         before_java_mtime = java_html.stat().st_mtime
         before_plain_snapshot = watch.snapshot(plain_html)
 
-        authors = json.loads(authors_path.read_text())
+        authors = load_structured_file(authors_path)
         authors['alex']['name'] = 'Alex Updated'
-        authors_path.write_text(json.dumps(authors, indent=2) + '\n')
+        write_structured_file(authors_path, authors)
 
         watch.wait_for_rebuild(java_html, 'modified', before_mtime=before_java_mtime)
         assert watch.snapshot(plain_html) == before_plain_snapshot
