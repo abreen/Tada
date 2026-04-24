@@ -18,9 +18,15 @@ body.is-presenting header,
 body.is-presenting .title-and-info,
 body.is-presenting nav.toc,
 body.is-presenting footer,
-body.is-presenting .file-header,
+body.is-presenting .slides-header,
 body.is-presenting .trace-toolbar {
   display: none;
+}
+
+@media (hover: none) {
+  .slides-header {
+    display: none;
+  }
 }
 
 body.is-presenting [data-slides-close] {

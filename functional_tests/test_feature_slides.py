@@ -61,7 +61,7 @@ class TestSlidesFeature:
             slides_html,
         )
         slide_header_match = re.search(
-            r'<div class="file-header" data-pagefind-ignore(?:="")?>',
+            r'<div class="slides-header" data-pagefind-ignore(?:="")?>',
             slides_html,
         )
         slide_button_match = re.search(
@@ -76,6 +76,7 @@ class TestSlidesFeature:
 
         assert 'data-slides-root' in slides_html
         assert 'class="slide"' in slides_html
+        assert 'class="file-header"' not in slides_html
         assert '<hr' not in slides_html
         assert slide_main_match is not None
         assert slide_header_match is not None

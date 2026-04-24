@@ -22,7 +22,7 @@ function createWindow(html: string): Win {
 
 function createSlidesWindow(): Win {
   return createWindow(`
-    <div class="file-header">
+    <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
       <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
     </div>
@@ -50,7 +50,7 @@ function createSlidesWindow(): Win {
 
 function createSlidesWindowWithInput(): Win {
   return createWindow(`
-    <div class="file-header">
+    <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
       <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
     </div>
@@ -68,7 +68,7 @@ function createSlidesWindowWithInput(): Win {
 
 function createSlidesWindowWithMultipleTraces(): Win {
   return createWindow(`
-    <div class="file-header">
+    <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
       <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
     </div>
@@ -120,7 +120,7 @@ function createSlidesWindowWithMultipleTraces(): Win {
 
 function createSingleSlideTraceWindow(): Win {
   return createWindow(`
-    <div class="file-header">
+    <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
       <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
     </div>
@@ -143,7 +143,7 @@ function createSingleSlideTraceWindow(): Win {
 
 function createSlidesWindowWithQuestionOnLastSlide(): Win {
   return createWindow(`
-    <div class="file-header">
+    <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
       <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
     </div>

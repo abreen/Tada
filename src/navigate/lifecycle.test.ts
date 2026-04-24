@@ -24,7 +24,7 @@ describe('component lifecycle', () => {
 
   test('teardown calls all per-page cleanup functions', async () => {
     const dom = new JSDOM(
-      `<body><header><details><summary>Menu</summary><nav></nav></details></header><div class="container"><div class="file-header"><button type="button" data-slides-present>Present</button></div><div class="slide-deck" data-slides-root><div class="slide" data-slide-index="0"><h1>One</h1></div></div></div></body>`,
+      `<body><header><details><summary>Menu</summary><nav></nav></details></header><div class="container"><div class="slides-header"><button type="button" data-slides-present>Present</button></div><div class="slide-deck" data-slides-root><div class="slide" data-slide-index="0"><h1>One</h1></div></div></div></body>`,
       { url: 'http://localhost/' },
     );
 

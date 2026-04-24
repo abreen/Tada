@@ -4,7 +4,8 @@ body.code {
   --code-gutter-width: 4rem;
 }
 
-.file-header {
+.file-header,
+.slides-header {
   display: flex;
   gap: var(--gap);
   align-items: center;

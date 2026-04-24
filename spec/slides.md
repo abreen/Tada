@@ -14,9 +14,10 @@ an HTML source file sets it.
 
 This does not change the page template. The page still builds as a normal
 default page with its usual heading, metadata, and body content. Slide pages
-add `Present` and `Present (Full Screen)` buttons in a `div.file-header` block
-at the top of the page body. These buttons render disabled in the HTML and are
-re-enabled by the client-side slides component when JavaScript is available.
+add `Present` and `Present (Full Screen)` buttons in a `div.slides-header`
+block at the top of the page body. These buttons render disabled in the HTML
+and are re-enabled by the client-side slides component when JavaScript is
+available. Touch/mobile browsers hide this header.
 
 ## Build output
 

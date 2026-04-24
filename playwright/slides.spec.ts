@@ -192,3 +192,19 @@ test.describe('slides presentation mode', () => {
       .toEqual({ fullscreen: false, presenting: false });
   });
 });
+
+test.describe('slides controls on touch browsers', () => {
+  test.use({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+
+  test('hides the presentation controls', async ({ page }) => {
+    await page.goto('/slides.html');
+
+    await expect(page.locator('.slides-header')).toBeHidden();
+    await expect(page.locator('[data-slides-present]')).toBeHidden();
+    await expect(page.locator('[data-slides-present-fullscreen]')).toBeHidden();
+  });
+});
