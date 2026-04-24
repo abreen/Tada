@@ -1,5 +1,4 @@
 import path from 'path';
-import WebSocket, { WebSocketServer } from 'ws';
 import { B } from '../colors';
 import { makeLogger, printFlair } from '../log';
 import { startServer } from '../serve';
@@ -7,6 +6,12 @@ import { WatchPagefindRunner } from '../pagefind';
 import type { TadaBuildMeta } from './compiler-types';
 import type { TadaSnapshot } from './snapshot';
 import type { WatchLifecycleEvent } from '../../watch/types';
+import {
+  WATCH_RELOAD_MESSAGE_REBUILDING,
+  WATCH_RELOAD_MESSAGE_RELOAD,
+  WATCH_RELOAD_PATH,
+  WATCH_RELOAD_TOPIC,
+} from './reload';
 
 const log = makeLogger(import.meta.url);
 const wslog = makeLogger('WebSocket');
@@ -22,65 +27,45 @@ function describeChange(kind: 'add' | 'change' | 'unlink'): string {
 }
 
 export class TadaWatchRuntime {
-  private wsPort: number;
   private httpPort: number | undefined;
   private distDir: string;
-  private wss: WebSocketServer | null;
+  private server: Bun.Server<undefined> | null;
   private lastBuildFailed: boolean;
-  private serveStarted: boolean;
   private pagefindRunner: WatchPagefindRunner | undefined;
   private pagefindSiteVariablesKey: string | undefined;
 
-  constructor({
-    wsPort,
-    httpPort,
-    distDir,
-  }: {
-    wsPort: number;
-    httpPort?: number;
-    distDir: string;
-  }) {
-    this.wsPort = wsPort;
+  constructor({ httpPort, distDir }: { httpPort?: number; distDir: string }) {
     this.httpPort = httpPort;
     this.distDir = distDir;
+    this.server = null;
     this.lastBuildFailed = false;
-    this.serveStarted = false;
     this.pagefindSiteVariablesKey = undefined;
-    this.wss = new WebSocketServer({ port: wsPort });
-
-    this.wss.on('connection', conn => {
-      wslog.debug`WebSocket client connected`;
-      conn.on('close', () => {
-        wslog.debug`WebSocket client disconnected`;
-      });
-    });
-
-    this.wss.on('listening', () => {
-      wslog.debug`WebSocket server listening at ws://localhost:${this.wsPort}`;
-    });
-
-    this.wss.on('error', err => {
-      wslog.error`WebSocket server error: ${err.message}`;
-    });
   }
 
   private broadcast(message: string): void {
-    if (!this.wss) {
+    if (!this.server) {
       return;
     }
-    for (const client of this.wss.clients) {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    }
+    this.server.publish(WATCH_RELOAD_TOPIC, message);
   }
 
   private ensureServerStarted(): void {
-    if (this.serveStarted) {
+    if (this.server) {
       return;
     }
-    this.serveStarted = true;
-    startServer({ port: this.httpPort, distDir: this.distDir });
+    this.server = startServer({
+      port: this.httpPort,
+      distDir: this.distDir,
+      watchReload: {
+        onClientOpen: () => {
+          wslog.debug`WebSocket client connected`;
+        },
+        onClientClose: () => {
+          wslog.debug`WebSocket client disconnected`;
+        },
+      },
+    });
+    wslog.debug`WebSocket server listening at ws://localhost:${this.server.port}${WATCH_RELOAD_PATH}`;
   }
 
   async onEvent(
@@ -92,7 +77,7 @@ export class TadaWatchRuntime {
           for (const change of event.batch?.changes || []) {
             log.event`${B`${path.basename(change.path)}`} ${describeChange(change.kind)}`;
           }
-          this.broadcast('rebuilding');
+          this.broadcast(WATCH_RELOAD_MESSAGE_REBUILDING);
         }
         return;
       case 'build-succeeded': {
@@ -101,7 +86,7 @@ export class TadaWatchRuntime {
         printFlair();
         this.ensureServerStarted();
         if (!event.initial && (event.changed || recoveredFromFailure)) {
-          this.broadcast('reload');
+          this.broadcast(WATCH_RELOAD_MESSAGE_RELOAD);
         }
         if (event.meta && event.changed) {
           if (event.meta.siteVariables.features.search !== false) {

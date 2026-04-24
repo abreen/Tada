@@ -137,7 +137,8 @@ later while watch mode is already running.
 
 ## Browser Reload Behavior
 
-Connected browsers use a WebSocket connection and react to these message types:
+Connected browsers use a same-origin WebSocket connection to `/__tada_watch` and
+react to these message types:
 
 - `rebuilding`: the page shows loading feedback
 - `reload`: the page reloads
@@ -158,6 +159,9 @@ Watch mode is split into:
   commits staged output updates, and preserves the last successful snapshot
 - a Tada watch adapter built on the same source model and source record layers
   used by full builds
+- a single Bun server that serves `dist/` over HTTP and accepts same-port
+  WebSocket upgrades for browser reload notifications after the first
+  successful build
 
 The Tada-specific watch pieces are:
 

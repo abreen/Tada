@@ -27,16 +27,14 @@ class WatchProcess:
         self.dist_dir = site_dir / 'dist'
         self.stdout_log_path = site_dir / 'watch_stdout.log'
         self.stderr_log_path = site_dir / 'watch_stderr.log'
-        http_port, self.ws_port = get_free_ports(2)
+        self.http_port = get_free_ports(1)[0]
         self._stdout_file = open(self.stdout_log_path, 'w')
         self._stderr_file = open(self.stderr_log_path, 'w')
         self.proc = subprocess.Popen(
             _bun_command(
                 'watch',
                 '--port',
-                str(http_port),
-                '--ws-port',
-                str(self.ws_port),
+                str(self.http_port),
             ),
             cwd=str(site_dir),
             stdout=self._stdout_file,

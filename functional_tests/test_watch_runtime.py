@@ -3,6 +3,8 @@ import threading
 import websocket
 from watch_helpers import WEBSOCKET_TIMEOUT_SEC
 
+WATCH_RELOAD_PATH = '/__tada_watch'
+
 
 class TestWatchRuntime:
     """Watch mode serves the reload client used by the dev page."""
@@ -21,7 +23,7 @@ class TestWatchRuntime:
             connected.set()
 
         ws = websocket.WebSocketApp(
-            f'ws://localhost:{watch.ws_port}',
+            f'ws://localhost:{watch.http_port}{WATCH_RELOAD_PATH}',
             on_message=on_message,
             on_open=on_open,
         )
@@ -30,7 +32,7 @@ class TestWatchRuntime:
 
         try:
             assert connected.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
-                f'WebSocket did not connect on port {watch.ws_port}'
+                f'WebSocket did not connect on port {watch.http_port}'
             )
 
             index_md = site_dir / 'content' / 'index.md'

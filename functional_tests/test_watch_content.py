@@ -6,6 +6,8 @@ import websocket
 from conftest import run_tada
 from watch_helpers import WEBSOCKET_TIMEOUT_SEC, WatchProcess
 
+WATCH_RELOAD_PATH = '/__tada_watch'
+
 
 class TestWatchEditContent:
     """Modifying a Markdown or HTML file triggers a build."""
@@ -327,7 +329,7 @@ class TestWatchPartials:
             connected.set()
 
         ws = websocket.WebSocketApp(
-            f'ws://localhost:{watch.ws_port}',
+            f'ws://localhost:{watch.http_port}{WATCH_RELOAD_PATH}',
             on_message=on_message,
             on_open=on_open,
         )
@@ -336,7 +338,7 @@ class TestWatchPartials:
 
         try:
             assert connected.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
-                f'WebSocket did not connect on port {watch.ws_port}'
+                f'WebSocket did not connect on port {watch.http_port}'
             )
 
             unused_partial = site_dir / 'content' / '_unused.md'

@@ -31,11 +31,9 @@ import {
 } from './validation';
 
 export async function buildFull({
-  wsPort,
   traceCache,
   traceOptions,
 }: {
-  wsPort: number;
   traceCache: TraceCache;
   traceOptions: WatchTraceOptions;
 }): Promise<CompilerBuildResult<TadaSnapshot, TadaBuildMeta>> {
@@ -53,11 +51,7 @@ export async function buildFull({
     compileTemplates(siteVariables);
     await ensureHighlighter(siteVariables);
 
-    const assetFiles = await bundleWatchAssets(
-      outputDir,
-      siteVariables,
-      wsPort,
-    );
+    const assetFiles = await bundleWatchAssets(outputDir, siteVariables);
     await populateStaticAssets(outputDir, siteVariables);
 
     const contentRecords = new Map<string, TadaSourceRecord>();

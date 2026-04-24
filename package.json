@@ -80,8 +80,7 @@
     "sass": "^1.99.0",
     "sharp": "^0.34.5",
     "shiki": "^4.0.2",
-    "string-strip-html": "^8.5.0",
-    "ws": "^8.20.0"
+    "string-strip-html": "^8.5.0"
   },
   "lint-staged": {
     "*.{ts,js}": "prettier --write",
@@ -111,7 +110,6 @@
     "@types/istanbul-reports": "^3.0.4",
     "@types/lodash": "^4.17.24",
     "@types/markdown-it-container": "^4.0.0",
-    "@types/ws": "^8.18.1",
     "eslint": "^10.2.1",
     "husky": "^9.1.7",
     "istanbul-lib-coverage": "^3.2.2",

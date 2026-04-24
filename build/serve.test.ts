@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type fs from 'fs';
 import path from 'path';
 import { createFsModuleMock } from './test-helpers';
-import { resolvePathname } from './serve';
+import { createDevServerFetchHandler, resolvePathname } from './serve';
+import { WATCH_RELOAD_PATH } from './watch/reload';
 
 type MockEntry = { kind: 'dir' | 'file'; mtime?: Date };
 
@@ -81,5 +82,48 @@ describe('resolvePathname', () => {
     const result = resolvePathname(DIST_DIR, '/spaced%20file.html');
     expect(result).not.toBeNull();
     expect(result!.filePath).toBe(path.join(DIST_DIR, 'spaced file.html'));
+  });
+});
+
+describe('createDevServerFetchHandler', () => {
+  test('upgrades watch reload requests when enabled', () => {
+    const handler = createDevServerFetchHandler(DIST_DIR, true);
+    const upgrade = mock(() => true);
+
+    const result = handler(
+      new Request(`http://localhost${WATCH_RELOAD_PATH}`),
+      { upgrade },
+    );
+
+    expect(result).toBeUndefined();
+    expect(upgrade).toHaveBeenCalledTimes(1);
+  });
+
+  test('returns 400 when a watch reload upgrade fails', () => {
+    const handler = createDevServerFetchHandler(DIST_DIR, true);
+    const upgrade = mock(() => false);
+
+    const result = handler(
+      new Request(`http://localhost${WATCH_RELOAD_PATH}`),
+      { upgrade },
+    );
+
+    expect(result).toBeInstanceOf(Response);
+    expect(result!.status).toBe(400);
+    expect(upgrade).toHaveBeenCalledTimes(1);
+  });
+
+  test('treats the watch reload path as a normal 404 when disabled', () => {
+    const handler = createDevServerFetchHandler(DIST_DIR, false);
+    const upgrade = mock(() => true);
+
+    const result = handler(
+      new Request(`http://localhost${WATCH_RELOAD_PATH}`),
+      { upgrade },
+    );
+
+    expect(result).toBeInstanceOf(Response);
+    expect(result!.status).toBe(404);
+    expect(upgrade).not.toHaveBeenCalled();
   });
 });

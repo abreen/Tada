@@ -34,7 +34,6 @@ export async function ensureHighlighter(
 export async function bundleWatchAssets(
   outputDir: string,
   siteVariables: SiteVariables,
-  wsPort: number,
 ): Promise<string[]> {
   const appAssets = await bundle(siteVariables, {
     mode: 'development',
@@ -45,7 +44,6 @@ export async function bundleWatchAssets(
     outdir: outputDir,
     naming: '[name].bundle.[ext]',
     sourcemap: 'inline',
-    define: { __WEBSOCKET_PORT__: String(wsPort) },
   });
   return [
     ...appAssets,

@@ -2,8 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { makeLogger } from './log';
 import { B } from './colors';
+import { WATCH_RELOAD_PATH, WATCH_RELOAD_TOPIC } from './watch/reload';
 
 const log = makeLogger(import.meta.url);
+
+interface ServerUpgradeTarget {
+  upgrade(req: Request): boolean;
+}
 
 export function resolvePathname(
   distDir: string,
@@ -40,13 +45,21 @@ export interface StartServerOptions {
   port?: number;
   distDir: string;
   onReady?: (port: number) => void;
+  watchReload?: { onClientOpen?: () => void; onClientClose?: () => void };
 }
 
-export function startServer(options: StartServerOptions): void {
-  const { port = 8080, distDir, onReady } = options;
-
-  function createResponse(req: Request): Response {
+export function createDevServerFetchHandler(
+  distDir: string,
+  watchReloadEnabled = false,
+) {
+  return (req: Request, server: ServerUpgradeTarget): Response | undefined => {
     const url = new URL(req.url);
+    if (watchReloadEnabled && url.pathname === WATCH_RELOAD_PATH) {
+      return server.upgrade(req)
+        ? undefined
+        : new Response('WebSocket upgrade error', { status: 400 });
+    }
+
     const result = resolvePathname(distDir, url.pathname);
     if (!result) {
       return new Response('Not Found', { status: 404 });
@@ -67,15 +80,30 @@ export function startServer(options: StartServerOptions): void {
     }
 
     return new Response(Bun.file(result.filePath), { headers });
-  }
+  };
+}
+
+export function startServer(options: StartServerOptions) {
+  const { port = 8080, distDir, onReady, watchReload } = options;
 
   try {
+    const fetch = createDevServerFetchHandler(distDir, Boolean(watchReload));
     const server = Bun.serve({
       port,
-      fetch: createResponse,
+      fetch,
       error(error: Error) {
         log.error`Request failed: ${error}`;
         return new Response('Internal Server Error', { status: 500 });
+      },
+      websocket: {
+        message() {},
+        open(ws) {
+          ws.subscribe(WATCH_RELOAD_TOPIC);
+          watchReload?.onClientOpen?.();
+        },
+        close() {
+          watchReload?.onClientClose?.();
+        },
       },
     });
 
@@ -83,6 +111,7 @@ export function startServer(options: StartServerOptions): void {
     if (onReady) {
       onReady(server.port!);
     }
+    return server;
   } catch (err) {
     log.error`Failed to start server on port ${port}: ${err}`;
     process.exit(1);

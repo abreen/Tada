@@ -1,4 +1,8 @@
-declare const __WEBSOCKET_PORT__: number;
+import {
+  WATCH_RELOAD_MESSAGE_REBUILDING,
+  WATCH_RELOAD_MESSAGE_RELOAD,
+  WATCH_RELOAD_PATH,
+} from './watch/reload';
 
 (function () {
   function setLoading(loading: boolean): void {
@@ -16,17 +20,20 @@ body.loading-cursor * {
 }`;
   document.head.appendChild(style);
 
-  const ws = new WebSocket(`ws://localhost:${__WEBSOCKET_PORT__}`);
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(
+    `${protocol}//${window.location.host}${WATCH_RELOAD_PATH}`,
+  );
 
   ws.onopen = () => {
     console.log('[watch-reload] connected to watcher');
   };
 
   ws.onmessage = event => {
-    if (event.data === 'rebuilding') {
+    if (event.data === WATCH_RELOAD_MESSAGE_REBUILDING) {
       console.log('[watch-reload] Rebuilding...');
       setLoading(true);
-    } else if (event.data === 'reload') {
+    } else if (event.data === WATCH_RELOAD_MESSAGE_RELOAD) {
       console.log('[watch-reload] Reloading page...');
       setLoading(false);
       window.history.scrollRestoration = 'auto';

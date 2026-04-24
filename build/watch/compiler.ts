@@ -44,12 +44,10 @@ export class TadaWatchCompiler implements WatchCompiler<
   TadaWatchPlan,
   TadaBuildMeta
 > {
-  private wsPort: number;
   private traceCache: TraceCache;
   private traceOptions: WatchTraceOptions;
 
-  constructor({ wsPort }: { wsPort: number }) {
-    this.wsPort = wsPort;
+  constructor() {
     this.traceCache = new Map();
     this.traceOptions = { toolAvailability: checkTraceToolAvailability() };
   }
@@ -79,7 +77,6 @@ export class TadaWatchCompiler implements WatchCompiler<
     CompilerBuildResult<TadaSnapshot, TadaBuildMeta>
   > {
     return buildFull({
-      wsPort: this.wsPort,
       traceCache: this.traceCache,
       traceOptions: this.traceOptions,
     });
@@ -105,7 +102,6 @@ export class TadaWatchCompiler implements WatchCompiler<
   ): Promise<CompilerBuildResult<TadaSnapshot, TadaBuildMeta>> {
     if (plan.kind === 'full' || !snapshot) {
       return buildFull({
-        wsPort: this.wsPort,
         traceCache: this.traceCache,
         traceOptions: this.traceOptions,
       });

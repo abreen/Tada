@@ -141,9 +141,6 @@ function printUsage() {
       console.log(
         '       [--port <n>]        HTTP server port (default: 8080)',
       );
-      console.log(
-        '       [--ws-port <n>]     WebSocket port for live reload (default: 35729)',
-      );
       continue;
     } else if (cmd === 'serve') {
       console.log(`  ${cmd.padEnd(18)} ${desc}`);
@@ -636,10 +633,7 @@ try {
       const { runWatch } = await import(
         path.join(packageDir, 'build/watch/index.ts')
       );
-      await runWatch({
-        httpPort: parsePortArg('--port'),
-        wsPort: parsePortArg('--ws-port'),
-      });
+      await runWatch({ httpPort: parsePortArg('--port') });
       break;
     }
 
