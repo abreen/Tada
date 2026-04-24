@@ -25,6 +25,7 @@ A static site generator. The successor to Presto.
 - Interactive execution traces via `renderTrace()`
   * Supports Java and Python source files
   * Renders step-by-step source highlighting, output, and memory diagrams
+- Slides mode: separate content by `---` and present sections as full-screen slides
 - PDF files are copied into `dist/`
   - Text of each PDF page is extracted using `mutool` (if present) and indexed
 - External link handling (special visual treatment for external links)
@@ -315,6 +316,7 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `author` | Author handle (e.g. `jsmith`) resolved to a full object via the authors config |
 | `description` | Meta description for the page |
 | `toc` | Set to `true` to show a table of contents |
+| `slides` | Set to `true` on Markdown pages to treat top-level `---` as slide separators and add presentation controls |
 | `parent` & `parentLabel` | URL and label for a breadcrumb link displayed above the title |
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
 
