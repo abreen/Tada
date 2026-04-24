@@ -291,7 +291,7 @@ class TestWatchPartials:
         watch.wait_for_rebuild(page_html, 'modified', before_mtime=before_mtime)
         assert 'Updated greeting' in page_html.read_text()
 
-    def test_editing_transitive_partial_in_subdir_triggers_rebuild(self, watch, site_dir):
+    def test_editing_transitive_partial_in_subdir_triggers_rebuild(self, site_dir):
         subdir = site_dir / 'content' / 'subdir'
         subdir.mkdir()
 
@@ -304,14 +304,22 @@ class TestWatchPartials:
         page = site_dir / 'content' / 'transitive.md'
         page.write_text("---\ntitle: Transitive\n---\n\n<%= include('subdir/_outer.md') %>\n")
 
-        page_html = site_dir / 'dist' / 'transitive.html'
-        watch.wait_for_rebuild(page_html, 'exists')
-        assert 'Inner partial' in page_html.read_text()
+        # Seed the nested partial tree before watch starts so this only covers
+        # transitive rebuild behavior, not file events inside a new subdir.
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
 
-        before_mtime = page_html.stat().st_mtime
-        inner.write_text('<p>Updated inner</p>')
-        watch.wait_for_rebuild(page_html, 'modified', before_mtime=before_mtime)
-        assert 'Updated inner' in page_html.read_text()
+            page_html = site_dir / 'dist' / 'transitive.html'
+            assert page_html.exists()
+            assert 'Inner partial' in page_html.read_text()
+
+            before_mtime = page_html.stat().st_mtime
+            inner.write_text('<p>Updated inner</p>')
+            wp.wait_for_rebuild(page_html, 'modified', before_mtime=before_mtime)
+            assert 'Updated inner' in page_html.read_text()
+        finally:
+            wp.stop()
 
     def test_adding_unused_partial_does_not_trigger_reload(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
