@@ -191,7 +191,7 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
     - name: Install dependencies
-      run: sudo apt install -y mupdf-tools openjdk-25-jdk-headless
+      run: sudo apt install -y mupdf-tools openjdk-25-jdk-headless yq
 
     - name: Set up Java 25
       run: |
@@ -229,9 +229,10 @@ jobs:
 
     - name: Add coverage vars to site config
       run: |
-        jq --arg pct "${{ steps.coverage.outputs.percent }}" \
-           '.vars.testCoveragePercent = ($pct | tonumber) | .vars.testCoverageUrl = "/coverage/index.html"' \
-           example/site.prod.json > tmp.json && mv tmp.json example/site.prod.json
+        yq --yaml-output --in-place --arg pct '${{ steps.coverage.outputs.percent }}' '
+          .vars.testCoveragePercent = ($pct | tonumber) |
+          .vars.testCoverageUrl = "/coverage/index.html"
+        ' example/site.prod.yaml
 
     - name: Copy coverage report into public
       run: cp -r coverage/report/ example/public/coverage/
