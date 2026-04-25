@@ -6,7 +6,6 @@ interface TraceToolbarState {
 type PresentationMode = 'normal' | 'fullscreen';
 
 interface SlidesPresentDetail {
-  mode?: PresentationMode;
   slideIndex?: number;
 }
 
@@ -50,10 +49,10 @@ export default function mountSlides(window: Window): void | (() => void) {
   const presentButton = document.querySelector(
     '[data-slides-present]',
   ) as HTMLButtonElement | null;
-  const presentFullscreenButton = document.querySelector(
-    '[data-slides-present-fullscreen]',
-  ) as HTMLButtonElement | null;
-  const rootScopeButton = presentButton ?? presentFullscreenButton;
+  const fullscreenCheckbox = document.querySelector(
+    '[data-slides-fullscreen]',
+  ) as HTMLInputElement | null;
+  const rootScopeButton = presentButton ?? fullscreenCheckbox;
   const scopedRoot = rootScopeButton
     ?.closest('main')
     ?.querySelector('[data-slides-root]');
@@ -83,8 +82,8 @@ export default function mountSlides(window: Window): void | (() => void) {
   if (presentButton) {
     presentButton.disabled = false;
   }
-  if (presentFullscreenButton) {
-    presentFullscreenButton.disabled = false;
+  if (fullscreenCheckbox) {
+    fullscreenCheckbox.disabled = false;
   }
 
   const overlay = document.createElement('div');
@@ -334,10 +333,6 @@ export default function mountSlides(window: Window): void | (() => void) {
     focusSlide(slides[activeIndex]);
   }
 
-  function handlePresentClick(): void {
-    enterPresentation('normal', 0);
-  }
-
   async function handlePresentFullscreenClick(slideIndex = 0): Promise<void> {
     enterPresentation('fullscreen', slideIndex);
 
@@ -353,8 +348,17 @@ export default function mountSlides(window: Window): void | (() => void) {
     }
   }
 
-  function handlePresentFullscreenButtonClick(): void {
-    void handlePresentFullscreenClick(0);
+  function startPresentation(slideIndex = 0): void {
+    if (fullscreenCheckbox?.checked === true) {
+      void handlePresentFullscreenClick(slideIndex);
+      return;
+    }
+
+    enterPresentation('normal', slideIndex);
+  }
+
+  function handlePresentClick(): void {
+    startPresentation(0);
   }
 
   function handleCloseClick(): void {
@@ -452,19 +456,10 @@ export default function mountSlides(window: Window): void | (() => void) {
         ? detail.slideIndex
         : 0;
 
-    if (detail.mode === 'fullscreen') {
-      void handlePresentFullscreenClick(slideIndex);
-      return;
-    }
-
-    enterPresentation('normal', slideIndex);
+    startPresentation(slideIndex);
   }
 
   presentButton?.addEventListener('click', handlePresentClick);
-  presentFullscreenButton?.addEventListener(
-    'click',
-    handlePresentFullscreenButtonClick,
-  );
   closeButton.addEventListener('click', handleCloseClick);
   document.addEventListener('fullscreenchange', handleFullscreenChange);
   window.addEventListener('keydown', handleKeydown);
@@ -475,10 +470,6 @@ export default function mountSlides(window: Window): void | (() => void) {
   return () => {
     exitPresentation();
     presentButton?.removeEventListener('click', handlePresentClick);
-    presentFullscreenButton?.removeEventListener(
-      'click',
-      handlePresentFullscreenButtonClick,
-    );
     closeButton.removeEventListener('click', handleCloseClick);
     document.removeEventListener('fullscreenchange', handleFullscreenChange);
     window.removeEventListener('keydown', handleKeydown);

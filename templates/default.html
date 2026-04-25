@@ -6,9 +6,10 @@
     <% if (page.slides) { %>
     <div class="slides-header" data-pagefind-ignore>
       <button type="button" data-slides-present disabled>Present</button>
-      <button type="button" data-slides-present-fullscreen disabled>
-        Present (Full Screen)
-      </button>
+      <label>
+        <input type="checkbox" data-slides-fullscreen checked disabled>
+        Full screen
+      </label>
     </div>
     <% } %>
     <%= content %>

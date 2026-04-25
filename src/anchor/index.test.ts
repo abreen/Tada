@@ -135,7 +135,7 @@ describe('anchor', () => {
       ) as HTMLButtonElement
     ).click();
 
-    expect(detail).toEqual({ mode: 'fullscreen', slideIndex: 3 });
+    expect(detail).toEqual({ slideIndex: 3 });
   });
 
   test('does nothing when no headings exist', () => {

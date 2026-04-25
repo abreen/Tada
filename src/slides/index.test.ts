@@ -24,7 +24,7 @@ function createSlidesWindow(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
+      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -52,7 +52,7 @@ function createSlidesWindowWithInput(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
+      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -70,7 +70,7 @@ function createSlidesWindowWithMultipleTraces(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
+      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -122,7 +122,7 @@ function createSingleSlideTraceWindow(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
+      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -145,7 +145,7 @@ function createSlidesWindowWithQuestionOnLastSlide(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <button type="button" data-slides-present-fullscreen>Present (Full Screen)</button>
+      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -253,22 +253,23 @@ function setCloseButtonBottom(win: Win, bottom: number): void {
 }
 
 describe('slides presentation controller', () => {
-  test('mount re-enables Present buttons that render disabled', () => {
+  test('mount re-enables Present and Full screen controls that render disabled', () => {
     const win = createSlidesWindow();
     const present = win.document.querySelector(
       '[data-slides-present]',
     ) as HTMLButtonElement;
-    const presentFullscreen = win.document.querySelector(
-      '[data-slides-present-fullscreen]',
-    ) as HTMLButtonElement;
+    const fullscreen = win.document.querySelector(
+      '[data-slides-fullscreen]',
+    ) as HTMLInputElement;
 
     present.disabled = true;
-    presentFullscreen.disabled = true;
+    fullscreen.disabled = true;
 
     const cleanup = mount(win);
 
     expect(present.disabled).toBe(false);
-    expect(presentFullscreen.disabled).toBe(false);
+    expect(fullscreen.disabled).toBe(false);
+    expect(fullscreen.checked).toBe(true);
 
     cleanup?.();
   });
@@ -403,15 +404,15 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
-  test('clicking Present (Full Screen) requests browser fullscreen and starts at slide 0', async () => {
+  test('clicking Present requests browser fullscreen and starts at slide 0 when Full screen is checked', async () => {
     const win = createSlidesWindow();
     const fullscreenApi = installFullscreenApi(win);
     const cleanup = mount(win);
 
-    const presentFullscreen = win.document.querySelector(
-      '[data-slides-present-fullscreen]',
+    const present = win.document.querySelector(
+      '[data-slides-present]',
     ) as HTMLButtonElement;
-    presentFullscreen.click();
+    present.click();
     await Promise.resolve();
 
     expect(fullscreenApi.requestCount).toBe(1);
@@ -425,7 +426,33 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
-  test('tada:slides-present starts fullscreen presentation at the requested slide', async () => {
+  test('clicking Present starts normal presentation when Full screen is unchecked', async () => {
+    const win = createSlidesWindow();
+    const fullscreenApi = installFullscreenApi(win);
+    const cleanup = mount(win);
+
+    const fullscreen = win.document.querySelector(
+      '[data-slides-fullscreen]',
+    ) as HTMLInputElement;
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    fullscreen.checked = false;
+    present.click();
+    await Promise.resolve();
+
+    expect(fullscreenApi.requestCount).toBe(0);
+    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('0');
+
+    cleanup?.();
+  });
+
+  test('tada:slides-present starts fullscreen presentation at the requested slide when Full screen is checked', async () => {
     const win = createSlidesWindow();
     const fullscreenApi = installFullscreenApi(win);
     const cleanup = mount(win);
@@ -434,12 +461,41 @@ describe('slides presentation controller', () => {
     root.dispatchEvent(
       new win.CustomEvent('tada:slides-present', {
         bubbles: true,
-        detail: { mode: 'fullscreen', slideIndex: 2 },
+        detail: { slideIndex: 2 },
       }),
     );
     await Promise.resolve();
 
     expect(fullscreenApi.requestCount).toBe(1);
+    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('2');
+
+    cleanup?.();
+  });
+
+  test('tada:slides-present starts normal presentation at the requested slide when Full screen is unchecked', async () => {
+    const win = createSlidesWindow();
+    const fullscreenApi = installFullscreenApi(win);
+    const cleanup = mount(win);
+
+    const fullscreen = win.document.querySelector(
+      '[data-slides-fullscreen]',
+    ) as HTMLInputElement;
+    const root = win.document.querySelector('[data-slides-root]')!;
+    fullscreen.checked = false;
+    root.dispatchEvent(
+      new win.CustomEvent('tada:slides-present', {
+        bubbles: true,
+        detail: { slideIndex: 2 },
+      }),
+    );
+    await Promise.resolve();
+
+    expect(fullscreenApi.requestCount).toBe(0);
     expect(win.document.body.classList.contains('is-presenting')).toBe(true);
     expect(
       win.document
@@ -459,7 +515,7 @@ describe('slides presentation controller', () => {
     root.dispatchEvent(
       new win.CustomEvent('tada:slides-present', {
         bubbles: true,
-        detail: { mode: 'fullscreen', slideIndex: 99 },
+        detail: { slideIndex: 99 },
       }),
     );
     await Promise.resolve();
@@ -481,7 +537,7 @@ describe('slides presentation controller', () => {
     root.dispatchEvent(
       new win.CustomEvent('tada:slides-present', {
         bubbles: true,
-        detail: { mode: 'fullscreen', slideIndex: 1 },
+        detail: { slideIndex: 1 },
       }),
     );
     await Promise.resolve();
@@ -511,7 +567,7 @@ describe('slides presentation controller', () => {
     root.dispatchEvent(
       new win.CustomEvent('tada:slides-present', {
         bubbles: true,
-        detail: { mode: 'fullscreen', slideIndex: 2 },
+        detail: { slideIndex: 2 },
       }),
     );
     await Promise.resolve();
@@ -533,10 +589,10 @@ describe('slides presentation controller', () => {
     installFullscreenApi(win);
     const cleanup = mount(win);
 
-    const presentFullscreen = win.document.querySelector(
-      '[data-slides-present-fullscreen]',
+    const present = win.document.querySelector(
+      '[data-slides-present]',
     ) as HTMLButtonElement;
-    presentFullscreen.click();
+    present.click();
     await Promise.resolve();
 
     const overlay = win.document.querySelector(
@@ -556,10 +612,10 @@ describe('slides presentation controller', () => {
     const fullscreenApi = installFullscreenApi(win);
     const cleanup = mount(win);
 
-    const presentFullscreen = win.document.querySelector(
-      '[data-slides-present-fullscreen]',
+    const present = win.document.querySelector(
+      '[data-slides-present]',
     ) as HTMLButtonElement;
-    presentFullscreen.click();
+    present.click();
     await Promise.resolve();
     await (
       win.document as Document & { exitFullscreen: () => Promise<void> }
@@ -824,7 +880,7 @@ describe('slides presentation controller', () => {
       .dispatchEvent(
         new win.CustomEvent('tada:slides-present', {
           bubbles: true,
-          detail: { mode: 'fullscreen', slideIndex: 1 },
+          detail: { slideIndex: 1 },
         }),
       );
     expect(win.document.body.classList.contains('is-presenting')).toBe(false);

@@ -68,9 +68,9 @@ class TestSlidesFeature:
             r'<button type="button" data-slides-present(?:="")? disabled(?:="")?>Present</button>',
             slides_html,
         )
-        slide_fullscreen_button_match = re.search(
-            r'<button type="button" data-slides-present-fullscreen(?:="")? '
-            r'disabled(?:="")?>\s*Present \(Full Screen\)\s*</button>',
+        slide_fullscreen_checkbox_match = re.search(
+            r'<input type="checkbox" data-slides-fullscreen(?:="")? '
+            r'checked(?:="")? disabled(?:="")?>\s*Full screen',
             slides_html,
         )
 
@@ -81,16 +81,16 @@ class TestSlidesFeature:
         assert slide_main_match is not None
         assert slide_header_match is not None
         assert slide_button_match is not None
-        assert slide_fullscreen_button_match is not None
+        assert slide_fullscreen_checkbox_match is not None
         assert slide_main_match.start() < slide_header_match.start()
         assert slide_header_match.start() < slide_button_match.start()
-        assert slide_button_match.end() < slide_fullscreen_button_match.start()
-        assert slide_fullscreen_button_match.end() < slides_html.index(
+        assert slide_button_match.end() < slide_fullscreen_checkbox_match.start()
+        assert slide_fullscreen_checkbox_match.end() < slides_html.index(
             '</div>',
             slide_header_match.start(),
         )
 
         assert '<hr' in plain_html
         assert 'data-slides-present' not in plain_html
-        assert 'data-slides-present-fullscreen' not in plain_html
+        assert 'data-slides-fullscreen' not in plain_html
         assert 'data-slides-root' not in plain_html

@@ -14,10 +14,10 @@ an HTML source file sets it.
 
 This does not change the page template. The page still builds as a normal
 default page with its usual heading, metadata, and body content. Slide pages
-add `Present` and `Present (Full Screen)` buttons in a `div.slides-header`
-block at the top of the page body. These buttons render disabled in the HTML
-and are re-enabled by the client-side slides component when JavaScript is
-available. Touch/mobile browsers hide this header.
+add a `Present` button and a checked `Full screen` checkbox in a
+`div.slides-header` block at the top of the page body. These controls render
+disabled in the HTML and are re-enabled by the client-side slides component
+when JavaScript is available. Touch/mobile browsers hide this header.
 
 ## Build output
 
@@ -41,15 +41,16 @@ time in a fixed viewport-sized layer above the rest of the page. Presentation
 slides scale their content up with the viewport, with minimum and maximum
 limits so they remain readable on both small and very large screens.
 
-Clicking `Present (Full Screen)` starts the same slide presentation in the
-browser's native Fullscreen API mode. In that mode the slide toolbar never
-appears.
+When `Full screen` is checked, clicking `Present` starts the presentation in
+the browser's native Fullscreen API mode. In that mode the slide toolbar never
+appears. When `Full screen` is unchecked, `Present` starts the same
+presentation in normal mode.
 
 Slide title headings (`div.slide > h2:first-child`) include a hover/focus
-`Present from this slide` icon button. It opens the same fullscreen
-presentation view from that slide. If the browser Fullscreen API is unavailable
-or rejects the request, presentation remains active in normal mode at the
-requested slide.
+`Present from this slide` icon button. It opens the same presentation view from
+that slide, using the current `Full screen` checkbox state. If fullscreen is
+requested but the browser Fullscreen API is unavailable or rejects the request,
+presentation remains active in normal mode at the requested slide.
 
 While presenting, the site header, title block, table of contents, footer, page
 file header, and trace toolbars are hidden. The `Close` button appears only
@@ -78,6 +79,6 @@ Going backward one slide or trace step hides it again.
 
 The slides component listens on the slide root for a bubbling
 `tada:slides-present` custom event. The event detail is
-`{ mode: 'fullscreen', slideIndex: number }`; `slideIndex` is clamped to the
-available slides. This internal event is used by the slide-heading presentation
-buttons.
+`{ slideIndex: number }`; `slideIndex` is clamped to the available slides and
+the presentation mode is read from the `Full screen` checkbox. This internal
+event is used by the slide-heading presentation buttons.

@@ -24,8 +24,8 @@ them in the bundle. Shared utilities are in `src/util.ts`.
   for newer validators and offers an in-place refresh
 - **Slides**: page-local presentation mode for Markdown pages with
   `slides: true`; it reads slide wrapper markup, opens from a `Present` button,
-  opens from slide-heading presentation buttons via a local custom event, and
-  shows one slide at a time with keyboard and click navigation (see
-  [Slides Mode](slides.md))
+  chooses fullscreen from a `Full screen` checkbox, opens from slide-heading
+  presentation buttons via a local custom event, and shows one slide at a time
+  with keyboard and click navigation (see [Slides Mode](slides.md))
 - **Traces**: widget that renders execution traces generated at build time and
   renders a stack and heap memory diagram (see [Traces](traces.md))

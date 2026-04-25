@@ -6,6 +6,7 @@ test.describe('slides presentation mode', () => {
   }) => {
     await page.goto('/slides.html');
 
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
     await page.getByRole('button', { name: 'Present', exact: true }).click();
 
     const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
@@ -160,7 +161,8 @@ test.describe('slides presentation mode', () => {
   }) => {
     await page.goto('/slides.html');
 
-    await page.getByRole('button', { name: 'Present (Full Screen)' }).click();
+    await page.getByRole('checkbox', { name: 'Full screen' }).check();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
 
     const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
     const closeButton = page.locator('[data-slides-close]');
@@ -199,6 +201,6 @@ test.describe('slides controls on touch browsers', () => {
 
     await expect(page.locator('.slides-header')).toBeHidden();
     await expect(page.locator('[data-slides-present]')).toBeHidden();
-    await expect(page.locator('[data-slides-present-fullscreen]')).toBeHidden();
+    await expect(page.locator('[data-slides-fullscreen]')).toBeHidden();
   });
 });

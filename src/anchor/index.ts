@@ -113,7 +113,7 @@ export default (window: Window) => {
       button.dispatchEvent(
         new view.CustomEvent('tada:slides-present', {
           bubbles: true,
-          detail: { mode: 'fullscreen', slideIndex },
+          detail: { slideIndex },
         }),
       );
     };
