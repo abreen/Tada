@@ -1,6 +1,20 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('slides presentation mode', () => {
+  test('Full screen checkbox can be toggled', async ({ page }) => {
+    await page.goto('/slides.html');
+
+    const checkbox = page.getByRole('checkbox', { name: 'Full screen' });
+    await expect(checkbox).toBeVisible();
+    await expect(checkbox).toBeChecked();
+
+    await checkbox.uncheck();
+    await expect(checkbox).not.toBeChecked();
+
+    await checkbox.check();
+    await expect(checkbox).toBeChecked();
+  });
+
   test('presentation mode fills the viewport and supports browser interactions', async ({
     page,
   }) => {
