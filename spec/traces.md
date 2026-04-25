@@ -53,5 +53,5 @@ While presenting, the trace toolbar is hidden and restored when presentation
 ends. If no trace on the active slide can move in the requested direction,
 Slides Mode advances to the next or previous slide as usual. Each time Slides
 Mode starts, ready trace widgets are reset to their first step. The trace SVG
-diagram scales uniformly to match the `125%` presentation sizing and returns to
-its normal size when Slides Mode ends.
+diagram scales uniformly to match the resolved Slides Mode font scale and
+returns to its normal size when Slides Mode ends.

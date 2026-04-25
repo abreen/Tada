@@ -15,8 +15,6 @@ interface WidgetElements {
   diagram: HTMLElement;
 }
 
-const PRESENTATION_SCALE = 1.25;
-
 function getStep(state: WidgetState): TraceChunkEntry {
   const chunkIndex = Math.floor(state.currentStep / state.manifest.chunkSize);
   const offset = state.currentStep % state.manifest.chunkSize;
@@ -138,6 +136,37 @@ function updateStepControls(
   }
 }
 
+function parsePositiveNumber(
+  rawValue: string | null | undefined,
+): number | null {
+  if (!rawValue) {
+    return null;
+  }
+
+  const parsed = Number.parseFloat(rawValue);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getPresentationScale(diagram: HTMLElement, doc: Document): number {
+  if (!doc.body.classList.contains('is-presenting')) {
+    return 1;
+  }
+
+  const view = doc.defaultView;
+  const traceWidget = diagram.closest('.trace-widget') as HTMLElement | null;
+  const traceFontSize = parsePositiveNumber(
+    traceWidget && view ? view.getComputedStyle(traceWidget).fontSize : null,
+  );
+  const baseFontSize = parsePositiveNumber(
+    view ? view.getComputedStyle(doc.body).fontSize : null,
+  );
+  if (traceFontSize && baseFontSize) {
+    return traceFontSize / baseFontSize;
+  }
+
+  return 1;
+}
+
 function scaleDiagramSvg(diagram: HTMLElement, doc: Document): void {
   const svg = diagram.querySelector('.trace-memory') as SVGElement | null;
   if (!svg) {
@@ -159,9 +188,7 @@ function scaleDiagramSvg(diagram: HTMLElement, doc: Document): void {
     return;
   }
 
-  const scale = doc.body.classList.contains('is-presenting')
-    ? PRESENTATION_SCALE
-    : 1;
+  const scale = getPresentationScale(diagram, doc);
   svg.setAttribute('width', String(baseWidth * scale));
   svg.setAttribute('height', String(baseHeight * scale));
 }

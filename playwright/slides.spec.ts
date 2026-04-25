@@ -21,21 +21,28 @@ test.describe('slides presentation mode', () => {
     await expect(closeButton).toBeHidden();
 
     const metrics = await activeSlide.evaluate(slide => {
+      const deck = slide.closest('.slide-deck') as HTMLElement;
       const style = window.getComputedStyle(slide);
       const rect = slide.getBoundingClientRect();
+      const deckRect = deck.getBoundingClientRect();
 
       return {
         position: style.position,
         width: rect.width,
         height: rect.height,
+        deckWidth: deckRect.width,
+        deckHeight: deckRect.height,
         innerWidth: window.innerWidth,
         innerHeight: window.innerHeight,
       };
     });
 
     expect(metrics.position).toBe('fixed');
-    expect(metrics.width).toBe(metrics.innerWidth);
-    expect(metrics.height).toBe(metrics.innerHeight);
+    expect(metrics.deckWidth).toBe(metrics.innerWidth);
+    expect(metrics.deckHeight).toBe(metrics.innerHeight);
+    expect(metrics.width / metrics.height).toBeCloseTo(4 / 3, 2);
+    expect(metrics.width).toBeLessThanOrEqual(metrics.innerWidth);
+    expect(metrics.height).toBeLessThanOrEqual(metrics.innerHeight);
 
     const overlayStyles = await overlay.evaluate(node => {
       const style = window.getComputedStyle(node);
@@ -113,13 +120,6 @@ test.describe('slides presentation mode', () => {
         ),
       )
       .toBe(true);
-    await expect
-      .poll(async () => page.locator('.trace-memory').getAttribute('width'))
-      .toBe('800');
-    await expect
-      .poll(async () => page.locator('.trace-memory').getAttribute('height'))
-      .toBe('600');
-
     const traceLayout = await activeSlide
       .locator('.trace-body')
       .evaluate(traceBody => {
@@ -153,12 +153,6 @@ test.describe('slides presentation mode', () => {
     await expect(activeSlide).toContainText('Middle');
     await expect(closeButton).toBeHidden();
     await page.keyboard.press('Escape');
-    await expect
-      .poll(async () => page.locator('.trace-memory').getAttribute('width'))
-      .toBe('640');
-    await expect
-      .poll(async () => page.locator('.trace-memory').getAttribute('height'))
-      .toBe('480');
   });
 
   test('fullscreen presentation enters native fullscreen and never shows the toolbar', async ({

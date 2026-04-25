@@ -34,12 +34,13 @@ const defaultChunk = makeChunk([
 
 function widgetHtml(
   manifestUrl: string | null = '/trace/manifest.json',
+  extraAttrs = '',
 ): string {
   const manifestAttr = manifestUrl
     ? ` data-trace-manifest="${manifestUrl}"`
     : '';
   return (
-    `<div class="trace-widget"${manifestAttr}>` +
+    `<div class="trace-widget"${manifestAttr}${extraAttrs}>` +
     '<div class="trace-source">' +
     '<span class="line-number" data-line="1">1</span>' +
     '<span class="line-number" data-line="2">2</span>' +
@@ -218,7 +219,7 @@ describe('trace', () => {
     expect(diagram.innerHTML).toBe('<svg>step0</svg>');
   });
 
-  test('scales the current trace SVG when presentation mode starts and restores it on exit', async () => {
+  test('scales the current trace SVG from the slides scale when presentation mode starts and restores it on exit', async () => {
     const chunk = makeChunk([
       {
         line: 1,
@@ -230,7 +231,13 @@ describe('trace', () => {
       '/trace/chunk-0.json': chunk,
     });
 
-    const win = createWindow(widgetHtml());
+    const win = createWindow(
+      `<div class="slide" style="font-size: 24px">${widgetHtml(
+        '/trace/manifest.json',
+        ' style="font-size: 20px"',
+      )}</div>`,
+    );
+    win.document.body.style.fontSize = '16px';
     mount(win);
     await flush();
 
@@ -267,8 +274,14 @@ describe('trace', () => {
       '/trace/chunk-0.json': chunk,
     });
 
-    const win = createWindow(widgetHtml());
+    const win = createWindow(
+      `<div class="slide" style="font-size: 24px">${widgetHtml(
+        '/trace/manifest.json',
+        ' style="font-size: 20px"',
+      )}</div>`,
+    );
     win.document.body.classList.add('is-presenting');
+    win.document.body.style.fontSize = '16px';
     mount(win);
     await flush();
 

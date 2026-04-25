@@ -235,12 +235,17 @@ ul.styled-list {
 
 ul.styled-list {
   // Make bullet points slightly bigger
-  font-size: 1.2rem;
+  font-size: 1.2em;
 }
 
-ol li .styled-list-item,
+ol li .styled-list-item {
+  font-size: 1em;
+  font-weight: var(--font-weight);
+  color: var(--fg-color);
+}
+
 ul li .styled-list-item {
-  font-size: 1rem;
+  font-size: 0.8333em;
   font-weight: var(--font-weight);
   color: var(--fg-color);
 }

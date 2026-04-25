@@ -38,7 +38,8 @@ breaks and literal HTML `<hr>` tags that would otherwise appear in the page.
 Clicking `Present` enables a client-side presentation view without rebuilding
 the page. Slides Mode applies `body.is-presenting` and shows one slide at a
 time in a fixed viewport-sized layer above the rest of the page. Presentation
-slides increase their content font size to `125%`.
+slides scale their content up with the viewport, with minimum and maximum
+limits so they remain readable on both small and very large screens.
 
 Clicking `Present (Full Screen)` starts the same slide presentation in the
 browser's native Fullscreen API mode. In that mode the slide toolbar never
