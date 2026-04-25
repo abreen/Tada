@@ -36,7 +36,8 @@ The rendered widget uses a vertical layout: the memory diagram on top, the
 syntax-highlighted source below it, and program output at the bottom when the
 trace has output to show. A toolbar with step buttons and a counter lets the
 user navigate through execution steps. Chunks are fetched on demand as the user
-steps forward.
+steps forward. Trace controls render disabled and are enabled by the
+client-side component after the trace data is ready.
 
 The source panel highlights the current line. The memory diagram is rendered as
 SVG and depicts stack frames with local variables, heap objects (arrays, objects,

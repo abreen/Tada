@@ -197,4 +197,17 @@ class B {
     expect(html).toContain('class="trace-content"');
     expect(html).not.toContain('trace-output');
   });
+
+  test('rendered widget disables controls until the client mounts', () => {
+    const html = renderTraceWidgetHtml({
+      highlightedSource: '<pre>class Test {}</pre>',
+      manifestUrl: '/_traces/Test/manifest.json',
+      totalSteps: 3,
+    });
+
+    expect(html).toContain('class="trace-widget"');
+    expect(html).toContain('1/3');
+    expect(html).toContain('trace-next" disabled tabindex="-1"');
+    expect(html).toContain('trace-last" disabled tabindex="-1"');
+  });
 });

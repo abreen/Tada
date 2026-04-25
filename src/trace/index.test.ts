@@ -42,11 +42,11 @@ function widgetHtml(
   return (
     `<div class="trace-widget"${manifestAttr}${extraAttrs}>` +
     '<div class="trace-controls">' +
-    '<button class="trace-first">First</button>' +
-    '<button class="trace-prev">Prev</button>' +
+    '<button class="trace-first" disabled tabindex="-1">First</button>' +
+    '<button class="trace-prev" disabled tabindex="-1">Prev</button>' +
     '<span class="trace-step-counter"></span>' +
-    '<button class="trace-next">Next</button>' +
-    '<button class="trace-last">Last</button>' +
+    '<button class="trace-next" disabled tabindex="-1">Next</button>' +
+    '<button class="trace-last" disabled tabindex="-1">Last</button>' +
     '</div>' +
     '<div class="trace-content">' +
     '<div class="trace-diagram"></div>' +
@@ -197,6 +197,24 @@ describe('trace', () => {
     const last = win.document.querySelector('.trace-last') as HTMLButtonElement;
     expect(next.disabled).toBe(false);
     expect(last.disabled).toBe(false);
+  });
+
+  test('re-enables initial navigation buttons that render disabled', async () => {
+    setupDefaultFetch();
+    const win = createWindow(widgetHtml());
+    const next = win.document.querySelector('.trace-next') as HTMLButtonElement;
+    const last = win.document.querySelector('.trace-last') as HTMLButtonElement;
+
+    expect(next.disabled).toBe(true);
+    expect(last.disabled).toBe(true);
+
+    mount(win);
+    await flush();
+
+    expect(next.disabled).toBe(false);
+    expect(last.disabled).toBe(false);
+    expect(next.tabIndex).toBe(0);
+    expect(last.tabIndex).toBe(-1);
   });
 
   test('highlights the active source line', async () => {

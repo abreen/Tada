@@ -187,12 +187,8 @@ export function renderTraceWidgetHtml({
     `<button class="trace-btn trace-first" disabled tabindex="-1" aria-label="First step" title="First step">${iconFirst}</button>` +
     `<button class="trace-btn trace-prev" disabled tabindex="-1" aria-label="Previous step" title="Previous step">${iconPrev}</button>` +
     `<span class="trace-step-counter"${counterStyle}>${counterContent}</span>` +
-    (disabled
-      ? `<button class="trace-btn trace-next" disabled tabindex="-1" aria-label="Next step" title="Next step">${iconNext}</button>`
-      : `<button class="trace-btn trace-next" aria-label="Next step" title="Next step">${iconNext}</button>`) +
-    (disabled
-      ? `<button class="trace-btn trace-last" disabled tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`
-      : `<button class="trace-btn trace-last" tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`);
+    `<button class="trace-btn trace-next" disabled tabindex="-1" aria-label="Next step" title="Next step">${iconNext}</button>` +
+    `<button class="trace-btn trace-last" disabled tabindex="-1" aria-label="Last step" title="Last step">${iconLast}</button>`;
   const wrapperAttrs = manifestUrl
     ? ` data-trace-manifest="${manifestUrl}"`
     : '';
