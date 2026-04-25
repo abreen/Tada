@@ -33,9 +33,10 @@ response), the widget stays in its initial state without crashing.
 ## Widget
 
 The rendered widget uses a vertical layout: the memory diagram on top, the
-syntax-highlighted source below it, and program output at the bottom. A toolbar
-with step buttons and a counter lets the user navigate through execution steps.
-Chunks are fetched on demand as the user steps forward.
+syntax-highlighted source below it, and program output at the bottom when the
+trace has output to show. A toolbar with step buttons and a counter lets the
+user navigate through execution steps. Chunks are fetched on demand as the user
+steps forward.
 
 The source panel highlights the current line. The memory diagram is rendered as
 SVG and depicts stack frames with local variables, heap objects (arrays, objects,

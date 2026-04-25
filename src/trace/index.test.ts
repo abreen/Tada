@@ -41,11 +41,6 @@ function widgetHtml(
     : '';
   return (
     `<div class="trace-widget"${manifestAttr}${extraAttrs}>` +
-    '<div class="trace-source">' +
-    '<span class="line-number" data-line="1">1</span>' +
-    '<span class="line-number" data-line="2">2</span>' +
-    '<span class="line-number" data-line="3">3</span>' +
-    '</div>' +
     '<div class="trace-controls">' +
     '<button class="trace-first">First</button>' +
     '<button class="trace-prev">Prev</button>' +
@@ -53,8 +48,14 @@ function widgetHtml(
     '<button class="trace-next">Next</button>' +
     '<button class="trace-last">Last</button>' +
     '</div>' +
-    '<pre class="trace-output"></pre>' +
+    '<div class="trace-content">' +
     '<div class="trace-diagram"></div>' +
+    '<div class="trace-source">' +
+    '<span class="line-number" data-line="1">1</span>' +
+    '<span class="line-number" data-line="2">2</span>' +
+    '<span class="line-number" data-line="3">3</span>' +
+    '</div>' +
+    '</div>' +
     '</div>'
   );
 }
@@ -118,7 +119,7 @@ describe('trace', () => {
 
     expect(counter!.textContent).toBe('');
     expect(diagram!.innerHTML).toBe('');
-    expect(output!.textContent).toBe('');
+    expect(output).toBeNull();
     expect(win.document.querySelector('.trace-line-active')).toBeNull();
   });
 
@@ -214,6 +215,8 @@ describe('trace', () => {
     const win = createWindow(widgetHtml());
     mount(win);
     await flush();
+
+    expect(win.document.querySelector('.trace-output')).toBeNull();
 
     const diagram = win.document.querySelector('.trace-diagram') as HTMLElement;
     expect(diagram.innerHTML).toBe('<svg>step0</svg>');
@@ -313,6 +316,7 @@ describe('trace', () => {
     await flush();
 
     const output = win.document.querySelector('.trace-output') as HTMLElement;
+    expect(output).not.toBeNull();
     expect(output.textContent).toBe('initial output');
   });
 
@@ -365,15 +369,37 @@ describe('trace', () => {
     await flush();
 
     const next = win.document.querySelector('.trace-next') as HTMLButtonElement;
-    const output = win.document.querySelector('.trace-output') as HTMLElement;
+    expect(win.document.querySelector('.trace-output')).toBeNull();
 
     next.click();
     await flush();
+    let output = win.document.querySelector('.trace-output') as HTMLElement;
+    expect(output).not.toBeNull();
     expect(output.textContent).toBe('hello');
 
     next.click();
     await flush();
+    output = win.document.querySelector('.trace-output') as HTMLElement;
     expect(output.textContent).toBe('hello world');
+  });
+
+  test('removes output when navigating back to a step with no accumulated stdout', async () => {
+    setupDefaultFetch();
+    const win = createWindow(widgetHtml());
+    mount(win);
+    await flush();
+
+    const next = win.document.querySelector('.trace-next') as HTMLButtonElement;
+    next.click();
+    await flush();
+
+    expect(win.document.querySelector('.trace-output')).not.toBeNull();
+
+    const prev = win.document.querySelector('.trace-prev') as HTMLButtonElement;
+    prev.click();
+    await flush();
+
+    expect(win.document.querySelector('.trace-output')).toBeNull();
   });
 
   test('clicking last goes to the final step', async () => {

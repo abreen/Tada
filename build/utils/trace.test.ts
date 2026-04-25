@@ -15,11 +15,12 @@ const fsMock = {
 mock.module('fs', () => createFsModuleMock(fsMock));
 
 let chunkTraceOutput: typeof import('./trace-core').chunkTraceOutput;
+let renderTraceWidgetHtml: typeof import('./trace-core').renderTraceWidgetHtml;
 let isTraceSourceFile: typeof import('./trace').isTraceSourceFile;
 let parseIgnoreFields: typeof import('./trace-java').parseIgnoreFields;
 
 beforeAll(async () => {
-  ({ chunkTraceOutput } = await import('./trace-core'));
+  ({ chunkTraceOutput, renderTraceWidgetHtml } = await import('./trace-core'));
   ({ isTraceSourceFile } = await import('./trace'));
   ({ parseIgnoreFields } = await import('./trace-java'));
 });
@@ -184,5 +185,16 @@ class B {
     expect(isTraceSourceFile('/tmp/TraceDemo.java')).toBe(true);
     expect(isTraceSourceFile('/tmp/trace_demo.py')).toBe(true);
     expect(isTraceSourceFile('/tmp/index.md')).toBe(false);
+  });
+
+  test('rendered widget omits output block until the client has output', () => {
+    const html = renderTraceWidgetHtml({
+      highlightedSource: '<pre>class Test {}</pre>',
+      manifestUrl: '/_traces/Test/manifest.json',
+      totalSteps: 1,
+    });
+
+    expect(html).toContain('class="trace-content"');
+    expect(html).not.toContain('trace-output');
   });
 });

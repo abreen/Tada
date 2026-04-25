@@ -18,6 +18,6 @@ def selection(nums):
         swap(nums, i, index_smallest(nums, i))
 
 
-input1 = [4, 9, 2, 10, 19, 5, 7]
+input1 = [25, 31, 12, 9]
 selection(input1)
 print(input1)

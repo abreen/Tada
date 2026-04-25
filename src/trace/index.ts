@@ -11,7 +11,7 @@ interface WidgetElements {
   root: HTMLElement;
   source: HTMLElement;
   controls: HTMLElement;
-  output: HTMLElement;
+  content: HTMLElement;
   diagram: HTMLElement;
 }
 
@@ -193,6 +193,27 @@ function scaleDiagramSvg(diagram: HTMLElement, doc: Document): void {
   svg.setAttribute('height', String(baseHeight * scale));
 }
 
+function updateOutput(
+  content: HTMLElement,
+  output: string,
+  doc: Document,
+): void {
+  const existing = content.querySelector(
+    ':scope > .trace-output',
+  ) as HTMLPreElement | null;
+  if (!output) {
+    existing?.remove();
+    return;
+  }
+
+  const outputElement = existing ?? doc.createElement('pre');
+  if (!existing) {
+    outputElement.className = 'trace-output';
+    content.append(outputElement);
+  }
+  outputElement.textContent = output;
+}
+
 function renderWidgetState(
   state: WidgetState,
   elements: WidgetElements,
@@ -215,7 +236,7 @@ function renderWidgetState(
       output += s.stdout;
     }
   }
-  elements.output.textContent = output;
+  updateOutput(elements.content, output, doc);
 
   const prevHeight = elements.diagram.scrollHeight;
   elements.diagram.innerHTML = entry.svg;
@@ -249,12 +270,9 @@ async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
 
   await loadChunk(state, manifestUrl, 0);
 
-  const entry = getStep(state);
-
   const source = root.querySelector('.trace-source') as HTMLElement;
+  const content = root.querySelector('.trace-content') as HTMLElement;
   const diagram = root.querySelector('.trace-diagram') as HTMLElement;
-  const output = root.querySelector('.trace-output') as HTMLPreElement;
-  output.textContent = entry.stdout || '';
 
   const controls = root.querySelector('.trace-controls') as HTMLElement;
   const firstBtn = controls.querySelector('.trace-first') as HTMLButtonElement;
@@ -296,7 +314,7 @@ async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
     next.focus();
   });
 
-  const elements: WidgetElements = { root, source, controls, output, diagram };
+  const elements: WidgetElements = { root, source, controls, content, diagram };
 
   renderWidgetState(state, elements, doc);
 }
