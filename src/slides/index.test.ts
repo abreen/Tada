@@ -425,6 +425,107 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
+  test('tada:slides-present starts fullscreen presentation at the requested slide', async () => {
+    const win = createSlidesWindow();
+    const fullscreenApi = installFullscreenApi(win);
+    const cleanup = mount(win);
+
+    const root = win.document.querySelector('[data-slides-root]')!;
+    root.dispatchEvent(
+      new win.CustomEvent('tada:slides-present', {
+        bubbles: true,
+        detail: { mode: 'fullscreen', slideIndex: 2 },
+      }),
+    );
+    await Promise.resolve();
+
+    expect(fullscreenApi.requestCount).toBe(1);
+    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('2');
+
+    cleanup?.();
+  });
+
+  test('tada:slides-present clamps requested slide index', async () => {
+    const win = createSlidesWindow();
+    installFullscreenApi(win);
+    const cleanup = mount(win);
+
+    const root = win.document.querySelector('[data-slides-root]')!;
+    root.dispatchEvent(
+      new win.CustomEvent('tada:slides-present', {
+        bubbles: true,
+        detail: { mode: 'fullscreen', slideIndex: 99 },
+      }),
+    );
+    await Promise.resolve();
+
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('2');
+
+    cleanup?.();
+  });
+
+  test('fullscreen custom event falls back to normal mode when fullscreen is unavailable', async () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+
+    const root = win.document.querySelector('[data-slides-root]')!;
+    root.dispatchEvent(
+      new win.CustomEvent('tada:slides-present', {
+        bubbles: true,
+        detail: { mode: 'fullscreen', slideIndex: 1 },
+      }),
+    );
+    await Promise.resolve();
+
+    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('1');
+
+    cleanup?.();
+  });
+
+  test('fullscreen custom event keeps requested slide active when fullscreen rejects', async () => {
+    const win = createSlidesWindow();
+    (
+      win.document.documentElement as HTMLElement & {
+        requestFullscreen?: () => Promise<void>;
+      }
+    ).requestFullscreen = async () => {
+      throw new Error('denied');
+    };
+    const cleanup = mount(win);
+
+    const root = win.document.querySelector('[data-slides-root]')!;
+    root.dispatchEvent(
+      new win.CustomEvent('tada:slides-present', {
+        bubbles: true,
+        detail: { mode: 'fullscreen', slideIndex: 2 },
+      }),
+    );
+    await Promise.resolve();
+
+    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('2');
+
+    cleanup?.();
+  });
+
   test('fullscreen mode never reveals the Close button on mouse move', async () => {
     jest.useFakeTimers();
 
@@ -716,6 +817,16 @@ describe('slides presentation controller', () => {
     expect(win.document.body.classList.contains('is-presenting')).toBe(false);
 
     present.click();
+    expect(win.document.body.classList.contains('is-presenting')).toBe(false);
+
+    win.document
+      .querySelector('[data-slides-root]')!
+      .dispatchEvent(
+        new win.CustomEvent('tada:slides-present', {
+          bubbles: true,
+          detail: { mode: 'fullscreen', slideIndex: 1 },
+        }),
+      );
     expect(win.document.body.classList.contains('is-presenting')).toBe(false);
   });
 

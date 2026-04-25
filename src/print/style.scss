@@ -82,10 +82,6 @@
     border: none;
   }
 
-  a.heading-anchor::after {
-    display: none;
-  }
-
   .external-link-tail::after,
   a.external:not(:has(.external-link-tail))::after {
     content: none;

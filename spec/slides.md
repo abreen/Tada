@@ -45,6 +45,12 @@ Clicking `Present (Full Screen)` starts the same slide presentation in the
 browser's native Fullscreen API mode. In that mode the slide toolbar never
 appears.
 
+Slide title headings (`div.slide > h2:first-child`) include a hover/focus
+`Present from this slide` icon button. It opens the same fullscreen
+presentation view from that slide. If the browser Fullscreen API is unavailable
+or rejects the request, presentation remains active in normal mode at the
+requested slide.
+
 While presenting, the site header, title block, table of contents, footer, page
 file header, and trace toolbars are hidden. The `Close` button appears only
 when the pointer is moved into the top reveal zone near the button itself; it
@@ -67,3 +73,11 @@ When the presentation is already on its last slide and no active trace can move
 forward, pressing `ArrowRight`, pressing `Space`, or clicking the slide reveals
 the `Close` button and keeps it visible to signal that the deck is finished.
 Going backward one slide or trace step hides it again.
+
+## Client event
+
+The slides component listens on the slide root for a bubbling
+`tada:slides-present` custom event. The event detail is
+`{ mode: 'fullscreen', slideIndex: number }`; `slideIndex` is clamped to the
+available slides. This internal event is used by the slide-heading presentation
+buttons.

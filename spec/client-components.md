@@ -6,8 +6,8 @@ Each component lives in `src/<name>/` with an `index.ts` (exporting async
 `mount()`) and `style.scss`. Import Sass styles in `src/index.ts` to include
 them in the bundle. Shared utilities are in `src/util.ts`.
 
-- **Anchor links**: clickable anchor icons on headings that scroll the heading
-  into view
+- **Anchor links**: clickable SVG anchor icons on headings that scroll the
+  heading into view; slide title headings also get a presentation icon button
 - **Table of contents**: a floating sidebar highlighting the current section
   based on scroll position
 - **Search**: a combobox in the header querying the Pagefind index (see
@@ -24,7 +24,8 @@ them in the bundle. Shared utilities are in `src/util.ts`.
   for newer validators and offers an in-place refresh
 - **Slides**: page-local presentation mode for Markdown pages with
   `slides: true`; it reads slide wrapper markup, opens from a `Present` button,
-  and shows one slide at a time with keyboard and click navigation (see
+  opens from slide-heading presentation buttons via a local custom event, and
+  shows one slide at a time with keyboard and click navigation (see
   [Slides Mode](slides.md))
 - **Traces**: widget that renders execution traces generated at build time and
   renders a stack and heap memory diagram (see [Traces](traces.md))

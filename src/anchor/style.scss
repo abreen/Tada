@@ -7,29 +7,83 @@ a.heading-anchor {
   @include subdued-link;
 }
 
-a.heading-anchor::after {
+.heading-anchor svg,
+.heading-present-button svg {
   display: inline-block;
   width: 1em;
   height: 1em;
-  margin-left: 4px;
   vertical-align: middle;
-  content: '';
-  opacity: 0;
-
-  @include contained-mask(var(--icon-anchor));
 }
 
-a.heading-anchor:focus-visible::after {
+.heading-anchor svg {
+  margin-left: 4px;
+  vertical-align: middle;
+  opacity: 0;
+}
+
+.heading-present-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  padding: 0;
+  margin-left: 4px;
+  font: inherit;
+  line-height: 1;
+  vertical-align: middle;
+  color: var(--fg-color);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  opacity: 0;
+}
+
+a.heading-anchor:focus-visible svg,
+.heading-present-button:focus {
   opacity: 1;
 }
 
+.heading-present-button:focus {
+  outline-offset: 2px;
+  background-color: transparent;
+  border-color: transparent;
+}
+
+button.heading-present-button:active:not(:disabled) {
+  color: var(--link-active-color) !important;
+  background: transparent !important;
+}
+
+body.is-presenting .heading-present-button {
+  display: none;
+}
+
 @media (hover: hover) {
-  h1:hover a.heading-anchor::after,
-  h2:hover a.heading-anchor::after,
-  h3:hover a.heading-anchor::after,
-  h4:hover a.heading-anchor::after,
-  h5:hover a.heading-anchor::after,
-  h6:hover a.heading-anchor::after {
+  button.heading-present-button:hover:not(:disabled) {
+    color: var(--fg2-color);
+    background: transparent;
+  }
+
+  h1:hover a.heading-anchor svg,
+  h2:hover a.heading-anchor svg,
+  h3:hover a.heading-anchor svg,
+  h4:hover a.heading-anchor svg,
+  h5:hover a.heading-anchor svg,
+  h6:hover a.heading-anchor svg,
+  h1:hover .heading-present-button,
+  h2:hover .heading-present-button,
+  h3:hover .heading-present-button,
+  h4:hover .heading-present-button,
+  h5:hover .heading-present-button,
+  h6:hover .heading-present-button {
     opacity: 1;
+  }
+}
+
+@media print {
+  .heading-anchor svg,
+  .heading-present-button {
+    display: none;
   }
 }
