@@ -81,6 +81,12 @@ body.is-presenting .heading-present-button {
   }
 }
 
+@media (hover: none) {
+  .heading-present-button {
+    display: none;
+  }
+}
+
 @media print {
   .heading-anchor svg,
   .heading-present-button {

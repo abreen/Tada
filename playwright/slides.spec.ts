@@ -202,5 +202,6 @@ test.describe('slides controls on touch browsers', () => {
     await expect(page.locator('.slides-header')).toBeHidden();
     await expect(page.locator('[data-slides-present]')).toBeHidden();
     await expect(page.locator('[data-slides-fullscreen]')).toBeHidden();
+    await expect(page.locator('.heading-present-button')).toBeHidden();
   });
 });
