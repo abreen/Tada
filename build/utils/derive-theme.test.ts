@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { parse, oklch } from 'culori';
-import { deriveTheme, deriveLinkHue, getTextOnColor } from './derive-theme';
+import {
+  deriveTheme,
+  deriveLinkHue,
+  deriveTraceLineActiveHue,
+  getTextOnColor,
+} from './derive-theme';
 
 function getL(hex: string): number {
   return oklch(parse(hex))!.l;
@@ -126,6 +131,32 @@ describe('deriveLinkHue', () => {
     const h = deriveLinkHue(120);
     expect(h).toBeLessThan(220);
     expect(h).toBeGreaterThanOrEqual(200);
+  });
+});
+
+describe('deriveTraceLineActiveHue', () => {
+  test('returns the anchor hue when tintHue equals the anchor', () => {
+    expect(deriveTraceLineActiveHue(52)).toBe(52);
+  });
+
+  test('default tint lands in the yellow range', () => {
+    const h = deriveTraceLineActiveHue(20);
+    expect(h).toBeGreaterThanOrEqual(45);
+    expect(h).toBeLessThanOrEqual(55);
+  });
+
+  test('output is always in [0, 360) for any tintHue', () => {
+    for (let tintHue = 0; tintHue < 360; tintHue += 7) {
+      const h = deriveTraceLineActiveHue(tintHue);
+      expect(h).toBeGreaterThanOrEqual(0);
+      expect(h).toBeLessThan(360);
+    }
+  });
+
+  test('hue wraparound near 0/360 produces nearby results', () => {
+    const h10 = deriveTraceLineActiveHue(10);
+    const h350 = deriveTraceLineActiveHue(350);
+    expect(Math.abs(h10 - h350)).toBeLessThan(10);
   });
 });
 

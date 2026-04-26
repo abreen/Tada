@@ -176,7 +176,7 @@ function markTraceReady(widget: HTMLElement | null): void {
   if (widget && !widget.querySelector('.trace-line-active')) {
     const doc = widget.ownerDocument;
     const activeLine = doc.createElement('span');
-    activeLine.className = 'trace-line-active';
+    activeLine.className = 'code-row trace-line-active';
     widget.appendChild(activeLine);
   }
 

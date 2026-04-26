@@ -112,16 +112,17 @@
     }
   }
 
-  .line-number.trace-line-active {
-    font-weight: bold;
-    color: var(--fg-color);
+  .code-row.trace-line-active {
+    background: var(--bg-trace-line-active);
 
-    &::before {
-      position: absolute;
-      left: 0;
-      margin-right: 0.25em;
-      line-height: 1.3;
-      content: '\25B6';
+    .line-number {
+      font-weight: bold;
+      color: var(--fg-color);
+      background: var(--bg-trace-line-active);
+    }
+
+    code {
+      background: none;
     }
   }
 }

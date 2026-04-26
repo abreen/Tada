@@ -9,7 +9,11 @@ import {
   getDistDir,
   toPosix,
 } from './utils/paths';
-import { deriveTheme, deriveLinkHue } from './utils/derive-theme';
+import {
+  deriveTheme,
+  deriveLinkHue,
+  deriveTraceLineActiveHue,
+} from './utils/derive-theme';
 import type { PluginBuilder } from 'bun';
 import type { SiteVariables } from './types';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
@@ -46,6 +50,9 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const linkColorHover = `hsl(${linkHue}deg 34% 60%)`;
   const linkColorDark = `hsl(${linkHue}deg 50% 72%)`;
   const linkColorHoverDark = `hsl(${linkHue}deg 40% 80%)`;
+  const traceLineActiveHue = formatCssNumber(deriveTraceLineActiveHue(tintHue));
+  const bgTraceLineActive = `hsl(${traceLineActiveHue}deg 100% 86%)`;
+  const bgTraceLineActiveDark = `hsl(${traceLineActiveHue}deg 90% 18%)`;
 
   const rendered = _.template(template)({
     ...theme,
@@ -60,6 +67,8 @@ function renderThemeScss(siteVariables: SiteVariables): string {
     linkColorHover,
     linkColorDark,
     linkColorHoverDark,
+    bgTraceLineActive,
+    bgTraceLineActiveDark,
   });
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-'));

@@ -51,9 +51,11 @@ function widgetHtml(
     '<div class="trace-content">' +
     '<div class="trace-diagram"></div>' +
     '<div class="trace-source">' +
-    '<span class="line-number" data-line="1">1</span>' +
-    '<span class="line-number" data-line="2">2</span>' +
-    '<span class="line-number" data-line="3">3</span>' +
+    '<pre>' +
+    '<span class="code-row"><span class="line-number" data-line="1">1</span><code>line one</code></span>' +
+    '<span class="code-row"><span class="line-number" data-line="2">2</span><code>line two</code></span>' +
+    '<span class="code-row"><span class="line-number" data-line="3">3</span><code>line three</code></span>' +
+    '</pre>' +
     '</div>' +
     '</div>' +
     '</div>'
@@ -248,7 +250,13 @@ describe('trace', () => {
 
     const active = win.document.querySelector('.trace-line-active');
     expect(active).not.toBeNull();
-    expect(active!.getAttribute('data-line')).toBe('1');
+    expect(active!.classList.contains('code-row')).toBe(true);
+    expect(
+      active!.querySelector('.line-number')!.getAttribute('data-line'),
+    ).toBe('1');
+    expect(
+      win.document.querySelector('.line-number.trace-line-active'),
+    ).toBeNull();
   });
 
   test('renders initial SVG in diagram', async () => {
@@ -386,7 +394,9 @@ describe('trace', () => {
     await flush();
 
     const active = win.document.querySelector('.trace-line-active');
-    expect(active!.getAttribute('data-line')).toBe('2');
+    expect(
+      active!.querySelector('.line-number')!.getAttribute('data-line'),
+    ).toBe('2');
   });
 
   test('clicking next updates SVG diagram', async () => {
@@ -540,7 +550,10 @@ describe('trace', () => {
 
     const allActive = win.document.querySelectorAll('.trace-line-active');
     expect(allActive.length).toBe(1);
-    expect(allActive[0].getAttribute('data-line')).toBe('2');
+    expect(allActive[0].classList.contains('code-row')).toBe(true);
+    expect(
+      allActive[0].querySelector('.line-number')!.getAttribute('data-line'),
+    ).toBe('2');
   });
 
   test('loads additional chunks when stepping across boundaries', async () => {

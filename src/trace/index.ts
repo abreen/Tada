@@ -58,13 +58,20 @@ async function goToStep(
 }
 
 function updateSourceHighlight(panel: HTMLElement, currentLine: number): void {
-  panel.querySelectorAll('.line-number').forEach(ln => {
-    ln.classList.remove('trace-line-active');
-  });
-  const el = panel.querySelector(`.line-number[data-line="${currentLine}"]`);
-  if (el) {
-    el.classList.add('trace-line-active');
-    const elRect = el.getBoundingClientRect();
+  panel
+    .querySelectorAll(
+      '.code-row.trace-line-active, .line-number.trace-line-active',
+    )
+    .forEach(el => {
+      el.classList.remove('trace-line-active');
+    });
+  const lineNumber = panel.querySelector(
+    `.line-number[data-line="${currentLine}"]`,
+  );
+  const row = lineNumber?.closest('.code-row') as HTMLElement | null;
+  if (row) {
+    row.classList.add('trace-line-active');
+    const elRect = row.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     panel.scrollTop += elRect.top - panelRect.top - panel.clientHeight / 2;
   }

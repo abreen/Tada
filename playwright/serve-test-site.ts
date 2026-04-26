@@ -87,7 +87,7 @@ slides: true
       <div class="trace-diagram"></div>
       <div class="trace-source-wrapper">
         <div class="trace-source">
-          <pre><code><span class="line-number trace-line-active" data-line="1">1</span> trace demo</code></pre>
+          <pre><span class="code-row trace-line-active"><span class="line-number" data-line="1">1</span><code>trace demo</code></span></pre>
         </div>
       </div>
       <pre class="trace-output">output</pre>

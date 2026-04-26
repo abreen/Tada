@@ -16,6 +16,8 @@ const DARK_TEXT_L_MAX = 0.82;
 
 const LINK_ANCHOR_HUE = 212;
 const LINK_TINT_BLEND = 0.05;
+const TRACE_LINE_ACTIVE_ANCHOR_HUE = 52;
+const TRACE_LINE_ACTIVE_TINT_BLEND = 0.1;
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(Math.max(v, min), max);
@@ -81,6 +83,14 @@ export function deriveTheme(cssColor: string): DerivedTheme {
 export function deriveLinkHue(tintHue: number): number {
   const diff = ((tintHue - LINK_ANCHOR_HUE + 540) % 360) - 180;
   return (LINK_ANCHOR_HUE + diff * LINK_TINT_BLEND + 360) % 360;
+}
+
+export function deriveTraceLineActiveHue(tintHue: number): number {
+  const diff = ((tintHue - TRACE_LINE_ACTIVE_ANCHOR_HUE + 540) % 360) - 180;
+  return (
+    (TRACE_LINE_ACTIVE_ANCHOR_HUE + diff * TRACE_LINE_ACTIVE_TINT_BLEND + 360) %
+    360
+  );
 }
 
 export function getTextOnColor(cssColor: string): '#fff' | '#000' {

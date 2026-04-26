@@ -32,6 +32,7 @@
   --bg2-color-translucent: hsl(
     var(--tint-hue) calc(12% * var(--tint-amount)) 92% / 66%
   );
+  --bg-trace-line-active: <%= bgTraceLineActive %>;
   --box-shadow: 0 2px 9px
     hsl(var(--tint-hue) calc(85% * var(--tint-amount)) 10% / 25%);
   --backdrop-filter: blur(10px);
@@ -87,6 +88,7 @@
     --bg2-color-translucent: hsl(
       var(--tint-hue) calc(12% * var(--tint-amount)) 12% / 66%
     );
+    --bg-trace-line-active: <%= bgTraceLineActiveDark %>;
     --box-shadow: 0 3px 8px
       hsl(var(--tint-hue) calc(33% * var(--tint-amount)) 8% / 70%);
     --link-active-color: #fff;
