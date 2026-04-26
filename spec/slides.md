@@ -14,10 +14,11 @@ an HTML source file sets it.
 
 This does not change the page template. The page still builds as a normal
 default page with its usual heading, metadata, and body content. Slide pages
-add a `Present` button and a checked `Full screen` checkbox in a
-`div.slides-header` block at the top of the page body. These controls render
-disabled in the HTML and are re-enabled by the client-side slides component
-when JavaScript is available. Touch/mobile browsers hide this header.
+add a `Present` button and a checked `Full screen` checkbox with
+`id="slides-fullscreen"` in a `div.slides-header` block at the top of the page
+body. These controls render disabled in the HTML and are re-enabled by the
+client-side slides component when JavaScript is available. Touch/mobile
+browsers hide this header.
 
 ## Build output
 
@@ -44,7 +45,8 @@ limits so they remain readable on both small and very large screens.
 When `Full screen` is checked, clicking `Present` starts the presentation in
 the browser's native Fullscreen API mode. In that mode the slide toolbar never
 appears. When `Full screen` is unchecked, `Present` starts the same
-presentation in normal mode.
+presentation in normal mode. The client stores the user's `Full screen`
+checkbox preference in local storage and restores it on later slide pages.
 
 Slide title headings (`div.slide > h2:first-child`) include a hover/focus
 `Present from this slide` icon button. It opens the same presentation view from

@@ -9,6 +9,8 @@ interface SlidesPresentDetail {
   slideIndex?: number;
 }
 
+const FULLSCREEN_STORAGE_KEY = 'slidesFullscreen';
+
 function isInteractive(
   view: Window & typeof globalThis,
   target: EventTarget | null,
@@ -83,6 +85,16 @@ export default function mountSlides(window: Window): void | (() => void) {
     presentButton.disabled = false;
   }
   if (fullscreenCheckbox) {
+    try {
+      const stored = window.localStorage.getItem(FULLSCREEN_STORAGE_KEY);
+      if (stored === 'false') {
+        fullscreenCheckbox.checked = false;
+      } else if (stored === 'true') {
+        fullscreenCheckbox.checked = true;
+      }
+    } catch {
+      // ignored
+    }
     fullscreenCheckbox.disabled = false;
   }
 
@@ -365,6 +377,20 @@ export default function mountSlides(window: Window): void | (() => void) {
     exitPresentation();
   }
 
+  function handleFullscreenPreferenceChange(): void {
+    if (!fullscreenCheckbox) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        FULLSCREEN_STORAGE_KEY,
+        String(fullscreenCheckbox.checked),
+      );
+    } catch {
+      // Ignore storage errors so the checkbox remains usable.
+    }
+  }
+
   function handleFullscreenChange(): void {
     if (
       isPresenting &&
@@ -460,6 +486,10 @@ export default function mountSlides(window: Window): void | (() => void) {
   }
 
   presentButton?.addEventListener('click', handlePresentClick);
+  fullscreenCheckbox?.addEventListener(
+    'change',
+    handleFullscreenPreferenceChange,
+  );
   closeButton.addEventListener('click', handleCloseClick);
   document.addEventListener('fullscreenchange', handleFullscreenChange);
   window.addEventListener('keydown', handleKeydown);
@@ -470,6 +500,10 @@ export default function mountSlides(window: Window): void | (() => void) {
   return () => {
     exitPresentation();
     presentButton?.removeEventListener('click', handlePresentClick);
+    fullscreenCheckbox?.removeEventListener(
+      'change',
+      handleFullscreenPreferenceChange,
+    );
     closeButton.removeEventListener('click', handleCloseClick);
     document.removeEventListener('fullscreenchange', handleFullscreenChange);
     window.removeEventListener('keydown', handleKeydown);

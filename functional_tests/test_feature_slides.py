@@ -69,7 +69,7 @@ class TestSlidesFeature:
             slides_html,
         )
         slide_fullscreen_checkbox_match = re.search(
-            r'<input type="checkbox" data-slides-fullscreen(?:="")? '
+            r'<input id="slides-fullscreen" type="checkbox" data-slides-fullscreen(?:="")? '
             r'checked(?:="")? disabled(?:="")?>\s*Full screen',
             slides_html,
         )

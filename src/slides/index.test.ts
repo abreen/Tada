@@ -24,7 +24,7 @@ function createSlidesWindow(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
+      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -52,7 +52,7 @@ function createSlidesWindowWithInput(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
+      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -70,7 +70,7 @@ function createSlidesWindowWithMultipleTraces(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
+      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -122,7 +122,7 @@ function createSingleSlideTraceWindow(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
+      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -145,7 +145,7 @@ function createSlidesWindowWithQuestionOnLastSlide(): Win {
   return createWindow(`
     <div class="slides-header">
       <button type="button" data-slides-present>Present</button>
-      <label><input type="checkbox" data-slides-fullscreen checked> Full screen</label>
+      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
     </div>
     <div class="slide-deck" data-slides-root>
       <div class="slide" data-slide-index="0">
@@ -270,6 +270,89 @@ describe('slides presentation controller', () => {
     expect(present.disabled).toBe(false);
     expect(fullscreen.disabled).toBe(false);
     expect(fullscreen.checked).toBe(true);
+
+    cleanup?.();
+  });
+
+  test('mount keeps Full screen checked when no preference is stored', () => {
+    const win = createSlidesWindow();
+    const fullscreen = win.document.querySelector(
+      '[data-slides-fullscreen]',
+    ) as HTMLInputElement;
+
+    const cleanup = mount(win);
+
+    expect(fullscreen.checked).toBe(true);
+
+    cleanup?.();
+  });
+
+  test('mount restores unchecked Full screen preference from localStorage', () => {
+    const win = createSlidesWindow();
+    win.localStorage.setItem('slidesFullscreen', 'false');
+    const fullscreen = win.document.querySelector(
+      '[data-slides-fullscreen]',
+    ) as HTMLInputElement;
+
+    const cleanup = mount(win);
+
+    expect(fullscreen.checked).toBe(false);
+
+    cleanup?.();
+  });
+
+  test('mount restores checked Full screen preference from localStorage', () => {
+    const win = createSlidesWindow();
+    win.localStorage.setItem('slidesFullscreen', 'true');
+    const fullscreen = win.document.querySelector(
+      '[data-slides-fullscreen]',
+    ) as HTMLInputElement;
+    fullscreen.checked = false;
+
+    const cleanup = mount(win);
+
+    expect(fullscreen.checked).toBe(true);
+
+    cleanup?.();
+  });
+
+  test('changing Full screen stores the preference', () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+    const fullscreen = win.document.querySelector(
+      '[data-slides-fullscreen]',
+    ) as HTMLInputElement;
+
+    fullscreen.checked = false;
+    fullscreen.dispatchEvent(new win.Event('change', { bubbles: true }));
+    expect(win.localStorage.getItem('slidesFullscreen')).toBe('false');
+
+    fullscreen.checked = true;
+    fullscreen.dispatchEvent(new win.Event('change', { bubbles: true }));
+    expect(win.localStorage.getItem('slidesFullscreen')).toBe('true');
+
+    cleanup?.();
+  });
+
+  test('blocked Full screen preference storage does not prevent mounting', () => {
+    const win = createSlidesWindow();
+    Object.defineProperty(win, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('storage blocked');
+      },
+    });
+    const fullscreen = win.document.querySelector(
+      '[data-slides-fullscreen]',
+    ) as HTMLInputElement;
+
+    const cleanup = mount(win);
+
+    expect(fullscreen.disabled).toBe(false);
+    expect(fullscreen.checked).toBe(true);
+
+    fullscreen.checked = false;
+    fullscreen.dispatchEvent(new win.Event('change', { bubbles: true }));
 
     cleanup?.();
   });
@@ -448,6 +531,24 @@ describe('slides presentation controller', () => {
         .querySelector('.slide.is-active')
         ?.getAttribute('data-slide-index'),
     ).toBe('0');
+
+    cleanup?.();
+  });
+
+  test('clicking Present starts normal presentation when stored Full screen preference is unchecked', async () => {
+    const win = createSlidesWindow();
+    win.localStorage.setItem('slidesFullscreen', 'false');
+    const fullscreenApi = installFullscreenApi(win);
+    const cleanup = mount(win);
+
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    present.click();
+    await Promise.resolve();
+
+    expect(fullscreenApi.requestCount).toBe(0);
+    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
 
     cleanup?.();
   });
