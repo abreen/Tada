@@ -38,12 +38,13 @@ body {
    * Enable Inter's features:
    * liga - standard ligatures
    * calt - contextual alternates
-   * ss03 - round quotes & commas (legibility)
-   * cv01 - alternate 1 (style)
-   * cv05 - lower case L with tail (legibility)
-   * cv10 - capital G with spur (style)
+   * ss07 - square punctuation
+   * ss08 - square quotes
+   * cv01 - alternate 1
+   * cv08 - uppercase I with serif
+   * cv10 - capital G with spur
    */
-  font-feature-settings: 'liga', 'calt', 'ss03', 'cv01', 'cv05', 'cv10';
+  font-feature-settings: 'liga', 'calt', 'ss07', 'ss08', 'cv01', 'cv08', 'cv10';
   line-height: var(--line-height);
   color: var(--fg-color);
   background-color: var(--bg-color);
