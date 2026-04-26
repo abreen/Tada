@@ -1,30 +1,20 @@
 import path from 'path';
-import {
-  getProjectConfigBaseName,
-  getSiteConfigBaseName,
-  getSupportedConfigFilePaths,
-} from '../config-files';
-import { getDevSiteVariables } from '../site-variables';
 import { getProjectConfigDir } from '../templates';
 import { getContentDir, getPublicDir } from '../util';
 import type {
   ChangeBatch,
   CompilerBuildResult,
-  CompilerPlanResult,
   WatchCompiler,
   WatchTarget,
-} from '../../watch/types';
+} from './types';
 import { buildFull } from './build-full';
 import { buildIncremental } from './build-incremental';
-import type {
-  TadaBuildMeta,
-  TraceCache,
-  WatchTraceOptions,
-} from './compiler-types';
+import type { TraceCache, WatchTraceOptions } from './compiler-types';
 import { checkTraceToolAvailability, isTraceSourceFile } from '../utils/trace';
-import { createTadaWatchPlan, type TadaWatchPlan } from './planner';
-import { scanProject, updateProjectScan } from '../source-model';
+import { createTadaWatchPlan } from './planner';
+import { updateProjectScan } from '../source-model';
 import type { TadaSnapshot } from './snapshot';
+import { getWatchConfigFilePaths } from './config-paths';
 
 export function invalidateTraceCacheForBatch(
   traceCache: TraceCache,
@@ -38,11 +28,7 @@ export function invalidateTraceCacheForBatch(
   }
 }
 
-export class TadaWatchCompiler implements WatchCompiler<
-  TadaSnapshot,
-  TadaWatchPlan,
-  TadaBuildMeta
-> {
+export class TadaWatchCompiler implements WatchCompiler {
   private traceCache: TraceCache;
   private traceOptions: WatchTraceOptions;
 
@@ -55,19 +41,7 @@ export class TadaWatchCompiler implements WatchCompiler<
     const contentDir = getContentDir();
     const publicDir = getPublicDir();
     const projectConfigDir = path.resolve(getProjectConfigDir());
-    const configFilePaths = new Set([
-      ...getSupportedConfigFilePaths('.', getSiteConfigBaseName('dev')).map(
-        filePath => path.resolve(filePath),
-      ),
-      ...getSupportedConfigFilePaths(
-        projectConfigDir,
-        getProjectConfigBaseName('nav'),
-      ).map(filePath => path.resolve(filePath)),
-      ...getSupportedConfigFilePaths(
-        projectConfigDir,
-        getProjectConfigBaseName('authors'),
-      ).map(filePath => path.resolve(filePath)),
-    ]);
+    const configFilePaths = getWatchConfigFilePaths();
 
     return [
       { path: contentDir, chokidar: { usePolling: true } },
@@ -80,34 +54,24 @@ export class TadaWatchCompiler implements WatchCompiler<
     ];
   }
 
-  async buildInitial(): Promise<
-    CompilerBuildResult<TadaSnapshot, TadaBuildMeta>
-  > {
-    return buildFull({
-      traceCache: this.traceCache,
-      traceOptions: this.traceOptions,
-    });
-  }
-
-  async plan(
+  async build(
     snapshot: TadaSnapshot | undefined,
-    batch: ChangeBatch,
-  ): Promise<CompilerPlanResult<TadaWatchPlan>> {
-    invalidateTraceCacheForBatch(this.traceCache, batch);
-    const scan = snapshot
-      ? updateProjectScan(snapshot, batch)
-      : scanProject(getDevSiteVariables());
-    return {
-      kind: 'build',
-      plan: createTadaWatchPlan({ snapshot, batch, scan }),
-    };
-  }
+    batch?: ChangeBatch,
+  ): Promise<CompilerBuildResult> {
+    if (batch) {
+      invalidateTraceCacheForBatch(this.traceCache, batch);
+    }
 
-  async run(
-    plan: TadaWatchPlan,
-    snapshot: TadaSnapshot | undefined,
-  ): Promise<CompilerBuildResult<TadaSnapshot, TadaBuildMeta>> {
-    if (plan.kind === 'full' || !snapshot) {
+    if (!snapshot || !batch) {
+      return buildFull({
+        traceCache: this.traceCache,
+        traceOptions: this.traceOptions,
+      });
+    }
+
+    const scan = updateProjectScan(snapshot.scan, batch);
+    const plan = createTadaWatchPlan({ snapshot, batch, scan });
+    if (plan.kind === 'full') {
       return buildFull({
         traceCache: this.traceCache,
         traceOptions: this.traceOptions,

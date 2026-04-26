@@ -21,8 +21,8 @@ output path, the build fails.
 
 The output directory is `dist/` for development builds.
 
-Within the Tada package itself, the shared build/watch source pipeline is split
-between:
+Within the Tada package itself, watch mode lives in `build/watch/` and shares
+the build source pipeline:
 
 - `build/source-model.ts` for scanning project files and tracking source-to-
   output ownership, valid link targets, and processed content classification

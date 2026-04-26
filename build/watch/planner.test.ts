@@ -1,7 +1,7 @@
 import path from 'path';
 import { describe, expect, test } from 'bun:test';
 import { createTadaWatchPlan, diffAuthorKeys } from './planner';
-import type { ChangeBatch } from '../../watch/types';
+import type { ChangeBatch } from './types';
 import type {
   TadaProjectScan,
   TadaSnapshot,
@@ -54,6 +54,18 @@ function makeSnapshot(overrides: Partial<TadaSnapshot> = {}): TadaSnapshot {
   const contentRecord = makeRecord(sitePath('content', 'index.md'), [
     'index.html',
   ]);
+  const scan = makeScan({
+    contentFiles: new Set([contentRecord.sourcePath]),
+    buildContentFiles: new Set([contentRecord.sourcePath]),
+    contentOwners: new Map([['index.html', contentRecord.sourcePath]]),
+    sourceOutputPaths: new Map([
+      [contentRecord.sourcePath, new Set(['index.html'])],
+    ]),
+    sourceTargetPaths: new Map([
+      [contentRecord.sourcePath, new Set(['/index.html'])],
+    ]),
+    validTargets: new Set(['/index.html']),
+  });
   return {
     siteVariables: {
       base: 'http://localhost',
@@ -67,7 +79,6 @@ function makeSnapshot(overrides: Partial<TadaSnapshot> = {}): TadaSnapshot {
     assetFiles: [],
     navData: [],
     authorsData: {},
-    processedExts: new Set(['md', 'html']),
     contentRecords: new Map([[contentRecord.sourcePath, contentRecord]]),
     publicRecords: new Map(),
     outputOwners: new Map([
@@ -77,25 +88,21 @@ function makeSnapshot(overrides: Partial<TadaSnapshot> = {}): TadaSnapshot {
     reverseTraceDeps: new Map(),
     reverseInternalTargetDeps: new Map(),
     reverseAuthorDeps: new Map(),
-    contentFiles: new Set([contentRecord.sourcePath]),
-    buildContentFiles: new Set([contentRecord.sourcePath]),
-    publicFiles: new Set(),
-    literateJavaOutputPaths: new Set(),
-    contentOwners: new Map([['index.html', contentRecord.sourcePath]]),
-    publicOwners: new Map(),
-    sourceOutputPaths: new Map([
-      [contentRecord.sourcePath, new Set(['index.html'])],
-    ]),
-    sourceTargetPaths: new Map([
-      [contentRecord.sourcePath, new Set(['/index.html'])],
-    ]),
-    validTargets: new Set(['/index.html']),
+    scan,
     ...overrides,
   };
 }
 
 function makeBatch(changes: ChangeBatch['changes']): ChangeBatch {
   return { changes };
+}
+
+function expectIncremental(plan: ReturnType<typeof createTadaWatchPlan>) {
+  expect(plan.kind).toBe('incremental');
+  if (plan.kind !== 'incremental') {
+    throw new Error('expected incremental watch plan');
+  }
+  return plan;
 }
 
 describe('createTadaWatchPlan', () => {
@@ -134,8 +141,8 @@ describe('createTadaWatchPlan', () => {
       scan,
     });
 
-    expect(plan.kind).toBe('incremental');
-    expect([...plan.contentToRender].sort()).toEqual(
+    const incrementalPlan = expectIncremental(plan);
+    expect([...incrementalPlan.contentToRender].sort()).toEqual(
       [dependentPath, partialPath].sort(),
     );
   });
@@ -170,8 +177,9 @@ describe('createTadaWatchPlan', () => {
       scan,
     });
 
-    expect([...plan.contentToRender]).toEqual([contentPath]);
-    expect([...plan.publicToRemove]).toEqual([publicPath]);
+    const incrementalPlan = expectIncremental(plan);
+    expect([...incrementalPlan.contentToRender]).toEqual([contentPath]);
+    expect([...incrementalPlan.publicToRemove]).toEqual([publicPath]);
   });
 
   test('re-renders copied content after public handoff removal', () => {
@@ -207,7 +215,8 @@ describe('createTadaWatchPlan', () => {
       scan,
     });
 
-    expect([...plan.contentToRender]).toEqual([contentPath]);
-    expect([...plan.publicToRemove]).toEqual([publicPath]);
+    const incrementalPlan = expectIncremental(plan);
+    expect([...incrementalPlan.contentToRender]).toEqual([contentPath]);
+    expect([...incrementalPlan.publicToRemove]).toEqual([publicPath]);
   });
 });

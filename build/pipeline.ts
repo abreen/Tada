@@ -15,7 +15,7 @@ import { makeLogger, printFlair } from './log';
 import { generateBuildManifest, getNextVersion } from './build-manifest';
 import { scanProject } from './source-model';
 import { validateConfig } from './watch/validation';
-import { applyCommitPlan } from '../watch/fs-commit';
+import { applyCommitPlan } from './watch/fs-commit';
 import path from 'path';
 
 const log = makeLogger(import.meta.url);

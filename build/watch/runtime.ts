@@ -3,9 +3,7 @@ import { B } from '../colors';
 import { makeLogger, printFlair } from '../log';
 import { startServer } from '../serve';
 import { WatchPagefindRunner } from '../pagefind';
-import type { TadaBuildMeta } from './compiler-types';
-import type { TadaSnapshot } from './snapshot';
-import type { WatchLifecycleEvent } from '../../watch/types';
+import type { WatchLifecycleEvent } from './types';
 import {
   WATCH_RELOAD_MESSAGE_REBUILDING,
   WATCH_RELOAD_MESSAGE_RELOAD,
@@ -30,7 +28,6 @@ export class TadaWatchRuntime {
   private httpPort: number | undefined;
   private distDir: string;
   private server: Bun.Server<undefined> | null;
-  private lastBuildFailed: boolean;
   private pagefindRunner: WatchPagefindRunner | undefined;
   private pagefindSiteVariablesKey: string | undefined;
 
@@ -38,7 +35,6 @@ export class TadaWatchRuntime {
     this.httpPort = httpPort;
     this.distDir = distDir;
     this.server = null;
-    this.lastBuildFailed = false;
     this.pagefindSiteVariablesKey = undefined;
   }
 
@@ -68,59 +64,51 @@ export class TadaWatchRuntime {
     wslog.debug`WebSocket server listening at ws://localhost:${this.server.port}${WATCH_RELOAD_PATH}`;
   }
 
-  async onEvent(
-    event: WatchLifecycleEvent<TadaSnapshot, TadaBuildMeta>,
-  ): Promise<void> {
+  async onEvent(event: WatchLifecycleEvent): Promise<void> {
     switch (event.kind) {
       case 'build-started':
-        if (!event.initial) {
-          for (const change of event.batch?.changes || []) {
-            log.event`${B`${path.basename(change.path)}`} ${describeChange(change.kind)}`;
-          }
-          this.broadcast(WATCH_RELOAD_MESSAGE_REBUILDING);
+        if (!event.batch) {
+          return;
         }
+        for (const change of event.batch.changes) {
+          log.event`${B`${path.basename(change.path)}`} ${describeChange(change.kind)}`;
+        }
+        this.broadcast(WATCH_RELOAD_MESSAGE_REBUILDING);
         return;
       case 'build-succeeded': {
-        const recoveredFromFailure = this.lastBuildFailed;
-        this.lastBuildFailed = false;
         printFlair();
         this.ensureServerStarted();
-        if (!event.initial && (event.changed || recoveredFromFailure)) {
+        if (event.batch) {
           this.broadcast(WATCH_RELOAD_MESSAGE_RELOAD);
         }
-        if (event.meta && event.changed) {
-          if (event.meta.siteVariables.features.search !== false) {
-            const siteVariablesKey = JSON.stringify(event.meta.siteVariables);
-            if (
-              !this.pagefindRunner ||
-              this.pagefindSiteVariablesKey !== siteVariablesKey
-            ) {
-              this.pagefindRunner = new WatchPagefindRunner();
-              this.pagefindSiteVariablesKey = siteVariablesKey;
-            }
-            this.pagefindRunner.update(
-              this.distDir,
-              event.meta.htmlAssetsByPath,
-              event.meta.htmlAnalysisByPath,
-            );
-            setImmediate(() => this.pagefindRunner!.run());
-          } else {
-            this.pagefindRunner = undefined;
-            this.pagefindSiteVariablesKey = undefined;
+        if (event.meta.siteVariables.features.search !== false) {
+          const siteVariablesKey = JSON.stringify(event.meta.siteVariables);
+          if (
+            !this.pagefindRunner ||
+            this.pagefindSiteVariablesKey !== siteVariablesKey
+          ) {
+            this.pagefindRunner = new WatchPagefindRunner();
+            this.pagefindSiteVariablesKey = siteVariablesKey;
           }
+          this.pagefindRunner.update(
+            this.distDir,
+            event.meta.htmlAssetsByPath,
+            event.meta.htmlAnalysisByPath,
+          );
+          setImmediate(() => this.pagefindRunner!.run());
+        } else {
+          this.pagefindRunner = undefined;
+          this.pagefindSiteVariablesKey = undefined;
         }
         return;
       }
       case 'build-failed':
-        this.lastBuildFailed = true;
         for (const diagnostic of event.diagnostics) {
           log.error`${diagnostic.message}`;
         }
         return;
       case 'watching':
         log.info`Watching for changes...`;
-        return;
-      case 'build-skipped':
         return;
     }
   }

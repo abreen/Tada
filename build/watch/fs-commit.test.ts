@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type fs from 'fs';
-import { createGlobals } from '../build/globals.test';
-import { createFsModuleMock } from '../build/test-helpers';
+import { createGlobals } from '../globals.test';
+import { createFsModuleMock } from '../test-helpers';
 
 const existingPaths = new Set<string>();
 const renameCalls: Array<[string, string]> = [];
@@ -18,16 +18,7 @@ function keyForRename(sourcePath: string, targetPath: string): string {
 }
 
 function mockFs(): void {
-  const mockedFs: Pick<
-    typeof fs,
-    | 'existsSync'
-    | 'mkdirSync'
-    | 'mkdtempSync'
-    | 'renameSync'
-    | 'rmdirSync'
-    | 'rmSync'
-    | 'writeFileSync'
-  > = {
+  const mockedFs = {
     existsSync(filePath: fs.PathLike) {
       return existingPaths.has(String(filePath));
     },
@@ -76,7 +67,7 @@ function mockFs(): void {
 }
 
 function mockGlobals(): void {
-  mock.module('../build/globals', () => ({
+  mock.module('../globals', () => ({
     globals: createGlobals({
       now() {
         return 1234567890;

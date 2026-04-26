@@ -15,7 +15,6 @@
   "files": [
     "bin/",
     "build/",
-    "watch/",
     "src/",
     "templates/",
     "fonts/",

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { globals, type Globals } from '../build/globals';
+import { globals, type Globals } from '../globals';
 import type {
   ApplyMutationsCommitPlan,
   CommitPlan,
@@ -87,8 +87,6 @@ function applyFileMutation(
   const stagedPath = path.join(stagedRoot, mutation.path);
 
   if (mutation.kind === 'write') {
-    ensureParentDir(stagedPath);
-    fs.writeFileSync(stagedPath, mutation.content);
     ensureParentDir(targetPath);
     renameWithRetry(stagedPath, targetPath, globals);
     return;

@@ -1,5 +1,5 @@
 import { getDistDir } from '../util';
-import { runWatchEngine } from '../../watch/engine';
+import { runWatchEngine } from './engine';
 import { TadaWatchCompiler } from './compiler';
 import { TadaWatchRuntime } from './runtime';
 

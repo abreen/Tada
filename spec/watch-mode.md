@@ -151,17 +151,15 @@ react to these message types:
 
 Failed rebuilds do not trigger `reload`.
 
-If a watched change batch results in no output changes in `dist/`, watch mode
-does not trigger `reload`.
-
-Exception: if the previous rebuild failed, the next successful rebuild triggers
-`reload` even when `dist/` bytes are unchanged.
+Every successful rebuild after watch startup triggers `reload`, even if the
+rebuilt `dist/` bytes are unchanged.
 
 ## Architecture
 
-Watch mode is split into:
+Watch mode lives under `build/watch/` and is made of:
 
-- a reusable file-watching engine that batches changes, schedules rebuilds,
+- `build/watch/engine.ts`, a file-watching engine that batches changes,
+  schedules rebuilds,
   commits staged output updates, and preserves the last successful snapshot
 - a Tada watch adapter built on the same source model and source record layers
   used by full builds

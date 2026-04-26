@@ -364,7 +364,7 @@ class TestWatchPartials:
         watch.wait_for_rebuild(page_html, 'modified', before_mtime=before_mtime)
         assert 'Updated inner partial content' in page_html.read_text()
 
-    def test_adding_unused_partial_does_not_trigger_reload(self, watch, site_dir):
+    def test_adding_unused_partial_triggers_reload(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
         before_snapshot = watch.snapshot(index_html)
         messages = []
@@ -395,7 +395,10 @@ class TestWatchPartials:
             unused_partial = site_dir / 'content' / '_unused.md'
             unused_partial.write_text('Unused partial content.\n')
 
-            assert not reloaded.wait(timeout=3), f'Unexpected reload message: {messages}'
+            assert reloaded.wait(timeout=WEBSOCKET_TIMEOUT_SEC), (
+                f"Did not receive 'reload' message; got: {messages}"
+            )
+            assert 'rebuilding' in messages
             assert watch.snapshot(index_html) == before_snapshot
         finally:
             ws.close()

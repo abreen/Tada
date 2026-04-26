@@ -1,22 +1,20 @@
 import path from 'path';
-import {
-  getProjectConfigBaseName,
-  getSiteConfigBaseName,
-  getSupportedConfigFilePaths,
-} from '../config-files';
 import { loadProjectConfig } from '../config-loader';
 import { getProjectConfigDir } from '../templates';
-import type { ChangeBatch } from '../../watch/types';
+import type { ChangeBatch } from './types';
 import type { TadaProjectScan, TadaSnapshot } from './snapshot';
+import { classifyWatchConfigPath } from './config-paths';
 
-export interface TadaWatchPlan {
-  kind: 'full' | 'incremental';
+export interface TadaIncrementalWatchPlan {
+  kind: 'incremental';
   scan: TadaProjectScan;
   contentToRender: Set<string>;
   publicToRender: Set<string>;
   contentToRemove: Set<string>;
   publicToRemove: Set<string>;
 }
+
+export type TadaWatchPlan = { kind: 'full' } | TadaIncrementalWatchPlan;
 
 export function diffAuthorKeys(previous: unknown, next: unknown): Set<string> {
   const previousMap =
@@ -60,7 +58,7 @@ export function createTadaWatchPlan({
   batch,
   scan,
 }: {
-  snapshot: TadaSnapshot | undefined;
+  snapshot: TadaSnapshot;
   batch: ChangeBatch;
   scan: TadaProjectScan;
 }): TadaWatchPlan {
@@ -69,66 +67,24 @@ export function createTadaWatchPlan({
   const contentToRemove = new Set<string>();
   const publicToRemove = new Set<string>();
   const projectConfigDir = getProjectConfigDir();
-  const siteConfigPaths = new Set(
-    getSupportedConfigFilePaths('.', getSiteConfigBaseName('dev')).map(
-      filePath => path.resolve(filePath),
-    ),
-  );
-  const navPaths = new Set(
-    getSupportedConfigFilePaths(
-      projectConfigDir,
-      getProjectConfigBaseName('nav'),
-    ).map(filePath => path.resolve(filePath)),
-  );
-  const authorsPaths = new Set(
-    getSupportedConfigFilePaths(
-      projectConfigDir,
-      getProjectConfigBaseName('authors'),
-    ).map(filePath => path.resolve(filePath)),
-  );
-
-  if (!snapshot) {
-    return {
-      kind: 'full',
-      scan,
-      contentToRender,
-      publicToRender,
-      contentToRemove,
-      publicToRemove,
-    };
-  }
 
   for (const change of batch.changes) {
-    const resolvedPath = path.resolve(change.path);
-    if (siteConfigPaths.has(resolvedPath) || navPaths.has(resolvedPath)) {
-      return {
-        kind: 'full',
-        scan,
-        contentToRender,
-        publicToRender,
-        contentToRemove,
-        publicToRemove,
-      };
+    const configKind = classifyWatchConfigPath(change.path);
+    if (configKind === 'site' || configKind === 'nav') {
+      return { kind: 'full' };
     }
   }
 
   for (const change of batch.changes) {
     const resolvedPath = path.resolve(change.path);
-    if (authorsPaths.has(resolvedPath)) {
+    if (classifyWatchConfigPath(resolvedPath) === 'authors') {
       const nextAuthorsData = loadProjectConfig(
         projectConfigDir,
         'authors',
         snapshot.siteVariables,
       )?.value;
       if (snapshot.authorsData === undefined || nextAuthorsData === undefined) {
-        return {
-          kind: 'full',
-          scan,
-          contentToRender,
-          publicToRender,
-          contentToRemove,
-          publicToRemove,
-        };
+        return { kind: 'full' };
       }
       const changedAuthorKeys = diffAuthorKeys(
         snapshot.authorsData,
@@ -169,14 +125,14 @@ export function createTadaWatchPlan({
 
   const changedTargets = new Set<string>();
   const removedTargets = new Set<string>();
-  for (const target of snapshot.validTargets) {
+  for (const target of snapshot.scan.validTargets) {
     if (!scan.validTargets.has(target)) {
       changedTargets.add(target);
       removedTargets.add(target);
     }
   }
   for (const target of scan.validTargets) {
-    if (!snapshot.validTargets.has(target)) {
+    if (!snapshot.scan.validTargets.has(target)) {
       changedTargets.add(target);
     }
   }

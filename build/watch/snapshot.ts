@@ -8,6 +8,7 @@ import {
   updateProjectScan,
 } from '../source-model';
 import type { Asset, HtmlOutputAnalysis, SiteVariables } from '../types';
+import type { TadaBuildMeta } from './compiler-types';
 
 export interface TadaSourceRecord {
   sourcePath: string;
@@ -21,28 +22,24 @@ export interface TadaSourceRecord {
   authorKey?: string;
 }
 
+export interface TadaOutputOwner {
+  kind: 'content' | 'public';
+  sourcePath: string;
+}
+
 export interface TadaSnapshot {
   siteVariables: SiteVariables;
   assetFiles: string[];
   navData: unknown;
   authorsData: unknown;
-  processedExts: Set<string>;
   contentRecords: Map<string, TadaSourceRecord>;
   publicRecords: Map<string, TadaSourceRecord>;
-  outputOwners: Map<string, { kind: 'content' | 'public'; sourcePath: string }>;
+  outputOwners: Map<string, TadaOutputOwner>;
   reversePartialDeps: Map<string, Set<string>>;
   reverseTraceDeps: Map<string, Set<string>>;
   reverseInternalTargetDeps: Map<string, Set<string>>;
   reverseAuthorDeps: Map<string, Set<string>>;
-  contentFiles: Set<string>;
-  buildContentFiles: Set<string>;
-  publicFiles: Set<string>;
-  literateJavaOutputPaths: Set<string>;
-  contentOwners: Map<string, string>;
-  publicOwners: Map<string, string>;
-  sourceOutputPaths: Map<string, Set<string>>;
-  sourceTargetPaths: Map<string, Set<string>>;
-  validTargets: Set<string>;
+  scan: TadaProjectScan;
 }
 
 function buildReverseMap(
@@ -63,22 +60,11 @@ function buildReverseMap(
   return reverse;
 }
 
-function cloneSetMap(
-  source: Map<string, Set<string>>,
-): Map<string, Set<string>> {
-  return new Map(
-    [...source.entries()].map(([key, values]) => [key, new Set(values)]),
-  );
-}
-
 export function collectOutputOwners(snapshot: {
   contentRecords: Map<string, TadaSourceRecord>;
   publicRecords: Map<string, TadaSourceRecord>;
-}): Map<string, { kind: 'content' | 'public'; sourcePath: string }> {
-  const owners = new Map<
-    string,
-    { kind: 'content' | 'public'; sourcePath: string }
-  >();
+}): Map<string, TadaOutputOwner> {
+  const owners = new Map<string, TadaOutputOwner>();
 
   for (const record of snapshot.contentRecords.values()) {
     for (const outputPath of record.outputs.keys()) {
@@ -116,23 +102,12 @@ export function createSnapshot({
   publicRecords: Map<string, TadaSourceRecord>;
 }): TadaSnapshot {
   const allRecords = [...contentRecords.values()];
-  const reverseAuthorDeps = new Map<string, Set<string>>();
-  for (const record of allRecords) {
-    if (!record.authorKey) {
-      continue;
-    }
-    if (!reverseAuthorDeps.has(record.authorKey)) {
-      reverseAuthorDeps.set(record.authorKey, new Set());
-    }
-    reverseAuthorDeps.get(record.authorKey)!.add(record.sourcePath);
-  }
 
   return {
     siteVariables,
     assetFiles,
     navData,
     authorsData,
-    processedExts: scan.processedExts,
     contentRecords,
     publicRecords,
     outputOwners: collectOutputOwners({ contentRecords, publicRecords }),
@@ -145,16 +120,10 @@ export function createSnapshot({
       allRecords,
       record => record.internalTargets,
     ),
-    reverseAuthorDeps,
-    contentFiles: new Set(scan.contentFiles),
-    buildContentFiles: new Set(scan.buildContentFiles),
-    publicFiles: new Set(scan.publicFiles),
-    literateJavaOutputPaths: new Set(scan.literateJavaOutputPaths),
-    contentOwners: new Map(scan.contentOwners),
-    publicOwners: new Map(scan.publicOwners),
-    sourceOutputPaths: cloneSetMap(scan.sourceOutputPaths),
-    sourceTargetPaths: cloneSetMap(scan.sourceTargetPaths),
-    validTargets: new Set(scan.validTargets),
+    reverseAuthorDeps: buildReverseMap(allRecords, record =>
+      record.authorKey ? [record.authorKey] : [],
+    ),
+    scan,
   };
 }
 
@@ -214,12 +183,22 @@ export function collectHtmlAnalysisByPath(
 ): Map<string, HtmlOutputAnalysis> {
   const htmlAnalysisByPath = new Map<string, HtmlOutputAnalysis>();
   for (const record of contentRecords.values()) {
-    for (const [outputPath, analysis] of record.htmlAnalysisByOutputPath ||
-      new Map<string, HtmlOutputAnalysis>()) {
+    if (!record.htmlAnalysisByOutputPath) {
+      continue;
+    }
+    for (const [outputPath, analysis] of record.htmlAnalysisByOutputPath) {
       htmlAnalysisByPath.set(outputPath, cloneHtmlOutputAnalysis(analysis));
     }
   }
   return htmlAnalysisByPath;
+}
+
+export function createBuildMeta(snapshot: TadaSnapshot): TadaBuildMeta {
+  return {
+    htmlAssetsByPath: collectHtmlAssetsByPath(snapshot.contentRecords),
+    htmlAnalysisByPath: collectHtmlAnalysisByPath(snapshot.contentRecords),
+    siteVariables: snapshot.siteVariables,
+  };
 }
 
 export function normalizeInternalTarget(target: string): string {

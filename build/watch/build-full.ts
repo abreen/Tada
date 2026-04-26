@@ -1,34 +1,24 @@
 import { compileTemplates, config } from '../templates';
 import { getDevSiteVariables } from '../site-variables';
-import { createContentRecord, createPublicRecord } from '../source-records';
 import { getDistDir } from '../util';
-import type { CompilerBuildResult } from '../../watch/types';
-import {
-  collectHtmlAnalysisByPath,
-  collectHtmlAssetsByPath,
-  createSnapshot,
-  type TadaSourceRecord,
-  type TadaSnapshot,
-} from './snapshot';
+import type { CompilerBuildResult } from './types';
+import { createSnapshot, type TadaSourceRecord } from './snapshot';
 import { scanProject } from '../source-model';
-import type {
-  TadaBuildMeta,
-  TraceCache,
-  WatchTraceOptions,
-} from './compiler-types';
+import type { TraceCache, WatchTraceOptions } from './compiler-types';
 import {
   bundleWatchAssets,
   ensureHighlighter,
   makeTempBuildDir,
   populateStaticAssets,
   removeDirIfExists,
-  writeAssets,
 } from './assets';
+import { validateConfig, validateProjectConfigLinks } from './validation';
+import { buildFailedFromError, buildSucceeded } from './build-result';
 import {
-  diagnosticsFromMessages,
-  validateConfig,
-  validateProjectConfigLinks,
-} from './validation';
+  buildFailedWithDiagnostics,
+  renderContentRecord,
+  renderPublicRecord,
+} from './build-helpers';
 
 export async function buildFull({
   traceCache,
@@ -36,7 +26,7 @@ export async function buildFull({
 }: {
   traceCache: TraceCache;
   traceOptions: WatchTraceOptions;
-}): Promise<CompilerBuildResult<TadaSnapshot, TadaBuildMeta>> {
+}): Promise<CompilerBuildResult> {
   const distDir = getDistDir();
   const outputDir = makeTempBuildDir(distDir);
   try {
@@ -44,8 +34,7 @@ export async function buildFull({
     const scan = scanProject(siteVariables);
     const configDiagnostics = validateConfig(scan);
     if (configDiagnostics.length > 0) {
-      removeDirIfExists(outputDir);
-      return { ok: false, diagnostics: configDiagnostics };
+      return buildFailedWithDiagnostics(outputDir, configDiagnostics);
     }
 
     compileTemplates(siteVariables);
@@ -56,33 +45,34 @@ export async function buildFull({
 
     const contentRecords = new Map<string, TadaSourceRecord>();
     for (const filePath of scan.contentFiles) {
-      const record = createContentRecord({
+      const record = renderContentRecord({
         filePath,
         siteVariables,
         scan,
         assetFiles,
         outputDir,
         traceCache,
-        traceToolAvailability: traceOptions.toolAvailability,
+        traceOptions,
         cachedTraceSourceDir: distDir,
       });
-      if (record.outputs.size > 0) {
-        writeAssets(outputDir, record.outputs);
+      if (record) {
         contentRecords.set(filePath, record);
       }
     }
 
     const publicRecords = new Map<string, TadaSourceRecord>();
     for (const filePath of scan.publicFiles) {
-      const record = createPublicRecord(filePath, scan.publicDir);
-      writeAssets(outputDir, record.outputs);
+      const record = renderPublicRecord({
+        filePath,
+        publicDir: scan.publicDir,
+        outputDir,
+      });
       publicRecords.set(filePath, record);
     }
 
     const linkDiagnostics = validateProjectConfigLinks(scan.validTargets);
     if (linkDiagnostics.length > 0) {
-      removeDirIfExists(outputDir);
-      return { ok: false, diagnostics: linkDiagnostics };
+      return buildFailedWithDiagnostics(outputDir, linkDiagnostics);
     }
 
     const nextSnapshot = createSnapshot({
@@ -95,29 +85,13 @@ export async function buildFull({
       publicRecords,
     });
 
-    return {
-      ok: true,
-      snapshot: nextSnapshot,
-      commit: {
-        kind: 'replace-root',
-        stagedPath: outputDir,
-        targetPath: distDir,
-      },
-      meta: {
-        htmlAssetsByPath: collectHtmlAssetsByPath(nextSnapshot.contentRecords),
-        htmlAnalysisByPath: collectHtmlAnalysisByPath(
-          nextSnapshot.contentRecords,
-        ),
-        siteVariables,
-      },
-    };
+    return buildSucceeded(nextSnapshot, {
+      kind: 'replace-root',
+      stagedPath: outputDir,
+      targetPath: distDir,
+    });
   } catch (error) {
     removeDirIfExists(outputDir);
-    return {
-      ok: false,
-      diagnostics: diagnosticsFromMessages([
-        error instanceof Error ? error.message : String(error),
-      ]),
-    };
+    return buildFailedFromError(error);
   }
 }

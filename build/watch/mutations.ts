@@ -1,4 +1,5 @@
-import type { TadaSnapshot } from './snapshot';
+import type { FileMutation } from './types';
+import type { TadaOutputOwner, TadaSnapshot } from './snapshot';
 
 function outputsEqual(
   left: string | Buffer | undefined,
@@ -15,16 +16,25 @@ function outputsEqual(
   return Buffer.compare(leftBuffer, rightBuffer) === 0;
 }
 
+function getOutputContent(
+  snapshot: TadaSnapshot,
+  owner: TadaOutputOwner | undefined,
+  outputPath: string,
+): string | Buffer | undefined {
+  if (!owner) {
+    return undefined;
+  }
+  const records =
+    owner.kind === 'content' ? snapshot.contentRecords : snapshot.publicRecords;
+  return records.get(owner.sourcePath)?.outputs.get(outputPath);
+}
+
 export function computeMutations(
   previous: TadaSnapshot,
   next: TadaSnapshot,
   forceSourcePaths: Set<string> = new Set(),
-): { path: string; kind: 'write' | 'delete'; content?: string | Buffer }[] {
-  const mutations: {
-    path: string;
-    kind: 'write' | 'delete';
-    content?: string | Buffer;
-  }[] = [];
+): FileMutation[] {
+  const mutations: FileMutation[] = [];
   const allPaths = new Set([
     ...previous.outputOwners.keys(),
     ...next.outputOwners.keys(),
@@ -34,24 +44,12 @@ export function computeMutations(
     const previousOwner = previous.outputOwners.get(outputPath);
     const nextOwner = next.outputOwners.get(outputPath);
 
-    const previousContent =
-      previousOwner?.kind === 'content'
-        ? previous.contentRecords
-            .get(previousOwner.sourcePath)
-            ?.outputs.get(outputPath)
-        : previousOwner
-          ? previous.publicRecords
-              .get(previousOwner.sourcePath)
-              ?.outputs.get(outputPath)
-          : undefined;
-    const nextContent =
-      nextOwner?.kind === 'content'
-        ? next.contentRecords.get(nextOwner.sourcePath)?.outputs.get(outputPath)
-        : nextOwner
-          ? next.publicRecords
-              .get(nextOwner.sourcePath)
-              ?.outputs.get(outputPath)
-          : undefined;
+    const previousContent = getOutputContent(
+      previous,
+      previousOwner,
+      outputPath,
+    );
+    const nextContent = getOutputContent(next, nextOwner, outputPath);
 
     if (!nextOwner) {
       mutations.push({ path: outputPath, kind: 'delete' });

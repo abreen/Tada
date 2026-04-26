@@ -4,7 +4,7 @@ This codebase is a static site generator written in TypeScript and uses Bun.
 
 - CLI entrypoints, argument validation, and command dispatch live in `bin/`
 - The main build pipeline, content processing, asset generation, and most core logic live in `build/`
-- Watch mode is split between `build/watch/` and `watch/` for planning, runtime state, and file-system events
+- Watch mode lives under `build/watch/` for planning, runtime state, and file-system events
 - Client-side runtime code and styles live in `src/`, and internal Lodash HTML templates live in `templates/`
 - Default `tada init` content lives in `init/`, feature documentation lives in `spec/`, and end-to-end coverage lives in `functional_tests/` and `playwright/`
 

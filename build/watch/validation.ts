@@ -2,7 +2,7 @@ import { B } from '../colors';
 import { makeLogger } from '../log';
 import { config, getConfigFileName } from '../templates';
 import { validateConfigLinks } from '../validate-config-links';
-import type { WatchDiagnostic } from '../../watch/types';
+import type { WatchDiagnostic } from './types';
 import { assertNoOutputPathConflicts, type TadaProjectScan } from './snapshot';
 
 const log = makeLogger(import.meta.url);

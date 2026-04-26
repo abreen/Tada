@@ -15,7 +15,7 @@ import {
   normalizeOutputPath,
   toPosix,
 } from './utils/paths';
-import type { ChangeBatch } from '../watch/types';
+import type { ChangeBatch } from './watch/types';
 import type { SiteVariables } from './types';
 
 export interface TadaProjectScan {
@@ -28,18 +28,6 @@ export interface TadaProjectScan {
   validTargets: Set<string>;
   literateJavaOutputPaths: Set<string>;
   processedExts: Set<string>;
-  contentOwners: Map<string, string>;
-  publicOwners: Map<string, string>;
-  sourceOutputPaths: Map<string, Set<string>>;
-  sourceTargetPaths: Map<string, Set<string>>;
-}
-
-export interface TadaProjectScanSnapshotLike {
-  processedExts: Set<string>;
-  contentFiles: Set<string>;
-  buildContentFiles: Set<string>;
-  publicFiles: Set<string>;
-  literateJavaOutputPaths: Set<string>;
   contentOwners: Map<string, string>;
   publicOwners: Map<string, string>;
   sourceOutputPaths: Map<string, Set<string>>;
@@ -333,7 +321,7 @@ export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
 }
 
 export function updateProjectScan(
-  snapshot: TadaProjectScanSnapshotLike,
+  snapshot: TadaProjectScan,
   batch: ChangeBatch,
 ): TadaProjectScan {
   const scan = createEmptyScan(snapshot.processedExts);

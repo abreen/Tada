@@ -1,32 +1,23 @@
 import { compileTemplates, config } from '../templates';
 import { getDistDir } from '../util';
-import { createContentRecord, createPublicRecord } from '../source-records';
-import type { CompilerBuildResult } from '../../watch/types';
-import type {
-  TadaBuildMeta,
-  TraceCache,
-  WatchTraceOptions,
-} from './compiler-types';
-import type { TadaWatchPlan } from './planner';
-import {
-  collectHtmlAnalysisByPath,
-  collectHtmlAssetsByPath,
-  createSnapshot,
-  type TadaSnapshot,
-} from './snapshot';
+import type { CompilerBuildResult } from './types';
+import type { TraceCache, WatchTraceOptions } from './compiler-types';
+import type { TadaIncrementalWatchPlan } from './planner';
+import { createSnapshot, type TadaSnapshot } from './snapshot';
 import {
   copyExistingBuildAssets,
   ensureHighlighter,
   makeTempBuildDir,
   removeDirIfExists,
-  writeAssets,
 } from './assets';
 import { computeMutations } from './mutations';
+import { validateConfig, validateProjectConfigLinks } from './validation';
+import { buildFailedFromError, buildSucceeded } from './build-result';
 import {
-  diagnosticsFromMessages,
-  validateConfig,
-  validateProjectConfigLinks,
-} from './validation';
+  buildFailedWithDiagnostics,
+  renderContentRecord,
+  renderPublicRecord,
+} from './build-helpers';
 
 export async function buildIncremental({
   plan,
@@ -34,23 +25,23 @@ export async function buildIncremental({
   traceCache,
   traceOptions,
 }: {
-  plan: TadaWatchPlan;
+  plan: TadaIncrementalWatchPlan;
   snapshot: TadaSnapshot;
   traceCache: TraceCache;
   traceOptions: WatchTraceOptions;
-}): Promise<CompilerBuildResult<TadaSnapshot, TadaBuildMeta>> {
-  const outputDir = makeTempBuildDir(plan.scan.distDir);
+}): Promise<CompilerBuildResult> {
+  const distDir = getDistDir();
+  const outputDir = makeTempBuildDir(distDir);
   try {
     const siteVariables = snapshot.siteVariables;
     const configDiagnostics = validateConfig(plan.scan);
     if (configDiagnostics.length > 0) {
-      removeDirIfExists(outputDir);
-      return { ok: false, diagnostics: configDiagnostics };
+      return buildFailedWithDiagnostics(outputDir, configDiagnostics);
     }
 
     compileTemplates(siteVariables);
     await ensureHighlighter(siteVariables);
-    copyExistingBuildAssets(getDistDir(), outputDir, snapshot.assetFiles);
+    copyExistingBuildAssets(distDir, outputDir, snapshot.assetFiles);
 
     const nextContentRecords = new Map(snapshot.contentRecords);
     const nextPublicRecords = new Map(snapshot.publicRecords);
@@ -64,25 +55,27 @@ export async function buildIncremental({
 
     for (const sourcePath of plan.contentToRender) {
       nextContentRecords.delete(sourcePath);
-      const record = createContentRecord({
+      const record = renderContentRecord({
         filePath: sourcePath,
         siteVariables,
         scan: plan.scan,
         assetFiles: snapshot.assetFiles,
         outputDir,
         traceCache,
-        traceToolAvailability: traceOptions.toolAvailability,
-        cachedTraceSourceDir: getDistDir(),
+        traceOptions,
+        cachedTraceSourceDir: distDir,
       });
-      if (record.outputs.size > 0) {
-        writeAssets(outputDir, record.outputs);
+      if (record) {
         nextContentRecords.set(sourcePath, record);
       }
     }
 
     for (const sourcePath of plan.publicToRender) {
       nextPublicRecords.delete(sourcePath);
-      const record = createPublicRecord(sourcePath, plan.scan.publicDir);
+      const record = renderPublicRecord({
+        filePath: sourcePath,
+        publicDir: plan.scan.publicDir,
+      });
       nextPublicRecords.set(sourcePath, record);
     }
 
@@ -97,11 +90,10 @@ export async function buildIncremental({
     });
 
     const linkDiagnostics = validateProjectConfigLinks(
-      nextSnapshot.validTargets,
+      nextSnapshot.scan.validTargets,
     );
     if (linkDiagnostics.length > 0) {
-      removeDirIfExists(outputDir);
-      return { ok: false, diagnostics: linkDiagnostics };
+      return buildFailedWithDiagnostics(outputDir, linkDiagnostics);
     }
 
     const forceSourcePaths = new Set([
@@ -112,35 +104,15 @@ export async function buildIncremental({
       snapshot,
       nextSnapshot,
       forceSourcePaths,
-    ).map(mutation =>
-      mutation.kind === 'write'
-        ? {
-            kind: 'write' as const,
-            path: mutation.path,
-            content: mutation.content!,
-          }
-        : { kind: 'delete' as const, path: mutation.path },
     );
     removeDirIfExists(outputDir);
-    return {
-      ok: true,
-      snapshot: nextSnapshot,
-      commit: { kind: 'apply-mutations', rootDir: getDistDir(), mutations },
-      meta: {
-        htmlAssetsByPath: collectHtmlAssetsByPath(nextSnapshot.contentRecords),
-        htmlAnalysisByPath: collectHtmlAnalysisByPath(
-          nextSnapshot.contentRecords,
-        ),
-        siteVariables,
-      },
-    };
+    return buildSucceeded(nextSnapshot, {
+      kind: 'apply-mutations',
+      rootDir: distDir,
+      mutations,
+    });
   } catch (error) {
     removeDirIfExists(outputDir);
-    return {
-      ok: false,
-      diagnostics: diagnosticsFromMessages([
-        error instanceof Error ? error.message : String(error),
-      ]),
-    };
+    return buildFailedFromError(error);
   }
 }
