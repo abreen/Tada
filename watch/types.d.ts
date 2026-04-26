@@ -1,3 +1,5 @@
+import type { ChokidarOptions } from 'chokidar';
+
 export type WatchEventKind = 'add' | 'change' | 'unlink';
 
 export interface FileChange {
@@ -11,12 +13,7 @@ export interface ChangeBatch {
 
 export interface WatchTarget {
   path: string;
-  chokidar?: {
-    depth?: number;
-    usePolling?: boolean;
-    interval?: number;
-    binaryInterval?: number;
-  };
+  chokidar?: ChokidarOptions;
   filter?: (filePath: string) => boolean;
 }
 

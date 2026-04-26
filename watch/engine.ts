@@ -267,10 +267,7 @@ export async function runWatchEngine<Snapshot, Plan, Meta>(
         ignoreInitial: true,
         atomic: true,
         awaitWriteFinish: { stabilityThreshold: 100 },
-        depth: target.chokidar?.depth,
-        usePolling: target.chokidar?.usePolling,
-        interval: target.chokidar?.interval,
-        binaryInterval: target.chokidar?.binaryInterval,
+        ...target.chokidar,
       }),
     }));
 
