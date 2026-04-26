@@ -47,12 +47,12 @@ class TestNoJavac:
     def test_disabled_trace_widget_in_output(self, built_site):
         html = (built_site['site_dir'] / 'dist' / 'labs' / '01' / 'index.html').read_text()
         assert 'trace-disabled' in html
-        assert '/labs/01/_traces/TraceDemo/manifest.json' not in html
-        assert '/labs/01/_traces/SearchTreeDemo/manifest.json' not in html
-        assert '/labs/01/_traces/trace_demo/manifest.json' in html
+        assert '/labs/01/_traces/TraceDemo/' not in html
+        assert '/labs/01/_traces/SearchTreeDemo/' not in html
+        assert '/labs/01/_traces/trace_demo/sha256-' in html
 
     def test_only_python_trace_chunks_written(self, built_site):
         traces_dir = built_site['site_dir'] / 'dist' / 'labs' / '01' / '_traces'
         assert not (traces_dir / 'TraceDemo').exists()
         assert not (traces_dir / 'SearchTreeDemo').exists()
-        assert (traces_dir / 'trace_demo' / 'manifest.json').exists()
+        assert list((traces_dir / 'trace_demo').glob('sha256-*/manifest.json'))

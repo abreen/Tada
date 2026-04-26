@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { createHash } from 'crypto';
 import { renderCodeSegment } from './code';
 import { splitLines } from './literate-java';
 import { normalizeOutputPath } from './paths';
@@ -14,17 +15,45 @@ export interface ChunkTraceOutputOptions {
   ignoreFields?: Record<string, string[]>;
 }
 
+export interface ChunkTraceOutputResult {
+  manifest: TraceManifest;
+  artifactId: string;
+  outputPaths: string[];
+}
+
+function hashTraceFiles(files: { name: string; content: string }[]): string {
+  const hasher = createHash('sha256');
+  for (const file of files) {
+    hasher.update(file.name, 'utf8');
+    hasher.update('\0', 'utf8');
+    hasher.update(file.content, 'utf8');
+    hasher.update('\0', 'utf8');
+  }
+  return `sha256-${hasher.digest('hex').slice(0, 16)}`;
+}
+
+function buildTraceOutputPath(
+  relDir: string,
+  traceName: string,
+  artifactId: string,
+  fileName: string,
+): string {
+  return [relDir, '_traces', traceName, artifactId, fileName]
+    .filter(Boolean)
+    .join('/');
+}
+
 export function chunkTraceOutput(
   output: string,
   traceOutputDir: string,
+  relDir: string,
+  traceName: string,
   sourceFile: string,
   source: string,
   options: ChunkTraceOutputOptions = {},
-): TraceManifest {
+): ChunkTraceOutputResult {
   const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
   const ignoreFields = options.ignoreFields ?? {};
-
-  fs.mkdirSync(traceOutputDir, { recursive: true });
 
   const lines = output
     .trim()
@@ -46,26 +75,27 @@ export function chunkTraceOutput(
 
   let chunkEntries: TraceChunkEntry[] = [];
   let chunkIndex = 0;
+  const chunkFiles: { name: string; content: string }[] = [];
 
   for (const step of allSteps) {
     const svg = generateStepSvg(step, layout);
     chunkEntries.push({ line: step.line, stdout: step.stdout, svg });
 
     if (chunkEntries.length >= chunkSize) {
-      fs.writeFileSync(
-        path.join(traceOutputDir, `chunk-${chunkIndex}.json`),
-        JSON.stringify(chunkEntries),
-      );
+      chunkFiles.push({
+        name: `chunk-${chunkIndex}.json`,
+        content: JSON.stringify(chunkEntries),
+      });
       chunkEntries = [];
       chunkIndex++;
     }
   }
 
   if (chunkEntries.length > 0) {
-    fs.writeFileSync(
-      path.join(traceOutputDir, `chunk-${chunkIndex}.json`),
-      JSON.stringify(chunkEntries),
-    );
+    chunkFiles.push({
+      name: `chunk-${chunkIndex}.json`,
+      content: JSON.stringify(chunkEntries),
+    });
   }
 
   const manifest: TraceManifest = {
@@ -76,12 +106,26 @@ export function chunkTraceOutput(
     lineToSteps,
   };
 
-  fs.writeFileSync(
-    path.join(traceOutputDir, 'manifest.json'),
-    JSON.stringify(manifest),
-  );
+  const manifestFile = {
+    name: 'manifest.json',
+    content: JSON.stringify(manifest),
+  };
+  const files = [manifestFile, ...chunkFiles];
+  const artifactId = hashTraceFiles(files);
+  const artifactDir = path.join(traceOutputDir, artifactId);
 
-  return manifest;
+  fs.mkdirSync(artifactDir, { recursive: true });
+  for (const file of files) {
+    fs.writeFileSync(path.join(artifactDir, file.name), file.content);
+  }
+
+  return {
+    manifest,
+    artifactId,
+    outputPaths: files.map(file =>
+      buildTraceOutputPath(relDir, traceName, artifactId, file.name),
+    ),
+  };
 }
 
 export function highlightTraceSource(
@@ -96,16 +140,25 @@ export function highlightTraceSource(
 export function getTraceOutputPaths(
   relDir: string,
   traceName: string,
+  artifactId: string,
   totalSteps: number,
 ): string[] {
-  const baseDir = [relDir, '_traces', traceName].filter(Boolean).join('/');
-  const outputPaths = [`${baseDir}/manifest.json`];
+  const outputPaths = [
+    buildTraceOutputPath(relDir, traceName, artifactId, 'manifest.json'),
+  ];
   for (
     let chunkIndex = 0;
     chunkIndex * DEFAULT_CHUNK_SIZE < totalSteps;
     chunkIndex++
   ) {
-    outputPaths.push(`${baseDir}/chunk-${chunkIndex}.json`);
+    outputPaths.push(
+      buildTraceOutputPath(
+        relDir,
+        traceName,
+        artifactId,
+        `chunk-${chunkIndex}.json`,
+      ),
+    );
   }
   return outputPaths;
 }
@@ -148,18 +201,18 @@ export function materializeTraceOutputs({
 export function buildManifestUrl({
   relDir,
   traceName,
+  artifactId,
   applyBasePath,
 }: {
   relDir: string;
   traceName: string;
+  artifactId: string;
   applyBasePath: (subPath: string) => string;
 }): string {
   return applyBasePath(
     normalizeOutputPath(
       '/' +
-        [relDir, '_traces', traceName, 'manifest.json']
-          .filter(Boolean)
-          .join('/'),
+        buildTraceOutputPath(relDir, traceName, artifactId, 'manifest.json'),
     ),
   );
 }

@@ -54,16 +54,27 @@ describe('chunkTraceOutput', () => {
     const output = lines.join('\n') + '\n';
     const outputDir = '/virtual/_traces/Test';
 
-    const manifest = chunkTraceOutput(
+    const result = chunkTraceOutput(
       output,
       outputDir,
+      '',
+      'Test',
       'Test.java',
       'public class Test {}',
       { chunkSize: 3 },
     );
+    const manifest = result.manifest;
+    const artifactDir = path.join(outputDir, result.artifactId);
 
-    const chunk0 = readJson<unknown[]>(path.join(outputDir, 'chunk-0.json'));
-    const chunk1 = readJson<unknown[]>(path.join(outputDir, 'chunk-1.json'));
+    expect(result.artifactId).toMatch(/^sha256-[0-9a-f]{16}$/);
+    expect(result.outputPaths).toEqual([
+      `_traces/Test/${result.artifactId}/manifest.json`,
+      `_traces/Test/${result.artifactId}/chunk-0.json`,
+      `_traces/Test/${result.artifactId}/chunk-1.json`,
+    ]);
+
+    const chunk0 = readJson<unknown[]>(path.join(artifactDir, 'chunk-0.json'));
+    const chunk1 = readJson<unknown[]>(path.join(artifactDir, 'chunk-1.json'));
     expect(chunk0).toHaveLength(3);
     expect(chunk1).toHaveLength(2);
 
@@ -72,7 +83,7 @@ describe('chunkTraceOutput', () => {
     expect(chunk0[0]).toHaveProperty('stdout');
 
     const manifestFile = readJson<TraceManifest>(
-      path.join(outputDir, 'manifest.json'),
+      path.join(artifactDir, 'manifest.json'),
     );
     expect(manifest.totalSteps).toBe(5);
     expect(manifest.chunkSize).toBe(3);
@@ -92,17 +103,20 @@ describe('chunkTraceOutput', () => {
     });
     const outputDir = '/virtual/_traces/Test';
 
-    const manifest = chunkTraceOutput(
+    const result = chunkTraceOutput(
       line,
       outputDir,
+      '',
+      'Test',
       'Test.java',
       'class Test {}',
       { chunkSize: 50 },
     );
+    const manifest = result.manifest;
 
     expect(manifest.totalSteps).toBe(1);
     const chunk0 = readJson<Array<{ stdout: string }>>(
-      path.join(outputDir, 'chunk-0.json'),
+      path.join(outputDir, result.artifactId, 'chunk-0.json'),
     );
     expect(chunk0).toHaveLength(1);
     expect(chunk0[0].stdout).toBe('hello\n');
@@ -170,15 +184,46 @@ class B {
     }
     const outputDir = '/virtual/_traces/Test';
 
-    const manifest = chunkTraceOutput(
+    const result = chunkTraceOutput(
       lines.join('\n'),
       outputDir,
+      '',
+      'Test',
       'Test.java',
       '',
       { chunkSize: 50 },
     );
+    const manifest = result.manifest;
 
     expect(manifest.lineToSteps[3]).toEqual([0, 1, 2]);
+  });
+
+  test('changes artifact id when generated trace content changes', () => {
+    const baseStep = {
+      line: 1,
+      file: 'Test.java',
+      stack: [],
+      heap: {},
+      stdout: '',
+    };
+    const first = chunkTraceOutput(
+      JSON.stringify(baseStep),
+      '/virtual/_traces/Test',
+      '',
+      'Test',
+      'Test.java',
+      'class Test {}',
+    );
+    const second = chunkTraceOutput(
+      JSON.stringify({ ...baseStep, stdout: 'changed' }),
+      '/virtual/_traces/Test',
+      '',
+      'Test',
+      'Test.java',
+      'class Test {}',
+    );
+
+    expect(first.artifactId).not.toBe(second.artifactId);
   });
 
   test('treats only .java and .py files as trace sources', () => {

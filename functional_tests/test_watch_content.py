@@ -9,6 +9,22 @@ from watch_helpers import WEBSOCKET_TIMEOUT_SEC, WatchProcess
 WATCH_RELOAD_PATH = '/__tada_watch'
 
 
+def trace_manifest_path(site_dir, trace_name):
+    matches = sorted(
+        (site_dir / 'dist' / 'labs' / '01' / '_traces' / trace_name).glob('sha256-*/manifest.json')
+    )
+    assert matches, f'No manifest found for {trace_name}'
+    return matches[0]
+
+
+def trace_chunk_path(site_dir, trace_name, chunk_name='chunk-0.json'):
+    matches = sorted(
+        (site_dir / 'dist' / 'labs' / '01' / '_traces' / trace_name).glob(f'sha256-*/{chunk_name}')
+    )
+    assert matches, f'No {chunk_name} found for {trace_name}'
+    return matches[0]
+
+
 class TestWatchEditContent:
     """Modifying a Markdown or HTML file triggers a build."""
 
@@ -376,14 +392,11 @@ class TestWatchTraceRebuildsOnJavaChange:
             lab_html = site_dir / 'dist' / 'labs' / '01' / 'index.html'
             assert lab_html.exists()
 
-            manifest_path = (
-                site_dir / 'dist' / 'labs' / '01' / '_traces' / 'TraceDemo' / 'manifest.json'
-            )
-            assert manifest_path.exists()
+            manifest_path = trace_manifest_path(site_dir, 'TraceDemo')
             old_manifest = json.loads(manifest_path.read_text())
             old_steps = old_manifest['totalSteps']
-
-            before_mtime = manifest_path.stat().st_mtime
+            before_html = lab_html.read_text()
+            before_mtime = lab_html.stat().st_mtime
 
             java_file = site_dir / 'content' / 'labs' / '01' / 'TraceDemo.java'
             java_file.write_text(
@@ -394,9 +407,12 @@ class TestWatchTraceRebuildsOnJavaChange:
                 '}\n'
             )
 
-            wp.wait_for_rebuild(manifest_path, 'modified', before_mtime=before_mtime)
+            wp.wait_for_rebuild(lab_html, 'modified', before_mtime=before_mtime)
 
-            new_manifest = json.loads(manifest_path.read_text())
+            new_manifest_path = trace_manifest_path(site_dir, 'TraceDemo')
+            assert new_manifest_path != manifest_path
+            assert lab_html.read_text() != before_html
+            new_manifest = json.loads(new_manifest_path.read_text())
             assert new_manifest['totalSteps'] != old_steps
             assert '"changed"' in new_manifest['source']
         finally:
@@ -407,21 +423,22 @@ class TestWatchTraceRebuildsOnJavaChange:
         try:
             wp.wait_for_initial_build()
 
-            manifest_path = (
-                site_dir / 'dist' / 'labs' / '01' / '_traces' / 'trace_demo' / 'manifest.json'
-            )
-            assert manifest_path.exists()
+            lab_html = site_dir / 'dist' / 'labs' / '01' / 'index.html'
+            manifest_path = trace_manifest_path(site_dir, 'trace_demo')
             old_manifest = json.loads(manifest_path.read_text())
             old_steps = old_manifest['totalSteps']
-
-            before_mtime = manifest_path.stat().st_mtime
+            before_html = lab_html.read_text()
+            before_mtime = lab_html.stat().st_mtime
 
             python_file = site_dir / 'content' / 'labs' / '01' / 'trace_demo.py'
             python_file.write_text("value = 7\nnums = [1, 2, 3]\nprint('changed', value)\n")
 
-            wp.wait_for_rebuild(manifest_path, 'modified', before_mtime=before_mtime)
+            wp.wait_for_rebuild(lab_html, 'modified', before_mtime=before_mtime)
 
-            new_manifest = json.loads(manifest_path.read_text())
+            new_manifest_path = trace_manifest_path(site_dir, 'trace_demo')
+            assert new_manifest_path != manifest_path
+            assert lab_html.read_text() != before_html
+            new_manifest = json.loads(new_manifest_path.read_text())
             assert new_manifest['totalSteps'] != old_steps
             assert "print('changed', value)" in new_manifest['source']
         finally:
@@ -436,12 +453,8 @@ class TestWatchTraceRebuildsOnJavaChange:
             assert lab_html.exists()
             before_lab_mtime = lab_html.stat().st_mtime
 
-            trace_manifest = (
-                site_dir / 'dist' / 'labs' / '01' / '_traces' / 'TraceDemo' / 'manifest.json'
-            )
-            trace_chunk = (
-                site_dir / 'dist' / 'labs' / '01' / '_traces' / 'TraceDemo' / 'chunk-0.json'
-            )
+            trace_manifest = trace_manifest_path(site_dir, 'TraceDemo')
+            trace_chunk = trace_chunk_path(site_dir, 'TraceDemo')
             assert trace_manifest.exists()
             assert trace_chunk.exists()
 

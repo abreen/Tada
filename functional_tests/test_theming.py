@@ -12,6 +12,12 @@ def get_inlined_style_content(html):
     return html[style_start:style_end]
 
 
+def read_critical_css(site_dir):
+    matches = list((site_dir / 'dist').glob('critical.bundle.tada-*.css'))
+    assert matches, 'Expected critical CSS bundle'
+    return matches[0].read_text()
+
+
 class TestTheming:
     """Custom theme config produces CSS custom properties in critical CSS and HTML."""
 
@@ -33,27 +39,27 @@ class TestTheming:
 
     def test_critical_css_contains_theme_color_property(self, built_dev_site):
         """Critical CSS bundle contains --theme-color property."""
-        critical_css = (built_dev_site / 'dist' / 'critical.bundle.css').read_text()
+        critical_css = read_critical_css(built_dev_site)
         assert '--theme-color:' in critical_css
 
     def test_critical_css_contains_theme_color_text_property(self, built_dev_site):
         """Critical CSS bundle contains --theme-color-text property."""
-        critical_css = (built_dev_site / 'dist' / 'critical.bundle.css').read_text()
+        critical_css = read_critical_css(built_dev_site)
         assert '--theme-color-text:' in critical_css
 
     def test_critical_css_contains_text_on_theme_property(self, built_dev_site):
         """Critical CSS bundle contains --text-on-theme property."""
-        critical_css = (built_dev_site / 'dist' / 'critical.bundle.css').read_text()
+        critical_css = read_critical_css(built_dev_site)
         assert '--text-on-theme:' in critical_css
 
     def test_critical_css_contains_tint_hue_property(self, built_dev_site):
         """Critical CSS bundle contains --tint-hue with custom value."""
-        critical_css = (built_dev_site / 'dist' / 'critical.bundle.css').read_text()
+        critical_css = read_critical_css(built_dev_site)
         assert '--tint-hue: 45deg' in critical_css
 
     def test_critical_css_contains_tint_amount_property(self, built_dev_site):
         """Critical CSS bundle contains --tint-amount with custom value."""
-        critical_css = (built_dev_site / 'dist' / 'critical.bundle.css').read_text()
+        critical_css = read_critical_css(built_dev_site)
         # tintAmount 75 becomes .75 in CSS (leading zero removed by minifier)
         assert '--tint-amount: .75' in critical_css
 
@@ -77,18 +83,18 @@ class TestThemingDefaults:
 
     def test_default_config_critical_css_contains_theme_color(self, built_dev_site):
         """Default config critical CSS contains --theme-color property."""
-        critical_css = (built_dev_site / 'dist' / 'critical.bundle.css').read_text()
+        critical_css = read_critical_css(built_dev_site)
         assert '--theme-color:' in critical_css
 
     def test_default_config_critical_css_contains_tint_hue(self, built_dev_site):
         """Default config critical CSS contains --tint-hue with default value."""
-        critical_css = (built_dev_site / 'dist' / 'critical.bundle.css').read_text()
+        critical_css = read_critical_css(built_dev_site)
         # Default tintHue is 20
         assert '--tint-hue: 20deg' in critical_css
 
     def test_default_config_critical_css_contains_tint_amount(self, built_dev_site):
         """Default config critical CSS contains --tint-amount with default value."""
-        critical_css = (built_dev_site / 'dist' / 'critical.bundle.css').read_text()
+        critical_css = read_critical_css(built_dev_site)
         # Default tintAmount is 100, which becomes 1.0
         assert '--tint-amount: 1' in critical_css
 

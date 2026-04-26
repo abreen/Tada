@@ -15,18 +15,18 @@ class TestDevBuild:
 
     def test_produces_css_bundle(self, built_dev_site):
         dist = built_dev_site / 'dist'
-        css_files = list(dist.glob('*.bundle.css'))
+        css_files = list(dist.glob('*.bundle.tada-*.css'))
         assert len(css_files) >= 1
         names = [f.name for f in css_files]
-        assert 'index.bundle.css' in names
+        assert any(name.startswith('index.bundle.tada-') for name in names)
 
     def test_produces_js_bundle(self, built_dev_site):
         dist = built_dev_site / 'dist'
-        assert (dist / 'index.bundle.js').exists()
+        assert list(dist.glob('index.bundle.tada-*.js'))
 
     def test_produces_critical_css(self, built_dev_site):
         dist = built_dev_site / 'dist'
-        assert (dist / 'critical.bundle.css').exists()
+        assert list(dist.glob('critical.bundle.tada-*.css'))
 
     def test_inlines_critical_css_in_html(self, built_dev_site):
         index = built_dev_site / 'dist' / 'index.html'

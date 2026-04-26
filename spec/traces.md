@@ -18,8 +18,11 @@ The argument is a path to a source file resolved relative to the page.
 At build time, `renderTrace` picks a backend by file extension and executes the
 target program to produce a JSONL trace (one JSON object per execution step).
 The output is split into chunk files of 50 steps each, plus a `manifest.json`
-with metadata and a line-to-step index. These files are written to
-`dist/_traces/{Name}/`. Results are cached per source file path.
+with metadata and a line-to-step index. Tada hashes the serialized generated
+manifest and chunk JSON, then writes the files to
+`dist/_traces/{Name}/sha256-{hash}/`. The rendered widget points at the
+hashed `manifest.json` path, so browsers fetch fresh trace data when a rebuild
+produces different trace artifacts. Results are cached per source file path.
 
 If the runtime needed for a trace backend is not available, `renderTrace` logs a
 warning and emits a disabled widget for that source file. Java traces require

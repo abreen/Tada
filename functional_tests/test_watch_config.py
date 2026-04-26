@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from conftest import (
     AUTHORS_CONFIG_FILE,
@@ -86,24 +88,27 @@ class TestWatchConfig:
             lab_html = site_dir / 'dist' / 'labs' / '01' / 'index.html'
             assert lab_html.exists()
             before_html = lab_html.read_text()
-            assert 'data-trace-manifest="/labs/01/_traces/TraceDemo/manifest.json"' in before_html
+            assert re.search(
+                r'data-trace-manifest="/labs/01/_traces/TraceDemo/sha256-[0-9a-f]{16}/manifest\.json"',
+                before_html,
+            )
             before_mtime = lab_html.stat().st_mtime
 
             set_site_config(site_dir, {'basePath': '/course'})
             wp.wait_for_rebuild(lab_html, 'modified', before_mtime=before_mtime)
 
             after_html = lab_html.read_text()
-            assert (
-                'data-trace-manifest="/course/labs/01/_traces/TraceDemo/manifest.json"'
-                in after_html
+            assert re.search(
+                r'data-trace-manifest="/course/labs/01/_traces/TraceDemo/sha256-[0-9a-f]{16}/manifest\.json"',
+                after_html,
             )
-            assert (
-                'data-trace-manifest="/course/labs/01/_traces/SearchTreeDemo/manifest.json"'
-                in after_html
+            assert re.search(
+                r'data-trace-manifest="/course/labs/01/_traces/SearchTreeDemo/sha256-[0-9a-f]{16}/manifest\.json"',
+                after_html,
             )
-            assert (
-                'data-trace-manifest="/course/labs/01/_traces/trace_demo/manifest.json"'
-                in after_html
+            assert re.search(
+                r'data-trace-manifest="/course/labs/01/_traces/trace_demo/sha256-[0-9a-f]{16}/manifest\.json"',
+                after_html,
             )
         finally:
             wp.stop()

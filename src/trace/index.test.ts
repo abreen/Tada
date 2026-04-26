@@ -144,6 +144,29 @@ describe('trace', () => {
     expect(fetched).toContain('/trace/chunk-0.json');
   });
 
+  test('derives chunk URLs inside hashed trace artifact directories', async () => {
+    const fetched: string[] = [];
+    mockGlobals({
+      fetch: async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        fetched.push(url);
+        if (url.endsWith('/manifest.json')) {
+          return { ok: true, json: async () => defaultManifest } as Response;
+        }
+        return { ok: true, json: async () => defaultChunk } as Response;
+      },
+    });
+
+    const win = createWindow(
+      widgetHtml('/trace/sha256-1234567890abcdef/manifest.json'),
+    );
+    mount(win);
+    await flush();
+
+    expect(fetched).toContain('/trace/sha256-1234567890abcdef/manifest.json');
+    expect(fetched).toContain('/trace/sha256-1234567890abcdef/chunk-0.json');
+  });
+
   test('displays step counter as 1/N', async () => {
     setupDefaultFetch();
     const win = createWindow(widgetHtml());

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { bundle } from '../bundle';
+import { bundle, getBundleNaming } from '../bundle';
 import { copyFonts } from '../generate-fonts';
 import { copyKatexAssets } from '../generate-katex-assets';
 import { generateFavicons } from '../generate-favicon';
@@ -42,7 +42,7 @@ export async function bundleWatchAssets(
   const reloadAssets = await Bun.build({
     entrypoints: [RELOAD_CLIENT_PATH],
     outdir: outputDir,
-    naming: '[name].bundle.[ext]',
+    naming: getBundleNaming(),
     sourcemap: 'inline',
   });
   return [

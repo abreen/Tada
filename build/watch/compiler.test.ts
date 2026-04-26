@@ -9,6 +9,7 @@ function makeTraceCache(paths: string[]): TraceCache {
       filePath,
       {
         manifestUrl: '/trace/manifest.json',
+        artifactId: 'sha256-test',
         highlightedSource: '<pre>source</pre>',
         totalSteps: 1,
         mtime: 1,

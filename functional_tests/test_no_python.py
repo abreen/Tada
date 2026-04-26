@@ -44,9 +44,9 @@ class TestNoPython:
 
     def test_java_trace_manifest_still_present(self, built_site):
         html = (built_site['site_dir'] / 'dist' / 'labs' / '01' / 'index.html').read_text()
-        assert '/labs/01/_traces/TraceDemo/manifest.json' in html
-        assert '/labs/01/_traces/SearchTreeDemo/manifest.json' in html
-        assert '/labs/01/_traces/trace_demo/manifest.json' not in html
+        assert '/labs/01/_traces/TraceDemo/sha256-' in html
+        assert '/labs/01/_traces/SearchTreeDemo/sha256-' in html
+        assert '/labs/01/_traces/trace_demo/' not in html
 
     def test_python_trace_widget_disabled(self, built_site):
         html = (built_site['site_dir'] / 'dist' / 'labs' / '01' / 'index.html').read_text()

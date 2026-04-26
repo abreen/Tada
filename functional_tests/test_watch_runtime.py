@@ -48,8 +48,9 @@ class TestWatchRuntime:
             ws_thread.join(timeout=2)
 
     def test_watch_build_includes_reload_client(self, watch, site_dir):
-        client_bundle = site_dir / 'dist' / 'watch-reload-client.bundle.js'
-        assert client_bundle.exists(), 'watch-reload-client.bundle.js not in dist/'
+        matches = list((site_dir / 'dist').glob('watch-reload-client.bundle.tada-*.js'))
+        assert matches, 'watch-reload-client bundle not in dist/'
+        client_bundle = matches[0]
         content = client_bundle.read_text()
         assert 'WebSocket' in content
         assert 'reload' in content

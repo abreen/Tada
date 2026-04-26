@@ -42,6 +42,7 @@ export interface TraceContext {
 
 export interface TraceResult {
   manifestUrl: string;
+  artifactId: string;
   highlightedSource: string;
   totalSteps: number;
   mtime: number;
@@ -141,6 +142,7 @@ export function createTraceHelpers(context: TraceContext): {
         const outputPaths = getTraceOutputPaths(
           relDir,
           traceName,
+          cached.artifactId,
           cached.totalSteps,
         );
         if (
@@ -155,7 +157,12 @@ export function createTraceHelpers(context: TraceContext): {
           }
           return {
             ...cached,
-            manifestUrl: buildManifestUrl({ relDir, traceName, applyBasePath }),
+            manifestUrl: buildManifestUrl({
+              relDir,
+              traceName,
+              artifactId: cached.artifactId,
+              applyBasePath,
+            }),
           };
         }
       }
@@ -176,32 +183,42 @@ export function createTraceHelpers(context: TraceContext): {
     );
     const traceOutputDir = path.join(distDir, relDir, '_traces', traceName);
 
-    const manifest = chunkTraceOutput(
+    const traceOutput = chunkTraceOutput(
       output,
       traceOutputDir,
+      relDir,
+      traceName,
       sourceFileNameForTrace(sourceFile),
       source,
       { chunkSize: DEFAULT_CHUNK_SIZE, ignoreFields },
     );
-    for (const outputPath of getTraceOutputPaths(
-      relDir,
-      traceName,
-      manifest.totalSteps,
-    )) {
+    for (const outputPath of traceOutput.outputPaths) {
       dependencyCollector?.generatedOutputPaths?.add(outputPath);
     }
 
-    const manifestUrl = buildManifestUrl({ relDir, traceName, applyBasePath });
+    const manifestUrl = buildManifestUrl({
+      relDir,
+      traceName,
+      artifactId: traceOutput.artifactId,
+      applyBasePath,
+    });
 
-    const totalSteps = manifest.totalSteps;
+    const totalSteps = traceOutput.manifest.totalSteps;
     const mtime = fs.statSync(sourceFilePath).mtimeMs;
     cache.set(sourceFilePath, {
       manifestUrl,
+      artifactId: traceOutput.artifactId,
       highlightedSource,
       totalSteps,
       mtime,
     });
-    return { manifestUrl, highlightedSource, totalSteps, mtime };
+    return {
+      manifestUrl,
+      artifactId: traceOutput.artifactId,
+      highlightedSource,
+      totalSteps,
+      mtime,
+    };
   }
 
   return {

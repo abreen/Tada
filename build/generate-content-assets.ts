@@ -35,6 +35,7 @@ export class ContentRenderer {
     string,
     {
       manifestUrl: string;
+      artifactId: string;
       highlightedSource: string;
       totalSteps: number;
       mtime: number;

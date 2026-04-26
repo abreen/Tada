@@ -432,6 +432,7 @@ function renderPlainTextContent(
       string,
       {
         manifestUrl: string;
+        artifactId: string;
         highlightedSource: string;
         totalSteps: number;
         mtime: number;

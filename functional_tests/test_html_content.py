@@ -21,7 +21,7 @@ class TestHtmlContentPages:
     def test_html_page_has_template_wrapper(self, built_dev_site):
         html = (built_dev_site / 'dist' / 'custom.html').read_text()
         assert '<html' in html
-        assert 'index.bundle.css' in html
+        assert 'index.bundle.tada-' in html
 
     def test_html_content_preserved(self, built_dev_site):
         html = (built_dev_site / 'dist' / 'custom.html').read_text()

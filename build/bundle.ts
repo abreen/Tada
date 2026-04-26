@@ -13,6 +13,12 @@ import { deriveTheme, deriveLinkHue } from './utils/derive-theme';
 import type { PluginBuilder } from 'bun';
 import type { SiteVariables } from './types';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
+import pkg from '../package.json' with { type: 'json' };
+
+export function getBundleNaming(): string {
+  const version = pkg.version.replace(/[^a-zA-Z0-9.-]/g, '-');
+  return `[name].bundle.tada-${version}.[ext]`;
+}
 
 function formatCssNumber(value: number, precision = 4): string {
   if (Number.isInteger(value)) {
@@ -109,7 +115,7 @@ export async function bundle(
   const result = await Bun.build({
     entrypoints,
     outdir: resolvedDistDir,
-    naming: '[name].bundle.[ext]',
+    naming: getBundleNaming(),
     minify: mode === 'production',
     sourcemap: isDev ? 'inline' : 'none',
     define: createDefine(siteVariables, isDev),

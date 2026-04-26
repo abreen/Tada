@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from conftest import SITE_PROD_CONFIG_FILE, init_site, load_structured_file, run_tada
 
@@ -12,20 +14,20 @@ class TestProdBuild:
 
     def test_produces_css_and_js_bundles(self, built_prod_site):
         dist = built_prod_site / 'dist-prod' / 'v1'
-        assert (dist / 'index.bundle.css').exists()
-        assert (dist / 'index.bundle.js').exists()
-        assert (dist / 'critical.bundle.css').exists()
+        assert list(dist.glob('index.bundle.tada-*.css'))
+        assert list(dist.glob('index.bundle.tada-*.js'))
+        assert list(dist.glob('critical.bundle.tada-*.css'))
 
     def test_no_watch_reload_client_in_prod(self, built_prod_site):
         dist = built_prod_site / 'dist-prod' / 'v1'
-        assert not (dist / 'watch-reload-client.bundle.js').exists()
+        assert not list(dist.glob('watch-reload-client.bundle.tada-*.js'))
 
     def test_html_uses_prod_base_path(self, built_prod_site):
         config = load_structured_file(built_prod_site / SITE_PROD_CONFIG_FILE)
         base_path = config['basePath']
         index = built_prod_site / 'dist-prod' / 'v1' / 'index.html'
         html = index.read_text()
-        assert f'{base_path}index.bundle.css' in html
+        assert f'{base_path}index.bundle.tada-' in html
 
     def test_produces_same_pages_as_dev(self, site_dir):
         run_tada('dev', cwd=str(site_dir), check=True)
@@ -81,8 +83,8 @@ class TestProdBuildWithBasePath:
 
     def test_head_asset_links_include_base_path(self, built_prod_site):
         html = (built_prod_site / 'dist-prod' / 'v1' / 'index.html').read_text()
-        assert '/test/index.bundle.css' in html
-        assert '/test/index.bundle.js' in html
+        assert re.search(r'/test/index\.bundle\.tada-[^"]+\.css', html)
+        assert re.search(r'/test/index\.bundle\.tada-[^"]+\.js', html)
 
     def test_markdown_links_include_base_path(self, built_prod_site):
         html = (built_prod_site / 'dist-prod' / 'v1' / 'index.html').read_text()

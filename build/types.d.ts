@@ -97,6 +97,7 @@ export interface RenderPlainTextOptions {
     string,
     {
       manifestUrl: string;
+      artifactId: string;
       highlightedSource: string;
       totalSteps: number;
       mtime: number;
