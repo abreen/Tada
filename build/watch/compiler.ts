@@ -70,8 +70,8 @@ export class TadaWatchCompiler implements WatchCompiler<
     ]);
 
     return [
-      { path: contentDir },
-      { path: publicDir },
+      { path: contentDir, chokidar: { usePolling: true } },
+      { path: publicDir, chokidar: { usePolling: true } },
       {
         path: projectConfigDir,
         chokidar: { depth: 0 },

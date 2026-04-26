@@ -82,6 +82,11 @@ the new path.
 This means watch mode updates `dist/` so the old output disappears and the new
 output appears at its new location.
 
+After a directory rename, watch mode continues tracking the renamed directory.
+If the rename temporarily breaks links and the next rebuild fails, fixing those
+links recovers the build and files added later under the renamed directory still
+trigger rebuilds.
+
 ## Content and Public Conflicts
 
 Watch mode rejects situations where a file in `content/` and a file in
@@ -177,3 +182,7 @@ The Tada-specific watch pieces are:
   which records must be re-rendered or removed
 - `build/watch/compiler.ts`, which runs that plan and publishes the updated
   snapshot after a successful rebuild
+
+The recursive `content/` and `public/` source watchers use chokidar polling so
+directory renames remain observable under Bun, including directories created
+after watch mode has already started.

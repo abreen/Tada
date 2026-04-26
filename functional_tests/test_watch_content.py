@@ -90,6 +90,41 @@ class TestWatchAddContent:
         watch.wait_for_rebuild(dist_asset, 'exists')
         assert dist_asset.read_text() == 'test asset content'
 
+    def test_add_after_folder_rename_error_recovery(self, watch, site_dir):
+        docs_dir = site_dir / 'content' / 'docs'
+        docs_dir.mkdir()
+        docs_index = docs_dir / 'index.md'
+        docs_index.write_text('---\ntitle: Docs\n---\n\nDocs home.\n')
+
+        docs_html = site_dir / 'dist' / 'docs' / 'index.html'
+        watch.wait_for_rebuild(docs_html, 'exists')
+
+        nav_path = site_dir / 'nav.yaml'
+        nav_path.write_text(
+            '- title: Docs\n  links:\n    - text: Docs\n      internal: /docs/index.html\n'
+        )
+        watch.wait_for_successful_rebuild()
+
+        guides_dir = site_dir / 'content' / 'guides'
+        docs_dir.rename(guides_dir)
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+        assert docs_html.exists()
+
+        nav_path.write_text(
+            '- title: Guides\n  links:\n    - text: Guides\n      internal: /guides/index.html\n'
+        )
+        guides_html = site_dir / 'dist' / 'guides' / 'index.html'
+        watch.wait_for_rebuild(guides_html, 'exists')
+        assert not docs_html.exists()
+
+        new_page = guides_dir / 'new-page.md'
+        new_page.write_text('---\ntitle: New Page\n---\n\nCreated after recovery.\n')
+
+        new_html = site_dir / 'dist' / 'guides' / 'new-page.html'
+        watch.wait_for_rebuild(new_html, 'exists')
+        assert 'Created after recovery.' in new_html.read_text()
+
 
 class TestWatchRemoveContent:
     """Removing a Markdown file triggers a build."""
