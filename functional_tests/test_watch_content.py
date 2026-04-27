@@ -143,9 +143,9 @@ class TestWatchAddContent:
 
 
 class TestWatchRemoveContent:
-    """Removing a Markdown file triggers a build."""
+    """Removing a content source updates only affected output."""
 
-    def test_removing_markdown_triggers_rebuild(self, watch, site_dir):
+    def test_removing_unlinked_markdown_removes_output_only(self, watch, site_dir):
         md_file = site_dir / 'content' / 'markdown.md'
         md_file.write_text('---\ntitle: Markdown\n---\n\nSome content.\n')
 
@@ -153,10 +153,10 @@ class TestWatchRemoveContent:
         watch.wait_for_rebuild(dist_md, 'exists')
 
         index_html = site_dir / 'dist' / 'index.html'
-        before_mtime = index_html.stat().st_mtime
+        before_index_snapshot = watch.snapshot(index_html)
         md_file.unlink()
-        watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
         watch.wait_for_rebuild(dist_md, 'removed')
+        assert watch.snapshot(index_html) == before_index_snapshot
 
     def test_removing_copied_content_asset_removes_dist_file(self, watch, site_dir):
         asset = site_dir / 'content' / 'notes.txt'

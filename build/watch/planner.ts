@@ -124,11 +124,9 @@ export function createTadaWatchPlan({
   }
 
   const changedTargets = new Set<string>();
-  const removedTargets = new Set<string>();
   for (const target of snapshot.scan.validTargets) {
     if (!scan.validTargets.has(target)) {
       changedTargets.add(target);
-      removedTargets.add(target);
     }
   }
   for (const target of scan.validTargets) {
@@ -138,13 +136,6 @@ export function createTadaWatchPlan({
   }
   for (const target of changedTargets) {
     addDependents(contentToRender, snapshot.reverseInternalTargetDeps, target);
-  }
-
-  if (removedTargets.size > 0 && contentToRender.size === 0) {
-    const rootOwner = snapshot.outputOwners.get('index.html');
-    if (rootOwner?.kind === 'content') {
-      contentToRender.add(rootOwner.sourcePath);
-    }
   }
 
   for (const [outputPath, owner] of snapshot.outputOwners) {

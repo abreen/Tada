@@ -147,6 +147,56 @@ describe('createTadaWatchPlan', () => {
     );
   });
 
+  test('does not rebuild root page when deleting an unreferenced content page', () => {
+    const indexPath = sitePath('content', 'index.md');
+    const removedPath = sitePath('content', 'orphan.md');
+    const snapshot = makeSnapshot({
+      contentRecords: new Map([
+        [indexPath, makeRecord(indexPath, ['index.html'])],
+        [removedPath, makeRecord(removedPath, ['orphan.html'])],
+      ]),
+      outputOwners: new Map([
+        ['index.html', { kind: 'content', sourcePath: indexPath }],
+        ['orphan.html', { kind: 'content', sourcePath: removedPath }],
+      ]),
+      scan: makeScan({
+        contentFiles: new Set([indexPath, removedPath]),
+        buildContentFiles: new Set([indexPath, removedPath]),
+        contentOwners: new Map([
+          ['index.html', indexPath],
+          ['orphan.html', removedPath],
+        ]),
+        sourceOutputPaths: new Map([
+          [indexPath, new Set(['index.html'])],
+          [removedPath, new Set(['orphan.html'])],
+        ]),
+        sourceTargetPaths: new Map([
+          [indexPath, new Set(['/index.html'])],
+          [removedPath, new Set(['/orphan.html'])],
+        ]),
+        validTargets: new Set(['/index.html', '/orphan.html']),
+      }),
+    });
+    const scan = makeScan({
+      contentFiles: new Set([indexPath]),
+      buildContentFiles: new Set([indexPath]),
+      contentOwners: new Map([['index.html', indexPath]]),
+      sourceOutputPaths: new Map([[indexPath, new Set(['index.html'])]]),
+      sourceTargetPaths: new Map([[indexPath, new Set(['/index.html'])]]),
+      validTargets: new Set(['/index.html']),
+    });
+
+    const plan = createTadaWatchPlan({
+      snapshot,
+      batch: makeBatch([{ path: removedPath, kind: 'unlink' }]),
+      scan,
+    });
+
+    const incrementalPlan = expectIncremental(plan);
+    expect([...incrementalPlan.contentToRender]).toEqual([]);
+    expect([...incrementalPlan.contentToRemove]).toEqual([removedPath]);
+  });
+
   test('rebuilds a content owner after public handoff removal', () => {
     const contentPath = sitePath('content', 'about.md');
     const publicPath = sitePath('public', 'about.html');
