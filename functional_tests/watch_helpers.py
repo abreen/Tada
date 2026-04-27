@@ -45,13 +45,20 @@ class WatchProcess:
 
     def _file_snapshot(self, path: Path):
         """Return a lightweight snapshot for change detection."""
-        if not path.exists():
+        try:
+            # During full rebuilds, FileNotFoundError can sometimes be thrown
+            # (usually on Windows) the moment between the old dist/ tree is
+            # renamed away and the new dist/ is added. Catch this error and
+            # let callers keep polling.
+            stat = path.stat()
+            content = path.read_bytes()
+        except FileNotFoundError:
             return None
-        stat = path.stat()
+
         return {
             'mtime_ns': stat.st_mtime_ns,
             'size': stat.st_size,
-            'content': path.read_bytes(),
+            'content': content,
         }
 
     def _stdout_text(self) -> str:
