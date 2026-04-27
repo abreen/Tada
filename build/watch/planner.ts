@@ -100,17 +100,6 @@ export function createTadaWatchPlan({
       contentToRender.add(resolvedPath);
     } else if (snapshot.contentRecords.has(resolvedPath)) {
       contentToRemove.add(resolvedPath);
-      const previousRecord = snapshot.contentRecords.get(resolvedPath)!;
-      for (const partialPath of previousRecord.partialDeps) {
-        addDependents(
-          contentToRender,
-          snapshot.reversePartialDeps,
-          partialPath,
-        );
-      }
-      for (const tracePath of previousRecord.traceDeps) {
-        addDependents(contentToRender, snapshot.reverseTraceDeps, tracePath);
-      }
     }
 
     if (scan.publicFiles.has(resolvedPath)) {

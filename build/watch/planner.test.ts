@@ -197,6 +197,72 @@ describe('createTadaWatchPlan', () => {
     expect([...incrementalPlan.contentToRemove]).toEqual([removedPath]);
   });
 
+  test('does not rebuild sibling pages when deleting a page with shared dependencies', () => {
+    const partialPath = sitePath('content', '_shared.md');
+    const tracePath = sitePath('content', 'TraceDemo.java');
+    const removedPath = sitePath('content', 'removed.md');
+    const siblingPath = sitePath('content', 'sibling.md');
+    const removedRecord = makeRecord(removedPath, ['removed.html'], {
+      partialDeps: new Set([partialPath]),
+      traceDeps: new Set([tracePath]),
+    });
+    const siblingRecord = makeRecord(siblingPath, ['sibling.html'], {
+      partialDeps: new Set([partialPath]),
+      traceDeps: new Set([tracePath]),
+    });
+    const snapshot = makeSnapshot({
+      contentRecords: new Map([
+        [removedPath, removedRecord],
+        [siblingPath, siblingRecord],
+      ]),
+      outputOwners: new Map([
+        ['removed.html', { kind: 'content', sourcePath: removedPath }],
+        ['sibling.html', { kind: 'content', sourcePath: siblingPath }],
+      ]),
+      reversePartialDeps: new Map([
+        [partialPath, new Set([removedPath, siblingPath])],
+      ]),
+      reverseTraceDeps: new Map([
+        [tracePath, new Set([removedPath, siblingPath])],
+      ]),
+      scan: makeScan({
+        contentFiles: new Set([removedPath, siblingPath]),
+        buildContentFiles: new Set([removedPath, siblingPath]),
+        contentOwners: new Map([
+          ['removed.html', removedPath],
+          ['sibling.html', siblingPath],
+        ]),
+        sourceOutputPaths: new Map([
+          [removedPath, new Set(['removed.html'])],
+          [siblingPath, new Set(['sibling.html'])],
+        ]),
+        sourceTargetPaths: new Map([
+          [removedPath, new Set(['/removed.html'])],
+          [siblingPath, new Set(['/sibling.html'])],
+        ]),
+        validTargets: new Set(['/removed.html', '/sibling.html']),
+      }),
+    });
+    const scan = makeScan({
+      contentFiles: new Set([siblingPath]),
+      buildContentFiles: new Set([siblingPath]),
+      contentOwners: new Map([['sibling.html', siblingPath]]),
+      sourceOutputPaths: new Map([[siblingPath, new Set(['sibling.html'])]]),
+      sourceTargetPaths: new Map([[siblingPath, new Set(['/sibling.html'])]]),
+      validTargets: new Set(['/sibling.html']),
+    });
+
+    const plan = createTadaWatchPlan({
+      snapshot,
+      batch: makeBatch([{ path: removedPath, kind: 'unlink' }]),
+      scan,
+    });
+
+    const incrementalPlan = expectIncremental(plan);
+    expect([...incrementalPlan.contentToRender]).toEqual([]);
+    expect([...incrementalPlan.contentToRemove]).toEqual([removedPath]);
+  });
+
   test('rebuilds a content owner after public handoff removal', () => {
     const contentPath = sitePath('content', 'about.md');
     const publicPath = sitePath('public', 'about.html');
