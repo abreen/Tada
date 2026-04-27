@@ -49,25 +49,13 @@ export interface ContentRenderOptions {
   distDir: string;
   assetFiles: string[];
   scan: TadaProjectScan;
-  watchState?: WatchState;
-}
-
-/** State passed from watch mode to control incremental rebuilds */
-export interface WatchState {
-  changedContentFiles?: Set<string>;
-  jsonDataChanged?: boolean;
-  partialsChanged?: boolean;
 }
 
 /** Result from ContentRenderer.processContent() */
 export interface ContentRenderResult {
   errors: Error[];
-  changedHtmlAssetPaths: Set<string>;
-  removedHtmlAssetPaths: Set<string>;
-  removedOutputRelPaths: Set<string>;
   htmlAssetsByPath: Map<string, string>;
   htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>;
-  buildContentFiles: string[];
 }
 
 /** Logger returned by makeLogger() */
