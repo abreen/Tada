@@ -8,9 +8,17 @@ import { parse as parseLcov } from '@saintedlama/lcov-parse';
 import { createInstrumenter } from 'istanbul-lib-instrument';
 
 const coverageDir = path.resolve(import.meta.dir, '..', 'coverage');
+const packageDir = path.resolve(import.meta.dir, '..');
 const functionalDir = path.join(coverageDir, 'functional');
 const unitLcovPath = path.join(coverageDir, 'unit', 'lcov.info');
 const outputDir = path.join(coverageDir, 'report');
+const excludedCoveragePaths = new Set([
+  path.join(packageDir, 'unit-test-preload.ts'),
+]);
+
+function isCoverageExcluded(filePath: string): boolean {
+  return excludedCoveragePaths.has(path.resolve(filePath));
+}
 
 const map = libCoverage.createCoverageMap({});
 
@@ -23,6 +31,11 @@ if (fs.existsSync(functionalDir)) {
     const data = JSON.parse(
       fs.readFileSync(path.join(functionalDir, file), 'utf8'),
     );
+    for (const filePath of Object.keys(data)) {
+      if (isCoverageExcluded(filePath)) {
+        delete data[filePath];
+      }
+    }
     map.merge(data);
   }
 }
@@ -34,6 +47,9 @@ if (fs.existsSync(unitLcovPath)) {
 
   for (const record of records) {
     const absPath = path.resolve(coverageDir, '..', record.file);
+    if (isCoverageExcluded(absPath)) {
+      continue;
+    }
     const fc = libCoverage.createFileCoverage(absPath);
     for (const { line, hit } of record.lines.details) {
       const idx = Object.keys(fc.data.statementMap).length;
@@ -90,7 +106,6 @@ const instrumenter = createInstrumenter({
   produceSourceMap: false,
 });
 
-const packageDir = path.resolve(import.meta.dir, '..');
 for (const dir of ['build', 'src']) {
   const base = path.join(packageDir, dir);
   const entries = fs.readdirSync(base, {
