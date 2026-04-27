@@ -6,7 +6,12 @@ import { splitLines } from './literate-java';
 import { normalizeOutputPath } from './paths';
 import { computeLayout } from './trace-layout';
 import { generateStepSvg } from './trace-svg';
-import type { TraceChunkEntry, TraceManifest, TraceStep } from '../types';
+import type {
+  TraceChunkEntry,
+  TraceManifest,
+  TraceOutputEvent,
+  TraceStep,
+} from '../types';
 
 export const DEFAULT_CHUNK_SIZE = 50;
 
@@ -19,6 +24,13 @@ export interface ChunkTraceOutputResult {
   manifest: TraceManifest;
   artifactId: string;
   outputPaths: string[];
+}
+
+function stepOutputEvents(step: TraceStep): TraceOutputEvent[] {
+  if (Array.isArray(step.output)) {
+    return step.output;
+  }
+  return step.stdout ? [{ stream: 'stdout', text: step.stdout }] : [];
 }
 
 function hashTraceFiles(files: { name: string; content: string }[]): string {
@@ -79,7 +91,7 @@ export function chunkTraceOutput(
 
   for (const step of allSteps) {
     const svg = generateStepSvg(step, layout);
-    chunkEntries.push({ line: step.line, stdout: step.stdout, svg });
+    chunkEntries.push({ line: step.line, output: stepOutputEvents(step), svg });
 
     if (chunkEntries.length >= chunkSize) {
       chunkFiles.push({

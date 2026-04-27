@@ -5,17 +5,22 @@ import json
 import os
 import pdb
 import sys
+import traceback
 import types
 
 
 class CaptureStream(io.TextIOBase):
-    def __init__(self, sink):
+    def __init__(self, sink, stream):
         self._sink = sink
+        self._stream = stream
 
     def write(self, s):
         if not isinstance(s, str):
             s = str(s)
-        self._sink.append(s)
+        if self._sink and self._sink[-1]["stream"] == self._stream:
+            self._sink[-1]["text"] += s
+        else:
+            self._sink.append({"stream": self._stream, "text": s})
         return len(s)
 
     def flush(self):
@@ -69,17 +74,23 @@ class TracePdb(pdb.Pdb):
         if self.pending_snapshot is None:
             return
         payload = dict(self.pending_snapshot)
-        payload["stdout"] = self._drain_output()
+        payload["output"] = self._drain_output()
         self.trace_writer.write(json.dumps(payload) + "\n")
         self.trace_writer.flush()
         self.pending_snapshot = None
 
     def _drain_output(self):
         if not self.output_chunks:
-            return ""
-        output = "".join(self.output_chunks)
+            return []
+        output = list(self.output_chunks)
         self.output_chunks.clear()
         return output
+
+    def emit_crash(self, frame):
+        payload = self._capture_snapshot(frame)
+        payload["output"] = self._drain_output()
+        self.trace_writer.write(json.dumps(payload) + "\n")
+        self.trace_writer.flush()
 
     def _capture_snapshot(self, frame):
         reachable = {}
@@ -234,7 +245,8 @@ def main():
 
     trace_writer = sys.stdout
     output_chunks = []
-    capture = CaptureStream(output_chunks)
+    stdout_capture = CaptureStream(output_chunks, "stdout")
+    stderr_capture = CaptureStream(output_chunks, "stderr")
     debugger = TracePdb(target_path, trace_writer, output_chunks)
 
     code_globals = {
@@ -253,19 +265,48 @@ def main():
             source = f.read()
         compiled = compile(source, target_path, "exec")
 
-        sys.stdout = capture
-        sys.stderr = capture
+        sys.stdout = stdout_capture
+        sys.stderr = stderr_capture
 
         try:
             debugger.set_step()
             debugger.runcall(exec, compiled, code_globals, code_globals)
         except SystemExit:
             pass
+        except BaseException as exc:
+            debugger.flush_pending()
+            sys.stderr.write(format_target_traceback(exc, target_path))
+            frame = find_traced_exception_frame(debugger, exc.__traceback__)
+            if frame is None:
+                raise
+            debugger.emit_crash(frame)
         finally:
             debugger.flush_pending()
     finally:
         sys.stdout = original_stdout
         sys.stderr = original_stderr
+
+
+def find_traced_exception_frame(debugger, tb):
+    traced = None
+    while tb is not None:
+        if debugger._is_traced_frame(tb.tb_frame):
+            traced = tb.tb_frame
+        tb = tb.tb_next
+    return traced
+
+
+def format_target_traceback(exc, target_path):
+    frames = [
+        frame
+        for frame in traceback.extract_tb(exc.__traceback__)
+        if os.path.abspath(frame.filename) == target_path
+    ]
+    return (
+        "Traceback (most recent call last):\n"
+        + "".join(traceback.format_list(frames))
+        + "".join(traceback.format_exception_only(type(exc), exc))
+    )
 
 
 if __name__ == "__main__":

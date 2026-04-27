@@ -1,4 +1,4 @@
-import type { TraceManifest, TraceChunkEntry } from './types';
+import type { TraceManifest, TraceChunkEntry, TraceOutputEvent } from './types';
 import { globals } from '../globals';
 
 interface WidgetState {
@@ -202,13 +202,13 @@ function scaleDiagramSvg(diagram: HTMLElement, doc: Document): void {
 
 function updateOutput(
   content: HTMLElement,
-  output: string,
+  output: TraceOutputEvent[],
   doc: Document,
 ): void {
   const existing = content.querySelector(
     ':scope > .trace-output',
   ) as HTMLPreElement | null;
-  if (!output) {
+  if (output.length === 0) {
     existing?.remove();
     return;
   }
@@ -218,7 +218,23 @@ function updateOutput(
     outputElement.className = 'trace-output';
     content.append(outputElement);
   }
-  outputElement.textContent = output;
+  outputElement.replaceChildren(
+    ...output.map(event => {
+      const span = doc.createElement('span');
+      if (event.stream === 'stderr') {
+        span.className = 'trace-output-stderr';
+      }
+      span.textContent = event.text;
+      return span;
+    }),
+  );
+}
+
+function getStepOutput(step: TraceChunkEntry): TraceOutputEvent[] {
+  if (Array.isArray(step.output)) {
+    return step.output;
+  }
+  return step.stdout ? [{ stream: 'stdout', text: step.stdout }] : [];
 }
 
 function renderWidgetState(
@@ -234,14 +250,12 @@ function renderWidgetState(
     state.manifest.totalSteps,
     doc,
   );
-  let output = '';
+  const output: TraceOutputEvent[] = [];
   for (let i = 0; i <= state.currentStep; i++) {
     const ci = Math.floor(i / state.manifest.chunkSize);
     const off = i % state.manifest.chunkSize;
     const s = state.chunks.get(ci)![off];
-    if (s.stdout) {
-      output += s.stdout;
-    }
+    output.push(...getStepOutput(s));
   }
   updateOutput(elements.content, output, doc);
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
-import type { TraceManifest, TraceChunkEntry } from './types';
+import type { TraceManifest, TraceChunkEntry, TraceOutputEvent } from './types';
 import mount from './index';
 
 function makeManifest(overrides: Partial<TraceManifest> = {}): TraceManifest {
@@ -16,11 +16,17 @@ function makeManifest(overrides: Partial<TraceManifest> = {}): TraceManifest {
 }
 
 function makeChunk(
-  entries: Array<{ line?: number; stdout?: string; svg?: string }>,
+  entries: Array<{
+    line?: number;
+    output?: TraceOutputEvent[];
+    stdout?: string;
+    svg?: string;
+  }>,
 ): TraceChunkEntry[] {
   return entries.map(e => ({
     line: e.line ?? 1,
-    stdout: e.stdout ?? '',
+    output:
+      e.output ?? (e.stdout ? [{ stream: 'stdout', text: e.stdout }] : []),
     svg: e.svg ?? '<svg></svg>',
   }));
 }
@@ -367,6 +373,53 @@ describe('trace', () => {
     const output = win.document.querySelector('.trace-output') as HTMLElement;
     expect(output).not.toBeNull();
     expect(output.textContent).toBe('initial output');
+  });
+
+  test('renders interleaved stderr in output with stderr class', async () => {
+    const chunk = makeChunk([
+      {
+        line: 1,
+        output: [
+          { stream: 'stdout', text: 'out\n' },
+          { stream: 'stderr', text: 'err\n' },
+          { stream: 'stdout', text: 'done\n' },
+        ],
+        svg: '<svg></svg>',
+      },
+    ]);
+    setupFetch({
+      '/trace/manifest.json': makeManifest({ totalSteps: 1 }),
+      '/trace/chunk-0.json': chunk,
+    });
+
+    const win = createWindow(widgetHtml());
+    mount(win);
+    await flush();
+
+    const output = win.document.querySelector('.trace-output') as HTMLElement;
+    expect(output.textContent).toBe('out\nerr\ndone\n');
+    const spans = output.querySelectorAll('span');
+    expect(spans).toHaveLength(3);
+    expect(spans[0].className).toBe('');
+    expect(spans[1].className).toBe('trace-output-stderr');
+    expect(spans[2].className).toBe('');
+  });
+
+  test('renders legacy stdout-only chunks', async () => {
+    const chunk = [
+      { line: 1, stdout: 'legacy output', svg: '<svg></svg>' },
+    ] as TraceChunkEntry[];
+    setupFetch({
+      '/trace/manifest.json': makeManifest({ totalSteps: 1 }),
+      '/trace/chunk-0.json': chunk,
+    });
+
+    const win = createWindow(widgetHtml());
+    mount(win);
+    await flush();
+
+    const output = win.document.querySelector('.trace-output') as HTMLElement;
+    expect(output.textContent).toBe('legacy output');
   });
 
   test('clicking next advances to the next step', async () => {

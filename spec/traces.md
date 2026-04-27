@@ -37,10 +37,18 @@ response), the widget stays in its initial state without crashing.
 
 The rendered widget uses a vertical layout: the memory diagram on top, the
 syntax-highlighted source below it, and program output at the bottom when the
-trace has output to show. A toolbar with step buttons and a counter lets the
-user navigate through execution steps. Chunks are fetched on demand as the user
-steps forward. Trace controls render disabled and are enabled by the
+trace has output to show. The output panel preserves stdout and stderr in the
+order captured by the tracer. Stdout uses the normal output text color; stderr
+is rendered in red. Traced program stderr is part of the trace data and is not
+printed among Tada's build logs. A toolbar with step buttons and a counter lets
+the user navigate through execution steps. Chunks are fetched on demand as the
+user steps forward. Trace controls render disabled and are enabled by the
 client-side component after the trace data is ready.
+
+If a Java or Python program terminates because of an uncaught exception, the
+trace still builds successfully. The tracer emits a final step on the throwing
+source line that includes the exception output on stderr, so examples can show
+the program crashing.
 
 The source panel highlights the current line. The memory diagram is rendered as
 SVG and depicts stack frames with local variables, heap objects (arrays, objects,

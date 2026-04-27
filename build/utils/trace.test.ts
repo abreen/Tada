@@ -47,7 +47,7 @@ describe('chunkTraceOutput', () => {
           file: 'Test.java',
           stack: [{ method: 'main', class: 'Test', locals: {} }],
           heap: {},
-          stdout: '',
+          output: [],
         }),
       );
     }
@@ -80,7 +80,7 @@ describe('chunkTraceOutput', () => {
 
     expect((chunk0[0] as { svg: string }).svg).toContain('<svg');
     expect(chunk0[0]).toHaveProperty('line');
-    expect(chunk0[0]).toHaveProperty('stdout');
+    expect(chunk0[0]).toHaveProperty('output');
 
     const manifestFile = readJson<TraceManifest>(
       path.join(artifactDir, 'manifest.json'),
@@ -99,7 +99,7 @@ describe('chunkTraceOutput', () => {
       file: 'Test.java',
       stack: [],
       heap: {},
-      stdout: 'hello\n',
+      output: [{ stream: 'stdout', text: 'hello\n' }],
     });
     const outputDir = '/virtual/_traces/Test';
 
@@ -115,11 +115,43 @@ describe('chunkTraceOutput', () => {
     const manifest = result.manifest;
 
     expect(manifest.totalSteps).toBe(1);
-    const chunk0 = readJson<Array<{ stdout: string }>>(
-      path.join(outputDir, result.artifactId, 'chunk-0.json'),
-    );
+    const chunk0 = readJson<
+      Array<{ output: Array<{ stream: string; text: string }> }>
+    >(path.join(outputDir, result.artifactId, 'chunk-0.json'));
     expect(chunk0).toHaveLength(1);
-    expect(chunk0[0].stdout).toBe('hello\n');
+    expect(chunk0[0].output).toEqual([{ stream: 'stdout', text: 'hello\n' }]);
+  });
+
+  test('preserves stderr output events in chunks', () => {
+    const line = JSON.stringify({
+      line: 1,
+      file: 'Test.java',
+      stack: [],
+      heap: {},
+      output: [
+        { stream: 'stdout', text: 'before\n' },
+        { stream: 'stderr', text: 'boom\n' },
+      ],
+    });
+    const outputDir = '/virtual/_traces/Test';
+
+    const result = chunkTraceOutput(
+      line,
+      outputDir,
+      '',
+      'Test',
+      'Test.java',
+      'class Test {}',
+      { chunkSize: 50 },
+    );
+
+    const chunk0 = readJson<
+      Array<{ output: Array<{ stream: string; text: string }> }>
+    >(path.join(outputDir, result.artifactId, 'chunk-0.json'));
+    expect(chunk0[0].output).toEqual([
+      { stream: 'stdout', text: 'before\n' },
+      { stream: 'stderr', text: 'boom\n' },
+    ]);
   });
 
   test('passes ignoreFields from source to layout', () => {
@@ -178,7 +210,7 @@ class B {
           file: 'Test.java',
           stack: [],
           heap: {},
-          stdout: '',
+          output: [],
         }),
       );
     }
@@ -204,7 +236,7 @@ class B {
       file: 'Test.java',
       stack: [],
       heap: {},
-      stdout: '',
+      output: [],
     };
     const first = chunkTraceOutput(
       JSON.stringify(baseStep),
@@ -215,7 +247,10 @@ class B {
       'class Test {}',
     );
     const second = chunkTraceOutput(
-      JSON.stringify({ ...baseStep, stdout: 'changed' }),
+      JSON.stringify({
+        ...baseStep,
+        output: [{ stream: 'stderr', text: 'changed' }],
+      }),
       '/virtual/_traces/Test',
       '',
       'Test',

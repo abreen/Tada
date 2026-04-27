@@ -3,6 +3,7 @@ import com.sun.jdi.connect.*;
 import com.sun.jdi.event.*;
 import com.sun.jdi.request.*;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -18,6 +19,9 @@ public class TraceRunner {
     private static final Map<Long, String> objectIdMap = new HashMap<>();
     private static long nextObjId = 1;
     private static Map<String, ObjectReference> previousReachable = new LinkedHashMap<>();
+    private static final List<OutputEvent> outputEvents = new ArrayList<>();
+
+    private record OutputEvent(String stream, String text) {}
 
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
@@ -39,27 +43,31 @@ public class TraceRunner {
         InputStream targetStdout = process.getInputStream();
         InputStream targetStderr = process.getErrorStream();
 
-        Thread stderrThread = new Thread(() -> {
-            try {
-                targetStderr.transferTo(System.err);
-            } catch (IOException ignored) {
-            }
-        });
+        Thread stdoutThread = new Thread(() -> readStream("stdout", targetStdout));
+        Thread stderrThread = new Thread(() -> readStream("stderr", targetStderr));
+        stdoutThread.setDaemon(true);
         stderrThread.setDaemon(true);
+        stdoutThread.start();
         stderrThread.start();
 
         try {
-            ClassPrepareRequest cpr =
-                vm.eventRequestManager().createClassPrepareRequest();
+            EventRequestManager requests = vm.eventRequestManager();
+            ClassPrepareRequest cpr = requests.createClassPrepareRequest();
             cpr.addClassFilter(className);
             cpr.setSuspendPolicy(EventRequest.SUSPEND_ALL);
             cpr.enable();
+
+            ExceptionRequest exceptionRequest =
+                requests.createExceptionRequest(null, false, true);
+            exceptionRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+            exceptionRequest.enable();
 
             vm.eventQueue().remove().resume(); // consume VMStartEvent
 
             boolean running = true;
             while (running) {
                 EventSet eventSet = vm.eventQueue().remove();
+                boolean resumed = false;
                 for (Event event : eventSet) {
                     if (event instanceof ClassPrepareEvent cpe) {
                         Method mainMethod = findMainMethod(cpe.referenceType());
@@ -75,7 +83,7 @@ public class TraceRunner {
                         cpr.disable();
 
                     } else if (event instanceof BreakpointEvent bpe) {
-                        emitState(bpe.thread(), targetStdout);
+                        emitState(bpe.thread(), drainOutputEventsJson());
 
                         var step = vm.eventRequestManager().createStepRequest(
                             bpe.thread(),
@@ -91,14 +99,31 @@ public class TraceRunner {
                         bpe.request().disable();
 
                     } else if (event instanceof StepEvent se) {
-                        emitState(se.thread(), targetStdout);
+                        emitState(se.thread(), drainOutputEventsJson());
+
+                    } else if (event instanceof ExceptionEvent ee
+                            && isUserClass(ee.location().declaringType())) {
+                        String initialOutput = drainOutputEventsJson();
+                        String statePrefix = buildStatePrefix(ee.thread());
+                        eventSet.resume();
+                        resumed = true;
+                        waitForVmTermination(vm.eventQueue());
+                        process.waitFor();
+                        stdoutThread.join(1000);
+                        stderrThread.join(1000);
+                        String finalOutput = mergeOutputJson(
+                            initialOutput,
+                            drainOutputEventsJson());
+                        emitState(statePrefix, finalOutput);
+                        running = false;
+                        break;
 
                     } else if (event instanceof VMDeathEvent
                             || event instanceof VMDisconnectEvent) {
                         running = false;
                     }
                 }
-                if (running) {
+                if (running && !resumed) {
                     eventSet.resume();
                 }
             }
@@ -108,6 +133,7 @@ public class TraceRunner {
                 vm.dispose();
             } catch (VMDisconnectedException ignored) {
             }
+            stdoutThread.join(1000);
             stderrThread.join(1000);
         }
     }
@@ -127,10 +153,18 @@ public class TraceRunner {
     }
 
     private static void emitState(ThreadReference thread,
-            InputStream targetStdout) throws Exception {
+            String outputJson) throws Exception {
         Thread.sleep(1);
-        String newStdout = drainStream(targetStdout);
+        emitState(buildStatePrefix(thread), outputJson);
+    }
 
+    private static void emitState(String statePrefix, String outputJson) {
+        System.out.println(statePrefix + outputJson + "}");
+        System.out.flush();
+    }
+
+    private static String buildStatePrefix(ThreadReference thread)
+            throws Exception {
         Location loc = thread.frame(0).location();
         int line = loc.lineNumber();
         String file = loc.sourceName();
@@ -155,13 +189,11 @@ public class TraceRunner {
         String heapJson = serializeHeap(reachable);
         previousReachable = new LinkedHashMap<>(reachable);
 
-        System.out.println(
-            "{\"line\":" + line
+        return "{\"line\":" + line
             + ",\"file\":\"" + jsonEscape(file)
             + "\",\"stack\":" + stackJson
             + ",\"heap\":" + heapJson
-            + ",\"stdout\":\"" + jsonEscape(newStdout) + "\"}");
-        System.out.flush();
+            + ",\"output\":";
     }
 
     private static String serializeStack(ThreadReference thread,
@@ -383,12 +415,89 @@ public class TraceRunner {
             && !name.startsWith("com.sun.");
     }
 
-    private static String drainStream(InputStream stream) throws IOException {
-        var sb = new StringBuilder();
-        while (stream.available() > 0) {
-            sb.append((char) stream.read());
+    private static void waitForVmTermination(EventQueue eventQueue)
+            throws InterruptedException {
+        boolean running = true;
+        while (running) {
+            try {
+                EventSet eventSet = eventQueue.remove();
+                for (Event event : eventSet) {
+                    if (event instanceof VMDeathEvent
+                            || event instanceof VMDisconnectEvent) {
+                        running = false;
+                        break;
+                    }
+                }
+                if (running) {
+                    eventSet.resume();
+                }
+            } catch (VMDisconnectedException ignored) {
+                running = false;
+            }
         }
+    }
+
+    private static void readStream(String streamName, InputStream stream) {
+        byte[] buffer = new byte[4096];
+        try {
+            int n;
+            while ((n = stream.read(buffer)) != -1) {
+                String text = new String(buffer, 0, n, StandardCharsets.UTF_8);
+                synchronized (outputEvents) {
+                    if (!outputEvents.isEmpty()
+                            && outputEvents.get(outputEvents.size() - 1)
+                                .stream().equals(streamName)) {
+                        OutputEvent previous =
+                            outputEvents.remove(outputEvents.size() - 1);
+                        outputEvents.add(new OutputEvent(
+                            streamName,
+                            previous.text() + text));
+                    } else {
+                        outputEvents.add(new OutputEvent(streamName, text));
+                    }
+                }
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static String drainOutputEventsJson() {
+        List<OutputEvent> drained;
+        synchronized (outputEvents) {
+            drained = new ArrayList<>(outputEvents);
+            outputEvents.clear();
+        }
+        return outputEventsJson(drained);
+    }
+
+    private static String outputEventsJson(List<OutputEvent> events) {
+        var sb = new StringBuilder("[");
+        boolean first = true;
+        for (OutputEvent event : events) {
+            if (!first) {
+                sb.append(',');
+            }
+            first = false;
+            sb.append("{\"stream\":\"")
+                .append(event.stream())
+                .append("\",\"text\":\"")
+                .append(jsonEscape(event.text()))
+                .append("\"}");
+        }
+        sb.append(']');
         return sb.toString();
+    }
+
+    private static String mergeOutputJson(String first, String second) {
+        if (first.equals("[]")) {
+            return second;
+        }
+        if (second.equals("[]")) {
+            return first;
+        }
+        return first.substring(0, first.length() - 1)
+            + ","
+            + second.substring(1);
     }
 
     private static String jsonEscape(String s) {

@@ -51,7 +51,7 @@ writeFileSync(
   JSON.stringify([
     {
       line: 1,
-      stdout: 'output',
+      output: [{ stream: 'stdout', text: 'output' }],
       svg: `<svg class="trace-memory" width="640" height="480" viewBox="0 0 640 480">
   <rect x="20" y="20" width="600" height="440" fill="none" stroke="currentColor"></rect>
 </svg>`,
@@ -73,14 +73,14 @@ writeFileSync(
   JSON.stringify([
     {
       line: 1,
-      stdout: '',
+      output: [],
       svg: `<svg class="trace-memory" width="640" height="480" viewBox="0 0 640 480">
   <text x="20" y="40">step 1</text>
 </svg>`,
     },
     {
       line: 2,
-      stdout: 'done',
+      output: [{ stream: 'stdout', text: 'done' }],
       svg: `<svg class="trace-memory" width="640" height="480" viewBox="0 0 640 480">
   <text x="20" y="40">step 2</text>
 </svg>`,

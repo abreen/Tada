@@ -141,6 +141,16 @@
   content: 'Output';
 }
 
+.trace-output-stderr {
+  color: hsl(0deg 70% 45%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .trace-output-stderr {
+    color: hsl(0deg 85% 72%);
+  }
+}
+
 .trace-memory {
   max-width: 100%;
   height: auto;

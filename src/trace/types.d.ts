@@ -11,7 +11,13 @@ export interface TraceStep {
   file: string;
   stack: TraceStackFrame[];
   heap: Record<string, TraceHeapObject>;
-  stdout: string;
+  output?: TraceOutputEvent[];
+  stdout?: string;
+}
+
+export interface TraceOutputEvent {
+  stream: 'stdout' | 'stderr';
+  text: string;
 }
 
 export interface TraceStackFrame {
@@ -42,6 +48,7 @@ export type TraceHeapObject =
 /** A single entry in a chunk file (new format with precomputed SVG). */
 export interface TraceChunkEntry {
   line: number;
-  stdout: string;
+  output?: TraceOutputEvent[];
+  stdout?: string;
   svg: string;
 }
