@@ -201,6 +201,39 @@ test.describe('slides presentation mode', () => {
       )
       .toEqual({ fullscreen: false, presenting: false });
   });
+
+  test('ArrowLeft resets traces when returning to a trace slide', async ({
+    page,
+  }) => {
+    await page.goto('/slides-reset.html');
+
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+
+    const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
+    const stepCounter = activeSlide.locator('.trace-step-counter');
+
+    await expect(activeSlide).toContainText('Intro');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(activeSlide).toContainText('Trace');
+    await expect(stepCounter).toHaveText('1/2');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(stepCounter).toHaveText('2/2');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(activeSlide).toContainText('Wrap');
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(activeSlide).toContainText('Trace');
+    await expect(stepCounter).toHaveText('1/2');
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(activeSlide).toContainText('Intro');
+
+    await page.keyboard.press('Escape');
+  });
 });
 
 test.describe('slides controls on touch browsers', () => {

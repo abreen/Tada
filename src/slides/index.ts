@@ -249,8 +249,8 @@ export default function mountSlides(window: Window): void | (() => void) {
     }
   }
 
-  function resetReadyTraces(): void {
-    const widgets = slidesRoot.querySelectorAll(
+  function resetReadyTraces(scope: HTMLElement = slidesRoot): void {
+    const widgets = scope.querySelectorAll(
       '.trace-widget:not(.trace-disabled)',
     );
 
@@ -341,7 +341,11 @@ export default function mountSlides(window: Window): void | (() => void) {
       hidePresentationControls();
     }
 
+    const previousIndex = activeIndex;
     setActiveSlide(activeIndex + delta);
+    if (delta === -1 && activeIndex !== previousIndex) {
+      resetReadyTraces(slides[activeIndex]);
+    }
     focusSlide(slides[activeIndex]);
   }
 

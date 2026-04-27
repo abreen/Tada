@@ -987,7 +987,7 @@ describe('slides presentation controller', () => {
     expect(win.document.body.classList.contains('is-presenting')).toBe(false);
   });
 
-  test('trace widgets consume next and previous navigation before slide changes', () => {
+  test('ArrowLeft resets a trace after returning to its slide', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
 
@@ -1000,22 +1000,38 @@ describe('slides presentation controller', () => {
     const tracePrev = win.document.querySelector(
       '.trace-prev',
     ) as HTMLButtonElement;
+    const traceFirst = win.document.createElement('button');
+    traceFirst.className = 'trace-first';
+    traceFirst.disabled = true;
 
     let nextClicks = 0;
     let prevClicks = 0;
+    let resetClicks = 0;
 
     traceNext.addEventListener('click', () => {
       nextClicks += 1;
+      traceFirst.disabled = false;
       traceNext.disabled = true;
       tracePrev.disabled = false;
     });
     tracePrev.addEventListener('click', () => {
       prevClicks += 1;
+      traceFirst.disabled = true;
+      tracePrev.disabled = true;
+      traceNext.disabled = false;
+    });
+    traceFirst.addEventListener('click', () => {
+      resetClicks += 1;
+      traceFirst.disabled = true;
       tracePrev.disabled = true;
       traceNext.disabled = false;
     });
 
-    markTraceReady(win.document.querySelector('.trace-widget'));
+    const traceWidget = win.document.querySelector(
+      '.trace-widget',
+    ) as HTMLElement;
+    traceWidget.querySelector('.trace-controls')?.prepend(traceFirst);
+    markTraceReady(traceWidget);
     present.click();
 
     dispatchKey(win, 'ArrowRight');
@@ -1039,9 +1055,13 @@ describe('slides presentation controller', () => {
         .querySelector('.slide.is-active')
         ?.getAttribute('data-slide-index'),
     ).toBe('0');
+    expect(resetClicks).toBe(1);
+    expect(traceFirst.disabled).toBe(true);
+    expect(tracePrev.disabled).toBe(true);
+    expect(traceNext.disabled).toBe(false);
 
     dispatchKey(win, 'ArrowLeft');
-    expect(prevClicks).toBe(1);
+    expect(prevClicks).toBe(0);
     expect(
       win.document
         .querySelector('.slide.is-active')

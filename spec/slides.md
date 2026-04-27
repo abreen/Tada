@@ -71,7 +71,9 @@ the cursor again. Leaving Slides Mode restores the normal page layout.
 
 If the active slide contains trace widgets, those gestures try to move the
 trace first and only change slides when the trace cannot move further. Entering
-Slides Mode resets ready traces to their first step. See [Traces](traces.md).
+Slides Mode resets ready traces to their first step. When `ArrowLeft` changes
+to a previous slide, any ready traces on that slide reset to their first step so
+the trace can be replayed from the beginning. See [Traces](traces.md).
 When the presentation is already on its last slide and no active trace can move
 forward, pressing `ArrowRight`, pressing `Space`, or clicking the slide reveals
 the `Close` button and keeps it visible to signal that the deck is finished.

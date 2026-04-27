@@ -5,7 +5,9 @@ const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
 const siteDir = path.join(repoDir, 'playwright', '.test-site');
 const slidesPath = path.join(siteDir, 'content', 'slides.md');
+const resetSlidesPath = path.join(siteDir, 'content', 'slides-reset.md');
 const traceDir = path.join(siteDir, 'public', 'trace');
+const resetTraceDir = path.join(siteDir, 'public', 'trace-reset');
 
 async function run(args: string[], cwd = repoDir): Promise<void> {
   const proc = Bun.spawn(args, {
@@ -33,6 +35,7 @@ await run([
 
 mkdirSync(path.dirname(slidesPath), { recursive: true });
 mkdirSync(traceDir, { recursive: true });
+mkdirSync(resetTraceDir, { recursive: true });
 writeFileSync(
   path.join(traceDir, 'manifest.json'),
   JSON.stringify({
@@ -51,6 +54,35 @@ writeFileSync(
       stdout: 'output',
       svg: `<svg class="trace-memory" width="640" height="480" viewBox="0 0 640 480">
   <rect x="20" y="20" width="600" height="440" fill="none" stroke="currentColor"></rect>
+</svg>`,
+    },
+  ]),
+);
+writeFileSync(
+  path.join(resetTraceDir, 'manifest.json'),
+  JSON.stringify({
+    totalSteps: 2,
+    chunkSize: 10,
+    sourceFile: 'slides-reset-trace.java',
+    source: 'trace reset demo',
+    lineToSteps: {},
+  }),
+);
+writeFileSync(
+  path.join(resetTraceDir, 'chunk-0.json'),
+  JSON.stringify([
+    {
+      line: 1,
+      stdout: '',
+      svg: `<svg class="trace-memory" width="640" height="480" viewBox="0 0 640 480">
+  <text x="20" y="40">step 1</text>
+</svg>`,
+    },
+    {
+      line: 2,
+      stdout: 'done',
+      svg: `<svg class="trace-memory" width="640" height="480" viewBox="0 0 640 480">
+  <text x="20" y="40">step 2</text>
 </svg>`,
     },
   ]),
@@ -100,6 +132,47 @@ slides: true
 The answer is twelve.
 
 ???
+`,
+);
+writeFileSync(
+  resetSlidesPath,
+  `---
+title: Slides Reset
+slides: true
+---
+
+# Intro
+
+---
+
+# Trace
+
+<div class="trace-widget" data-trace-manifest="/trace-reset/manifest.json">
+  <div class="trace-body">
+    <div class="trace-toolbar">
+      <div class="trace-controls" role="toolbar" aria-label="Trace navigation">
+        <button class="trace-btn trace-first" disabled tabindex="-1">First</button>
+        <button class="trace-btn trace-prev" disabled tabindex="-1">Prev</button>
+        <span class="trace-step-counter"></span>
+        <button class="trace-btn trace-next" disabled tabindex="-1">Next</button>
+        <button class="trace-btn trace-last" disabled tabindex="-1">Last</button>
+      </div>
+    </div>
+    <div class="trace-content">
+      <div class="trace-diagram"></div>
+      <div class="trace-source-wrapper">
+        <div class="trace-source">
+          <pre><span class="code-row trace-line-active"><span class="line-number" data-line="1">1</span><code>trace reset demo</code></span>
+<span class="code-row"><span class="line-number" data-line="2">2</span><code>done</code></span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+---
+
+# Wrap
 `,
 );
 
