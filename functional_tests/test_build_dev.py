@@ -97,10 +97,10 @@ class TestDevBuildDefaultContent:
         assert 'Problem 1' in html
         assert 'Problem 2' in html
 
-    def test_html_partial_included(self, built_dev_site):
+    def test_nested_markdown_partial_included(self, built_dev_site):
         page = built_dev_site / 'dist' / 'lectures' / '02' / 'index.html'
         html = page.read_text()
-        assert 'HTML partial' in html
+        assert 'nested Markdown partial' in html
 
     def test_template_variables_resolve_in_partials(self, built_dev_site):
         page = built_dev_site / 'dist' / 'lectures' / '02' / 'index.html'

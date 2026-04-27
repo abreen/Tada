@@ -25,7 +25,7 @@ import {
 } from './code';
 import { extensionIsMarkdown } from './file-types';
 import { createTraceHelpers } from './trace';
-import { createIncludeFunction } from './include';
+import { stripHtmlComments } from './html-comments';
 import { finalizeHtmlPage } from './final-html';
 import {
   createApplyBasePath,
@@ -59,6 +59,8 @@ import type {
 const log = makeLogger(import.meta.url);
 
 const tadaVersion: string = pkg.version;
+
+export { stripHtmlComments } from './html-comments';
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 
@@ -459,7 +461,7 @@ function renderPlainTextContent(
       `${filePath}: slides mode is only supported on Markdown pages`,
     );
   }
-  const md = createMarkdown(siteVariables, {
+  const frontMatterMd = createMarkdown(siteVariables, {
     filePath,
     slides: pageVariables.slides === true,
   });
@@ -480,8 +482,8 @@ function renderPlainTextContent(
   );
 
   // Render title and description as inline Markdown
-  renderInlineField(md, pageVariablesProcessed, 'title');
-  renderInlineField(md, pageVariablesProcessed, 'description');
+  renderInlineField(frontMatterMd, pageVariablesProcessed, 'title');
+  renderInlineField(frontMatterMd, pageVariablesProcessed, 'description');
 
   resolveAuthor(pageVariablesProcessed, filePath, dependencyCollector);
 
@@ -526,8 +528,6 @@ function renderPlainTextContent(
     params.renderTrace = helpers.renderTrace;
   }
 
-  params.include = createIncludeFunction(filePath, params, dependencyCollector);
-
   let html: string;
   try {
     html = _.template(strippedContent)(params);
@@ -541,6 +541,12 @@ function renderPlainTextContent(
   let tocItems: unknown[] | null = null;
   let alertIds: string[] = [];
   if (extensionIsMarkdown(ext)) {
+    const md = createMarkdown(siteVariables, {
+      filePath,
+      slides: pageVariables.slides === true,
+      templateParams: params,
+      dependencyCollector,
+    });
     const env: Record<string, unknown> = { alertIds: [] as string[] };
     html = md.render(html!, env);
     tocItems = (env.tocItems as unknown[] | undefined) || null;
@@ -553,10 +559,6 @@ function renderPlainTextContent(
     tocItems,
     alertIds,
   };
-}
-
-export function stripHtmlComments(str: string): string {
-  return str.replace(/<!---[\s\S]*?-->/g, '');
 }
 
 export function renderLiterateJavaPageAsset({

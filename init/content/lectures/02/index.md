@@ -8,6 +8,6 @@ author: alex
 
 Here is a page constructed from multiple partials.
 
-<%= include('_pr1.md') %>
+{{{ _pr1.md }}}
 
-<%= include('subdir/_pr2.md') %>
+{{{ subdir/_pr2.md }}}

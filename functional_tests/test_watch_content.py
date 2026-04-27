@@ -347,7 +347,7 @@ class TestWatchPartials:
         partial.write_text('Hello from partial')
 
         page = site_dir / 'content' / 'with_partial.md'
-        page.write_text("---\ntitle: Test Partial\n---\n\n<%= include('_greeting.md') %>\n")
+        page.write_text('---\ntitle: Test Partial\n---\n\n{{{ _greeting.md }}}\n')
 
         page_html = site_dir / 'dist' / 'with_partial.html'
         watch.wait_for_rebuild(page_html, 'exists')
@@ -362,21 +362,21 @@ class TestWatchPartials:
         subdir = site_dir / 'content' / 'subdir'
         subdir.mkdir()
 
-        inner = subdir / '_inner.html'
-        inner.write_text('<p>Inner partial</p>')
+        inner = subdir / '_inner.md'
+        inner.write_text('Inner partial')
 
         outer = subdir / '_outer.md'
-        outer.write_text("Outer then <%= include('_inner.html') %>")
+        outer.write_text('Outer then\n\n{{{ _inner.md }}}\n')
 
         page = site_dir / 'content' / 'transitive.md'
-        page.write_text("---\ntitle: Transitive\n---\n\n<%= include('subdir/_outer.md') %>\n")
+        page.write_text('---\ntitle: Transitive\n---\n\n{{{ subdir/_outer.md }}}\n')
 
         page_html = site_dir / 'dist' / 'transitive.html'
         watch.wait_for_rebuild(page_html, 'exists')
         assert 'Inner partial' in page_html.read_text()
 
         before_mtime = page_html.stat().st_mtime
-        inner.write_text('<p>Updated inner partial content</p>')
+        inner.write_text('Updated inner partial content')
         watch.wait_for_rebuild(page_html, 'modified', before_mtime=before_mtime)
         assert 'Updated inner partial content' in page_html.read_text()
 

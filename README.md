@@ -40,6 +40,7 @@ A static site generator. The successor to Presto.
   * `??? question ... ???` renders a Q & A section; answers hidden until click
   * `+++ ... +++ ... +++` renders a two-column layout
   * Special heading subtitles with `## Heading # A subtitle here`
+  * `{{{ _partial.md }}}` syntax for including partials
 - Automatically generated favicon
   * Text, color, font and font weight taken from config file
 
@@ -332,6 +333,51 @@ templates][lodash].
 - Page variables (from front matter) are available under `page`
 - Custom variables from the `"vars"` property of the config are available
   under `vars` (e.g., `<%= vars.staffEmail %>`)
+
+### Markdown partials
+
+Use the `{{{ _partial.md }}}` syntax to include a partial (a fragment of
+Markdown in a separate file whose name must start with `_`) at that particular
+location in a Markdown file.
+
+This is useful for reducing duplication across multiple documents which use the
+exact same content, or for breaking up a large document into building blocks
+which are easier to edit.
+
+Partials are never built into their own pages, and they don't have front matter.
+
+The `{{{ ... }}}` syntax is not a simple string replacement; instead, the
+Markdown syntax tree of the partial is *added* to the syntax tree of the
+Markdown file that includes it. This is a powerful feature because it allows you
+to include content as a subtree.
+
+For example, this partial `_groceries.md`
+
+```
+* apples
+* oranges
+* pears
+```
+
+can be inserted as a sub-list of a larger list in a Markdown page
+
+```
+title: To do list
+
+* Grocery shopping
+  {{{ _groceries.md }}}
+* Car wash
+```
+
+which results in:
+
+```
+* Grocery shopping
+  * apples
+  * oranges
+  * pears
+* Car wash
+```
 
 
 [inter]: https://fonts.google.com/specimen/Inter

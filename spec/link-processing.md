@@ -18,7 +18,7 @@ pages are prefixed with the base path. This includes:
 - links and images rendered from Markdown
 - raw HTML written inside Markdown files
 - `.html` content pages
-- markup contributed by `.html` partials
+- markup contributed by Markdown partials
 
 ### Relative links
 

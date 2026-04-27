@@ -18,7 +18,8 @@ import columnsPlugin from '../columns-plugin';
 import markdownItKatex from '@vscode/markdown-it-katex';
 import katex from 'katex';
 import renderA11yString from 'katex/contrib/render-a11y-string';
-import type { SiteVariables } from '../types';
+import markdownPartialsPlugin from './markdown-partials';
+import type { RenderDependencyCollector, SiteVariables } from '../types';
 
 const DETAILS_PATTERN = /^details\s+(.*)$/;
 const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
@@ -31,6 +32,8 @@ interface CreateMarkdownOptions {
   literateJavaOutputPaths?: Set<string>;
   sourceUrlPath?: string;
   validTargets?: Set<string>;
+  templateParams?: Record<string, unknown>;
+  dependencyCollector?: RenderDependencyCollector;
 }
 
 function capitalize(str: string): string {
@@ -101,6 +104,14 @@ export function createMarkdown(
         }
       },
     });
+
+  if (filePath && options.templateParams) {
+    markdown.use(markdownPartialsPlugin, {
+      filePath,
+      templateParams: options.templateParams,
+      dependencyCollector: options.dependencyCollector,
+    });
+  }
 
   function createWrapperToken(
     type: string,
