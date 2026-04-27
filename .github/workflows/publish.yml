@@ -1,16 +1,300 @@
-name: Publish to npm
+name: Deploy and publish
 
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
-  publish:
+  verify-version:
     runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Verify version matches tag
+      run: |
+        pkg_version="v$(jq -r .version package.json)"
+        tag="${{ github.ref_name }}"
+        if [ "$pkg_version" != "$tag" ]; then
+          echo "::error::package.json version ($pkg_version) does not match release tag ($tag)"
+          exit 1
+        fi
+
+  unit-test:
+    needs: verify-version
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Use Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+    - run: bun install
+
+    - name: Run unit tests with coverage
+      run: bun test --coverage
+
+    - name: Upload unit coverage
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: coverage-unit
+        path: coverage/unit/
+
+  functional-test:
+    needs: verify-version
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5]
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Install dependencies
+      run: sudo apt install -y mupdf-tools openjdk-25-jdk-headless
+
+    - name: Set up Java 25
+      run: |
+        echo "JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64" >> "$GITHUB_ENV"
+        echo "/usr/lib/jvm/java-25-openjdk-amd64/bin" >> "$GITHUB_PATH"
+
+    - name: Use Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+    - run: bun install
+
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      with:
+        python-version: "3.13"
+
+    - name: Set up Python tooling
+      run: bun run setup:python
+
+    - name: Run functional tests with coverage (shard ${{ matrix.shard }}/5)
+      run: >
+        TADA_COVERAGE=1 bun run test:functional
+        --shard ${{ matrix.shard }} --num-shards 5
+
+    - name: Upload functional coverage
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      if: always()
+      with:
+        name: coverage-functional-${{ matrix.shard }}
+        path: coverage/functional/
+
+  unit-test-windows:
+    needs: verify-version
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Use Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+    - run: bun install
+
+    - name: Run unit tests
+      run: bun test
+
+  functional-test-windows:
+    needs: verify-version
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5]
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Install mupdf (provides mutool)
+      run: choco install mupdf -y --no-progress
+
+    - name: Set up Java 25
+      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+      with:
+        distribution: temurin
+        java-version: '25'
+
+    - name: Use Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+    - run: bun install
+
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      with:
+        python-version: "3.13"
+
+    - name: Set up Python tooling
+      run: bun run setup:python
+
+    - name: Run functional tests (shard ${{ matrix.shard }}/5)
+      run: >
+        bun run test:functional
+        --shard ${{ matrix.shard }} --num-shards 5
+
+  playwright:
+    needs: verify-version
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Use Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+    - run: bun install
+
+    - name: Install Playwright browsers
+      run: bunx playwright install --with-deps chromium
+
+    - name: Run Playwright tests
+      run: bun run test:playwright
+
+  coverage:
+    needs: [unit-test, functional-test]
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Use Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+    - run: bun install
+
+    - name: Download unit coverage
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      with:
+        name: coverage-unit
+        path: coverage/unit/
+
+    - name: Download functional coverage (all shards)
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      with:
+        pattern: coverage-functional-*
+        path: coverage/functional/
+        merge-multiple: true
+
+    - name: Generate coverage report
+      run: bun run scripts/coverage-report.ts
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: coverage-report
+        path: coverage/report/
+
+  build:
+    needs: [coverage, playwright, unit-test-windows, functional-test-windows]
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Install dependencies
+      run: sudo apt install -y mupdf-tools openjdk-25-jdk-headless yq
+
+    - name: Set up Java 25
+      run: |
+        echo "JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64" >> "$GITHUB_ENV"
+        echo "/usr/lib/jvm/java-25-openjdk-amd64/bin" >> "$GITHUB_PATH"
+
+    - name: Use Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+    - run: bun install
+
+    - name: Download coverage report
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      with:
+        name: coverage-report
+        path: coverage/report/
+
+    - name: Extract coverage percentage
+      id: coverage
+      run: |
+        total=0; hit=0
+        while IFS= read -r line; do
+          case "$line" in
+            LF:*) total=$((total + ${line#LF:})) ;;
+            LH:*) hit=$((hit + ${line#LH:})) ;;
+          esac
+        done < coverage/report/lcov.info
+        echo "percent=$((hit * 100 / total))" >> "$GITHUB_OUTPUT"
+
+    - name: Initialize example site
+      run: >
+        bun run bin/tada.ts init example --no-interactive
+        --prod-base https://abreen.io
+        --prod-base-path /Tada
+
+    - name: Add coverage vars to site config
+      run: |
+        yq --yaml-output --in-place --arg pct '${{ steps.coverage.outputs.percent }}' '
+          .vars.testCoveragePercent = ($pct | tonumber) |
+          .vars.testCoverageUrl = "/coverage/index.html"
+        ' example/site.prod.yaml
+
+    - name: Copy coverage report into public
+      run: cp -r coverage/report/ example/public/coverage/
+
+    - name: Build example site
+      run: ../bin/tada.ts prod
+      working-directory: example
+
+    - name: Upload static files as artifact
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+      with:
+        path: example/dist-prod/v1/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+
+  purge:
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Purge Cloudflare cache
+      run: |
+        curl -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
+          -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          --data '{"purge_everything": true}'
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
