@@ -82,6 +82,22 @@ class TestWatchAddContent:
         assert 'Hello from new page.' in new_html.read_text()
         assert watch.snapshot(index_html) == before_index_snapshot
 
+    def test_fixing_failed_new_markdown_rebuilds_only_that_file(self, watch, site_dir):
+        index_html = site_dir / 'dist' / 'index.html'
+        before_index_snapshot = watch.snapshot(index_html)
+        new_md = site_dir / 'content' / 'untitled.md'
+        new_md.write_text('')
+
+        watch.wait_for_error()
+        assert not (site_dir / 'dist' / 'untitled.html').exists()
+
+        new_md.write_text('---\ntitle: Untitled\n---\n\nRecovered.\n')
+
+        new_html = site_dir / 'dist' / 'untitled.html'
+        watch.wait_for_rebuild(new_html, 'exists')
+        assert 'Recovered.' in new_html.read_text()
+        assert watch.snapshot(index_html) == before_index_snapshot
+
     def test_adding_new_asset(self, watch, site_dir):
         new_asset = site_dir / 'content' / 'test_asset.txt'
         new_asset.write_text('test asset content')

@@ -17,6 +17,10 @@ function normalizeBatch(changes: Map<string, WatchEventKind>): ChangeBatch {
   };
 }
 
+function mapBatch(batch: ChangeBatch): Map<string, WatchEventKind> {
+  return new Map(batch.changes.map(change => [change.path, change.kind]));
+}
+
 function mergeChangeKind(
   previous: WatchEventKind | undefined,
   next: WatchEventKind,
@@ -51,6 +55,7 @@ export async function runWatchEngine(
 ): Promise<void> {
   const debounceMs = options.debounceMs ?? 300;
   let snapshot: TadaSnapshot | undefined;
+  let uncommitted = new Map<string, WatchEventKind>();
   let pending = new Map<string, WatchEventKind>();
   let timer: ReturnType<typeof setTimeout> | null = null;
   let running = false;
@@ -86,12 +91,17 @@ export async function runWatchEngine(
         | undefined;
 
       while (pending.size > 0) {
-        const batch = normalizeBatch(pending);
+        const changes = new Map(uncommitted);
+        for (const [filePath, kind] of pending) {
+          changes.set(filePath, mergeChangeKind(changes.get(filePath), kind));
+        }
+
+        const batch = normalizeBatch(changes);
         pending = new Map();
         const outcome = await runBuild(batch);
 
         if (!outcome.ok) {
-          snapshot = undefined;
+          uncommitted = mapBatch(batch);
           await emit({
             kind: 'build-failed',
             batch,
@@ -102,6 +112,7 @@ export async function runWatchEngine(
 
         applyCommitPlan(outcome.commit);
         snapshot = outcome.snapshot;
+        uncommitted = new Map();
         finalSuccess = { batch, result: outcome };
 
         if (pending.size === 0) {

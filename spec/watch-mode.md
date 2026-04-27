@@ -11,6 +11,28 @@ Its goals are:
 - report build errors without crashing the watcher
 - preserve the last successful site output when a rebuild fails
 
+## Definition of Terms
+
+Watch mode uses these source kinds:
+
+- A **page source** is a file in `content/` that Tada renders into a page.
+  This includes Markdown files, HTML files, literate Java files, and files whose
+  extension is listed in `extensionToShikiLanguage`.
+- A **content asset source** is a file in `content/` that Tada copies to
+  `dist/` instead of rendering as a page.
+- A **partial source** is like a page source, but is never rendered into a page;
+  instead, page sources include them. Their file names start with `_`.
+- A **skipped content source** is a Markdown or HTML file in `content/` whose
+  front matter has `skip: true`. Skipped content sources do not produce output,
+  even though Markdown and HTML files are normally page sources.
+- A **public source** is a file in `public/`. Public sources are copied to the
+  same relative path in `dist/`.
+- A **trace source** is a `.java` or `.py` file used by a page source's trace
+  output.
+- A **config source** is one of these config files in the site root:
+  `site.dev.yaml`, `site.dev.yml`, `site.dev.json`, `nav.yaml`, `nav.yml`,
+  `nav.json`, `authors.yaml`, `authors.yml`, or `authors.json`.
+
 ## Startup
 
 When watch mode starts, it tries to build the site immediately.
@@ -19,60 +41,73 @@ When watch mode starts, it tries to build the site immediately.
   watching for changes.
 - If the initial build fails, watch mode stays running and continues watching
   for changes so the problem can be fixed in place.
-- A failed initial build does not publish partial output.
+- A failed initial build does not publish incomplete output.
 
 ## What Watch Mode Rebuilds
 
 Watch mode treats changes differently depending on what changed.
 
-### Existing content page edit
+### Existing page source edit
 
-Editing an existing Markdown or HTML page updates the affected page output.
+Editing an existing page source updates that page source's output in `dist/`.
 
-If a `.java` or `.py` file changes, watch mode rebuilds the changed trace
-source output and any content pages that depend on that file's trace output.
+### Existing public source edit
 
-### Existing non-page file edit
+Editing an existing public source updates the corresponding file in `dist/`.
 
-Editing an existing file in `public/` updates the corresponding file in
+### Existing content asset source edit
+
+Editing an existing content asset source updates the corresponding file in
 `dist/`.
 
-Editing an existing non-processed file in `content/` updates the corresponding
-file in `dist/`.
+### Existing trace source edit
+
+Editing an existing trace source rebuilds the changed trace output and any page
+sources that depend on it.
 
 ### Partial edit
 
-Editing, adding, or deleting a partial rebuilds only pages that include that
-partial, including transitive includes.
+Editing, adding, or deleting a partial source rebuilds only page sources that
+include that partial source, including transitive includes.
 
-### Config or data change
+### Skipped content source edit
 
-Changing the resolved `site.dev.*` or `nav.*` config file triggers a full site
-rebuild.
+Editing, adding, or deleting a source that is skipped does not update `dist/`.
+However:
 
-Changing `authors.*` rebuilds only pages whose `author` front matter depends on
-author entries whose data changed.
+- If `skip: true` is added to an existing page source, its output is deleted
+- If `skip: true` is removed from a skipped source, it becomes a page source
+
+### Config source change
+
+Changing a `site.dev.*` or `nav.*` config source triggers a full site rebuild.
+
+Editing an `authors.*` config source rebuilds only page sources whose `author`
+front matter depends on author entries whose data changed. But adding or
+deleting an `authors.*` config source triggers a full rebuild.
 
 ### Adding a file
 
-Adding a file in `content/` or `public/` rebuilds only outputs affected by that
-new source, unless the change also requires a full rebuild for one of the
-site-wide cases above.
+Adding a page source, content asset source, partial source, or public source
+rebuilds only outputs affected by that new source, unless the change also
+requires a full rebuild for one of the site-wide cases above.
 
 ### Deleting a file
 
-Deleting a file removes the output that came from that source.
+Deleting a page source, content asset source, or public source removes the
+output that came from that source. Deleting a partial source rebuilds page
+sources that included it.
 
 Examples:
 
 - deleting `content/about.md` removes `dist/about.html`
 - deleting `public/logo.png` removes `dist/logo.png`
-- deleting a copied asset in `content/` removes its copied output
+- deleting a content asset source removes its copied output
 
-If deleting one side of a `content/` versus `public/` conflict changes which
-source should own that output path, watch mode updates that output so the
-surviving source becomes authoritative immediately without rebuilding
-unrelated pages.
+If two sources conflict and the user deletes one of them, the remaining source
+writes that `dist/` path. For example, if `content/about.md` and
+`public/about.html` conflict, deleting `public/about.html` writes
+`dist/about.html` from `content/about.md`. Unrelated outputs are not rebuilt.
 
 ### Rename and move behavior
 
@@ -87,39 +122,15 @@ If the rename temporarily breaks links and the next rebuild fails, fixing those
 links recovers the build and files added later under the renamed directory still
 trigger rebuilds.
 
-## Content and Public Conflicts
+## Output Path Conflicts
 
-Watch mode rejects situations where a file in `content/` and a file in
-`public/` would produce the same path in `dist/`.
+Watch mode rejects situations where a page source or content asset source and a
+public source would produce the same path in `dist/`.
 
 Examples:
 
 - `content/about.md` conflicts with `public/about.html`
 - `content/logo.png` conflicts with `public/logo.png`
-
-Conflicts are based on the final output path, not on the source filename alone.
-
-When a conflict is detected:
-
-- the rebuild fails
-- watch mode stays running
-- the browser is not reloaded with partial output
-- the last successful `dist/` remains unchanged
-
-If the conflict is then fixed, watch mode rebuilds and resumes normal reload
-behavior.
-
-## Ownership Handoffs
-
-Watch mode supports switching which source tree owns a given output path.
-
-Examples:
-
-- removing `public/about.html` and adding `content/about.md`
-- removing `content/logo.png` and adding `public/logo.png`
-
-After a successful rebuild, `dist/` reflects the new owner of that path while
-leaving unrelated outputs untouched.
 
 ## Failure and Recovery
 
@@ -127,19 +138,17 @@ Watch mode does not exit just because a rebuild fails.
 
 This applies to:
 
-- invalid configuration
-- missing required data files
-- content errors
+- invalid config sources
+- missing required config sources
+- page source errors
 - output-path conflicts
 
 After a failed rebuild:
 
 - watch mode keeps running
 - the previous successful `dist/` stays available
+- the failed source changes are retried with the next source change
 - fixing the underlying problem triggers another rebuild
-
-Recovery must work both after startup failures and after failures that happen
-later while watch mode is already running.
 
 ## Browser Reload Behavior
 
@@ -153,34 +162,3 @@ Failed rebuilds do not trigger `reload`.
 
 Every successful rebuild after watch startup triggers `reload`, even if the
 rebuilt `dist/` bytes are unchanged.
-
-## Architecture
-
-Watch mode lives under `build/watch/` and is made of:
-
-- `build/watch/engine.ts`, a file-watching engine that batches changes,
-  schedules rebuilds,
-  commits staged output updates, and preserves the last successful snapshot
-- a Tada watch adapter built on the same source model and source record layers
-  used by full builds
-- a single Bun server that serves `dist/` over HTTP and accepts same-port
-  WebSocket upgrades for browser reload notifications after the first
-  successful build
-
-The Tada-specific watch pieces are:
-
-- `build/source-model.ts`, which scans `content/` and `public/` and keeps the
-  shared view of source ownership, output paths, valid internal targets, and
-  processed-versus-copied content sources
-- `build/source-records.ts`, which renders or copies one source at a time into
-  a source record with outputs plus dependency metadata used by incremental
-  rebuild planning
-- `build/watch/planner.ts`, which compares the previous snapshot with the
-  updated source model to choose a full or incremental rebuild and determine
-  which records must be re-rendered or removed
-- `build/watch/compiler.ts`, which runs that plan and publishes the updated
-  snapshot after a successful rebuild
-
-The recursive `content/` and `public/` source watchers use chokidar polling so
-directory renames remain observable under Bun, including directories created
-after watch mode has already started.
