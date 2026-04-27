@@ -14,7 +14,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-version-commit:
+    runs-on: ubuntu-latest
+
+    outputs:
+      run-ci: ${{ steps.check.outputs.run-ci }}
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      with:
+        fetch-depth: 0
+
+    - name: Check version commit
+      id: check
+      run: |
+        version="$(jq -r .version package.json)"
+        subject="$(git log -1 --pretty=%s)"
+
+        if [ "$subject" = "$version" ] && git tag --points-at HEAD --list "v$version" | rg -q "^v$version$"; then
+          echo "run-ci=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "run-ci=true" >> "$GITHUB_OUTPUT"
+        fi
+
   unit-test:
+    needs: check-version-commit
+    if: needs.check-version-commit.outputs.run-ci == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +54,8 @@ jobs:
       run: bun test
 
   functional-test:
+    needs: check-version-commit
+    if: needs.check-version-commit.outputs.run-ci == 'true'
     runs-on: ubuntu-latest
 
     strategy:
@@ -66,6 +93,8 @@ jobs:
         --shard ${{ matrix.shard }} --num-shards 5
 
   unit-test-windows:
+    needs: check-version-commit
+    if: needs.check-version-commit.outputs.run-ci == 'true'
     runs-on: windows-latest
 
     steps:
@@ -80,6 +109,8 @@ jobs:
       run: bun test
 
   functional-test-windows:
+    needs: check-version-commit
+    if: needs.check-version-commit.outputs.run-ci == 'true'
     runs-on: windows-latest
 
     strategy:
@@ -118,6 +149,8 @@ jobs:
         --shard ${{ matrix.shard }} --num-shards 5
 
   playwright:
+    needs: check-version-commit
+    if: needs.check-version-commit.outputs.run-ci == 'true'
     runs-on: ubuntu-latest
 
     steps:
