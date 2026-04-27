@@ -184,7 +184,9 @@ describe('renderPlainTextPageAsset', () => {
     });
 
     expect(html).toContain('<strong>Hello</strong> from partial');
-    expect([...dependencyCollector.partials]).toEqual([partialPath]);
+    expect([...dependencyCollector.partials]).toEqual([
+      path.resolve(partialPath),
+    ]);
   });
 
   test('processes Lodash expressions in Markdown partials', () => {
@@ -218,7 +220,10 @@ describe('renderPlainTextPageAsset', () => {
 
     expect(html).toContain('Outer then');
     expect(html).toContain('Inner in subdir');
-    expect([...dependencyCollector.partials]).toEqual([outerPath, innerPath]);
+    expect([...dependencyCollector.partials]).toEqual([
+      path.resolve(outerPath),
+      path.resolve(innerPath),
+    ]);
   });
 
   test('strips HTML comments from Markdown partials', () => {
