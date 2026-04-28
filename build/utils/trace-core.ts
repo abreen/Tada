@@ -42,6 +42,10 @@ function hashTraceFiles(files: { name: string; content: string }[]): string {
   return `sha256-${hasher.digest('hex').slice(0, 16)}`;
 }
 
+function safeSvgIdPart(value: string): string {
+  return value.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
 function buildTraceOutputPath(
   relDir: string,
   traceName: string,
@@ -181,13 +185,19 @@ export function chunkTraceOutput(
 
   const layoutSteps = allSteps.map(step => ({ ...step, ...filterStep(step) }));
   const layout = computeLayout(layoutSteps, ignoreFields);
+  const svgIdPrefix = safeSvgIdPart(traceName) || 'trace';
 
   let chunkEntries: TraceChunkEntry[] = [];
   let chunkIndex = 0;
   const chunkFiles: { name: string; content: string }[] = [];
 
-  for (const step of allSteps) {
-    const svg = generateStepSvg(step, layout);
+  for (const [stepIndex, step] of allSteps.entries()) {
+    const svg = generateStepSvg(
+      step,
+      layout,
+      undefined,
+      `trace-${svgIdPrefix}-${stepIndex}`,
+    );
     chunkEntries.push({
       file: path.basename(step.file),
       line: step.line,

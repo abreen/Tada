@@ -168,6 +168,62 @@ describe('chunkTraceOutput', () => {
     expect(chunk0[0].output).toEqual([{ stream: 'stdout', text: 'hello\n' }]);
   });
 
+  test('namespaces generated trace SVG marker ids', () => {
+    const output = `${JSON.stringify({
+      line: 1,
+      file: 'First.java',
+      stack: [
+        {
+          method: 'main',
+          class: 'First',
+          locals: { node: { type: 'ref', id: '1' } },
+        },
+      ],
+      heap: {
+        '1': { type: 'Node', fields: { value: { type: 'int', value: 1 } } },
+      },
+      output: [],
+    })}\n`;
+
+    const first = chunkTraceOutput(
+      output,
+      '/virtual/_traces/First',
+      '',
+      'First',
+      'First.java',
+      [{ file: 'First.java', source: 'class First {}' }],
+    );
+    const second = chunkTraceOutput(
+      output.replaceAll('First', 'Second'),
+      '/virtual/_traces/Second',
+      '',
+      'Second',
+      'Second.java',
+      [{ file: 'Second.java', source: 'class Second {}' }],
+    );
+
+    const firstChunk = readJson<Array<{ svg: string }>>(
+      path.join('/virtual/_traces/First', first.artifactId, 'chunk-0.json'),
+    );
+    const secondChunk = readJson<Array<{ svg: string }>>(
+      path.join('/virtual/_traces/Second', second.artifactId, 'chunk-0.json'),
+    );
+    const firstArrowhead = firstChunk[0].svg.match(
+      /id="([^"]+-arrowhead)"/,
+    )?.[1];
+    const secondArrowhead = secondChunk[0].svg.match(
+      /id="([^"]+-arrowhead)"/,
+    )?.[1];
+
+    expect(firstArrowhead).toBeDefined();
+    expect(secondArrowhead).toBeDefined();
+    expect(firstArrowhead).not.toBe(secondArrowhead);
+    expect(firstChunk[0].svg).toContain(`marker-end="url(#${firstArrowhead})"`);
+    expect(secondChunk[0].svg).toContain(
+      `marker-end="url(#${secondArrowhead})"`,
+    );
+  });
+
   test('preserves stderr output events in chunks', () => {
     const line = JSON.stringify({
       line: 1,

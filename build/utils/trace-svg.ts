@@ -545,6 +545,7 @@ function generateArrows(
   stackLayouts: FrameLayout[],
   heapObjMap: Map<string, HeapObjInfo>,
   dims: { rowH: number; fontSize: number },
+  markerIds: { arrowhead: string; arrowheadDim: string },
 ): string[] {
   const parts: string[] = [];
 
@@ -558,7 +559,8 @@ function generateArrows(
     const ep = heapTargetBoundaryPoint(sx, sy, target, heap[target.id], dims);
     const cpx = Math.round((sx + ep.x) / 2);
     const cls = style === 'fg' ? 'trace-arrow' : 'trace-arrow-dim';
-    const marker = style === 'fg' ? 'trace-arrowhead' : 'trace-arrowhead-dim';
+    const marker =
+      style === 'fg' ? markerIds.arrowhead : markerIds.arrowheadDim;
     return (
       `<path class="${cls}" d="` +
       `M ${sx} ${sy} Q ${cpx} ${sy}, ${ep.x} ${ep.y}" ` +
@@ -577,7 +579,7 @@ function generateArrows(
     if (Math.abs(tx - sx) < 4) {
       return (
         `<path class="trace-arrow-heap" d="M ${sx} ${sy} L ${tx} ${ty}" ` +
-        `marker-end="url(#trace-arrowhead-dim)"/>`
+        `marker-end="url(#${markerIds.arrowheadDim})"/>`
       );
     }
 
@@ -600,7 +602,7 @@ function generateArrows(
 
     return (
       `<path class="trace-arrow-heap" d="${path}" ` +
-      `marker-end="url(#trace-arrowhead-dim)"/>`
+      `marker-end="url(#${markerIds.arrowheadDim})"/>`
     );
   }
 
@@ -644,7 +646,7 @@ function generateArrows(
       `<path class="trace-arrow-heap" d="` +
       `M ${sx} ${sy} C ${Math.round(cp1x)} ${Math.round(cp1y)}, ` +
       `${Math.round(cp2x)} ${Math.round(cp2y)}, ${ep.x} ${ep.y}" ` +
-      `marker-end="url(#trace-arrowhead-dim)"/>`
+      `marker-end="url(#${markerIds.arrowheadDim})"/>`
     );
   }
 
@@ -772,6 +774,7 @@ export function generateStepSvg(
   step: TraceStep,
   layout: TraceLayout,
   fontSize: number = DEFAULT_FONT_SIZE,
+  markerIdPrefix = 'trace',
 ): string {
   const { stack, heap } = filterStep(step);
 
@@ -836,6 +839,10 @@ export function generateStepSvg(
 
   // Build SVG
   const parts: string[] = [];
+  const markerIds = {
+    arrowhead: `${markerIdPrefix}-arrowhead`,
+    arrowheadDim: `${markerIdPrefix}-arrowhead-dim`,
+  };
   parts.push(
     `<svg class="trace-memory" viewBox="0 0 ${totalWidth} ${totalHeight}" ` +
       `width="${totalWidth}" height="${totalHeight}" ` +
@@ -845,13 +852,13 @@ export function generateStepSvg(
   // Defs: arrowhead markers
   parts.push('<defs>');
   parts.push(
-    '<marker id="trace-arrowhead" markerWidth="8" markerHeight="6" ' +
+    `<marker id="${markerIds.arrowhead}" markerWidth="8" markerHeight="6" ` +
       'refX="8" refY="3" orient="auto" markerUnits="strokeWidth">',
   );
   parts.push('<polygon class="trace-arrowhead" points="0 0, 8 3, 0 6"/>');
   parts.push('</marker>');
   parts.push(
-    '<marker id="trace-arrowhead-dim" markerWidth="8" markerHeight="6" ' +
+    `<marker id="${markerIds.arrowheadDim}" markerWidth="8" markerHeight="6" ` +
       'refX="8" refY="3" orient="auto" markerUnits="strokeWidth">',
   );
   parts.push('<polygon class="trace-arrowhead-dim" points="0 0, 8 3, 0 6"/>');
@@ -884,6 +891,7 @@ export function generateStepSvg(
     stackLayouts,
     heapObjMap,
     dims,
+    markerIds,
   );
   for (const arrow of arrowParts) {
     parts.push(arrow);
