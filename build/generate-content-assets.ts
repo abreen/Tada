@@ -14,6 +14,7 @@ import type {
   HtmlOutputAnalysis,
   TraceToolAvailability,
 } from './types';
+import type { TraceCache } from './watch/compiler-types';
 
 const log = makeLogger(import.meta.url);
 
@@ -37,16 +38,7 @@ function writeRecordOutputs(
 export class ContentRenderer {
   private siteVariables: SiteVariables;
   private traceToolAvailability: TraceToolAvailability | undefined;
-  private traceCache: Map<
-    string,
-    {
-      manifestUrl: string;
-      artifactId: string;
-      highlightedSource: string;
-      totalSteps: number;
-      mtime: number;
-    }
-  > = new Map();
+  private traceCache: TraceCache = new Map();
 
   constructor(siteVariables: SiteVariables) {
     this.siteVariables = siteVariables;

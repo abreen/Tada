@@ -33,9 +33,10 @@ class CaptureStream(io.TextIOBase):
 class TracePdb(pdb.Pdb):
     SYNTHETIC_FRAME_NAMES = {"<listcomp>", "<dictcomp>", "<setcomp>"}
 
-    def __init__(self, target_path, trace_writer, output_chunks):
+    def __init__(self, target_path, traced_paths, trace_writer, output_chunks):
         super().__init__(nosigint=True, readrc=False)
         self.target_path = os.path.abspath(target_path)
+        self.traced_paths = set(os.path.abspath(path) for path in traced_paths)
         self.trace_writer = trace_writer
         self.output_chunks = output_chunks
         self.pending_snapshot = None
@@ -217,7 +218,7 @@ class TracePdb(pdb.Pdb):
 
     def _is_traced_frame(self, frame):
         return (
-            os.path.abspath(frame.f_code.co_filename) == self.target_path
+            os.path.abspath(frame.f_code.co_filename) in self.traced_paths
             and frame.f_code.co_name not in self.SYNTHETIC_FRAME_NAMES
         )
 
@@ -232,11 +233,14 @@ class TracePdb(pdb.Pdb):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: trace_runner.py <python_file>", file=sys.stderr)
+    if len(sys.argv) < 2:
+        print("Usage: trace_runner.py <python_file> [traced_file ...]", file=sys.stderr)
         sys.exit(1)
 
     target_path = os.path.abspath(sys.argv[1])
+    traced_paths = [os.path.abspath(path) for path in sys.argv[2:]]
+    if target_path not in traced_paths:
+        traced_paths.insert(0, target_path)
     target_dir = os.path.dirname(target_path)
     target_name = os.path.basename(target_path)
 
@@ -247,7 +251,7 @@ def main():
     output_chunks = []
     stdout_capture = CaptureStream(output_chunks, "stdout")
     stderr_capture = CaptureStream(output_chunks, "stderr")
-    debugger = TracePdb(target_path, trace_writer, output_chunks)
+    debugger = TracePdb(target_path, traced_paths, trace_writer, output_chunks)
 
     code_globals = {
         "__name__": "__main__",
@@ -275,7 +279,7 @@ def main():
             pass
         except BaseException as exc:
             debugger.flush_pending()
-            sys.stderr.write(format_target_traceback(exc, target_path))
+            sys.stderr.write(format_target_traceback(exc, set(traced_paths)))
             frame = find_traced_exception_frame(debugger, exc.__traceback__)
             if frame is None:
                 raise
@@ -296,11 +300,11 @@ def find_traced_exception_frame(debugger, tb):
     return traced
 
 
-def format_target_traceback(exc, target_path):
+def format_target_traceback(exc, traced_paths):
     frames = [
         frame
         for frame in traceback.extract_tb(exc.__traceback__)
-        if os.path.abspath(frame.filename) == target_path
+        if os.path.abspath(frame.filename) in traced_paths
     ]
     return (
         "Traceback (most recent call last):\n"

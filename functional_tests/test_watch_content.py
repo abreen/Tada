@@ -460,7 +460,7 @@ class TestWatchTraceRebuildsOnJavaChange:
             assert lab_html.read_text() != before_html
             new_manifest = json.loads(new_manifest_path.read_text())
             assert new_manifest['totalSteps'] != old_steps
-            assert '"changed"' in new_manifest['source']
+            assert '"changed"' in new_manifest['sources'][0]['source']
         finally:
             wp.stop()
 
@@ -486,7 +486,7 @@ class TestWatchTraceRebuildsOnJavaChange:
             assert lab_html.read_text() != before_html
             new_manifest = json.loads(new_manifest_path.read_text())
             assert new_manifest['totalSteps'] != old_steps
-            assert "print('changed', value)" in new_manifest['source']
+            assert "print('changed', value)" in new_manifest['sources'][0]['source']
         finally:
             wp.stop()
 

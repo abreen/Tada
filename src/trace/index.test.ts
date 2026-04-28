@@ -8,34 +8,43 @@ function makeManifest(overrides: Partial<TraceManifest> = {}): TraceManifest {
   return {
     totalSteps: 3,
     chunkSize: 10,
-    sourceFile: 'Main.java',
-    source: 'public class Main {}',
-    lineToSteps: {},
+    primaryFile: 'Main.java',
+    sources: [
+      { file: 'Main.java', source: 'public class Main {}', lineToSteps: {} },
+    ],
     ...overrides,
   };
 }
 
 function makeChunk(
   entries: Array<{
+    file?: string;
     line?: number;
     output?: TraceOutputEvent[];
-    stdout?: string;
     svg?: string;
   }>,
 ): TraceChunkEntry[] {
   return entries.map(e => ({
+    file: e.file ?? 'Main.java',
     line: e.line ?? 1,
-    output:
-      e.output ?? (e.stdout ? [{ stream: 'stdout', text: e.stdout }] : []),
+    output: e.output ?? [],
     svg: e.svg ?? '<svg></svg>',
   }));
 }
 
 const defaultManifest = makeManifest();
 const defaultChunk = makeChunk([
-  { line: 1, stdout: '', svg: '<svg>step0</svg>' },
-  { line: 2, stdout: 'hello', svg: '<svg>step1</svg>' },
-  { line: 3, stdout: ' world', svg: '<svg>step2</svg>' },
+  { line: 1, svg: '<svg>step0</svg>' },
+  {
+    line: 2,
+    output: [{ stream: 'stdout', text: 'hello' }],
+    svg: '<svg>step1</svg>',
+  },
+  {
+    line: 3,
+    output: [{ stream: 'stdout', text: ' world' }],
+    svg: '<svg>step2</svg>',
+  },
 ]);
 
 function widgetHtml(
@@ -56,12 +65,14 @@ function widgetHtml(
     '</div>' +
     '<div class="trace-content">' +
     '<div class="trace-diagram"></div>' +
-    '<div class="trace-source">' +
+    '<div class="trace-source-wrapper">' +
+    '<div class="trace-source" data-trace-source-file="Main.java">' +
     '<pre>' +
     '<span class="code-row"><span class="line-number" data-line="1">1</span><code>line one</code></span>' +
     '<span class="code-row"><span class="line-number" data-line="2">2</span><code>line two</code></span>' +
     '<span class="code-row"><span class="line-number" data-line="3">3</span><code>line three</code></span>' +
     '</pre>' +
+    '</div>' +
     '</div>' +
     '</div>' +
     '</div>'
@@ -358,7 +369,11 @@ describe('trace', () => {
 
   test('renders initial stdout in output', async () => {
     const chunk = makeChunk([
-      { line: 1, stdout: 'initial output', svg: '<svg></svg>' },
+      {
+        line: 1,
+        output: [{ stream: 'stdout', text: 'initial output' }],
+        svg: '<svg></svg>',
+      },
       { line: 2, svg: '<svg></svg>' },
     ]);
     setupFetch({
@@ -405,23 +420,6 @@ describe('trace', () => {
     expect(spans[2].className).toBe('');
   });
 
-  test('renders legacy stdout-only chunks', async () => {
-    const chunk = [
-      { line: 1, stdout: 'legacy output', svg: '<svg></svg>' },
-    ] as TraceChunkEntry[];
-    setupFetch({
-      '/trace/manifest.json': makeManifest({ totalSteps: 1 }),
-      '/trace/chunk-0.json': chunk,
-    });
-
-    const win = createWindow(widgetHtml());
-    mount(win);
-    await flush();
-
-    const output = win.document.querySelector('.trace-output') as HTMLElement;
-    expect(output.textContent).toBe('legacy output');
-  });
-
   test('clicking next advances to the next step', async () => {
     setupDefaultFetch();
     const win = createWindow(widgetHtml());
@@ -450,6 +448,66 @@ describe('trace', () => {
     expect(
       active!.querySelector('.line-number')!.getAttribute('data-line'),
     ).toBe('2');
+  });
+
+  test('clicking next switches to the source panel for that step file', async () => {
+    const manifest = makeManifest({
+      totalSteps: 2,
+      sources: [
+        { file: 'Main.java', source: 'main', lineToSteps: { 1: [0] } },
+        { file: 'Helper.java', source: 'helper', lineToSteps: { 4: [1] } },
+      ],
+    });
+    const chunk = makeChunk([
+      { file: 'Main.java', line: 1, svg: '<svg>main</svg>' },
+      { file: 'Helper.java', line: 4, svg: '<svg>helper</svg>' },
+    ]);
+    setupFetch({
+      '/trace/manifest.json': manifest,
+      '/trace/chunk-0.json': chunk,
+    });
+    const win = createWindow(
+      `<div class="trace-widget" data-trace-manifest="/trace/manifest.json">
+        <div class="trace-controls">
+          <button class="trace-first" disabled tabindex="-1">First</button>
+          <button class="trace-prev" disabled tabindex="-1">Prev</button>
+          <span class="trace-step-counter"></span>
+          <button class="trace-next" disabled tabindex="-1">Next</button>
+          <button class="trace-last" disabled tabindex="-1">Last</button>
+        </div>
+        <div class="trace-content">
+          <div class="trace-diagram"></div>
+          <div class="trace-source-wrapper">
+            <div class="trace-source" data-trace-source-file="Main.java">
+              <pre><span class="code-row"><span class="line-number" data-line="1">1</span><code>main</code></span></pre>
+            </div>
+            <div class="trace-source" data-trace-source-file="Helper.java" hidden>
+              <pre><span class="code-row"><span class="line-number" data-line="4">4</span><code>helper</code></span></pre>
+            </div>
+          </div>
+        </div>
+      </div>`,
+    );
+    mount(win);
+    await flush();
+
+    const next = win.document.querySelector('.trace-next') as HTMLButtonElement;
+    next.click();
+    await flush();
+
+    const mainPanel = win.document.querySelector(
+      '[data-trace-source-file="Main.java"]',
+    ) as HTMLElement;
+    const helperPanel = win.document.querySelector(
+      '[data-trace-source-file="Helper.java"]',
+    ) as HTMLElement;
+    expect(mainPanel.hidden).toBe(true);
+    expect(helperPanel.hidden).toBe(false);
+    expect(
+      helperPanel
+        .querySelector('.trace-line-active .line-number')!
+        .getAttribute('data-line'),
+    ).toBe('4');
   });
 
   test('clicking next updates SVG diagram', async () => {
@@ -616,7 +674,11 @@ describe('trace', () => {
       { line: 2, svg: '<svg>s1</svg>' },
     ]);
     const chunk1 = makeChunk([
-      { line: 3, stdout: 'out', svg: '<svg>s2</svg>' },
+      {
+        line: 3,
+        output: [{ stream: 'stdout', text: 'out' }],
+        svg: '<svg>s2</svg>',
+      },
       { line: 1, svg: '<svg>s3</svg>' },
     ]);
     setupFetch({

@@ -12,7 +12,7 @@ function makeStep(
   stack: TraceStackFrame[],
   heap: Record<string, TraceHeapObject>,
 ): TraceStep {
-  return { line, file: 'Test.java', stack, heap, stdout: '' };
+  return { line, file: 'Test.java', stack, heap, output: [] };
 }
 
 const mainStack: TraceStackFrame[] = [

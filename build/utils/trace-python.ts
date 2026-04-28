@@ -1,7 +1,10 @@
 import path from 'path';
 import { execFileSyncPython, resolvePythonCommand } from '../../python/command';
 
-export function runPythonTrace(pythonFilePath: string): string {
+export function runPythonTrace(
+  pythonFilePath: string,
+  tracedFilePaths: string[],
+): string {
   const pythonCommand = resolvePythonCommand();
   if (!pythonCommand) {
     throw new Error('Python is required to generate Python traces');
@@ -16,10 +19,11 @@ export function runPythonTrace(pythonFilePath: string): string {
     timeout: 60000,
     encoding: 'utf-8' as const,
     maxBuffer: 50 * 1024 * 1024,
+    cwd: path.dirname(pythonFilePath),
   };
 
   return execFileSyncPython(
-    [runnerPath, pythonFilePath],
+    [runnerPath, pythonFilePath, ...tracedFilePaths],
     options,
     pythonCommand,
   );

@@ -435,9 +435,9 @@ function renderPlainTextContent(
       {
         manifestUrl: string;
         artifactId: string;
-        highlightedSource: string;
+        highlightedSources: { file: string; highlightedSource: string }[];
         totalSteps: number;
-        mtime: number;
+        sourceMtims: Record<string, number>;
       }
     >;
     contentDir?: string;

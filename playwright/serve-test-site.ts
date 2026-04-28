@@ -41,15 +41,17 @@ writeFileSync(
   JSON.stringify({
     totalSteps: 1,
     chunkSize: 10,
-    sourceFile: 'slides-trace.java',
-    source: 'trace demo',
-    lineToSteps: {},
+    primaryFile: 'slides-trace.java',
+    sources: [
+      { file: 'slides-trace.java', source: 'trace demo', lineToSteps: {} },
+    ],
   }),
 );
 writeFileSync(
   path.join(traceDir, 'chunk-0.json'),
   JSON.stringify([
     {
+      file: 'slides-trace.java',
       line: 1,
       output: [{ stream: 'stdout', text: 'output' }],
       svg: `<svg class="trace-memory" width="640" height="480" viewBox="0 0 640 480">
@@ -63,15 +65,21 @@ writeFileSync(
   JSON.stringify({
     totalSteps: 2,
     chunkSize: 10,
-    sourceFile: 'slides-reset-trace.java',
-    source: 'trace reset demo',
-    lineToSteps: {},
+    primaryFile: 'slides-reset-trace.java',
+    sources: [
+      {
+        file: 'slides-reset-trace.java',
+        source: 'trace reset demo',
+        lineToSteps: {},
+      },
+    ],
   }),
 );
 writeFileSync(
   path.join(resetTraceDir, 'chunk-0.json'),
   JSON.stringify([
     {
+      file: 'slides-reset-trace.java',
       line: 1,
       output: [],
       svg: `<svg class="trace-memory" width="640" height="480" viewBox="0 0 640 480">
@@ -79,6 +87,7 @@ writeFileSync(
 </svg>`,
     },
     {
+      file: 'slides-reset-trace.java',
       line: 2,
       output: [{ stream: 'stdout', text: 'done' }],
       svg: `<svg class="trace-memory" width="640" height="480" viewBox="0 0 640 480">
@@ -118,7 +127,7 @@ slides: true
     <div class="trace-content">
       <div class="trace-diagram"></div>
       <div class="trace-source-wrapper">
-        <div class="trace-source">
+        <div class="trace-source" data-trace-source-file="slides-trace.java">
           <pre><span class="code-row trace-line-active"><span class="line-number" data-line="1">1</span><code>trace demo</code></span></pre>
         </div>
       </div>
@@ -161,7 +170,7 @@ slides: true
     <div class="trace-content">
       <div class="trace-diagram"></div>
       <div class="trace-source-wrapper">
-        <div class="trace-source">
+        <div class="trace-source" data-trace-source-file="slides-reset-trace.java">
           <pre><span class="code-row trace-line-active"><span class="line-number" data-line="1">1</span><code>trace reset demo</code></span>
 <span class="code-row"><span class="line-number" data-line="2">2</span><code>done</code></span></pre>
         </div>

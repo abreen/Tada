@@ -10,9 +10,14 @@ function makeTraceCache(paths: string[]): TraceCache {
       {
         manifestUrl: '/trace/manifest.json',
         artifactId: 'sha256-test',
-        highlightedSource: '<pre>source</pre>',
+        highlightedSources: [
+          {
+            file: path.basename(filePath),
+            highlightedSource: '<pre>source</pre>',
+          },
+        ],
         totalSteps: 1,
-        mtime: 1,
+        sourceMtims: { [filePath]: 1 },
       },
     ]),
   );
@@ -68,5 +73,45 @@ describe('invalidateTraceCacheForBatch', () => {
 
     expect(cache.has(oldPythonPath)).toBe(false);
     expect(cache.has(newPythonPath)).toBe(false);
+  });
+
+  test('invalidates cache entries when a companion source changes', () => {
+    const primaryPath = path.resolve('/site/content/labs/Demo.java');
+    const companionPath = path.resolve('/site/content/lib/Bag.java');
+    const otherPath = path.resolve('/site/content/labs/Other.java');
+    const cache: TraceCache = new Map([
+      [
+        JSON.stringify([primaryPath, companionPath]),
+        {
+          manifestUrl: '/trace/manifest.json',
+          artifactId: 'sha256-test',
+          highlightedSources: [
+            { file: 'Demo.java', highlightedSource: '<pre>demo</pre>' },
+            { file: 'Bag.java', highlightedSource: '<pre>bag</pre>' },
+          ],
+          totalSteps: 1,
+          sourceMtims: { [primaryPath]: 1, [companionPath]: 1 },
+        },
+      ],
+      [
+        JSON.stringify([otherPath]),
+        {
+          manifestUrl: '/trace/other/manifest.json',
+          artifactId: 'sha256-other',
+          highlightedSources: [
+            { file: 'Other.java', highlightedSource: '<pre>other</pre>' },
+          ],
+          totalSteps: 1,
+          sourceMtims: { [otherPath]: 1 },
+        },
+      ],
+    ]);
+
+    invalidateTraceCacheForBatch(cache, {
+      changes: [{ path: companionPath, kind: 'change' }],
+    });
+
+    expect(cache.has(JSON.stringify([primaryPath, companionPath]))).toBe(false);
+    expect(cache.has(JSON.stringify([otherPath]))).toBe(true);
   });
 });

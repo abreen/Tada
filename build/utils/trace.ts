@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { makeLogger } from '../log';
 import { B } from '../colors';
@@ -43,9 +44,9 @@ export interface TraceContext {
 export interface TraceResult {
   manifestUrl: string;
   artifactId: string;
-  highlightedSource: string;
+  highlightedSources: { file: string; highlightedSource: string }[];
   totalSteps: number;
-  mtime: number;
+  sourceMtims: Record<string, number>;
 }
 
 export function isTraceSourceFile(filePath: string): boolean {
@@ -89,31 +90,44 @@ function disabledTraceMessage(fileName: string): string {
   return `Python was not found; trace for ${B`${fileName}`} will be disabled`;
 }
 
-function sourceFileNameForTrace(fileName: string): string {
-  const { name, ext } = path.parse(fileName);
-  return `${name}${ext}`;
+interface TraceSourceFile {
+  requestedPath: string;
+  absolutePath: string;
+  file: string;
+  source: string;
 }
 
 function runTraceForFile(
-  filePath: string,
-  source: string,
+  primaryFilePath: string,
+  tracedFilePaths: string[],
+  sources: { file: string; source: string }[],
 ): { output: string; ignoreFields?: Record<string, string[]> } {
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = path.extname(primaryFilePath).toLowerCase();
   if (ext === '.java') {
-    validateJavaTraceTarget(filePath, source);
+    validateJavaTraceTarget(primaryFilePath, sources[0].source);
+    const ignoreFields: Record<string, string[]> = {};
+    for (const source of sources) {
+      const sourceFields = parseIgnoreFields(source.source);
+      for (const [className, fieldNames] of Object.entries(sourceFields)) {
+        ignoreFields[className] = [
+          ...(ignoreFields[className] ?? []),
+          ...fieldNames,
+        ];
+      }
+    }
     return {
-      output: runJavaTrace(filePath, path.parse(filePath).name),
-      ignoreFields: parseIgnoreFields(source),
+      output: runJavaTrace(tracedFilePaths, path.parse(primaryFilePath).name),
+      ignoreFields,
     };
   }
   if (ext === '.py') {
-    return { output: runPythonTrace(filePath) };
+    return { output: runPythonTrace(primaryFilePath, tracedFilePaths) };
   }
-  throw new Error(`Unsupported trace source: ${filePath}`);
+  throw new Error(`Unsupported trace source: ${primaryFilePath}`);
 }
 
 export function createTraceHelpers(context: TraceContext): {
-  renderTrace: (sourceFile: string) => string;
+  renderTrace: (sourceFile: string, companionFiles?: string[]) => string;
 } {
   const {
     filePath,
@@ -127,60 +141,158 @@ export function createTraceHelpers(context: TraceContext): {
   } = context;
   const pageDir = path.dirname(filePath);
 
-  function getOrRunTrace(sourceFile: string): TraceResult {
-    const sourceFilePath = path.resolve(pageDir, sourceFile);
-    dependencyCollector?.traceFiles?.add(sourceFilePath);
-    const traceName = path.parse(sourceFile).name;
-    const relDir = toPosix(path.relative(contentDir, pageDir));
+  function resolveTraceSources(
+    sourceFile: string,
+    companionFiles?: string[],
+  ): TraceSourceFile[] {
+    if (companionFiles !== undefined && !Array.isArray(companionFiles)) {
+      throw new Error('renderTrace companionFiles must be an array');
+    }
 
-    const cached = cache.get(sourceFilePath);
-    if (cached) {
-      const mtime = fs.statSync(sourceFilePath, {
+    const requestedPaths = [sourceFile, ...(companionFiles ?? [])];
+    const sources = requestedPaths.map(requestedPath => {
+      const absolutePath = path.resolve(pageDir, requestedPath);
+      if (!fs.existsSync(absolutePath)) {
+        throw new Error(`Trace target not found: ${absolutePath}`);
+      }
+      return {
+        requestedPath,
+        absolutePath,
+        file: path.basename(requestedPath),
+        source: fs.readFileSync(absolutePath, 'utf-8'),
+      };
+    });
+
+    const primaryExt = path.extname(sources[0].absolutePath).toLowerCase();
+    for (const source of sources) {
+      const ext = path.extname(source.absolutePath).toLowerCase();
+      if (ext !== primaryExt) {
+        throw new Error(
+          `Trace companion must use the same extension as ${sourceFile}: ${source.requestedPath}`,
+        );
+      }
+      traceLanguageForFile(source.absolutePath);
+    }
+
+    const seenBasenames = new Set<string>();
+    for (const source of sources) {
+      if (seenBasenames.has(source.file)) {
+        throw new Error(
+          `Trace files must have unique basenames in a flat workspace: ${source.file}`,
+        );
+      }
+      seenBasenames.add(source.file);
+    }
+
+    return sources;
+  }
+
+  function cacheKeyForSources(sources: TraceSourceFile[]): string {
+    return JSON.stringify(sources.map(source => source.absolutePath));
+  }
+
+  function getSourceMtims(sources: TraceSourceFile[]): Record<string, number> {
+    return Object.fromEntries(
+      sources.map(source => [
+        source.absolutePath,
+        fs.statSync(source.absolutePath).mtimeMs,
+      ]),
+    );
+  }
+
+  function cacheIsFresh(
+    sources: TraceSourceFile[],
+    cached: TraceResult,
+  ): boolean {
+    return sources.every(source => {
+      const mtime = fs.statSync(source.absolutePath, {
         throwIfNoEntry: false,
       })?.mtimeMs;
-      if (mtime !== undefined && mtime === cached.mtime) {
-        const outputPaths = getTraceOutputPaths(
-          relDir,
-          traceName,
-          cached.artifactId,
-          cached.totalSteps,
-        );
-        if (
-          materializeTraceOutputs({
-            outputPaths,
-            targetDistDir: distDir,
-            sourceDistDir: cachedTraceSourceDir || distDir,
-          })
-        ) {
-          for (const outputPath of outputPaths) {
-            dependencyCollector?.generatedOutputPaths?.add(outputPath);
-          }
-          return {
-            ...cached,
-            manifestUrl: buildManifestUrl({
-              relDir,
-              traceName,
-              artifactId: cached.artifactId,
-              applyBasePath,
-            }),
-          };
+      return (
+        mtime !== undefined && cached.sourceMtims[source.absolutePath] === mtime
+      );
+    });
+  }
+
+  function createTraceWorkspace(sources: TraceSourceFile[]): string {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-trace-work-'));
+    try {
+      for (const source of sources) {
+        fs.copyFileSync(source.absolutePath, path.join(tempDir, source.file));
+      }
+      return tempDir;
+    } catch (err) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+      throw err;
+    }
+  }
+
+  function getOrRunTrace(
+    sourceFile: string,
+    companionFiles?: string[],
+  ): TraceResult {
+    const sources = resolveTraceSources(sourceFile, companionFiles);
+    for (const source of sources) {
+      dependencyCollector?.traceFiles?.add(source.absolutePath);
+    }
+    const sourceFilePath = sources[0].absolutePath;
+    const traceName = path.parse(sourceFile).name;
+    const relDir = toPosix(path.relative(contentDir, pageDir));
+    const cacheKey = cacheKeyForSources(sources);
+
+    const cached = cache.get(cacheKey);
+    if (cached && cacheIsFresh(sources, cached)) {
+      const outputPaths = getTraceOutputPaths(
+        relDir,
+        traceName,
+        cached.artifactId,
+        cached.totalSteps,
+      );
+      if (
+        materializeTraceOutputs({
+          outputPaths,
+          targetDistDir: distDir,
+          sourceDistDir: cachedTraceSourceDir || distDir,
+        })
+      ) {
+        for (const outputPath of outputPaths) {
+          dependencyCollector?.generatedOutputPaths?.add(outputPath);
         }
+        return {
+          ...cached,
+          manifestUrl: buildManifestUrl({
+            relDir,
+            traceName,
+            artifactId: cached.artifactId,
+            applyBasePath,
+          }),
+        };
       }
     }
 
-    if (!fs.existsSync(sourceFilePath)) {
-      throw new Error(`Trace target not found: ${sourceFilePath}`);
-    }
-
-    const source = fs.readFileSync(sourceFilePath, 'utf-8');
-
     log.info`Tracing ${B`${sourceFile}`}`;
 
-    const { output, ignoreFields } = runTraceForFile(sourceFilePath, source);
-    const highlightedSource = highlightTraceSource(
-      source,
-      traceLanguageForFile(sourceFilePath),
-    );
+    const workspaceDir = createTraceWorkspace(sources);
+    let output: string;
+    let ignoreFields: Record<string, string[]> | undefined;
+    try {
+      const workspacePaths = sources.map(source =>
+        path.join(workspaceDir, source.file),
+      );
+      ({ output, ignoreFields } = runTraceForFile(
+        workspacePaths[0],
+        workspacePaths,
+        sources.map(source => ({ file: source.file, source: source.source })),
+      ));
+    } finally {
+      fs.rmSync(workspaceDir, { recursive: true, force: true });
+    }
+
+    const language = traceLanguageForFile(sourceFilePath);
+    const highlightedSources = sources.map(source => ({
+      file: source.file,
+      highlightedSource: highlightTraceSource(source.source, language),
+    }));
     const traceOutputDir = path.join(distDir, relDir, '_traces', traceName);
 
     const traceOutput = chunkTraceOutput(
@@ -188,8 +300,8 @@ export function createTraceHelpers(context: TraceContext): {
       traceOutputDir,
       relDir,
       traceName,
-      sourceFileNameForTrace(sourceFile),
-      source,
+      sources[0].file,
+      sources.map(source => ({ file: source.file, source: source.source })),
       { chunkSize: DEFAULT_CHUNK_SIZE, ignoreFields },
     );
     for (const outputPath of traceOutput.outputPaths) {
@@ -204,45 +316,48 @@ export function createTraceHelpers(context: TraceContext): {
     });
 
     const totalSteps = traceOutput.manifest.totalSteps;
-    const mtime = fs.statSync(sourceFilePath).mtimeMs;
-    cache.set(sourceFilePath, {
+    const sourceMtims = getSourceMtims(sources);
+    cache.set(cacheKey, {
       manifestUrl,
       artifactId: traceOutput.artifactId,
-      highlightedSource,
+      highlightedSources,
       totalSteps,
-      mtime,
+      sourceMtims,
     });
     return {
       manifestUrl,
       artifactId: traceOutput.artifactId,
-      highlightedSource,
+      highlightedSources,
       totalSteps,
-      mtime,
+      sourceMtims,
     };
   }
 
   return {
-    renderTrace: (sourceFile: string): string => {
-      const sourceFilePath = path.resolve(pageDir, sourceFile);
+    renderTrace: (sourceFile: string, companionFiles?: string[]): string => {
+      const sources = resolveTraceSources(sourceFile, companionFiles);
+      for (const source of sources) {
+        dependencyCollector?.traceFiles?.add(source.absolutePath);
+      }
+      const sourceFilePath = sources[0].absolutePath;
       const available = availabilityForFile(sourceFilePath, toolAvailability);
       if (available === false) {
         log.warn`${disabledTraceMessage(sourceFile)}`;
-        if (!fs.existsSync(sourceFilePath)) {
-          throw new Error(`Trace target not found: ${sourceFilePath}`);
-        }
-        const source = fs.readFileSync(sourceFilePath, 'utf-8');
+        const language = traceLanguageForFile(sourceFilePath);
         return renderTraceWidgetHtml({
-          highlightedSource: highlightTraceSource(
-            source,
-            traceLanguageForFile(sourceFilePath),
-          ),
+          highlightedSources: sources.map(source => ({
+            file: source.file,
+            highlightedSource: highlightTraceSource(source.source, language),
+          })),
         });
       }
 
-      const { manifestUrl, highlightedSource, totalSteps } =
-        getOrRunTrace(sourceFile);
+      const { manifestUrl, highlightedSources, totalSteps } = getOrRunTrace(
+        sourceFile,
+        companionFiles,
+      );
       return renderTraceWidgetHtml({
-        highlightedSource,
+        highlightedSources,
         manifestUrl,
         totalSteps,
       });

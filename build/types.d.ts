@@ -86,9 +86,9 @@ export interface RenderPlainTextOptions {
     {
       manifestUrl: string;
       artifactId: string;
-      highlightedSource: string;
+      highlightedSources: { file: string; highlightedSource: string }[];
       totalSteps: number;
-      mtime: number;
+      sourceMtims: Record<string, number>;
     }
   >;
   traceToolAvailability?: TraceToolAvailability;
@@ -207,7 +207,6 @@ export interface TraceStep {
   stack: TraceStackFrame[];
   heap: Record<string, TraceHeapObject>;
   output?: TraceOutputEvent[];
-  stdout?: string;
 }
 
 export interface TraceOutputEvent {
@@ -244,7 +243,12 @@ export type TraceHeapObject =
 export interface TraceManifest {
   totalSteps: number;
   chunkSize: number;
-  sourceFile: string;
+  primaryFile: string;
+  sources: TraceSource[];
+}
+
+export interface TraceSource {
+  file: string;
   source: string;
   lineToSteps: Record<number, number[]>;
 }
@@ -273,9 +277,9 @@ export interface TraceLayout {
 
 /** A single entry in a chunk file (new format with precomputed SVG). */
 export interface TraceChunkEntry {
+  file: string;
   line: number;
   output?: TraceOutputEvent[];
-  stdout?: string;
   svg: string;
 }
 

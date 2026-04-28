@@ -9,7 +9,7 @@ interface WidgetState {
 
 interface WidgetElements {
   root: HTMLElement;
-  source: HTMLElement;
+  sourceWrapper: HTMLElement;
   controls: HTMLElement;
   content: HTMLElement;
   diagram: HTMLElement;
@@ -75,6 +75,22 @@ function updateSourceHighlight(panel: HTMLElement, currentLine: number): void {
     const panelRect = panel.getBoundingClientRect();
     panel.scrollTop += elRect.top - panelRect.top - panel.clientHeight / 2;
   }
+}
+
+function updateVisibleSourcePanel(
+  sourceWrapper: HTMLElement,
+  currentFile: string,
+): HTMLElement | null {
+  let activePanel: HTMLElement | null = null;
+  sourceWrapper.querySelectorAll('.trace-source').forEach(panel => {
+    const sourcePanel = panel as HTMLElement;
+    const matches = sourcePanel.dataset.traceSourceFile === currentFile;
+    sourcePanel.hidden = !matches;
+    if (matches) {
+      activePanel = sourcePanel;
+    }
+  });
+  return activePanel;
 }
 
 function updateStepControls(
@@ -230,20 +246,19 @@ function updateOutput(
   );
 }
 
-function getStepOutput(step: TraceChunkEntry): TraceOutputEvent[] {
-  if (Array.isArray(step.output)) {
-    return step.output;
-  }
-  return step.stdout ? [{ stream: 'stdout', text: step.stdout }] : [];
-}
-
 function renderWidgetState(
   state: WidgetState,
   elements: WidgetElements,
   doc: Document,
 ): void {
   const entry = getStep(state);
-  updateSourceHighlight(elements.source, entry.line);
+  const sourcePanel = updateVisibleSourcePanel(
+    elements.sourceWrapper,
+    entry.file,
+  );
+  if (sourcePanel) {
+    updateSourceHighlight(sourcePanel, entry.line);
+  }
   updateStepControls(
     elements.controls,
     state.currentStep,
@@ -255,7 +270,7 @@ function renderWidgetState(
     const ci = Math.floor(i / state.manifest.chunkSize);
     const off = i % state.manifest.chunkSize;
     const s = state.chunks.get(ci)![off];
-    output.push(...getStepOutput(s));
+    output.push(...(s.output ?? []));
   }
   updateOutput(elements.content, output, doc);
 
@@ -291,7 +306,9 @@ async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
 
   await loadChunk(state, manifestUrl, 0);
 
-  const source = root.querySelector('.trace-source') as HTMLElement;
+  const sourceWrapper = root.querySelector(
+    '.trace-source-wrapper',
+  ) as HTMLElement;
   const content = root.querySelector('.trace-content') as HTMLElement;
   const diagram = root.querySelector('.trace-diagram') as HTMLElement;
 
@@ -335,7 +352,13 @@ async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
     next.focus();
   });
 
-  const elements: WidgetElements = { root, source, controls, content, diagram };
+  const elements: WidgetElements = {
+    root,
+    sourceWrapper,
+    controls,
+    content,
+    diagram,
+  };
 
   renderWidgetState(state, elements, doc);
 }

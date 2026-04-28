@@ -87,7 +87,7 @@ function ensureTracerCompiled(): string {
   return tempDir;
 }
 
-function compileTargetFile(javaFilePath: string): string {
+function compileTargetFiles(javaFilePaths: string[]): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-trace-target-'));
 
   runJavac(
@@ -96,10 +96,10 @@ function compileTargetFile(javaFilePath: string): string {
       '-d',
       tempDir,
       '-sourcepath',
-      path.dirname(javaFilePath),
-      javaFilePath,
+      path.dirname(javaFilePaths[0]),
+      ...javaFilePaths,
     ],
-    { tempDir, label: `Compilation failed for ${javaFilePath}` },
+    { tempDir, label: `Compilation failed for ${javaFilePaths[0]}` },
   );
 
   return tempDir;
@@ -116,8 +116,11 @@ export function validateJavaTraceTarget(
   }
 }
 
-export function runJavaTrace(javaFilePath: string, className: string): string {
-  const targetClassDir = compileTargetFile(javaFilePath);
+export function runJavaTrace(
+  javaFilePaths: string[],
+  className: string,
+): string {
+  const targetClassDir = compileTargetFiles(javaFilePaths);
 
   try {
     const tracerDir = ensureTracerCompiled();

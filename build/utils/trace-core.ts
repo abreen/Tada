@@ -27,10 +27,7 @@ export interface ChunkTraceOutputResult {
 }
 
 function stepOutputEvents(step: TraceStep): TraceOutputEvent[] {
-  if (Array.isArray(step.output)) {
-    return step.output;
-  }
-  return step.stdout ? [{ stream: 'stdout', text: step.stdout }] : [];
+  return step.output ?? [];
 }
 
 function hashTraceFiles(files: { name: string; content: string }[]): string {
@@ -55,13 +52,21 @@ function buildTraceOutputPath(
     .join('/');
 }
 
+function escapeAttr(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
 export function chunkTraceOutput(
   output: string,
   traceOutputDir: string,
   relDir: string,
   traceName: string,
-  sourceFile: string,
-  source: string,
+  primaryFile: string,
+  sources: { file: string; source: string }[],
   options: ChunkTraceOutputOptions = {},
 ): ChunkTraceOutputResult {
   const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
@@ -74,9 +79,17 @@ export function chunkTraceOutput(
 
   const allSteps: TraceStep[] = lines.map(l => JSON.parse(l));
 
-  const lineToSteps: Record<number, number[]> = {};
+  const lineToStepsByFile = new Map<string, Record<number, number[]>>();
+  for (const source of sources) {
+    lineToStepsByFile.set(source.file, {});
+  }
   for (let i = 0; i < allSteps.length; i++) {
     const step = allSteps[i];
+    const file = path.basename(step.file);
+    const lineToSteps = lineToStepsByFile.get(file);
+    if (!lineToSteps) {
+      continue;
+    }
     if (!lineToSteps[step.line]) {
       lineToSteps[step.line] = [];
     }
@@ -91,7 +104,12 @@ export function chunkTraceOutput(
 
   for (const step of allSteps) {
     const svg = generateStepSvg(step, layout);
-    chunkEntries.push({ line: step.line, output: stepOutputEvents(step), svg });
+    chunkEntries.push({
+      file: path.basename(step.file),
+      line: step.line,
+      output: stepOutputEvents(step),
+      svg,
+    });
 
     if (chunkEntries.length >= chunkSize) {
       chunkFiles.push({
@@ -113,9 +131,11 @@ export function chunkTraceOutput(
   const manifest: TraceManifest = {
     totalSteps: allSteps.length,
     chunkSize,
-    sourceFile,
-    source,
-    lineToSteps,
+    primaryFile,
+    sources: sources.map(source => ({
+      ...source,
+      lineToSteps: lineToStepsByFile.get(source.file) ?? {},
+    })),
   };
 
   const manifestFile = {
@@ -230,11 +250,11 @@ export function buildManifestUrl({
 }
 
 export function renderTraceWidgetHtml({
-  highlightedSource,
+  highlightedSources,
   manifestUrl,
   totalSteps,
 }: {
-  highlightedSource: string;
+  highlightedSources: { file: string; highlightedSource: string }[];
   manifestUrl?: string;
   totalSteps?: number;
 }): string {
@@ -260,5 +280,11 @@ export function renderTraceWidgetHtml({
   const wrapperClass = disabled
     ? 'trace-widget trace-disabled'
     : 'trace-widget';
-  return `<div class="${wrapperClass}"${wrapperAttrs}><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-source-wrapper"><div class="trace-source">${highlightedSource}</div></div></div></div></div>`;
+  const sourcePanels = highlightedSources
+    .map((source, index) => {
+      const hidden = index === 0 ? '' : ' hidden';
+      return `<div class="trace-source" data-trace-source-file="${escapeAttr(source.file)}"${hidden}>${source.highlightedSource}</div>`;
+    })
+    .join('');
+  return `<div class="${wrapperClass}"${wrapperAttrs}><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-source-wrapper">${sourcePanels}</div></div></div></div>`;
 }

@@ -9,20 +9,38 @@ A trace is embedded in a page using the `renderTrace` template function:
 ```
 <%= renderTrace('MyProgram.java') %>
 <%= renderTrace('my_program.py') %>
+<%= renderTrace('Demo.java', ['../../lectures/bag/ArrayBag.java']) %>
 ```
 
-The argument is a path to a source file resolved relative to the page.
+The first argument is the primary source file, resolved relative to the page.
+The optional second argument is an explicit array of companion source files,
+also resolved relative to the page. Companions are non-transitive: every source
+file that should be traced must be listed.
 
 ## Build processing
 
 At build time, `renderTrace` picks a backend by file extension and executes the
 target program to produce a JSONL trace (one JSON object per execution step).
+The primary file and companions must all use the same supported extension. Tada
+copies them into a temporary flat workspace using only their basenames, then
+runs the trace from that workspace. Because the workspace is flat, duplicate
+basenames in one trace are rejected. Java traces compile all workspace `.java`
+files together and run the primary class. Python traces run the primary script
+from the workspace so imports such as `import helper` and
+`from helper import value` can resolve explicit companion modules.
+
 The output is split into chunk files of 50 steps each, plus a `manifest.json`
-with metadata and a line-to-step index. Tada hashes the serialized generated
-manifest and chunk JSON, then writes the files to
+with metadata and one source entry per traced file. Tada hashes the serialized
+generated manifest and chunk JSON, then writes the files to
 `dist/_traces/{Name}/sha256-{hash}/`. The rendered widget points at the
 hashed `manifest.json` path, so browsers fetch fresh trace data when a rebuild
-produces different trace artifacts. Results are cached per source file path.
+produces different trace artifacts. Results are cached for the full primary and
+companion file set and are invalidated when any traced source changes.
+
+The manifest shape is `{ totalSteps, chunkSize, primaryFile, sources }`, where
+each source entry is `{ file, source, lineToSteps }`. Chunk entries are
+`{ file, line, output, svg }`, so each execution step names the source file that
+owns the active line.
 
 If the runtime needed for a trace backend is not available, `renderTrace` logs a
 warning and emits a disabled widget for that source file. Java traces require
@@ -50,10 +68,13 @@ trace still builds successfully. The tracer emits a final step on the throwing
 source line that includes the exception output on stderr, so examples can show
 the program crashing.
 
-The source panel highlights the current line. The memory diagram is rendered as
-SVG and depicts stack frames with local variables, heap objects (arrays, objects,
-strings), and reference arrows between them. The diagram reads colors from CSS
-custom properties and re-renders on color scheme changes.
+The source panel highlights the current line. Multi-file traces render one
+highlighted source panel per traced file; as the user navigates, the widget
+shows the panel matching the current step's `file` and hides the others. The
+memory diagram is rendered as SVG and depicts stack frames with local variables,
+heap objects (arrays, objects, strings), and reference arrows between them. The
+diagram reads colors from CSS custom properties and re-renders on color scheme
+changes.
 
 ## Slides Mode
 

@@ -23,7 +23,11 @@ export function invalidateTraceCacheForBatch(
   for (const change of batch.changes) {
     const sourcePath = path.resolve(change.path);
     if (isTraceSourceFile(sourcePath)) {
-      traceCache.delete(sourcePath);
+      for (const [cacheKey, entry] of traceCache) {
+        if (sourcePath in entry.sourceMtims) {
+          traceCache.delete(cacheKey);
+        }
+      }
     }
   }
 }
