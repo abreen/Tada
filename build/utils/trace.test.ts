@@ -52,11 +52,13 @@ let renderTraceWidgetHtml: typeof import('./trace-core').renderTraceWidgetHtml;
 let createTraceHelpers: typeof import('./trace').createTraceHelpers;
 let isTraceSourceFile: typeof import('./trace').isTraceSourceFile;
 let parseIgnoreFields: typeof import('./trace-java').parseIgnoreFields;
+let hasExplicitTopLevelTypeDeclaration: typeof import('./trace-java').hasExplicitTopLevelTypeDeclaration;
 
 beforeAll(async () => {
   ({ chunkTraceOutput, renderTraceWidgetHtml } = await import('./trace-core'));
   ({ createTraceHelpers, isTraceSourceFile } = await import('./trace'));
-  ({ parseIgnoreFields } = await import('./trace-java'));
+  ({ parseIgnoreFields, hasExplicitTopLevelTypeDeclaration } =
+    await import('./trace-java'));
 });
 
 beforeEach(() => {
@@ -241,6 +243,29 @@ class B {
   test('parseIgnoreFields returns empty for no annotations', () => {
     const source = `class Node { int x; }`;
     expect(parseIgnoreFields(source)).toEqual({});
+  });
+
+  test('detects explicit top-level Java type declarations', () => {
+    expect(
+      hasExplicitTopLevelTypeDeclaration(
+        `import java.util.List;
+
+public class Demo {
+    public static void main(String[] args) {}
+}`,
+      ),
+    ).toBe(true);
+  });
+
+  test('treats implicit Java class source as unnamed', () => {
+    expect(
+      hasExplicitTopLevelTypeDeclaration(
+        `void main() {
+    class Local {}
+    System.out.println("class is just text");
+}`,
+      ),
+    ).toBe(false);
   });
 
   test('maps repeated lines to multiple step indices', () => {

@@ -20,6 +20,7 @@ public class TraceRunner {
     private static long nextObjId = 1;
     private static Map<String, ObjectReference> previousReachable = new LinkedHashMap<>();
     private static final List<OutputEvent> outputEvents = new ArrayList<>();
+    private static final Set<String> unnamedClassNames = new HashSet<>();
 
     private record OutputEvent(String stream, String text) {}
 
@@ -31,6 +32,9 @@ public class TraceRunner {
 
         String className = args[0];
         String classPath = args[1];
+        for (int i = 2; i < args.length; i++) {
+            unnamedClassNames.add(args[i]);
+        }
 
         LaunchingConnector connector =
             Bootstrap.virtualMachineManager().defaultConnector();
@@ -223,7 +227,7 @@ public class TraceRunner {
             if (!frame.location().method().isStatic()) {
                 try {
                     ObjectReference thisObj = frame.thisObject();
-                    if (thisObj != null) {
+                    if (thisObj != null && shouldEmitThis(declType)) {
                         sb.append("\"this\":")
                             .append(serializeValue(thisObj, reachable));
                         firstVar = false;
@@ -268,6 +272,25 @@ public class TraceRunner {
         }
         sb.append(']');
         return sb.toString();
+    }
+
+    private static boolean shouldEmitThis(ReferenceType type) {
+        if (!unnamedClassNames.contains(type.name())) {
+            return true;
+        }
+        return hasInstanceFields(type);
+    }
+
+    private static boolean hasInstanceFields(ReferenceType type) {
+        try {
+            for (Field field : type.visibleFields()) {
+                if (!field.isStatic()) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     private static String serializeValue(Value val,

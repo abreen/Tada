@@ -2,10 +2,16 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import { parse as parseJava } from 'java-parser';
 import { makeLogger } from '../log';
 import { hasMainMethod, runJavac } from './literate-java';
 
 const log = makeLogger(import.meta.url);
+
+interface CstNode {
+  name?: string;
+  children?: Record<string, CstNode[]>;
+}
 
 /**
  * Parse // @trace-ignore comments from Java source code.
@@ -63,6 +69,42 @@ export function parseIgnoreFields(source: string): Record<string, string[]> {
   }
 
   return result;
+}
+
+const JAVA_TOP_LEVEL_TYPE_NODES = new Set([
+  'classDeclaration',
+  'interfaceDeclaration',
+  'enumDeclaration',
+  'recordDeclaration',
+]);
+
+export function hasExplicitTopLevelTypeDeclaration(source: string): boolean {
+  let cst: CstNode;
+  try {
+    cst = parseJava(source) as CstNode;
+  } catch (err: unknown) {
+    log.debug`Failed to parse Java source for unnamed class detection: ${(err as Error).message}`;
+    return true;
+  }
+
+  const ordinaryCompilationUnit = cst.children?.ordinaryCompilationUnit?.[0];
+  const typeDeclarations =
+    ordinaryCompilationUnit?.children?.typeDeclaration ?? [];
+
+  return typeDeclarations.some(typeDeclaration =>
+    Object.keys(typeDeclaration.children ?? {}).some(childName =>
+      JAVA_TOP_LEVEL_TYPE_NODES.has(childName),
+    ),
+  );
+}
+
+export function getUnnamedClassNames(javaFilePaths: string[]): string[] {
+  return javaFilePaths
+    .filter(javaFilePath => {
+      const source = fs.readFileSync(javaFilePath, 'utf-8');
+      return !hasExplicitTopLevelTypeDeclaration(source);
+    })
+    .map(javaFilePath => path.parse(javaFilePath).name);
 }
 
 let tracerClassDir: string | null = null;
@@ -124,9 +166,17 @@ export function runJavaTrace(
 
   try {
     const tracerDir = ensureTracerCompiled();
+    const unnamedClassNames = getUnnamedClassNames(javaFilePaths);
     return execFileSync(
       'java',
-      ['-cp', tracerDir, 'TraceRunner', className, targetClassDir],
+      [
+        '-cp',
+        tracerDir,
+        'TraceRunner',
+        className,
+        targetClassDir,
+        ...unnamedClassNames,
+      ],
       { timeout: 60000, encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 },
     );
   } finally {

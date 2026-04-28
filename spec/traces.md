@@ -73,8 +73,13 @@ highlighted source panel per traced file; as the user navigates, the widget
 shows the panel matching the current step's `file` and hides the others. The
 memory diagram is rendered as SVG and depicts stack frames with local variables,
 heap objects (arrays, objects, strings), and reference arrows between them. The
-diagram reads colors from CSS custom properties and re-renders on color scheme
-changes.
+For Java compact source files, the tracer does not render the implicit `this`
+local when the implicitly declared class has no instance fields. If the compact
+source file declares instance fields, `this` remains visible so those fields can
+be inspected.
+
+The diagram reads colors from CSS custom properties and re-renders on color
+scheme changes.
 
 ## Slides Mode
 

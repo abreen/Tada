@@ -1,7 +1,5 @@
 import json
-import shutil
 
-import pytest
 from conftest import run_tada
 
 
@@ -17,7 +15,24 @@ def load_chunk(manifest_path, index=0):
 
 
 class TestMultiFileTraces:
-    @pytest.mark.skipif(shutil.which('javac') is None, reason='javac is required')
+    def test_unnamed_class_without_fields_hides_this_reference(self, site_dir):
+        labs_dir = site_dir / 'content' / 'labs' / '01'
+        labs_dir.mkdir(parents=True, exist_ok=True)
+        (labs_dir / 'UnnamedDemo.java').write_text(
+            'void main() {\n    int value = 7;\n    System.out.println(value);\n}\n'
+        )
+        (labs_dir / 'index.md').write_text(
+            "---\ntitle: Trace Lab\n---\n\n<%= renderTrace('UnnamedDemo.java') %>\n"
+        )
+
+        result = run_tada('dev', cwd=str(site_dir), timeout=180)
+        assert result.returncode == 0, result.stderr
+
+        manifest_path, _manifest = load_manifest(site_dir, 'UnnamedDemo')
+        chunk = load_chunk(manifest_path)
+        assert any('>value</text>' in entry['svg'] for entry in chunk)
+        assert all('>this</text>' not in entry['svg'] for entry in chunk)
+
     def test_java_trace_with_companion_source(self, site_dir):
         lectures_dir = site_dir / 'content' / 'lectures' / 'bag'
         labs_dir = site_dir / 'content' / 'labs' / '01'
@@ -62,7 +77,6 @@ class TestMultiFileTraces:
         chunk = load_chunk(manifest_path)
         assert any(entry['file'] == 'ArrayBag.java' for entry in chunk)
 
-    @pytest.mark.skipif(shutil.which('python3') is None, reason='python3 is required')
     def test_python_trace_with_companion_module(self, site_dir):
         labs_dir = site_dir / 'content' / 'labs' / '01'
         labs_dir.mkdir(parents=True, exist_ok=True)
