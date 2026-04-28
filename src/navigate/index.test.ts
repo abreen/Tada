@@ -1,6 +1,7 @@
 import { describe, expect, test, beforeEach, mock } from 'bun:test';
 import * as jsdom from 'jsdom';
 import { createGlobals } from '../globals.test';
+import { deferred } from '../../test-helpers';
 
 // Mock the lifecycle module so we can track calls
 const mockTeardown = mock(() => {});
@@ -11,6 +12,7 @@ mock.module('./lifecycle', () => ({
 }));
 
 import mount from './index';
+import { NAVIGATION_EVENT } from './runtime';
 
 // JSDOM's DOMWindow is structurally compatible with Window. We cast once
 // in createDOM and use this alias everywhere else so the rest of the file
@@ -113,6 +115,12 @@ async function flush(): Promise<void> {
   for (let i = 0; i < 10; i++) {
     await new Promise(r => setTimeout(r, 0));
   }
+}
+
+function waitForNavigation(win: Win): Promise<void> {
+  return new Promise(resolve => {
+    win.addEventListener(NAVIGATION_EVENT, () => resolve(), { once: true });
+  });
 }
 
 function setupGlobals(win: Win) {
@@ -552,20 +560,26 @@ describe('cross-page navigation', () => {
     const win = createDOM('<a href="http://localhost/other">Link</a>');
     setupGlobals(win);
 
-    let headerHadLoading = false;
+    const fetchStarted = deferred<void>();
+    const fetchResponse = deferred<Response>();
     mockGlobals({
       fetch: mock(async () => {
-        const header = win.document.querySelector('header');
-        headerHadLoading = header?.classList.contains('loading') ?? false;
-        return htmlResponse(createPageHTML());
+        fetchStarted.resolve();
+        return fetchResponse.promise;
       }),
     });
     mount(win);
 
     clickLink(win);
+    await fetchStarted.promise;
+
+    expect(
+      win.document.querySelector('header')!.classList.contains('loading'),
+    ).toBe(true);
+
+    fetchResponse.resolve(htmlResponse(createPageHTML()));
     await flush();
 
-    expect(headerHadLoading).toBe(true);
     expect(
       win.document.querySelector('header')!.classList.contains('loading'),
     ).toBe(false);
@@ -923,6 +937,7 @@ describe('popstate handling', () => {
 
     let backFetchAborted = false;
     let callCount = 0;
+    const backFetchStarted = deferred<void>();
     mockGlobals({
       fetch: mock(async (_input: RequestInfo | URL, init?: RequestInit) => {
         callCount++;
@@ -936,6 +951,7 @@ describe('popstate handling', () => {
         }
 
         if (callCount === 2) {
+          backFetchStarted.resolve();
           await new Promise((_resolve, reject) => {
             init?.signal?.addEventListener('abort', () => {
               backFetchAborted = true;
@@ -956,21 +972,23 @@ describe('popstate handling', () => {
     });
 
     mount(win);
+    const initialNavigation = waitForNavigation(win);
     clickLink(win);
-    await flush();
+    await initialNavigation;
 
     win.scrollY = 500;
     win.dispatchEvent(new win.Event('scroll'));
 
     win.history.replaceState(null, '', '/index.html');
     win.dispatchEvent(new win.PopStateEvent('popstate', { state: null }));
-    await new Promise(r => setTimeout(r, 0));
+    await backFetchStarted.promise;
 
+    const forwardNavigation = waitForNavigation(win);
     win.history.replaceState({ navIndex: 1 }, '', '/markdown.html');
     win.dispatchEvent(
       new win.PopStateEvent('popstate', { state: { navIndex: 1 } }),
     );
-    await flush();
+    await forwardNavigation;
 
     expect(backFetchAborted).toBe(true);
     expect(callCount).toBe(3);

@@ -13,6 +13,7 @@ const functionalDir = path.join(coverageDir, 'functional');
 const unitLcovPath = path.join(coverageDir, 'unit', 'lcov.info');
 const outputDir = path.join(coverageDir, 'report');
 const excludedCoveragePaths = new Set([
+  path.join(packageDir, 'test-helpers.ts'),
   path.join(packageDir, 'unit-test-preload.ts'),
 ]);
 

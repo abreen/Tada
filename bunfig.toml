@@ -4,4 +4,4 @@ preload = ["./unit-test-preload.ts"]
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage/unit"
 coverageSkipTestFiles = true
-coveragePathIgnorePatterns = ["unit-test-preload.ts"]
+coveragePathIgnorePatterns = ["unit-test-preload.ts", "test-helpers.ts"]

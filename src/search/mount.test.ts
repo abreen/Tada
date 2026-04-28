@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
 import mountSearch, { resetPagefindForTest } from './index';
+import { deferred } from '../../test-helpers';
 
 type MockPagefindResult = {
   meta?: {
@@ -65,14 +66,6 @@ function focusEvent(
     'FocusEvent'
   ] as typeof FocusEvent;
   return new FE(type, init);
-}
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>(r => {
-    resolve = r;
-  });
-  return { promise, resolve };
 }
 
 async function flush() {
