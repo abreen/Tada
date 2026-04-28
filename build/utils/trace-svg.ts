@@ -18,6 +18,9 @@ const PADDING = 8;
 /** Horizontal margin when routing stack-to-heap arrows. */
 const ARROW_MARGIN = 20;
 
+/** Approximate monospace character width for arrow targeting. */
+const CHAR_WIDTH_RATIO = 0.6;
+
 // ---------------------------------------------------------------------------
 // Escape & format helpers
 // ---------------------------------------------------------------------------
@@ -473,6 +476,43 @@ function rectBoundaryPoint(
   return { x: Math.round(cx + dx * scale), y: Math.round(cy + dy * scale) };
 }
 
+function heapTargetBoundaryPoint(
+  sx: number,
+  sy: number,
+  target: HeapObjInfo,
+  obj: TraceHeapObject | undefined,
+  dims: { fontSize: number },
+): { x: number; y: number } {
+  if (!obj || !('value' in obj) || !isInlineHeapObject(obj)) {
+    return rectBoundaryPoint(
+      sx,
+      sy,
+      target.absX,
+      target.absY,
+      target.width,
+      target.height,
+    );
+  }
+
+  const text = formatHeapObjectValue(obj.type, obj.value);
+  const textWidth = Math.max(
+    dims.fontSize,
+    text.length * dims.fontSize * CHAR_WIDTH_RATIO,
+  );
+  const textHeight = dims.fontSize * 1.2;
+  const textPadding = 4;
+  const rx = target.absX + (target.width - textWidth) / 2 - textPadding;
+  const ry = target.absY + (target.height - textHeight) / 2 - textPadding;
+  return rectBoundaryPoint(
+    sx,
+    sy,
+    rx,
+    ry,
+    textWidth + textPadding * 2,
+    textHeight + textPadding * 2,
+  );
+}
+
 /**
  * Get the center of the child-slot box for a given field.
  * The slot row has a small label at the top and a box below it.
@@ -515,14 +555,7 @@ function generateArrows(
     target: HeapObjInfo,
     style: 'fg' | 'dim' = 'fg',
   ): string {
-    const ep = rectBoundaryPoint(
-      sx,
-      sy,
-      target.absX,
-      target.absY,
-      target.width,
-      target.height,
-    );
+    const ep = heapTargetBoundaryPoint(sx, sy, target, heap[target.id], dims);
     const cpx = Math.round((sx + ep.x) / 2);
     const cls = style === 'fg' ? 'trace-arrow' : 'trace-arrow-dim';
     const marker = style === 'fg' ? 'trace-arrowhead' : 'trace-arrowhead-dim';
@@ -574,14 +607,7 @@ function generateArrows(
   // Non-structural heap arrow: cubic Bezier with auto-detected direction
   // (typically horizontal toward ref chains).
   function heapArrow(sx: number, sy: number, target: HeapObjInfo): string {
-    const ep = rectBoundaryPoint(
-      sx,
-      sy,
-      target.absX,
-      target.absY,
-      target.width,
-      target.height,
-    );
+    const ep = heapTargetBoundaryPoint(sx, sy, target, heap[target.id], dims);
     const dx = ep.x - sx;
     const dy = ep.y - sy;
     const dist = Math.sqrt(dx * dx + dy * dy);

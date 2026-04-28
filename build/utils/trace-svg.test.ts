@@ -247,6 +247,31 @@ describe('generateStepSvg', () => {
     expect(svg).toContain('class="trace-arrow"');
   });
 
+  test('targets boxed primitive arrows near the rendered value', () => {
+    const step = makeStep(
+      5,
+      [
+        {
+          method: 'main',
+          class: 'Test',
+          locals: { boxed: { type: 'ref', id: '1' } },
+        },
+      ],
+      { '1': { type: 'java.lang.Integer', value: 42 } },
+    );
+    const layout = computeLayout([step]);
+    const svg = generateStepSvg(step, layout);
+
+    const objectX = Number(
+      svg.match(/data-id="1" transform="translate\(([^,]+),/)?.[1],
+    );
+    const arrowEndX = Number(
+      svg.match(/class="trace-arrow" d="M \d+ \d+ Q \d+ \d+, (\d+) \d+"/)?.[1],
+    );
+
+    expect(arrowEndX).toBeGreaterThan(objectX);
+  });
+
   test('handles array heap objects', () => {
     const step = makeStep(
       5,
