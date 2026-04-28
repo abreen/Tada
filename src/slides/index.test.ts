@@ -2,9 +2,11 @@ import { afterEach, beforeAll, describe, expect, jest, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 
 let mount: typeof import('./index').default;
+let mountQuestion: typeof import('../question').default;
 
 beforeAll(async () => {
   ({ default: mount } = await import('./index'));
+  ({ default: mountQuestion } = await import('../question'));
 });
 
 afterEach(() => {
@@ -1357,8 +1359,9 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
-  test('clicking a Q&A reveal on the last slide does not count as slide navigation', () => {
+  test('clicking a Q&A reveal on the last slide only advances after it is revealed', () => {
     const win = createSlidesWindowWithQuestionOnLastSlide();
+    mountQuestion(win);
     const cleanup = mount(win);
 
     const present = win.document.querySelector(
@@ -1371,13 +1374,6 @@ describe('slides presentation controller', () => {
       '.question-a-body',
     ) as HTMLElement;
 
-    questionBody.addEventListener('click', () => {
-      questionBody.setAttribute('data-revealed', '');
-      questionBody.removeAttribute('role');
-      questionBody.removeAttribute('tabindex');
-      questionBody.removeAttribute('aria-label');
-    });
-
     present.click();
     dispatchKey(win, 'ArrowRight');
     dispatchKey(win, 'ArrowRight');
@@ -1386,6 +1382,15 @@ describe('slides presentation controller', () => {
 
     expect(overlay.hidden).toBe(true);
     expect(questionBody.hasAttribute('data-revealed')).toBe(true);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('2');
+
+    questionBody.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+
+    expect(overlay.hidden).toBe(false);
     expect(
       win.document
         .querySelector('.slide.is-active')

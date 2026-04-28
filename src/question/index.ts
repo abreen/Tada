@@ -13,10 +13,22 @@ export default (window: Window) => {
       el.removeAttribute('aria-label');
     };
 
-    el.addEventListener('click', reveal);
+    el.addEventListener('click', (e: MouseEvent) => {
+      if (el.hasAttribute('data-revealed')) {
+        return;
+      }
+
+      e.stopPropagation();
+      reveal();
+    });
     el.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (el.hasAttribute('data-revealed')) {
+        return;
+      }
+
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
+        e.stopPropagation();
         reveal();
       }
     });

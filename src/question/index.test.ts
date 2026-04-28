@@ -31,6 +31,23 @@ describe('question', () => {
     expect(el.hasAttribute('aria-label')).toBe(false);
   });
 
+  test('consumes only the click that reveals the answer', () => {
+    const win = create('<div class="question-a-body">Answer</div>');
+    mount(win);
+
+    const el = win.document.querySelector('.question-a-body')!;
+    let bodyClicks = 0;
+    win.document.body.addEventListener('click', () => {
+      bodyClicks += 1;
+    });
+
+    el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+    el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+
+    expect(el.hasAttribute('data-revealed')).toBe(true);
+    expect(bodyClicks).toBe(1);
+  });
+
   test('reveals answer on Enter key', () => {
     const win = create('<div class="question-a-body">Answer</div>');
     mount(win);
