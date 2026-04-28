@@ -30,8 +30,9 @@ jobs:
       run: |
         version="$(jq -r .version package.json)"
         subject="$(git log -1 --pretty=%s)"
+        tag="$(git tag --points-at HEAD --list "v$version")"
 
-        if [ "$subject" = "$version" ] && git tag --points-at HEAD --list "v$version" | rg -q "^v$version$"; then
+        if [ "$subject" = "$version" ] && [ "$tag" = "v$version" ]; then
           echo "run-ci=false" >> "$GITHUB_OUTPUT"
         else
           echo "run-ci=true" >> "$GITHUB_OUTPUT"
