@@ -29,6 +29,9 @@ const ROW_HEIGHT_RATIO = 2;
 /** Minimum width for a value box in a field object. */
 const MIN_VALUE_WIDTH = 40;
 
+/** Minimum width for each displayed array cell. */
+const MIN_ARRAY_CELL_WIDTH = 48;
+
 /** Information collected about a heap object across all trace steps. */
 export interface ObjectInfo {
   id: string;
@@ -261,7 +264,7 @@ export function getObjectSize(
 
   if (info.isArray) {
     const cellCount = Math.min(info.maxElements, ARRAY_MAX_CELLS);
-    const cellWidth = Math.max(charWidth * 3, MIN_VALUE_WIDTH);
+    const cellWidth = Math.max(charWidth * 3, MIN_ARRAY_CELL_WIDTH);
     const width = Math.max(
       info.type.length * charWidth + 16,
       cellCount * cellWidth,
