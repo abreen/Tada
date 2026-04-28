@@ -251,6 +251,19 @@ describe('getObjectSize', () => {
     expect(size.cellWidth).toBeUndefined();
   });
 
+  test('sizes a boxed Java primitive as inline heap text', () => {
+    const steps: TraceStep[] = [
+      makeStep(1, mainStack, { '1': { type: 'java.lang.Integer', value: 42 } }),
+    ];
+    const objects = scanSteps(steps);
+    const size = getObjectSize(objects.get('1')!);
+
+    expect(size.width).toBeGreaterThan(0);
+    expect(size.height).toBe(15 * 2 * 2);
+    expect(size.cellWidth).toBeUndefined();
+    expect(size.valueX).toBeUndefined();
+  });
+
   test('sizes an array with cellWidth', () => {
     const steps: TraceStep[] = [
       makeStep(1, mainStack, {
@@ -421,6 +434,37 @@ describe('computeLayout', () => {
     expect(pos['2'].y).toBe(pos['3'].y);
     expect(pos['1'].x).toBeLessThan(pos['2'].x);
     expect(pos['2'].x).toBeLessThan(pos['3'].x);
+  });
+
+  test('array children do not overlap after negative first-child placement is shifted', () => {
+    const steps: TraceStep[] = [
+      makeStep(1, mainStack, {
+        '1': {
+          type: 'Object[]',
+          elements: [
+            { type: 'ref', id: '2' },
+            { type: 'ref', id: '3' },
+            { type: 'null' },
+          ],
+        },
+        '2': {
+          type: 'Rectangle',
+          fields: {
+            width: { type: 'int', value: 10 },
+            height: { type: 'int', value: 20 },
+          },
+        },
+        '3': { type: 'java.lang.Integer', value: 123 },
+      }),
+    ];
+
+    const layout = computeLayout(steps);
+    const rect = layout.objects['2'];
+    const boxed = layout.objects['3'];
+
+    expect(rect).toBeDefined();
+    expect(boxed).toBeDefined();
+    expect(boxed.x).toBeGreaterThanOrEqual(rect.x + rect.width + 12);
   });
 
   test('layout stability: supergraph union produces same positions regardless of step order', () => {

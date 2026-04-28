@@ -391,6 +391,11 @@ public class TraceRunner {
         }
 
         ReferenceType type = obj.referenceType();
+        String boxedPrimitiveJson = serializeBoxedPrimitive(obj, type);
+        if (boxedPrimitiveJson != null) {
+            return boxedPrimitiveJson;
+        }
+
         if (!isUserClass(type)) {
             // JDK object: show type name and toString value
             try {
@@ -422,6 +427,74 @@ public class TraceRunner {
         }
         sb.append("}}");
         return sb.toString();
+    }
+
+    private static String serializeBoxedPrimitive(ObjectReference obj,
+            ReferenceType type) {
+        if (!isBoxedPrimitive(type)) {
+            return null;
+        }
+
+        Field valueField = type.fieldByName("value");
+        if (valueField == null) {
+            return null;
+        }
+
+        try {
+            Value value = obj.getValue(valueField);
+            return "{\"type\":\"" + jsonEscape(type.name())
+                + "\",\"value\":" + primitiveJsonLiteral(value) + "}";
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static boolean isBoxedPrimitive(ReferenceType type) {
+        return switch (type.name()) {
+            case "java.lang.Boolean",
+                 "java.lang.Byte",
+                 "java.lang.Character",
+                 "java.lang.Double",
+                 "java.lang.Float",
+                 "java.lang.Integer",
+                 "java.lang.Long",
+                 "java.lang.Short" -> true;
+            default -> false;
+        };
+    }
+
+    private static String primitiveJsonLiteral(Value value) {
+        if (value instanceof BooleanValue v) {
+            return String.valueOf(v.value());
+        }
+        if (value instanceof ByteValue v) {
+            return String.valueOf(v.value());
+        }
+        if (value instanceof CharValue v) {
+            return "\"" + jsonEscape(String.valueOf(v.value())) + "\"";
+        }
+        if (value instanceof DoubleValue v) {
+            double n = v.value();
+            return Double.isFinite(n)
+                ? String.valueOf(n)
+                : "\"" + jsonEscape(String.valueOf(n)) + "\"";
+        }
+        if (value instanceof FloatValue v) {
+            float n = v.value();
+            return Float.isFinite(n)
+                ? String.valueOf(n)
+                : "\"" + jsonEscape(String.valueOf(n)) + "\"";
+        }
+        if (value instanceof IntegerValue v) {
+            return String.valueOf(v.value());
+        }
+        if (value instanceof LongValue v) {
+            return String.valueOf(v.value());
+        }
+        if (value instanceof ShortValue v) {
+            return String.valueOf(v.value());
+        }
+        return "\"" + jsonEscape(String.valueOf(value)) + "\"";
     }
 
     private static String getObjectId(ObjectReference obj) {

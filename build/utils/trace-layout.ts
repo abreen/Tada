@@ -5,6 +5,11 @@ import type {
   TraceLayout,
   TraceObjectLayout,
 } from '../types';
+import {
+  formatHeapObjectValue,
+  isInlineHeapObject,
+  type TraceHeapScalar,
+} from './trace-heap';
 
 /** Maximum number of array cells to display. */
 export const ARRAY_MAX_CELLS = 12;
@@ -38,8 +43,10 @@ export interface ObjectInfo {
   maxFields: number;
   /** Max number of elements seen on this object (for arrays). */
   maxElements: number;
-  /** String value (for string-valued objects). */
-  value: string | null;
+  /** Scalar value (for heap objects represented by a single value). */
+  value: TraceHeapScalar | null;
+  hasValue: boolean;
+  isInlineValue: boolean;
   isArray: boolean;
   isString: boolean;
   /** All field names ever seen on this object. */
@@ -78,6 +85,8 @@ export function scanSteps(steps: TraceStep[]): Map<string, ObjectInfo> {
           maxFields: 0,
           maxElements: 0,
           value: null,
+          hasValue: false,
+          isInlineValue: false,
           isArray: false,
           isString: false,
           fieldNames: new Set(),
@@ -125,7 +134,9 @@ export function scanSteps(steps: TraceStep[]): Map<string, ObjectInfo> {
           }
         }
       } else if ('value' in obj) {
-        info.isString = true;
+        info.hasValue = true;
+        info.isString = obj.type === 'String';
+        info.isInlineValue ||= isInlineHeapObject(obj);
         info.value = obj.value;
       }
     }
@@ -229,12 +240,19 @@ export function getObjectSize(
   const charWidth = fontSize * CHAR_WIDTH_RATIO;
   const rowHeight = fontSize * ROW_HEIGHT_RATIO;
 
-  if (info.isString) {
-    const text = `"${info.value ?? ''}"`;
+  if (info.isInlineValue) {
+    const text = formatHeapObjectValue(info.type, info.value ?? '');
+    const textWidth = text.length * charWidth;
+    const minWidth = info.isString ? info.type.length * charWidth + 16 : 16;
+    const width = Math.max(minWidth, textWidth + 16);
+    return { width, height: rowHeight * 2 };
+  }
+
+  if (info.hasValue) {
+    const text = String(info.value ?? '');
     const textWidth = text.length * charWidth;
     const width = Math.max(info.type.length * charWidth + 16, textWidth + 16);
-    const height = rowHeight * 2; // header + value
-    return { width, height };
+    return { width, height: rowHeight * 2 };
   }
 
   if (info.isArray) {
@@ -754,6 +772,13 @@ function layoutArrays(
         };
       });
 
+      const minPlacementX = Math.min(...placements.map(p => p.x));
+      if (minPlacementX < 0) {
+        for (const p of placements) {
+          p.x -= minPlacementX;
+        }
+      }
+
       const gap = Math.round(OBJ_GAP * 0.5);
       for (let j = 1; j < placements.length; j++) {
         const prev = placements[j - 1];
@@ -767,7 +792,7 @@ function layoutArrays(
       const refY = Math.round(yOffset + size.height + OBJ_GAP);
       let maxRefHeight = 0;
       for (const p of placements) {
-        result[p.id] = makeLayout(Math.round(Math.max(0, p.x)), refY, p.size);
+        result[p.id] = makeLayout(Math.round(p.x), refY, p.size);
         maxRefHeight = Math.max(maxRefHeight, p.height);
       }
 

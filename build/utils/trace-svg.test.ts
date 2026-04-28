@@ -226,6 +226,27 @@ describe('generateStepSvg', () => {
     expect(svg).toContain('class="trace-arrow"');
   });
 
+  test('renders boxed Java primitives as inline heap values', () => {
+    const step = makeStep(
+      5,
+      [
+        {
+          method: 'main',
+          class: 'Test',
+          locals: { boxed: { type: 'ref', id: '1' } },
+        },
+      ],
+      { '1': { type: 'java.lang.Integer', value: 42 } },
+    );
+    const layout = computeLayout([step]);
+    const svg = generateStepSvg(step, layout);
+
+    expect(svg).toContain('data-id="1"');
+    expect(svg).toContain('>42</text>');
+    expect(svg).not.toContain('class="trace-obj-border"');
+    expect(svg).toContain('class="trace-arrow"');
+  });
+
   test('handles array heap objects', () => {
     const step = makeStep(
       5,

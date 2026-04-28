@@ -47,7 +47,7 @@ export type TraceValue =
 export type TraceHeapObject =
   | { type: string; elements: TraceValue[] }
   | { type: string; fields: Record<string, TraceValue> }
-  | { type: string; value: string };
+  | { type: string; value: string | number | boolean };
 
 /** A single entry in a chunk file (new format with precomputed SVG). */
 export interface TraceChunkEntry {

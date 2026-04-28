@@ -237,7 +237,7 @@ export type TraceValue =
 export type TraceHeapObject =
   | { type: string; elements: TraceValue[] }
   | { type: string; fields: Record<string, TraceValue> }
-  | { type: string; value: string };
+  | { type: string; value: string | number | boolean };
 
 /** Manifest written alongside trace chunks */
 export interface TraceManifest {

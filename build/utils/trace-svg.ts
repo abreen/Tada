@@ -7,6 +7,7 @@ import type {
   TraceObjectLayout,
 } from '../types';
 import { ARRAY_MAX_CELLS, DEFAULT_FONT_SIZE } from './trace-layout';
+import { formatHeapObjectValue, isInlineHeapObject } from './trace-heap';
 
 /** Gap between stack area and heap area. */
 const SECTION_GAP = 60;
@@ -60,10 +61,6 @@ export function formatValue(val: TraceValue): string {
 // ---------------------------------------------------------------------------
 // filterStep -- remove args from main(), hide objects reachable only via args
 // ---------------------------------------------------------------------------
-
-function isStringObject(obj: TraceHeapObject): boolean {
-  return 'value' in obj && obj.type === 'String';
-}
 
 export function filterStep(step: TraceStep): {
   stack: TraceStackFrame[];
@@ -294,11 +291,12 @@ function svgHeapObject(
     `<g class="trace-obj" data-id="${escapeXml(id)}" transform="translate(${absX},${absY})">`,
   );
 
-  if ('value' in obj && isStringObject(obj)) {
-    // Strings: just quoted text, no box
+  if ('value' in obj && isInlineHeapObject(obj)) {
+    // Strings and Java boxed primitives are heap values, but render inline.
     parts.push(
-      `<text class="trace-val" x="0" y="${height / 2}" ` +
-        `dominant-baseline="central">${escapeXml(`"${obj.value}"`)}</text>`,
+      `<text class="trace-val" x="${width / 2}" y="${height / 2}" ` +
+        `text-anchor="middle" dominant-baseline="central">` +
+        `${escapeXml(formatHeapObjectValue(obj.type, obj.value))}</text>`,
     );
     parts.push('</g>');
     return parts.join('');

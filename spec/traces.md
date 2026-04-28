@@ -72,8 +72,11 @@ The source panel highlights the current line. Multi-file traces render one
 highlighted source panel per traced file; as the user navigates, the widget
 shows the panel matching the current step's `file` and hides the others. The
 memory diagram is rendered as SVG and depicts stack frames with local variables,
-heap objects (arrays, objects, strings), and reference arrows between them. The
-For Java compact source files, the tracer does not render the implicit `this`
+heap objects (arrays, objects, strings), and reference arrows between them. Java
+boxed primitive objects such as `Integer` and `Boolean` render as simple scalar
+heap values, with references from stack variables or object fields pointing to
+that heap value. For Java compact source files, the tracer does not render the
+implicit `this`
 local when the implicitly declared class has no instance fields. If the compact
 source file declares instance fields, `this` remains visible so those fields can
 be inspected.
