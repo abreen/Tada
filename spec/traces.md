@@ -75,11 +75,14 @@ memory diagram is rendered as SVG and depicts stack frames with local variables,
 heap objects (arrays, objects, strings), and reference arrows between them. Java
 boxed primitive objects such as `Integer` and `Boolean` render as simple scalar
 heap values, with references from stack variables or object fields pointing to
-that heap value. For Java compact source files, the tracer does not render the
-implicit `this`
-local when the implicitly declared class has no instance fields. If the compact
-source file declares instance fields, `this` remains visible so those fields can
-be inspected.
+that heap value. Heap objects that are no longer reachable from visible stack
+locals are omitted; short-lived temporaries with disjoint lifetimes can reuse the
+same visual slot. Immediately after a Java constructor returns, the object
+reachable from the constructor's `this` remains visible for the caller step that
+receives the newly constructed value. For Java compact source files, the tracer
+does not render the implicit `this` local when the implicitly declared class has
+no instance fields. If the compact source file declares instance fields, `this`
+remains visible so those fields can be inspected.
 
 The diagram reads colors from CSS custom properties and re-renders on color
 scheme changes.

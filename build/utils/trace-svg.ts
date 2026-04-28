@@ -59,7 +59,7 @@ export function formatValue(val: TraceValue): string {
 }
 
 // ---------------------------------------------------------------------------
-// filterStep -- remove args from main(), hide objects reachable only via args
+// filterStep -- remove args from main(), hide unreachable heap objects
 // ---------------------------------------------------------------------------
 
 export function filterStep(step: TraceStep): {
@@ -81,38 +81,6 @@ export function filterStep(step: TraceStep): {
     return { ...frame, locals };
   });
 
-  // Find objects reachable only through the hidden 'args' variable
-  const argsOnly = new Set<string>();
-  for (const frame of step.stack) {
-    if (frame.method === 'main') {
-      const argsVal = frame.locals.args;
-      if (argsVal?.type === 'ref') {
-        const q = [argsVal.id];
-        while (q.length > 0) {
-          const id = q.shift()!;
-          if (argsOnly.has(id) || !step.heap[id]) {
-            continue;
-          }
-          argsOnly.add(id);
-          const obj = step.heap[id];
-          if ('elements' in obj) {
-            for (const el of obj.elements) {
-              if (el.type === 'ref') {
-                q.push(el.id);
-              }
-            }
-          } else if ('fields' in obj) {
-            for (const v of Object.values(obj.fields)) {
-              if (v.type === 'ref') {
-                q.push(v.id);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
   // Find objects reachable from visible (non-args) variables
   const reachable = new Set<string>();
   const queue: string[] = [];
@@ -122,6 +90,9 @@ export function filterStep(step: TraceStep): {
         queue.push(val.id);
       }
     }
+  }
+  for (const id of step.transientHeapRoots ?? []) {
+    queue.push(id);
   }
   while (queue.length > 0) {
     const id = queue.shift()!;
@@ -145,11 +116,10 @@ export function filterStep(step: TraceStep): {
     }
   }
 
-  // Keep heap objects that are reachable from visible variables, or that
-  // aren't exclusively reachable from the hidden 'args'
+  // Keep only heap objects reachable from visible variables.
   const heap: Record<string, TraceHeapObject> = {};
   const sortedIds = Object.keys(step.heap)
-    .filter(id => reachable.has(id) || !argsOnly.has(id))
+    .filter(id => reachable.has(id))
     .sort((a, b) => {
       const numA = parseInt(a.split('_').pop()!, 10);
       const numB = parseInt(b.split('_').pop()!, 10);

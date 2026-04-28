@@ -467,6 +467,77 @@ describe('computeLayout', () => {
     expect(boxed.x).toBeGreaterThanOrEqual(rect.x + rect.width + 12);
   });
 
+  test('reuses an orphan slot for string temporaries with disjoint lifetimes', () => {
+    const steps: TraceStep[] = [
+      makeStep(
+        1,
+        [
+          {
+            method: 'toString',
+            class: 'Bag',
+            locals: { s: { type: 'ref', id: '1' } },
+          },
+        ],
+        { '1': { type: 'String', value: '{' } },
+      ),
+      makeStep(
+        2,
+        [
+          {
+            method: 'toString',
+            class: 'Bag',
+            locals: { s: { type: 'ref', id: '2' } },
+          },
+        ],
+        { '2': { type: 'String', value: '{123' } },
+      ),
+    ];
+
+    const layout = computeLayout(steps);
+    expect(layout.objects['2'].y).toBe(layout.objects['1'].y);
+  });
+
+  test('reuses orphan slots for objects with non-contiguous active steps', () => {
+    const steps: TraceStep[] = [
+      makeStep(
+        1,
+        [
+          {
+            method: 'toString',
+            class: 'Bag',
+            locals: { s: { type: 'ref', id: '1' } },
+          },
+        ],
+        { '1': { type: 'String', value: '{' } },
+      ),
+      makeStep(
+        2,
+        [
+          {
+            method: 'toString',
+            class: 'Bag',
+            locals: { s: { type: 'ref', id: '2' } },
+          },
+        ],
+        { '2': { type: 'String', value: '{item' } },
+      ),
+      makeStep(
+        3,
+        [
+          {
+            method: 'toString',
+            class: 'Bag',
+            locals: { s: { type: 'ref', id: '1' } },
+          },
+        ],
+        { '1': { type: 'String', value: '{' } },
+      ),
+    ];
+
+    const layout = computeLayout(steps);
+    expect(layout.objects['2'].y).toBe(layout.objects['1'].y);
+  });
+
   test('layout stability: supergraph union produces same positions regardless of step order', () => {
     // Object '3' appears only in step 2, but the supergraph should still
     // place it consistently because we scan ALL steps.

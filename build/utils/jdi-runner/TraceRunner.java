@@ -18,7 +18,6 @@ public class TraceRunner {
 
     private static final Map<Long, String> objectIdMap = new HashMap<>();
     private static long nextObjId = 1;
-    private static Map<String, ObjectReference> previousReachable = new LinkedHashMap<>();
     private static final List<OutputEvent> outputEvents = new ArrayList<>();
     private static final Set<String> unnamedClassNames = new HashSet<>();
 
@@ -176,22 +175,7 @@ public class TraceRunner {
         var reachable = new LinkedHashMap<String, ObjectReference>();
         String stackJson = serializeStack(thread, reachable);
 
-        // Carry forward objects from the previous step that are still alive.
-        // This keeps in-flight objects (e.g., on the operand stack during
-        // chained constructor calls) visible in the diagram.
-        for (var entry : previousReachable.entrySet()) {
-            if (!reachable.containsKey(entry.getKey())) {
-                try {
-                    if (!entry.getValue().isCollected()) {
-                        reachable.put(entry.getKey(), entry.getValue());
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-        }
-
         String heapJson = serializeHeap(reachable);
-        previousReachable = new LinkedHashMap<>(reachable);
 
         return "{\"line\":" + line
             + ",\"file\":\"" + jsonEscape(file)

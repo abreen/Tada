@@ -390,6 +390,39 @@ describe('filterStep', () => {
     expect(heap).toHaveProperty('2');
     expect(heap).not.toHaveProperty('args_1');
   });
+
+  test('removes heap objects that are no longer reachable from visible locals', () => {
+    const step = makeStep(
+      1,
+      [
+        {
+          method: 'main',
+          class: 'Test',
+          locals: { current: { type: 'ref', id: '2' } },
+        },
+      ],
+      {
+        '1': { type: 'String', value: 'old temporary' },
+        '2': { type: 'String', value: 'current' },
+      },
+    );
+
+    const { heap } = filterStep(step);
+    expect(heap).not.toHaveProperty('1');
+    expect(heap).toHaveProperty('2');
+  });
+
+  test('keeps objects reachable from transient heap roots', () => {
+    const step = makeStep(1, [{ method: 'main', class: 'Test', locals: {} }], {
+      '1': { type: 'ArrayBag', fields: { items: { type: 'ref', id: '2' } } },
+      '2': { type: 'Object[]', elements: [] },
+    });
+    step.transientHeapRoots = ['1'];
+
+    const { heap } = filterStep(step);
+    expect(heap).toHaveProperty('1');
+    expect(heap).toHaveProperty('2');
+  });
 });
 
 describe('formatValue', () => {

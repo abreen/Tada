@@ -48,6 +48,7 @@ const fsMock = {
 mock.module('fs', () => createFsModuleMock(fsMock));
 
 let chunkTraceOutput: typeof import('./trace-core').chunkTraceOutput;
+let bridgeConstructorReturnValues: typeof import('./trace-core').bridgeConstructorReturnValues;
 let renderTraceWidgetHtml: typeof import('./trace-core').renderTraceWidgetHtml;
 let createTraceHelpers: typeof import('./trace').createTraceHelpers;
 let isTraceSourceFile: typeof import('./trace').isTraceSourceFile;
@@ -55,7 +56,8 @@ let parseIgnoreFields: typeof import('./trace-java').parseIgnoreFields;
 let hasExplicitTopLevelTypeDeclaration: typeof import('./trace-java').hasExplicitTopLevelTypeDeclaration;
 
 beforeAll(async () => {
-  ({ chunkTraceOutput, renderTraceWidgetHtml } = await import('./trace-core'));
+  ({ chunkTraceOutput, bridgeConstructorReturnValues, renderTraceWidgetHtml } =
+    await import('./trace-core'));
   ({ createTraceHelpers, isTraceSourceFile } = await import('./trace'));
   ({ parseIgnoreFields, hasExplicitTopLevelTypeDeclaration } =
     await import('./trace-java'));
@@ -376,6 +378,130 @@ public class Demo {
     );
 
     expect(first.artifactId).not.toBe(second.artifactId);
+  });
+
+  test('bridges constructed objects for the caller step after constructor return', () => {
+    const steps = bridgeConstructorReturnValues([
+      {
+        line: 4,
+        file: 'Bag.java',
+        stack: [
+          {
+            method: '<init>',
+            class: 'ArrayBag',
+            locals: { this: { type: 'ref', id: 'obj_1' } },
+          },
+          { method: 'main', class: 'Demo', locals: {} },
+        ],
+        heap: {
+          obj_1: {
+            type: 'ArrayBag',
+            fields: { items: { type: 'ref', id: 'obj_2' } },
+          },
+          obj_2: { type: 'Object[]', elements: [] },
+        },
+        output: [],
+      },
+      {
+        line: 4,
+        file: 'Demo.java',
+        stack: [{ method: 'main', class: 'Demo', locals: {} }],
+        heap: {},
+        output: [],
+      },
+    ]);
+
+    expect(steps[1].transientHeapRoots).toEqual(['obj_1']);
+    expect(steps[1].heap).toHaveProperty('obj_1');
+    expect(steps[1].heap).toHaveProperty('obj_2');
+  });
+
+  test('does not bridge ordinary method return values', () => {
+    const steps = bridgeConstructorReturnValues([
+      {
+        line: 25,
+        file: 'Bag.java',
+        stack: [
+          {
+            method: 'toString',
+            class: 'ArrayBag',
+            locals: { result: { type: 'ref', id: 'obj_1' } },
+          },
+          { method: 'main', class: 'Demo', locals: {} },
+        ],
+        heap: { obj_1: { type: 'String', value: '{123}' } },
+        output: [],
+      },
+      {
+        line: 16,
+        file: 'Demo.java',
+        stack: [{ method: 'main', class: 'Demo', locals: {} }],
+        heap: {},
+        output: [],
+      },
+    ]);
+
+    expect(steps[1].transientHeapRoots).toBeUndefined();
+    expect(steps[1].heap).not.toHaveProperty('obj_1');
+  });
+
+  test('lays out replacement strings in the same slot after filtering stale raw heap objects', () => {
+    const output = [
+      JSON.stringify({
+        line: 1,
+        file: 'Test.java',
+        stack: [
+          {
+            method: 'toString',
+            class: 'Test',
+            locals: { str: { type: 'ref', id: 'old' } },
+          },
+        ],
+        heap: { old: { type: 'String', value: '{' } },
+        output: [],
+      }),
+      JSON.stringify({
+        line: 2,
+        file: 'Test.java',
+        stack: [
+          {
+            method: 'toString',
+            class: 'Test',
+            locals: { str: { type: 'ref', id: 'new' } },
+          },
+        ],
+        heap: {
+          old: { type: 'String', value: '{' },
+          new: { type: 'String', value: '{item' },
+        },
+        output: [],
+      }),
+    ].join('\n');
+
+    const outputDir = '/virtual/_traces/Test';
+    const result = chunkTraceOutput(
+      output,
+      outputDir,
+      '',
+      'Test',
+      'Test.java',
+      [{ file: 'Test.java', source: 'class Test {}' }],
+      { chunkSize: 50 },
+    );
+    const chunk0 = readJson<Array<{ svg: string }>>(
+      path.join(outputDir, result.artifactId, 'chunk-0.json'),
+    );
+
+    const oldY = chunk0[0].svg.match(
+      /data-id="old" transform="translate\([^,]+,([^)]+)\)"/,
+    )?.[1];
+    const newY = chunk0[1].svg.match(
+      /data-id="new" transform="translate\([^,]+,([^)]+)\)"/,
+    )?.[1];
+
+    expect(oldY).toBeDefined();
+    expect(newY).toBe(oldY);
+    expect(chunk0[1].svg).not.toContain('data-id="old"');
   });
 
   test('treats only .java and .py files as trace sources', () => {

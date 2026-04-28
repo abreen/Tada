@@ -5,9 +5,10 @@ import { renderCodeSegment } from './code';
 import { splitLines } from './literate-java';
 import { normalizeOutputPath } from './paths';
 import { computeLayout } from './trace-layout';
-import { generateStepSvg } from './trace-svg';
+import { filterStep, generateStepSvg } from './trace-svg';
 import type {
   TraceChunkEntry,
+  TraceHeapObject,
   TraceManifest,
   TraceOutputEvent,
   TraceStep,
@@ -60,6 +61,86 @@ function escapeAttr(value: string): string {
     .replaceAll('>', '&gt;');
 }
 
+function framesMatchCaller(previous: TraceStep, current: TraceStep): boolean {
+  if (current.stack.length !== previous.stack.length - 1) {
+    return false;
+  }
+
+  return current.stack.every((frame, index) => {
+    const previousFrame = previous.stack[index + 1];
+    return (
+      frame.method === previousFrame.method &&
+      frame.class === previousFrame.class
+    );
+  });
+}
+
+function addReachableHeapObjects(
+  id: string,
+  source: Record<string, TraceHeapObject>,
+  target: Record<string, TraceHeapObject>,
+): void {
+  const queue = [id];
+  const seen = new Set<string>();
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    if (seen.has(currentId) || !source[currentId]) {
+      continue;
+    }
+    seen.add(currentId);
+    target[currentId] ??= source[currentId];
+
+    const obj = source[currentId];
+    if ('elements' in obj) {
+      for (const element of obj.elements) {
+        if (element.type === 'ref') {
+          queue.push(element.id);
+        }
+      }
+    } else if ('fields' in obj) {
+      for (const value of Object.values(obj.fields)) {
+        if (value.type === 'ref') {
+          queue.push(value.id);
+        }
+      }
+    }
+  }
+}
+
+export function bridgeConstructorReturnValues(steps: TraceStep[]): TraceStep[] {
+  const bridgedSteps = steps.map(step => ({
+    ...step,
+    heap: { ...step.heap },
+    transientHeapRoots: step.transientHeapRoots
+      ? [...step.transientHeapRoots]
+      : undefined,
+  }));
+
+  for (let i = 1; i < bridgedSteps.length; i++) {
+    const previous = bridgedSteps[i - 1];
+    const current = bridgedSteps[i];
+    const poppedFrame = previous.stack[0];
+    const thisValue = poppedFrame?.locals.this;
+
+    if (
+      poppedFrame?.method !== '<init>' ||
+      thisValue?.type !== 'ref' ||
+      !framesMatchCaller(previous, current)
+    ) {
+      continue;
+    }
+
+    addReachableHeapObjects(thisValue.id, previous.heap, current.heap);
+    current.transientHeapRoots ??= [];
+    if (!current.transientHeapRoots.includes(thisValue.id)) {
+      current.transientHeapRoots.push(thisValue.id);
+    }
+  }
+
+  return bridgedSteps;
+}
+
 export function chunkTraceOutput(
   output: string,
   traceOutputDir: string,
@@ -77,7 +158,9 @@ export function chunkTraceOutput(
     .split('\n')
     .filter(l => l.length > 0);
 
-  const allSteps: TraceStep[] = lines.map(l => JSON.parse(l));
+  const allSteps: TraceStep[] = bridgeConstructorReturnValues(
+    lines.map(l => JSON.parse(l)),
+  );
 
   const lineToStepsByFile = new Map<string, Record<number, number[]>>();
   for (const source of sources) {
@@ -96,7 +179,8 @@ export function chunkTraceOutput(
     lineToSteps[step.line].push(i);
   }
 
-  const layout = computeLayout(allSteps, ignoreFields);
+  const layoutSteps = allSteps.map(step => ({ ...step, ...filterStep(step) }));
+  const layout = computeLayout(layoutSteps, ignoreFields);
 
   let chunkEntries: TraceChunkEntry[] = [];
   let chunkIndex = 0;

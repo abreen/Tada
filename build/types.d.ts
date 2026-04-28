@@ -207,6 +207,7 @@ export interface TraceStep {
   stack: TraceStackFrame[];
   heap: Record<string, TraceHeapObject>;
   output?: TraceOutputEvent[];
+  transientHeapRoots?: string[];
 }
 
 export interface TraceOutputEvent {

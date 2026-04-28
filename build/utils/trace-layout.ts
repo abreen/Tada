@@ -37,6 +37,8 @@ export interface ObjectInfo {
   lastStep: number;
   /** Set of object IDs this object ever references (across all steps). */
   references: Set<string>;
+  /** Step indices where this object is actually present. */
+  activeSteps: Set<number>;
   /** Per-field reference targets (field name -> set of referenced object IDs). */
   fieldRefs: Map<string, Set<string>>;
   /** Max number of fields seen on this object (for field objects). */
@@ -81,6 +83,7 @@ export function scanSteps(steps: TraceStep[]): Map<string, ObjectInfo> {
           firstStep: stepIndex,
           lastStep: stepIndex,
           references: new Set(),
+          activeSteps: new Set(),
           fieldRefs: new Map(),
           maxFields: 0,
           maxElements: 0,
@@ -96,6 +99,7 @@ export function scanSteps(steps: TraceStep[]): Map<string, ObjectInfo> {
       }
 
       info.lastStep = stepIndex;
+      info.activeSteps.add(stepIndex);
 
       if ('elements' in obj) {
         info.isArray = true;
@@ -814,7 +818,11 @@ function layoutOrphans(
   result: Record<string, TraceObjectLayout>,
   yOffset: number,
 ) {
-  type OrphanSlot = { ids: string[]; lastStep: number; maxHeight: number };
+  type OrphanSlot = {
+    ids: string[];
+    activeSteps: Set<number>;
+    maxHeight: number;
+  };
 
   const orphanIds = [...objects.keys()]
     .filter(id => !(id in result))
@@ -831,13 +839,22 @@ function layoutOrphans(
     const info = objects.get(id)!;
     const size = sizes.get(id)!;
 
-    let slot = slots.find(existing => existing.lastStep < info.firstStep);
+    let slot = slots.find(existing => {
+      for (const stepIndex of info.activeSteps) {
+        if (existing.activeSteps.has(stepIndex)) {
+          return false;
+        }
+      }
+      return true;
+    });
     if (!slot) {
-      slot = { ids: [], lastStep: info.lastStep, maxHeight: size.height };
+      slot = { ids: [], activeSteps: new Set(), maxHeight: size.height };
       slots.push(slot);
     } else {
-      slot.lastStep = info.lastStep;
       slot.maxHeight = Math.max(slot.maxHeight, size.height);
+    }
+    for (const stepIndex of info.activeSteps) {
+      slot.activeSteps.add(stepIndex);
     }
     slot.ids.push(id);
   }
