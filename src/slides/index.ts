@@ -458,15 +458,7 @@ export default function mountSlides(window: Window): void | (() => void) {
       return;
     }
 
-    const activeSlide = slides[activeIndex];
-    if (!activeSlide) {
-      return;
-    }
-
-    if (
-      !(event.target instanceof domView.Node) ||
-      !activeSlide.contains(event.target)
-    ) {
+    if (!(event.target instanceof domView.Node)) {
       return;
     }
 

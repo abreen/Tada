@@ -55,20 +55,20 @@ body.is-presenting .slide {
   @include user-select(none);
 
   position: fixed;
-  top: 50%;
+  top: 0;
   left: 50%;
   z-index: 1000;
   box-sizing: border-box;
   display: none;
-  width: min(100vw, calc(100vh * 4 / 3));
-  height: min(100vh, calc(100vw * 3 / 4));
+  width: min(calc(100vw - var(--gap) - var(--gap)), 70rem);
+  height: 100vh;
   padding: calc(3 * var(--gap));
   overflow: auto;
   font-size: var(--slides-scale);
   letter-spacing: 0.2px;
   outline: none;
   background: var(--bg-color);
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 
   > :first-child {
     margin-top: 0;

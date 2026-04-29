@@ -503,6 +503,38 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
+  test('clicking the slide deck outside the capped slide advances', () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    const traceNext = win.document.querySelector(
+      '.trace-next',
+    ) as HTMLButtonElement;
+    const tracePrev = win.document.querySelector(
+      '.trace-prev',
+    ) as HTMLButtonElement;
+    const root = win.document.querySelector(
+      '[data-slides-root]',
+    ) as HTMLElement;
+
+    present.click();
+    traceNext.disabled = true;
+    tracePrev.disabled = true;
+
+    root.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('1');
+
+    cleanup?.();
+  });
+
   test('Space advances slides with the same behavior as ArrowRight', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);

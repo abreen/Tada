@@ -15,7 +15,7 @@ test.describe('slides presentation mode', () => {
     await expect(checkbox).toBeChecked();
   });
 
-  test('presentation mode fills the viewport and supports browser interactions', async ({
+  test('presentation mode caps slide width and supports browser interactions', async ({
     page,
   }) => {
     await page.goto('/slides.html');
@@ -47,6 +47,8 @@ test.describe('slides presentation mode', () => {
 
       return {
         position: style.position,
+        overflowY: style.overflowY,
+        top: rect.top,
         width: rect.width,
         height: rect.height,
         deckWidth: deckRect.width,
@@ -59,9 +61,12 @@ test.describe('slides presentation mode', () => {
     expect(metrics.position).toBe('fixed');
     expect(metrics.deckWidth).toBe(metrics.innerWidth);
     expect(metrics.deckHeight).toBe(metrics.innerHeight);
-    expect(metrics.width / metrics.height).toBeCloseTo(4 / 3, 2);
+    expect(metrics.overflowY).toBe('auto');
+    expect(metrics.top).toBe(0);
+    expect(metrics.width).toBeLessThan(metrics.innerWidth);
     expect(metrics.width).toBeLessThanOrEqual(metrics.innerWidth);
-    expect(metrics.height).toBeLessThanOrEqual(metrics.innerHeight);
+    expect(metrics.height).toBe(metrics.innerHeight);
+    expect(metrics.width).toBeLessThan(metrics.innerWidth - 8);
 
     const overlayStyles = await overlay.evaluate(node => {
       const style = window.getComputedStyle(node);
@@ -103,9 +108,8 @@ test.describe('slides presentation mode', () => {
     await page.mouse.move(100, Math.max(1, revealBottom - 1));
     await expect(closeButton).toBeVisible();
 
-    await activeSlide.evaluate(slide => {
-      slide.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    const sideGutterX = (metrics.innerWidth - metrics.width) / 4;
+    await page.mouse.click(sideGutterX, metrics.innerHeight - 24);
     await expect(activeSlide).toContainText('Middle');
     await expect(closeButton).toBeHidden();
     await expect

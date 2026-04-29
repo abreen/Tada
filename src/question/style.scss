@@ -3,7 +3,7 @@
 .question {
   --question-label-width: 1.2em;
 
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .question-q,
@@ -136,7 +136,7 @@
 .question-multiple-choice-options {
   display: flex;
   flex-direction: column;
-  gap: 0.75em;
+  gap: 0.5em;
   margin-left: calc(var(--question-label-width) + 0.5em);
 }
 
@@ -154,6 +154,14 @@
       border-color 0.25s,
       box-shadow 0.25s;
   }
+}
+
+.question-multiple-choice-option:has(> code):not(
+    :has(> :not(code, .question-multiple-choice-result))
+  )
+  > code {
+  padding: 0;
+  background: none;
 }
 
 .question-multiple-choice-option::after {

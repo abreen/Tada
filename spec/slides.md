@@ -39,8 +39,10 @@ breaks and literal HTML `<hr>` tags that would otherwise appear in the page.
 Clicking `Present` enables a client-side presentation view without rebuilding
 the page. Slides Mode applies `body.is-presenting` and shows one slide at a
 time in a fixed viewport-sized layer above the rest of the page. Presentation
-slides scale their content up with the viewport, with minimum and maximum
-limits so they remain readable on both small and very large screens.
+slides scale their content up with the viewport and cap their width so they
+remain readable on wide screens. Slides are anchored to the top of the viewport.
+Slides fill the viewport height so clicks in empty areas still advance the
+presentation. Content that exceeds the viewport scrolls internally.
 
 When `Full screen` is checked, clicking `Present` starts the presentation in
 the browser's native Fullscreen API mode. In that mode the slide toolbar never
@@ -68,7 +70,7 @@ hash.
 - `ArrowRight` moves forward
 - `ArrowLeft` moves backward
 - `Space` moves forward
-- clicking the active slide moves forward
+- clicking the presentation deck moves forward, including empty side gutters
 - `Escape` or `Close` exits Slides Mode
 
 Clicking an unrevealed Q&A answer on the active slide reveals that answer
