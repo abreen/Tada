@@ -260,11 +260,6 @@ test.describe('slides presentation mode', () => {
     );
     expect(penCursor).toContain('data:image/svg+xml');
 
-    await page.mouse.move(marginX, marginY);
-    await page.mouse.down();
-    await page.mouse.move(marginX + 120, marginY + 80, { steps: 8 });
-    await page.mouse.up();
-
     const introCanvas = page.locator(
       '[data-slides-annotations][data-slide-index="0"]',
     );
@@ -341,6 +336,23 @@ test.describe('slides presentation mode', () => {
 
         return count;
       }, rect);
+
+    await page.mouse.click(marginX, marginY);
+    await expect
+      .poll(() =>
+        violetPixelsInRect({
+          x: marginX - 4,
+          y: marginY - 4,
+          width: 8,
+          height: 8,
+        }),
+      )
+      .toBeGreaterThan(0);
+
+    await page.mouse.move(marginX, marginY);
+    await page.mouse.down();
+    await page.mouse.move(marginX + 120, marginY + 80, { steps: 8 });
+    await page.mouse.up();
 
     await expect.poll(violetPixels).toBeGreaterThan(0);
     await page.mouse.move(marginX + 24, marginY + 260);

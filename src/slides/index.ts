@@ -671,6 +671,24 @@ export default function mountSlides(window: Window): void | (() => void) {
     ctx.stroke();
   }
 
+  function drawAnnotationDot(
+    ctx: CanvasRenderingContext2D,
+    state: SlideAnnotationState,
+    point: { x: number; y: number },
+  ): void {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = ANNOTATION_COLOR;
+    ctx.beginPath();
+    ctx.arc(
+      point.x * state.dpr,
+      point.y * state.dpr,
+      1.5 * state.dpr,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+  }
+
   function drawAnnotationErase(
     ctx: CanvasRenderingContext2D,
     state: SlideAnnotationState,
@@ -738,6 +756,10 @@ export default function mountSlides(window: Window): void | (() => void) {
 
     const state = getAnnotationState(slide);
     resizeAnnotationCanvas(state);
+    const ctx = getCanvasContext(state.canvas);
+    if (ctx) {
+      drawAnnotationDot(ctx, state, point);
+    }
     activeAnnotation = { slide, previousX: point.x, previousY: point.y };
 
     const target =
