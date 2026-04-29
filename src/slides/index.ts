@@ -755,15 +755,24 @@ export default function mountSlides(window: Window): void | (() => void) {
       return;
     }
 
-    if (!activeAnnotation) {
-      return;
-    }
-
     event.preventDefault();
     event.stopPropagation();
 
     const point = getViewportPoint(event);
     if (!point) {
+      activeAnnotation = null;
+      return;
+    }
+
+    if (!activeAnnotation) {
+      if ((event.buttons & 1) !== 1) {
+        return;
+      }
+      const slide = getActiveSlide();
+      if (!slide) {
+        return;
+      }
+      activeAnnotation = { slide, previousX: point.x, previousY: point.y };
       return;
     }
 

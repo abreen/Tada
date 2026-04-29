@@ -302,8 +302,63 @@ test.describe('slides presentation mode', () => {
 
         return count;
       });
+    const violetPixelsInRect = async (rect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }) =>
+      introCanvas.evaluate((canvas, rect) => {
+        const annotationCanvas = canvas as HTMLCanvasElement;
+        const context = annotationCanvas.getContext('2d');
+        if (!context) {
+          return 0;
+        }
+
+        const dpr = annotationCanvas.width / window.innerWidth;
+        const x = Math.max(0, Math.floor(rect.x * dpr));
+        const y = Math.max(0, Math.floor(rect.y * dpr));
+        const width = Math.max(1, Math.floor(rect.width * dpr));
+        const height = Math.max(1, Math.floor(rect.height * dpr));
+        const { data } = context.getImageData(x, y, width, height);
+        let count = 0;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const red = data[i] ?? 0;
+          const green = data[i + 1] ?? 0;
+          const blue = data[i + 2] ?? 0;
+          const alpha = data[i + 3] ?? 0;
+
+          if (
+            alpha > 0 &&
+            Math.abs(red - 138) < 24 &&
+            Math.abs(green - 43) < 24 &&
+            Math.abs(blue - 226) < 24
+          ) {
+            count += 1;
+          }
+        }
+
+        return count;
+      }, rect);
 
     await expect.poll(violetPixels).toBeGreaterThan(0);
+    await page.mouse.move(marginX + 24, marginY + 260);
+    await page.mouse.down();
+    await page.mouse.move(marginX + 72, marginY + 260, { steps: 3 });
+    await page.mouse.move(-20, marginY + 260);
+    await page.mouse.move(marginX + 72, marginY + 360);
+    await page.mouse.move(marginX + 120, marginY + 360, { steps: 3 });
+    await page.mouse.up();
+    expect(
+      await violetPixelsInRect({
+        x: marginX + 62,
+        y: marginY + 292,
+        width: 20,
+        height: 36,
+      }),
+    ).toBe(0);
+
     const pixelsBeforeErase = await violetPixels();
 
     await page.keyboard.down('Shift');
