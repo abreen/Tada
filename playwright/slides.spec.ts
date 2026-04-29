@@ -227,12 +227,14 @@ test.describe('slides presentation mode', () => {
   test('presentation annotations draw and persist per slide', async ({
     page,
   }) => {
+    await page.setViewportSize({ width: 1600, height: 800 });
     await page.goto('/slides.html');
 
     await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
     await page.getByRole('button', { name: 'Present', exact: true }).click();
 
     const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
+    const deck = page.locator('main.body .slide-deck');
     await expect(activeSlide).toContainText('Intro');
 
     const rect = await activeSlide.boundingBox();
@@ -241,7 +243,10 @@ test.describe('slides presentation mode', () => {
       return;
     }
 
-    await page.mouse.click(rect.x + 120, rect.y + 120, { button: 'right' });
+    const marginX = Math.max(24, rect.x / 2);
+    const marginY = 160;
+
+    await page.mouse.click(marginX, marginY, { button: 'right' });
     await expect
       .poll(async () =>
         page.evaluate(() =>
@@ -250,18 +255,21 @@ test.describe('slides presentation mode', () => {
       )
       .toBe(true);
 
-    const penCursor = await activeSlide.evaluate(
-      slide => window.getComputedStyle(slide).cursor,
+    const penCursor = await deck.evaluate(
+      node => window.getComputedStyle(node).cursor,
     );
     expect(penCursor).toContain('data:image/svg+xml');
 
-    await page.mouse.move(rect.x + 120, rect.y + 120);
+    await page.mouse.move(marginX, marginY);
     await page.mouse.down();
-    await page.mouse.move(rect.x + 260, rect.y + 220, { steps: 8 });
+    await page.mouse.move(marginX + 120, marginY + 80, { steps: 8 });
     await page.mouse.up();
 
+    const introCanvas = page.locator(
+      '[data-slides-annotations][data-slide-index="0"]',
+    );
     const violetPixels = async () =>
-      activeSlide.locator('[data-slides-annotations]').evaluate(canvas => {
+      introCanvas.evaluate(canvas => {
         const annotationCanvas = canvas as HTMLCanvasElement;
         const context = annotationCanvas.getContext('2d');
         if (!context) {
@@ -307,13 +315,13 @@ test.describe('slides presentation mode', () => {
       )
       .toBe(true);
 
-    const eraserCursor = await activeSlide.evaluate(
-      slide => window.getComputedStyle(slide).cursor,
+    const eraserCursor = await deck.evaluate(
+      node => window.getComputedStyle(node).cursor,
     );
     expect(eraserCursor).toContain('data:image/svg+xml');
     expect(eraserCursor).not.toBe(penCursor);
 
-    await page.mouse.move(rect.x + 170, rect.y + 155);
+    await page.mouse.move(marginX + 40, marginY + 24);
     const eraserPreview = page.locator('[data-slides-eraser-preview]');
     await expect(eraserPreview).toBeVisible();
     const previewStyle = await eraserPreview.evaluate(node => {
@@ -338,7 +346,7 @@ test.describe('slides presentation mode', () => {
     expect(previewStyle.width).toBeGreaterThan(0);
     expect(previewStyle.height).toBe(previewStyle.width);
 
-    await page.mouse.move(rect.x + 220, rect.y + 190, { steps: 6 });
+    await page.mouse.move(marginX + 100, marginY + 64, { steps: 6 });
     await page.keyboard.up('Shift');
     await expect
       .poll(async () =>
@@ -356,23 +364,28 @@ test.describe('slides presentation mode', () => {
 
     await page.keyboard.press('ArrowRight');
     await expect(activeSlide).toContainText('Middle');
-    await expect(activeSlide.locator('[data-slides-annotations]')).toHaveCount(
-      0,
-    );
+    await expect(introCanvas).toBeHidden();
+    await expect(
+      page.locator('[data-slides-annotations][data-slide-index="1"]'),
+    ).toHaveCount(0);
 
     await page.keyboard.press('ArrowLeft');
     await expect(activeSlide).toContainText('Intro');
+    await expect(introCanvas).toBeVisible();
+    await expect.poll(violetPixels).toBeGreaterThan(0);
+    const canvasWidthBeforeResize = await introCanvas.evaluate(
+      canvas => (canvas as HTMLCanvasElement).width,
+    );
+
+    await page.setViewportSize({ width: 1700, height: 820 });
+    await expect
+      .poll(async () =>
+        introCanvas.evaluate(canvas => (canvas as HTMLCanvasElement).width),
+      )
+      .toBeGreaterThan(canvasWidthBeforeResize);
     await expect.poll(violetPixels).toBeGreaterThan(0);
 
-    const returnedRect = await activeSlide.boundingBox();
-    expect(returnedRect).not.toBeNull();
-    if (!returnedRect) {
-      return;
-    }
-
-    await page.mouse.click(returnedRect.x + 120, returnedRect.y + 120, {
-      button: 'right',
-    });
+    await page.mouse.click(marginX, marginY, { button: 'right' });
     await expect
       .poll(async () =>
         page.evaluate(() =>

@@ -9,34 +9,14 @@ interface SlidesPresentDetail {
   slideIndex?: number;
 }
 
-interface AnnotationPoint {
-  x: number;
-  y: number;
-}
-
-interface AnnotationStroke {
-  type: 'stroke';
-  points: AnnotationPoint[];
-}
-
-interface AnnotationErase {
-  type: 'erase';
-  points: AnnotationPoint[];
-  radius: number;
-}
-
-type AnnotationOperation = AnnotationStroke | AnnotationErase;
-
 interface SlideAnnotationState {
   canvas: HTMLCanvasElement;
-  operations: AnnotationOperation[];
   width: number;
   height: number;
   dpr: number;
 }
 
 const FULLSCREEN_STORAGE_KEY = 'slidesFullscreen';
-const ANNOTATION_CANVAS_SELECTOR = '[data-slides-annotations]';
 const ANNOTATION_COLOR = 'blueviolet';
 const ANNOTATION_ERASER_RADIUS = 18;
 const ANNOTATION_ERASER_DIAMETER = ANNOTATION_ERASER_RADIUS * 2;
@@ -151,6 +131,12 @@ export default function mountSlides(window: Window): void | (() => void) {
   );
   document.body.appendChild(eraserPreview);
 
+  const annotationLayer = document.createElement('div');
+  annotationLayer.hidden = true;
+  annotationLayer.dataset.slidesAnnotationLayer = '';
+  annotationLayer.setAttribute('aria-hidden', 'true');
+  slidesRoot.append(annotationLayer);
+
   let isPresenting = false;
   let activeIndex = -1;
   let presentationMode: PresentationMode | null = null;
@@ -160,10 +146,9 @@ export default function mountSlides(window: Window): void | (() => void) {
   let isErasing = false;
   let activeAnnotation: {
     slide: HTMLElement;
-    stroke: AnnotationStroke;
+    previousX: number;
+    previousY: number;
   } | null = null;
-  let activeEraser: { slide: HTMLElement; erase: AnnotationErase } | null =
-    null;
 
   const toolbarStates = new WeakMap<HTMLElement, TraceToolbarState>();
   const slideTabIndexes = new WeakMap<HTMLElement, string | null>();
@@ -249,10 +234,10 @@ export default function mountSlides(window: Window): void | (() => void) {
 
   function setActiveSlide(index: number): void {
     activeAnnotation = null;
-    activeEraser = null;
     hideEraserPreview();
     activeIndex = Math.max(0, Math.min(index, slides.length - 1));
     updateActiveSlide(slides, activeIndex, isPresenting);
+    updateActiveAnnotationCanvas();
     resizeActiveAnnotationCanvas();
   }
 
@@ -308,6 +293,7 @@ export default function mountSlides(window: Window): void | (() => void) {
     isShiftPressed = false;
     setAnnotationMode(false);
     clearAnnotationCanvases();
+    annotationLayer.hidden = true;
     hidePresentationControls();
     showPresentationCursor();
     document.body.classList.remove('is-presenting');
@@ -350,6 +336,7 @@ export default function mountSlides(window: Window): void | (() => void) {
   function enterPresentation(mode: PresentationMode, slideIndex = 0): void {
     isPresenting = true;
     presentationMode = mode;
+    annotationLayer.hidden = false;
     setAnnotationMode(false);
     hidePresentationControls();
     showPresentationCursor();
@@ -540,7 +527,6 @@ export default function mountSlides(window: Window): void | (() => void) {
   function setAnnotationMode(enabled: boolean): void {
     isAnnotating = enabled;
     activeAnnotation = null;
-    activeEraser = null;
     hideEraserPreview();
     document.body.classList.toggle('is-slides-annotating', enabled);
     setEraserMode(enabled && isShiftPressed);
@@ -552,7 +538,6 @@ export default function mountSlides(window: Window): void | (() => void) {
 
   function setEraserMode(enabled: boolean): void {
     isErasing = enabled && isPresenting && isAnnotating;
-    activeEraser = null;
 
     if (isErasing) {
       activeAnnotation = null;
@@ -577,33 +562,24 @@ export default function mountSlides(window: Window): void | (() => void) {
     setAnnotationMode(!isAnnotating);
   }
 
-  function getSlidePoint(
-    slide: HTMLElement,
+  function getViewportPoint(
     event: Pick<PointerEvent, 'clientX' | 'clientY'>,
-  ): AnnotationPoint | null {
-    const rect = slide.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) {
+  ): { x: number; y: number } | null {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    if (
+      width <= 0 ||
+      height <= 0 ||
+      event.clientX < 0 ||
+      event.clientX > width ||
+      event.clientY < 0 ||
+      event.clientY > height
+    ) {
       return null;
     }
 
-    const x = Math.min(Math.max(event.clientX - rect.left, 0), rect.width);
-    const y = Math.min(Math.max(event.clientY - rect.top, 0), rect.height);
-
-    return { x: x / rect.width, y: y / rect.height };
-  }
-
-  function eventIsInsideSlide(
-    slide: HTMLElement,
-    event: Pick<PointerEvent, 'clientX' | 'clientY'>,
-  ): boolean {
-    const rect = slide.getBoundingClientRect();
-
-    return (
-      event.clientX >= rect.left &&
-      event.clientX <= rect.right &&
-      event.clientY >= rect.top &&
-      event.clientY <= rect.bottom
-    );
+    return { x: event.clientX, y: event.clientY };
   }
 
   function getCanvasContext(
@@ -624,33 +600,35 @@ export default function mountSlides(window: Window): void | (() => void) {
 
     const canvas = document.createElement('canvas');
     canvas.dataset.slidesAnnotations = '';
+    canvas.dataset.slideIndex = slide.getAttribute('data-slide-index') ?? '';
     canvas.setAttribute('aria-hidden', 'true');
-    slide.append(canvas);
+    canvas.hidden = slide !== getActiveSlide();
+    annotationLayer.append(canvas);
 
-    const state: SlideAnnotationState = {
-      canvas,
-      operations: [],
-      width: 0,
-      height: 0,
-      dpr: 1,
-    };
+    const state: SlideAnnotationState = { canvas, width: 0, height: 0, dpr: 1 };
     annotationStates.set(slide, state);
-    resizeAnnotationCanvas(slide, state);
+    resizeAnnotationCanvas(state);
 
     return state;
   }
 
-  function resizeAnnotationCanvas(
-    slide: HTMLElement,
-    state: SlideAnnotationState,
-  ): void {
-    const rect = slide.getBoundingClientRect();
-    const width = Math.max(1, rect.width);
-    const height = Math.max(1, rect.height);
+  function resizeAnnotationCanvas(state: SlideAnnotationState): void {
+    const width = Math.max(1, window.innerWidth);
+    const height = Math.max(1, window.innerHeight);
     const dpr = Math.max(1, window.devicePixelRatio || 1);
 
     if (state.width === width && state.height === height && state.dpr === dpr) {
       return;
+    }
+
+    const priorCanvas =
+      state.canvas.width > 0 && state.canvas.height > 0
+        ? document.createElement('canvas')
+        : null;
+    if (priorCanvas) {
+      priorCanvas.width = state.canvas.width;
+      priorCanvas.height = state.canvas.height;
+      priorCanvas.getContext('2d')?.drawImage(state.canvas, 0, 0);
     }
 
     state.width = width;
@@ -658,7 +636,10 @@ export default function mountSlides(window: Window): void | (() => void) {
     state.dpr = dpr;
     state.canvas.width = Math.round(width * dpr);
     state.canvas.height = Math.round(height * dpr);
-    redrawAnnotationCanvas(state);
+
+    if (priorCanvas) {
+      getCanvasContext(state.canvas)?.drawImage(priorCanvas, 0, 0);
+    }
   }
 
   function resizeActiveAnnotationCanvas(): void {
@@ -669,124 +650,57 @@ export default function mountSlides(window: Window): void | (() => void) {
 
     const state = annotationStates.get(slide);
     if (state) {
-      resizeAnnotationCanvas(slide, state);
-    }
-  }
-
-  function redrawAnnotationCanvas(state: SlideAnnotationState): void {
-    const ctx = getCanvasContext(state.canvas);
-    if (!ctx) {
-      return;
-    }
-
-    ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
-
-    for (const operation of state.operations) {
-      if (operation.type === 'stroke') {
-        drawAnnotationStroke(ctx, operation, state);
-      } else {
-        drawAnnotationErase(ctx, operation, state);
-      }
+      resizeAnnotationCanvas(state);
     }
   }
 
   function drawAnnotationStroke(
     ctx: CanvasRenderingContext2D,
-    stroke: AnnotationStroke,
     state: SlideAnnotationState,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
   ): void {
-    if (stroke.points.length === 0) {
-      return;
-    }
-
     ctx.globalCompositeOperation = 'source-over';
     ctx.strokeStyle = ANNOTATION_COLOR;
     ctx.lineWidth = 3 * state.dpr;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
-    const [first] = stroke.points;
-    ctx.moveTo(first.x * state.canvas.width, first.y * state.canvas.height);
-
-    for (const point of stroke.points.slice(1)) {
-      ctx.lineTo(point.x * state.canvas.width, point.y * state.canvas.height);
-    }
-
+    ctx.moveTo(from.x * state.dpr, from.y * state.dpr);
+    ctx.lineTo(to.x * state.dpr, to.y * state.dpr);
     ctx.stroke();
   }
 
   function drawAnnotationErase(
     ctx: CanvasRenderingContext2D,
-    erase: AnnotationErase,
     state: SlideAnnotationState,
+    point: { x: number; y: number },
   ): void {
-    if (erase.points.length === 0) {
-      return;
-    }
-
-    const radius = erase.radius * state.dpr;
+    const radius = ANNOTATION_ERASER_RADIUS * state.dpr;
     ctx.globalCompositeOperation = 'destination-out';
-    ctx.lineWidth = radius * 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    const [first] = erase.points;
-    if (erase.points.length === 1) {
-      ctx.beginPath();
-      ctx.arc(
-        first.x * state.canvas.width,
-        first.y * state.canvas.height,
-        radius,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
-      return;
-    }
-
     ctx.beginPath();
-    ctx.moveTo(first.x * state.canvas.width, first.y * state.canvas.height);
-
-    for (const point of erase.points.slice(1)) {
-      ctx.lineTo(point.x * state.canvas.width, point.y * state.canvas.height);
-    }
-
-    ctx.stroke();
+    ctx.arc(point.x * state.dpr, point.y * state.dpr, radius, 0, Math.PI * 2);
+    ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
-  }
-
-  function drawCurrentAnnotation(): void {
-    if (!activeAnnotation) {
-      return;
-    }
-
-    const state = getAnnotationState(activeAnnotation.slide);
-    resizeAnnotationCanvas(activeAnnotation.slide, state);
-    redrawAnnotationCanvas(state);
-  }
-
-  function drawCurrentEraser(): void {
-    if (!activeEraser) {
-      return;
-    }
-
-    const state = annotationStates.get(activeEraser.slide);
-    if (!state) {
-      return;
-    }
-
-    resizeAnnotationCanvas(activeEraser.slide, state);
-    redrawAnnotationCanvas(state);
   }
 
   function clearAnnotationCanvases(): void {
     for (const slide of slides) {
-      slide.querySelector(ANNOTATION_CANVAS_SELECTOR)?.remove();
+      annotationStates.get(slide)?.canvas.remove();
       annotationStates.delete(slide);
     }
     activeAnnotation = null;
-    activeEraser = null;
+    hideEraserPreview();
+  }
+
+  function updateActiveAnnotationCanvas(): void {
+    const activeSlide = getActiveSlide();
+    for (const slide of slides) {
+      const state = annotationStates.get(slide);
+      if (state) {
+        state.canvas.hidden = slide !== activeSlide;
+      }
+    }
   }
 
   function handleAnnotationContextMenu(event: MouseEvent): void {
@@ -812,21 +726,19 @@ export default function mountSlides(window: Window): void | (() => void) {
     }
 
     const slide = getActiveSlide();
-    if (!slide || !eventIsInsideSlide(slide, event)) {
+    if (!slide) {
       activeAnnotation = null;
       return;
     }
 
-    const point = getSlidePoint(slide, event);
+    const point = getViewportPoint(event);
     if (!point) {
       return;
     }
 
     const state = getAnnotationState(slide);
-    const stroke: AnnotationStroke = { type: 'stroke', points: [point] };
-    state.operations.push(stroke);
-    activeAnnotation = { slide, stroke };
-    drawCurrentAnnotation();
+    resizeAnnotationCanvas(state);
+    activeAnnotation = { slide, previousX: point.x, previousY: point.y };
 
     const target =
       event.target instanceof domView.Element ? event.target : slide;
@@ -850,33 +762,35 @@ export default function mountSlides(window: Window): void | (() => void) {
     event.preventDefault();
     event.stopPropagation();
 
-    const point = getSlidePoint(activeAnnotation.slide, event);
+    const point = getViewportPoint(event);
     if (!point) {
       return;
     }
 
-    activeAnnotation.stroke.points.push(point);
-    drawCurrentAnnotation();
+    const state = getAnnotationState(activeAnnotation.slide);
+    resizeAnnotationCanvas(state);
+    const ctx = getCanvasContext(state.canvas);
+    if (ctx) {
+      drawAnnotationStroke(
+        ctx,
+        state,
+        { x: activeAnnotation.previousX, y: activeAnnotation.previousY },
+        point,
+      );
+    }
+    activeAnnotation.previousX = point.x;
+    activeAnnotation.previousY = point.y;
   }
 
   function handleAnnotationEraseMove(event: PointerEvent): void {
     const slide = getActiveSlide();
-    if (!slide || !eventIsInsideSlide(slide, event)) {
-      activeEraser = null;
+    if (!slide) {
       hideEraserPreview();
       return;
     }
 
-    const state = annotationStates.get(slide);
-    if (!state) {
-      activeEraser = null;
-      hideEraserPreview();
-      return;
-    }
-
-    const point = getSlidePoint(slide, event);
+    const point = getViewportPoint(event);
     if (!point) {
-      activeEraser = null;
       hideEraserPreview();
       return;
     }
@@ -885,18 +799,12 @@ export default function mountSlides(window: Window): void | (() => void) {
     event.stopPropagation();
     showEraserPreview(event);
 
-    if (!activeEraser || activeEraser.slide !== slide) {
-      const erase: AnnotationErase = {
-        type: 'erase',
-        points: [],
-        radius: ANNOTATION_ERASER_RADIUS,
-      };
-      state.operations.push(erase);
-      activeEraser = { slide, erase };
+    const state = getAnnotationState(slide);
+    resizeAnnotationCanvas(state);
+    const ctx = getCanvasContext(state.canvas);
+    if (ctx) {
+      drawAnnotationErase(ctx, state, point);
     }
-
-    activeEraser.erase.points.push(point);
-    drawCurrentEraser();
   }
 
   function handleAnnotationPointerUp(event: PointerEvent): void {
@@ -1011,5 +919,6 @@ export default function mountSlides(window: Window): void | (() => void) {
     slidesRoot.removeEventListener('tada:slides-present', handleSlidesPresent);
     overlay.remove();
     eraserPreview.remove();
+    annotationLayer.remove();
   };
 }

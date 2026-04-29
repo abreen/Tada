@@ -97,8 +97,9 @@ Going backward one slide or trace step hides it again.
 
 While presenting, right-clicking the presentation deck toggles annotation mode.
 Annotation mode changes the cursor to a simple pen cursor. In annotation mode,
-left-clicking and dragging on the active slide draws a `blueviolet` line on a
-slide-local `<canvas>` overlay.
+left-clicking and dragging anywhere in the presentation viewport, including
+the margins outside the width-capped slide, draws a `blueviolet` line on a
+slide-associated `<canvas>` overlay.
 
 While annotation mode is active, holding `Shift` temporarily switches to an
 eraser cursor. Moving the pointer over the active slide while `Shift` is held
@@ -107,10 +108,13 @@ or drag. A transparent preview ring with a `var(--bg2-color)` border follows
 the pointer to show the erase radius. Releasing `Shift` returns to the pen
 cursor.
 
-Each slide stores its own annotation canvas in the slide DOM while presentation
-mode is active, so annotations remain visible when navigating away from a slide
-and then back to it. The canvases are responsive and redraw when their slide is
-shown at a new size. Leaving Slides Mode removes the annotation canvases.
+Each slide stores its own annotation canvas in the presentation deck DOM while
+presentation mode is active, so annotations remain visible when navigating away
+from a slide and then back to it. The canvases cover the presentation viewport
+rather than the slide content box. When the viewport is resized, existing
+bitmap pixels stay at their top-left canvas coordinates: shrinking the viewport
+cuts off pixels outside the new bounds, and expanding it adds empty transparent
+space. Leaving Slides Mode removes the annotation canvases.
 
 ## Client event
 

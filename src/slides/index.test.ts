@@ -644,7 +644,7 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
-  test('annotation canvases stay on their slide and are removed on exit', () => {
+  test('annotation canvases stay associated with their slide and are removed on exit', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
 
@@ -654,10 +654,9 @@ describe('slides presentation controller', () => {
     const slides = Array.from(
       win.document.querySelectorAll<HTMLElement>('.slide'),
     );
-
-    for (const slide of slides) {
-      setElementRect(slide, { left: 0, top: 0, width: 800, height: 600 });
-    }
+    const root = win.document.querySelector(
+      '[data-slides-root]',
+    ) as HTMLElement;
 
     present.click();
     slides[0].dispatchEvent(
@@ -668,18 +667,29 @@ describe('slides presentation controller', () => {
       }),
     );
 
-    const pointerDown = dispatchPointer(win, slides[0], 'pointerdown', {
+    const pointerDown = dispatchPointer(win, root, 'pointerdown', {
       clientX: 100,
       clientY: 100,
     });
     dispatchPointer(win, win, 'pointermove', { clientX: 180, clientY: 160 });
     dispatchPointer(win, win, 'pointerup', { clientX: 180, clientY: 160 });
 
-    const canvas = slides[0].querySelector('[data-slides-annotations]');
+    const canvas = win.document.querySelector(
+      '[data-slides-annotations][data-slide-index="0"]',
+    ) as HTMLCanvasElement | null;
 
     expect(pointerDown.defaultPrevented).toBe(true);
     expect(canvas).toBeInstanceOf(win.HTMLCanvasElement);
-    expect(slides[1].querySelector('[data-slides-annotations]')).toBeNull();
+    expect(canvas?.parentElement).toBe(
+      win.document.querySelector(
+        '[data-slides-annotation-layer]',
+      ) as HTMLElement,
+    );
+    expect(
+      win.document.querySelector(
+        '[data-slides-annotations][data-slide-index="1"]',
+      ),
+    ).toBeNull();
 
     dispatchKey(win, 'ArrowRight');
     expect(
@@ -687,8 +697,14 @@ describe('slides presentation controller', () => {
         .querySelector('.slide.is-active')
         ?.getAttribute('data-slide-index'),
     ).toBe('1');
+    expect(canvas?.hidden).toBe(true);
     dispatchKey(win, 'ArrowLeft');
-    expect(slides[0].querySelector('[data-slides-annotations]')).toBe(canvas);
+    expect(
+      win.document.querySelector(
+        '[data-slides-annotations][data-slide-index="0"]',
+      ),
+    ).toBe(canvas);
+    expect(canvas?.hidden).toBe(false);
 
     dispatchKey(win, 'Escape');
 
