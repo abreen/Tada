@@ -28,10 +28,8 @@ Selection sort's strength is its simplicity.
 - `index_smallest()` always scans from `start` to the end
 - It requires no additional memory (other than local variables)
 
-However
-
-- It has no `break` statements & can't return early
-- No difference between best, average and worst cases
+However, it has no `break` statements and therefore can't return early if
+the array is already sorted.
 
 ---
 
@@ -48,10 +46,10 @@ However
 The innermost statement compares `nums[i]` and `nums[curr]`.
 
 - when `i` is 0, the comparison is executed $n - 1$ times
-- when `i` is 1, the innermost statement is executed $n - 2$ times
+- when `i` is 1, the comparison is executed $n - 2$ times
 - $\dots$
-- when `i` is $n - 3$, the innermost statement is executed two times
-- when `i` is $n - 2$, the innermost statement is executed one time
+- when `i` is $n - 3$, the comparison is executed two times
+- when `i` is $n - 2$, the comparison is executed one time
 
 Therefore the total number of comparisons is
 
@@ -59,3 +57,20 @@ $$
 (n-1) + (n-2) + \dots + 1 = \sum_{i=1}^{n-1}i
 $$
 
+---
+
+## Review
+
+??? question The outer loop of selection sort runs
+- [ ] $n$ times
+- [x] $n - 1$ times
+- [ ] $n^2$ times
+- [ ] $n - 2$ times
+???
+
+??? question What is selection sort's best case?
+- [ ] An already sorted array
+- [ ] A reverse-sorted array
+- [ ] An array filled with the same element
+- [x] Its best, worst, and average cases are all the same
+???
