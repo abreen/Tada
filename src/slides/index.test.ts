@@ -644,7 +644,7 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
-  test('annotation canvases stay associated with their slide and are removed on exit', () => {
+  test('annotation canvases stay associated with their slide and are removed on exit', async () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
 
@@ -659,6 +659,7 @@ describe('slides presentation controller', () => {
     ) as HTMLElement;
 
     present.click();
+    await Promise.resolve();
     slides[0].dispatchEvent(
       new win.MouseEvent('contextmenu', {
         bubbles: true,
@@ -707,6 +708,7 @@ describe('slides presentation controller', () => {
     expect(canvas?.hidden).toBe(false);
 
     dispatchKey(win, 'Escape');
+    await Promise.resolve();
 
     expect(win.document.body.classList.contains('is-slides-annotating')).toBe(
       false,
