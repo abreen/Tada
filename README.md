@@ -26,6 +26,9 @@ A static site generator. The successor to Presto.
   * Supports Java and Python source files
   * Renders step-by-step source highlighting, output, and memory diagrams
 - Slides mode: separate content by `---` and present sections as full-screen slides
+  * Click icon near slide titles to start presenting at that slide
+  * Right-click in presentation mode to annotate
+  * Hold Shift while annotating to erase
 - PDF files are copied into `dist/`
   * Text of each PDF page is extracted using `mutool` (if present) and indexed
 - External link handling (special visual treatment for external links)
