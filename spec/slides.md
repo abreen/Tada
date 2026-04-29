@@ -108,7 +108,9 @@ eraser cursor. Moving the pointer over the active slide while `Shift` is held
 erases annotation marks within an 18 px circular radius without needing a click
 or drag. A transparent preview ring with a `var(--bg2-color)` border follows
 the pointer to show the erase radius. Releasing `Shift` returns to the pen
-cursor.
+cursor. Keyboard navigation remains available in annotation mode, including
+using `ArrowRight` and `ArrowLeft` to move through trace steps before changing
+slides.
 
 Each slide stores its own annotation canvas in the presentation deck DOM while
 presentation mode is active, so annotations remain visible when navigating away

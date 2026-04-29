@@ -598,6 +598,39 @@ test.describe('slides presentation mode', () => {
 
     await page.keyboard.press('Escape');
   });
+
+  test('trace arrow keys work while annotation mode is active', async ({
+    page,
+  }) => {
+    await page.goto('/slides-reset.html');
+
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+
+    const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
+    const stepCounter = activeSlide.locator('.trace-step-counter');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(activeSlide).toContainText('Trace');
+    await expect(stepCounter).toHaveText('1/2');
+
+    await page.mouse.click(80, 120, { button: 'right' });
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          document.body.classList.contains('is-slides-annotating'),
+        ),
+      )
+      .toBe(true);
+
+    await page.keyboard.press('ArrowRight');
+    await expect(stepCounter).toHaveText('2/2');
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(stepCounter).toHaveText('1/2');
+
+    await page.keyboard.press('Escape');
+  });
 });
 
 test.describe('slides controls on touch browsers', () => {

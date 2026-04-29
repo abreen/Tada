@@ -1180,6 +1180,58 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
+  test('Arrow keys drive an active trace while annotation mode is active', () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
+    const traceNext = win.document.querySelector(
+      '.trace-next',
+    ) as HTMLButtonElement;
+    const tracePrev = win.document.querySelector(
+      '.trace-prev',
+    ) as HTMLButtonElement;
+    let nextClicks = 0;
+    let prevClicks = 0;
+
+    traceNext.addEventListener('click', () => {
+      nextClicks += 1;
+      traceNext.disabled = true;
+      tracePrev.disabled = false;
+    });
+    tracePrev.addEventListener('click', () => {
+      prevClicks += 1;
+      traceNext.disabled = false;
+      tracePrev.disabled = true;
+    });
+
+    markTraceReady(win.document.querySelector('.trace-widget'));
+    present.click();
+    activeSlide.dispatchEvent(
+      new win.MouseEvent('contextmenu', {
+        bubbles: true,
+        button: 2,
+        cancelable: true,
+      }),
+    );
+
+    dispatchKey(win, 'ArrowRight');
+    dispatchKey(win, 'ArrowLeft');
+
+    expect(nextClicks).toBe(1);
+    expect(prevClicks).toBe(1);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('0');
+
+    cleanup?.();
+  });
+
   test('Close button only appears when the mouse is near the top reveal zone', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);

@@ -144,6 +144,7 @@ export default function mountSlides(window: Window): void | (() => void) {
   let isAnnotating = false;
   let isShiftPressed = false;
   let isErasing = false;
+  let isDrivingTrace = false;
   let activeAnnotation: {
     slide: HTMLElement;
     previousX: number;
@@ -374,7 +375,12 @@ export default function mountSlides(window: Window): void | (() => void) {
         continue;
       }
 
-      button.click();
+      isDrivingTrace = true;
+      try {
+        button.click();
+      } finally {
+        isDrivingTrace = false;
+      }
       return true;
     }
 
@@ -863,7 +869,7 @@ export default function mountSlides(window: Window): void | (() => void) {
   }
 
   function handleAnnotationClick(event: MouseEvent): void {
-    if (!isPresenting || !isAnnotating) {
+    if (!isPresenting || !isAnnotating || isDrivingTrace) {
       return;
     }
 
