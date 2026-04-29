@@ -281,6 +281,21 @@ function setCloseButtonBottom(win: Win, bottom: number): void {
   });
 }
 
+function trackSlideScrollIntoView(win: Win): string[] {
+  const calls: string[] = [];
+
+  for (const slide of win.document.querySelectorAll<HTMLElement>('.slide')) {
+    Object.defineProperty(slide, 'scrollIntoView', {
+      configurable: true,
+      value: () => {
+        calls.push(slide.getAttribute('data-slide-index') ?? '');
+      },
+    });
+  }
+
+  return calls;
+}
+
 describe('slides presentation controller', () => {
   test('mount re-enables Present and Full screen controls that render disabled', () => {
     const win = createSlidesWindow();
@@ -636,6 +651,36 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
+  test('exiting normal presentation scrolls to the active slide without changing the hash', async () => {
+    const win = createSlidesWindow();
+    const scrollCalls = trackSlideScrollIntoView(win);
+    installFullscreenApi(win);
+    const cleanup = mount(win);
+
+    const fullscreen = win.document.querySelector(
+      '[data-slides-fullscreen]',
+    ) as HTMLInputElement;
+    const root = win.document.querySelector('[data-slides-root]')!;
+    fullscreen.checked = false;
+    root.dispatchEvent(
+      new win.CustomEvent('tada:slides-present', {
+        bubbles: true,
+        detail: { slideIndex: 2 },
+      }),
+    );
+    await Promise.resolve();
+
+    const close = win.document.querySelector(
+      '[data-slides-close]',
+    ) as HTMLButtonElement;
+    close.click();
+
+    expect(scrollCalls).toEqual(['2']);
+    expect(win.location.hash).toBe('');
+
+    cleanup?.();
+  });
+
   test('tada:slides-present clamps requested slide index', async () => {
     const win = createSlidesWindow();
     installFullscreenApi(win);
@@ -739,13 +784,17 @@ describe('slides presentation controller', () => {
 
   test('leaving browser fullscreen exits presentation mode', async () => {
     const win = createSlidesWindow();
+    const scrollCalls = trackSlideScrollIntoView(win);
     const fullscreenApi = installFullscreenApi(win);
     const cleanup = mount(win);
 
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    present.click();
+    const root = win.document.querySelector('[data-slides-root]')!;
+    root.dispatchEvent(
+      new win.CustomEvent('tada:slides-present', {
+        bubbles: true,
+        detail: { slideIndex: 1 },
+      }),
+    );
     await Promise.resolve();
     await (
       win.document as Document & { exitFullscreen: () => Promise<void> }
@@ -754,6 +803,35 @@ describe('slides presentation controller', () => {
     expect(fullscreenApi.exitCount).toBe(1);
     expect(win.document.body.classList.contains('is-presenting')).toBe(false);
     expect(win.document.querySelector('.slide.is-active')).toBeNull();
+    expect(scrollCalls).toEqual(['1']);
+    expect(win.location.hash).toBe('');
+
+    cleanup?.();
+  });
+
+  test('Escape exits fullscreen presentation and scrolls to the active slide', async () => {
+    const win = createSlidesWindow();
+    const scrollCalls = trackSlideScrollIntoView(win);
+    const fullscreenApi = installFullscreenApi(win);
+    const cleanup = mount(win);
+
+    const root = win.document.querySelector('[data-slides-root]')!;
+    root.dispatchEvent(
+      new win.CustomEvent('tada:slides-present', {
+        bubbles: true,
+        detail: { slideIndex: 2 },
+      }),
+    );
+    await Promise.resolve();
+
+    dispatchKey(win, 'Escape');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(fullscreenApi.exitCount).toBe(1);
+    expect(win.document.body.classList.contains('is-presenting')).toBe(false);
+    expect(scrollCalls).toEqual(['2']);
+    expect(win.location.hash).toBe('');
 
     cleanup?.();
   });

@@ -19,6 +19,10 @@ test.describe('slides presentation mode', () => {
     page,
   }) => {
     await page.goto('/slides.html');
+    await page.addStyleTag({
+      content:
+        'body:not(.is-presenting) main.body .slide { min-height: 120vh; }',
+    });
 
     await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
     await page.getByRole('button', { name: 'Present', exact: true }).click();
@@ -168,12 +172,25 @@ test.describe('slides presentation mode', () => {
     await expect(activeSlide).toContainText('Middle');
     await expect(closeButton).toBeHidden();
     await page.keyboard.press('Escape');
+    await expect
+      .poll(async () =>
+        page.evaluate(() => document.body.classList.contains('is-presenting')),
+      )
+      .toBe(false);
+    await expect
+      .poll(async () => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.location.hash)).toBe('');
   });
 
   test('fullscreen presentation enters native fullscreen and never shows the toolbar', async ({
     page,
   }) => {
     await page.goto('/slides.html');
+    await page.addStyleTag({
+      content:
+        'body:not(.is-presenting) main.body .slide { min-height: 120vh; }',
+    });
 
     await page.getByRole('checkbox', { name: 'Full screen' }).check();
     await page.getByRole('button', { name: 'Present', exact: true }).click();
@@ -191,6 +208,9 @@ test.describe('slides presentation mode', () => {
     await page.mouse.move(120, 20);
     await expect(closeButton).toBeHidden();
 
+    await page.keyboard.press('ArrowRight');
+    await expect(activeSlide).toContainText('Middle');
+
     await page.keyboard.press('Escape');
     await expect
       .poll(async () =>
@@ -200,6 +220,10 @@ test.describe('slides presentation mode', () => {
         })),
       )
       .toEqual({ fullscreen: false, presenting: false });
+    await expect
+      .poll(async () => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.location.hash)).toBe('');
   });
 
   test('multiple choice selections reveal before slide clicks advance', async ({

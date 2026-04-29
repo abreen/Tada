@@ -59,7 +59,9 @@ file header, and trace toolbars are hidden. The `Close` button appears only
 when the pointer is moved into the top reveal zone near the button itself; it
 hides again when the pointer leaves that zone. Slide and trace navigation
 gestures hide the button and mouse cursor immediately. Moving the mouse shows
-the cursor again. Leaving Slides Mode restores the normal page layout.
+the cursor again. Leaving Slides Mode restores the normal page layout and uses
+JavaScript to scroll the active slide back into view without changing the URL
+hash.
 
 ## Navigation
 

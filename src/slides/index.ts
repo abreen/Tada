@@ -224,11 +224,21 @@ export default function mountSlides(window: Window): void | (() => void) {
     }
   }
 
+  function scrollToSlide(index: number): void {
+    const slide = slides[index];
+    if (!slide || typeof slide.scrollIntoView !== 'function') {
+      return;
+    }
+
+    slide.scrollIntoView({ block: 'start', inline: 'nearest' });
+  }
+
   function exitPresentation(): void {
     if (!isPresenting) {
       return;
     }
 
+    const exitingActiveIndex = activeIndex;
     const shouldExitFullscreen =
       presentationMode === 'fullscreen' &&
       domDocument.fullscreenElement != null &&
@@ -245,8 +255,16 @@ export default function mountSlides(window: Window): void | (() => void) {
     setTraceToolbarVisibility(false);
 
     if (shouldExitFullscreen) {
-      void domDocument.exitFullscreen?.();
+      void domDocument
+        .exitFullscreen()
+        .finally(() => scrollToSlide(exitingActiveIndex))
+        .catch(() => {
+          // ignored
+        });
+      return;
     }
+
+    scrollToSlide(exitingActiveIndex);
   }
 
   function resetReadyTraces(scope: HTMLElement = slidesRoot): void {
