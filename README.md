@@ -27,7 +27,7 @@ A static site generator. The successor to Presto.
   * Renders step-by-step source highlighting, output, and memory diagrams
 - Slides mode: separate content by `---` and present sections as full-screen slides
 - PDF files are copied into `dist/`
-  - Text of each PDF page is extracted using `mutool` (if present) and indexed
+  * Text of each PDF page is extracted using `mutool` (if present) and indexed
 - External link handling (special visual treatment for external links)
 - Internal link validation at build time (broken links fail the build)
 - Internal links automatically prefixed with base path, if specified
@@ -37,7 +37,8 @@ A static site generator. The successor to Presto.
   * `<<< details ... <<<` renders a collapsible box
   * `::: section ... :::` renders a special section with a fancy background
   * `!!! note ... !!!` and `!!! warning ... !!!` render alert boxes
-  * `??? question ... ???` renders a Q & A section; answers hidden until click
+  * `??? question ... ???` renders a Q&A section; answer is hidden until click
+    - To display clickable multiple choice options, use a [task list][task-list]
   * `+++ ... +++ ... +++` renders a two-column layout
   * Special heading subtitles with `## Heading # A subtitle here`
   * `{{{ _partial.md }}}` syntax for including partials
@@ -387,3 +388,4 @@ which results in:
 [jep467]: https://openjdk.org/jeps/467
 [katex]: https://katex.org/
 [homebrew]: https://brew.sh/
+[task-list]: https://github.github.com/gfm/#task-list-items-extension-

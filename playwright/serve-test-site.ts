@@ -141,6 +141,11 @@ slides: true
 The answer is twelve.
 
 ???
+
+??? question Which option is correct?
+- [ ] Eleven
+- [x] Twelve
+???
 `,
 );
 writeFileSync(

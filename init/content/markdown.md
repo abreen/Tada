@@ -293,6 +293,16 @@ solved directly without any further recursive calls. For recursive methods that
 process strings, the base case is the empty string.
 ???
 
+If the body is a [task list][task-list] with exactly one `[x]` option, it
+becomes a multiple choice question with clickable options:
+
+??? question Which is correct for obtaining the number of characters in a `String`?
+- [ ] `word.size()`
+- [x] `word.length()`
+- [ ] `word.count()`
+- [ ] `word.length`
+???
+
 
 ### Generic section
 
@@ -438,3 +448,4 @@ Here's a time range:
 [flavored]: https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/organizing-information-with-tables
 [presto]: https://github.com/abreen/presto
 [shiki]: https://shiki.style/
+[task-list]: https://github.github.com/gfm/#task-list-items-extension-

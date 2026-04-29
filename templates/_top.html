@@ -33,6 +33,7 @@
     <meta property="og:author" content="<%= page.author.name %>" />
     <% } %>
     <title><%= page.title %><%= site.titlePostfix %></title>
+    <script>document.documentElement.classList.add('js')</script>
     <% if (!isWatchMode) { %>
     <script type="speculationrules">
     {
@@ -47,10 +48,9 @@
     <% } %>
   <script>document.head.appendChild(document.createElement('style')).textContent='.time-zone-label[hidden],select.time-zone[hidden]{display:revert}'</script>
   <noscript><style>
-    .question-a-body:not([data-revealed]) > * { color: unset; background-color: unset; }
-    .question-a-body:not([data-revealed]) > * * { color: unset; background-color: unset; }
-    .question-a-body::after { display: none; }
-    .question-a-body { cursor: unset; }
+    .question-multiple-choice-option { cursor: unset; }
+    .question-multiple-choice-option[data-correct] { border-color: hsl(142deg 58% 36%); }
+    .question-multiple-choice-option[data-correct]::after { display: block; background-color: hsl(142deg 58% 36%); -webkit-mask-image: var(--question-correct-icon); mask-image: var(--question-correct-icon); -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center center; mask-position: center center; -webkit-mask-size: contain; mask-size: contain; }
   </style></noscript>
   </head>
 

@@ -50,6 +50,21 @@ The answer is here.
 ???
 ```
 
+If a `question` block's body is entirely a checked-list option set, it renders
+as a multiple choice block instead. Options use the existing `Q.` prompt style
+with no `A.` label:
+
+```
+??? question Which option is correct?
+- [ ] First option
+- [x] Correct option
+- [ ] Third option
+???
+```
+
+Exactly one option must be marked `[x]` or `[X]`. The option marker must use
+standard Markdown list spacing, such as `- [ ] Option`.
+
 
 ## Collapsible details
 

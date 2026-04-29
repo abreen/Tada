@@ -12,7 +12,8 @@ them in the bundle. Shared utilities are in `src/util.ts`.
   based on scroll position
 - **Search**: a combobox in the header querying the Pagefind index (see
   [Search](search.md))
-- **Q&A toggle**: reveals answers in question-and-answer blocks on click
+- **Q&A toggle**: reveals answers in question-and-answer blocks on click and
+  handles multiple choice selections
 - **Time zone chooser**: a dropdown that reformats all `<time>` elements to
   the selected zone, persisted in local storage (see [Time Zones](time-zones.md))
 - **Scroll-to-top button**: appears when the user scrolls down the page

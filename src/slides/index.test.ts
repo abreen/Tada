@@ -170,6 +170,33 @@ function createSlidesWindowWithQuestionOnLastSlide(): Win {
   `);
 }
 
+function createSlidesWindowWithMultipleChoiceOnLastSlide(): Win {
+  return createWindow(`
+    <div class="slides-header">
+      <button type="button" data-slides-present>Present</button>
+      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
+    </div>
+    <div class="slide-deck" data-slides-root>
+      <div class="slide" data-slide-index="0">
+        <h1>Slide 1</h1>
+      </div>
+      <div class="slide" data-slide-index="1">
+        <h1>Slide 2</h1>
+      </div>
+      <div class="slide" data-slide-index="2">
+        <h1>Slide 3</h1>
+        <div class="question question-multiple-choice">
+          <p class="question-q"><span class="question-label">Q.</span><span>Which option is correct?</span></p>
+          <div class="question-multiple-choice-options">
+            <div class="question-multiple-choice-option">Wrong</div>
+            <div class="question-multiple-choice-option" data-correct="">Correct</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
 function dispatchKey(win: Win, key: string): void {
   win.dispatchEvent(new win.KeyboardEvent('keydown', { key, bubbles: true }));
 }
@@ -1389,6 +1416,51 @@ describe('slides presentation controller', () => {
     ).toBe('2');
 
     questionBody.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+
+    expect(overlay.hidden).toBe(false);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('2');
+
+    cleanup?.();
+  });
+
+  test('clicking a multiple choice option on the last slide only advances after it is revealed', () => {
+    const win = createSlidesWindowWithMultipleChoiceOnLastSlide();
+    mountQuestion(win);
+    const cleanup = mount(win);
+
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    const overlay = win.document.querySelector(
+      '[data-slides-overlay]',
+    ) as HTMLElement;
+    const question = win.document.querySelector(
+      '.question-multiple-choice',
+    ) as HTMLElement;
+    const option = win.document.querySelector(
+      '.question-multiple-choice-option',
+    ) as HTMLElement;
+
+    present.click();
+    dispatchKey(win, 'ArrowRight');
+    dispatchKey(win, 'ArrowRight');
+
+    option.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+
+    expect(overlay.hidden).toBe(true);
+    expect(question.hasAttribute('data-revealed')).toBe(true);
+    expect(option.hasAttribute('data-selected')).toBe(true);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('2');
+
+    option.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
 
     expect(overlay.hidden).toBe(false);
     expect(

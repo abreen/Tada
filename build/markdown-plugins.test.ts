@@ -301,6 +301,103 @@ describe('custom markdown containers', () => {
     expect(html).toContain('<p>An organized collection.</p>');
   });
 
+  test('renders checked-list questions as multiple choice blocks', () => {
+    const md = createProjectMarkdown();
+
+    const html = md.render(
+      [
+        '??? question Which option is correct?',
+        '- [ ] **One**',
+        '- [x] [Two](./two.md)',
+        '???',
+      ].join('\n'),
+    );
+
+    expect(html).toContain('<div class="question question-multiple-choice">');
+    expect(html).toContain(
+      '<p class="question-q"><span class="question-label">Q.</span><span>Which option is correct?</span></p>',
+    );
+    expect(html).not.toContain('question-a-label');
+    expect(html).not.toContain('[ ]');
+    expect(html).not.toContain('[x]');
+    expect(html).toContain(
+      '<div class="question-multiple-choice-option"><strong>One</strong></div>',
+    );
+    expect(html).toContain(
+      '<div class="question-multiple-choice-option" data-correct=""><a href="./two.md">Two</a></div>',
+    );
+  });
+
+  test('keeps non-checked-list questions as spoiler answers', () => {
+    const md = createProjectMarkdown();
+
+    const html = md.render(
+      ['??? question Which option is correct?', '- one', '- two', '???'].join(
+        '\n',
+      ),
+    );
+
+    expect(html).toContain('<div class="question">');
+    expect(html).toContain('<p class="question-a-label">A.</p>');
+    expect(html).toContain('<ul class="styled-list">');
+    expect(html).not.toContain('question-multiple-choice');
+  });
+
+  test('rejects multiple choice questions without exactly one correct option', () => {
+    const md = createProjectMarkdown();
+
+    expect(() =>
+      md.render(
+        [
+          '??? question Which option is correct?',
+          '- [ ] one',
+          '- [ ] two',
+          '???',
+        ].join('\n'),
+      ),
+    ).toThrow(
+      'multiple choice question must include exactly one correct option marked with [x], but found 0',
+    );
+
+    expect(() =>
+      md.render(
+        [
+          '??? question Which option is correct?',
+          '- [x] one',
+          '- [x] two',
+          '???',
+        ].join('\n'),
+      ),
+    ).toThrow(
+      'multiple choice question must include exactly one correct option marked with [x], but found 2',
+    );
+  });
+
+  test('multiple choice rendering does not clear collected TOC items', () => {
+    const md = createProjectMarkdown();
+    const env: Record<string, unknown> = {};
+
+    const html = md.render(
+      [
+        '## Before',
+        '',
+        '??? question Which option is correct?',
+        '- [ ] One',
+        '- [x] Two',
+        '???',
+        '',
+        '## After',
+      ].join('\n'),
+      env,
+    );
+
+    expect(html).toContain('question-multiple-choice');
+    expect(env.tocItems).toEqual([
+      { kind: 'heading', level: '2', id: 'before', innerHtml: 'Before' },
+      { kind: 'heading', level: '2', id: 'after', innerHtml: 'After' },
+    ]);
+  });
+
   test('renders alert containers with custom and default titles', () => {
     const md = createProjectMarkdown();
 
@@ -454,6 +551,25 @@ describe('markdown slide segmentation', () => {
 
     expect(html).not.toContain('<hr');
     expect(html).toContain('<p>Text  more</p>');
+  });
+
+  test('removes inline raw html hr tags inside multiple choice options on slide pages', () => {
+    const md = createSlidesMarkdown();
+
+    const html = md.render(
+      [
+        '??? question Which option is correct?',
+        '- [ ] A <hr> option',
+        '- [x] B option',
+        '???',
+      ].join('\n'),
+    );
+
+    expect(html).toContain('question-multiple-choice');
+    expect(html).not.toContain('<hr');
+    expect(html).toContain(
+      '<div class="question-multiple-choice-option">A  option</div>',
+    );
   });
 
   test('removes embedded raw html hr tags inside single-line html blocks on slide pages', () => {

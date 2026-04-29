@@ -73,6 +73,11 @@ Clicking an unrevealed Q&A answer on the active slide reveals that answer
 without moving forward. Once the answer is revealed, later clicks on it behave
 like normal active-slide clicks and move forward.
 
+Clicking an unanswered multiple choice option on the active slide selects that
+option and reveals the correct answer without moving forward. Once the multiple
+choice block is answered, later clicks on its options behave like normal
+active-slide clicks and move forward.
+
 If the active slide contains trace widgets, those gestures try to move the
 trace first and only change slides when the trace cannot move further. Entering
 Slides Mode resets ready traces to their first step. When `ArrowLeft` changes

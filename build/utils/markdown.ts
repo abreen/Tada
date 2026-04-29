@@ -24,6 +24,7 @@ import type { RenderDependencyCollector, SiteVariables } from '../types';
 const DETAILS_PATTERN = /^details\s+(.*)$/;
 const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
 const QUESTION_PATTERN = /^question\s+(.+)$/;
+const MULTIPLE_CHOICE_MARKER_LENGTH = 4;
 
 interface CreateMarkdownOptions {
   filePath?: string;
@@ -34,6 +35,16 @@ interface CreateMarkdownOptions {
   validTargets?: Set<string>;
   templateParams?: Record<string, unknown>;
   dependencyCollector?: RenderDependencyCollector;
+}
+
+interface MultipleChoiceOption {
+  correct: boolean;
+  inline: Token;
+}
+
+interface MultipleChoiceMeta {
+  question: string;
+  options: MultipleChoiceOption[];
 }
 
 function capitalize(str: string): string {
@@ -121,6 +132,132 @@ export function createMarkdown(
     const token = new Token(type, 'div', nesting);
     token.attrs = attributes;
     return token;
+  }
+
+  function cloneToken(token: Token): Token {
+    const cloned = new Token(token.type, token.tag, token.nesting);
+    cloned.attrs = token.attrs?.map(([name, value]) => [name, value]) ?? null;
+    cloned.block = token.block;
+    cloned.children = token.children?.map(cloneToken) ?? null;
+    cloned.content = token.content;
+    cloned.hidden = token.hidden;
+    cloned.info = token.info;
+    cloned.level = token.level;
+    cloned.map = token.map ? [token.map[0], token.map[1]] : null;
+    cloned.markup = token.markup;
+    cloned.meta = token.meta;
+    return cloned;
+  }
+
+  function parseMultipleChoiceOption(
+    inline: Token,
+  ): MultipleChoiceOption | null {
+    const firstChild = inline.children?.[0];
+    if (firstChild?.type !== 'text') {
+      return null;
+    }
+
+    let correct: boolean;
+    if (firstChild.content.startsWith('[ ] ')) {
+      correct = false;
+    } else if (
+      firstChild.content.startsWith('[x] ') ||
+      firstChild.content.startsWith('[X] ')
+    ) {
+      correct = true;
+    } else {
+      return null;
+    }
+
+    const optionInline = cloneToken(inline);
+    optionInline.content = inline.content.slice(MULTIPLE_CHOICE_MARKER_LENGTH);
+    if (optionInline.children?.[0]?.type === 'text') {
+      optionInline.children[0].content = optionInline.children[0].content.slice(
+        MULTIPLE_CHOICE_MARKER_LENGTH,
+      );
+    }
+    if (slides) {
+      sanitizeTokenForSlides(optionInline);
+    }
+
+    return { correct, inline: optionInline };
+  }
+
+  function findQuestionCloseIndex(tokens: Token[], openIndex: number): number {
+    const level = tokens[openIndex].level;
+    for (let i = openIndex + 1; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (token.type === 'container_question_close' && token.level === level) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function multipleChoiceError(message: string): Error {
+    return new Error(
+      (filePath ? `${filePath}: ` : '') + `multiple choice question ${message}`,
+    );
+  }
+
+  function parseMultipleChoiceQuestion(
+    tokens: Token[],
+    openIndex: number,
+    closeIndex: number,
+  ): MultipleChoiceMeta | null {
+    const questionMatch = tokens[openIndex].info.trim().match(QUESTION_PATTERN);
+    if (!questionMatch) {
+      return null;
+    }
+
+    const bodyStart = openIndex + 1;
+    const bodyEnd = closeIndex - 1;
+    if (
+      bodyStart > bodyEnd ||
+      tokens[bodyStart].type !== 'bullet_list_open' ||
+      tokens[bodyEnd].type !== 'bullet_list_close'
+    ) {
+      return null;
+    }
+
+    const options: MultipleChoiceOption[] = [];
+    for (let i = bodyStart + 1; i < bodyEnd; ) {
+      const listItemOpen = tokens[i];
+      const paragraphOpen = tokens[i + 1];
+      const inline = tokens[i + 2];
+      const paragraphClose = tokens[i + 3];
+      const listItemClose = tokens[i + 4];
+      if (
+        listItemOpen?.type !== 'list_item_open' ||
+        paragraphOpen?.type !== 'paragraph_open' ||
+        inline?.type !== 'inline' ||
+        paragraphClose?.type !== 'paragraph_close' ||
+        listItemClose?.type !== 'list_item_close'
+      ) {
+        return null;
+      }
+
+      const option = parseMultipleChoiceOption(inline);
+      if (!option) {
+        return null;
+      }
+
+      options.push(option);
+      i += 5;
+    }
+
+    if (options.length === 0) {
+      return null;
+    }
+
+    const correctCount = options.filter(option => option.correct).length;
+    if (correctCount !== 1) {
+      throw multipleChoiceError(
+        `must include exactly one correct option marked with [x], but found ${correctCount}`,
+      );
+    }
+
+    return { question: questionMatch[1], options };
   }
 
   function isInlineOnlyTokenStream(tokens: Token[]): boolean {
@@ -433,6 +570,89 @@ export function createMarkdown(
       }
     },
   });
+
+  markdown.core.ruler.before(
+    'slides_transform',
+    'multiple_choice_questions',
+    state => {
+      const transformedTokens: Token[] = [];
+      for (let i = 0; i < state.tokens.length; i++) {
+        const token = state.tokens[i];
+        if (token.type !== 'container_question_open') {
+          transformedTokens.push(token);
+          continue;
+        }
+
+        const closeIndex = findQuestionCloseIndex(state.tokens, i);
+        if (closeIndex === -1) {
+          transformedTokens.push(token);
+          continue;
+        }
+
+        const multipleChoice = parseMultipleChoiceQuestion(
+          state.tokens,
+          i,
+          closeIndex,
+        );
+        if (!multipleChoice) {
+          transformedTokens.push(...state.tokens.slice(i, closeIndex + 1));
+          i = closeIndex;
+          continue;
+        }
+
+        const multipleChoiceToken = new Token(
+          'question_multiple_choice',
+          '',
+          0,
+        );
+        multipleChoiceToken.block = true;
+        multipleChoiceToken.level = token.level;
+        multipleChoiceToken.map = token.map;
+        multipleChoiceToken.meta = multipleChoice;
+        transformedTokens.push(multipleChoiceToken);
+        i = closeIndex;
+      }
+
+      state.tokens = transformedTokens;
+    },
+  );
+
+  markdown.renderer.rules.question_multiple_choice = (
+    tokens,
+    idx,
+    renderOptions,
+    env,
+  ) => {
+    const meta = tokens[idx].meta as MultipleChoiceMeta;
+    const question = markdown.renderInline(meta.question);
+    const optionsHtml = meta.options
+      .map(option => {
+        const correctAttribute = option.correct ? ' data-correct=""' : '';
+        const optionHtml = markdown.renderer.render(
+          [option.inline],
+          renderOptions,
+          env,
+        );
+        return (
+          '<div class="question-multiple-choice-option"' +
+          correctAttribute +
+          '>' +
+          optionHtml +
+          '</div>'
+        );
+      })
+      .join('');
+
+    return (
+      '<div class="question question-multiple-choice">' +
+      '<p class="question-q"><span class="question-label">Q.</span><span>' +
+      question +
+      '</span></p>' +
+      '<div class="question-multiple-choice-options">' +
+      optionsHtml +
+      '</div></div>\n'
+    );
+  };
 
   /*
    * Customize markdown-it-footnote renderer.

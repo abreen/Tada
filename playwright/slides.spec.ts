@@ -202,6 +202,34 @@ test.describe('slides presentation mode', () => {
       .toEqual({ fullscreen: false, presenting: false });
   });
 
+  test('multiple choice selections reveal before slide clicks advance', async ({
+    page,
+  }) => {
+    await page.goto('/slides.html');
+
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+
+    const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
+    const closeButton = page.locator('[data-slides-close]');
+    const multipleChoice = activeSlide.locator('.question-multiple-choice');
+    const wrongOption = multipleChoice
+      .locator('.question-multiple-choice-option')
+      .filter({ hasText: 'Eleven' });
+
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(activeSlide).toContainText('End');
+
+    await wrongOption.click();
+    await expect(closeButton).toBeHidden();
+    await expect(multipleChoice).toHaveAttribute('data-revealed', '');
+    await expect(wrongOption).toHaveAttribute('data-selected', '');
+
+    await wrongOption.click();
+    await expect(closeButton).toBeVisible();
+  });
+
   test('ArrowLeft resets traces when returning to a trace slide', async ({
     page,
   }) => {
