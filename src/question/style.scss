@@ -115,7 +115,7 @@
 .js .question-a-body[data-revealed] {
   cursor: unset;
 
-  @include user-select(text);
+  @include user-select(unset);
 }
 
 .question-multiple-choice {
@@ -185,7 +185,7 @@
   .question-multiple-choice-option {
     cursor: unset;
 
-    @include user-select(text);
+    @include user-select(unset);
 
     &:focus,
     &:focus-visible {
