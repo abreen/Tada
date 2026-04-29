@@ -187,6 +187,43 @@ test.describe('slides presentation mode', () => {
     expect(await page.evaluate(() => window.location.hash)).toBe('');
   });
 
+  test('presentation content scales down on small viewports', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.goto('/slides.html');
+
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+
+    const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
+    const largeFontSize = await activeSlide.evaluate(slide =>
+      Number.parseFloat(window.getComputedStyle(slide).fontSize),
+    );
+    expect(largeFontSize).toBeCloseTo(24, 1);
+
+    await page.setViewportSize({ width: 420, height: 360 });
+
+    const smallMetrics = await activeSlide.evaluate(slide => {
+      const style = window.getComputedStyle(slide);
+      const rect = slide.getBoundingClientRect();
+
+      return {
+        fontSize: Number.parseFloat(style.fontSize),
+        width: rect.width,
+        height: rect.height,
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+      };
+    });
+
+    expect(smallMetrics.fontSize).toBeLessThan(largeFontSize);
+    expect(smallMetrics.width).toBeLessThanOrEqual(smallMetrics.innerWidth);
+    expect(smallMetrics.height).toBe(smallMetrics.innerHeight);
+
+    await page.keyboard.press('Escape');
+  });
+
   test('fullscreen presentation enters native fullscreen and never shows the toolbar', async ({
     page,
   }) => {

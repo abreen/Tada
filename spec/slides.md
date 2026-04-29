@@ -39,10 +39,9 @@ breaks and literal HTML `<hr>` tags that would otherwise appear in the page.
 Clicking `Present` enables a client-side presentation view without rebuilding
 the page. Slides Mode applies `body.is-presenting` and shows one slide at a
 time in a fixed viewport-sized layer above the rest of the page. Presentation
-slides scale their content up with the viewport and cap their width so they
-remain readable on wide screens. Slides are anchored to the top of the viewport.
-Slides fill the viewport height so clicks in empty areas still advance the
-presentation. Content that exceeds the viewport scrolls internally.
+slides scale their content with the viewport while capping their width so they
+remain readable on wide screens. Slides are anchored to the top of the viewport
+and fill its height. Content that exceeds the viewport scrolls internally.
 
 When `Full screen` is checked, clicking `Present` starts the presentation in
 the browser's native Fullscreen API mode. In that mode the slide toolbar never
