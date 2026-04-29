@@ -224,6 +224,116 @@ test.describe('slides presentation mode', () => {
     await page.keyboard.press('Escape');
   });
 
+  test('presentation annotations draw and persist per slide', async ({
+    page,
+  }) => {
+    await page.goto('/slides.html');
+
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+
+    const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
+    await expect(activeSlide).toContainText('Intro');
+
+    const rect = await activeSlide.boundingBox();
+    expect(rect).not.toBeNull();
+    if (!rect) {
+      return;
+    }
+
+    await page.mouse.click(rect.x + 120, rect.y + 120, { button: 'right' });
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          document.body.classList.contains('is-slides-annotating'),
+        ),
+      )
+      .toBe(true);
+
+    const cursor = await activeSlide.evaluate(
+      slide => window.getComputedStyle(slide).cursor,
+    );
+    expect(cursor).toContain('data:image/svg+xml');
+
+    await page.mouse.move(rect.x + 120, rect.y + 120);
+    await page.mouse.down();
+    await page.mouse.move(rect.x + 260, rect.y + 220, { steps: 8 });
+    await page.mouse.up();
+
+    const violetPixels = async () =>
+      activeSlide.locator('[data-slides-annotations]').evaluate(canvas => {
+        const annotationCanvas = canvas as HTMLCanvasElement;
+        const context = annotationCanvas.getContext('2d');
+        if (!context) {
+          return 0;
+        }
+
+        const { data } = context.getImageData(
+          0,
+          0,
+          annotationCanvas.width,
+          annotationCanvas.height,
+        );
+        let count = 0;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const red = data[i] ?? 0;
+          const green = data[i + 1] ?? 0;
+          const blue = data[i + 2] ?? 0;
+          const alpha = data[i + 3] ?? 0;
+
+          if (
+            alpha > 0 &&
+            Math.abs(red - 138) < 24 &&
+            Math.abs(green - 43) < 24 &&
+            Math.abs(blue - 226) < 24
+          ) {
+            count += 1;
+          }
+        }
+
+        return count;
+      });
+
+    await expect.poll(violetPixels).toBeGreaterThan(0);
+
+    await activeSlide.click();
+    await expect(activeSlide).toContainText('Intro');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(activeSlide).toContainText('Middle');
+    await expect(activeSlide.locator('[data-slides-annotations]')).toHaveCount(
+      0,
+    );
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(activeSlide).toContainText('Intro');
+    await expect.poll(violetPixels).toBeGreaterThan(0);
+
+    const returnedRect = await activeSlide.boundingBox();
+    expect(returnedRect).not.toBeNull();
+    if (!returnedRect) {
+      return;
+    }
+
+    await page.mouse.click(returnedRect.x + 120, returnedRect.y + 120, {
+      button: 'right',
+    });
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          document.body.classList.contains('is-slides-annotating'),
+        ),
+      )
+      .toBe(false);
+
+    await activeSlide.click();
+    await expect(activeSlide).toContainText('Middle');
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-slides-annotations]')).toHaveCount(0);
+  });
+
   test('fullscreen presentation enters native fullscreen and never shows the toolbar', async ({
     page,
   }) => {

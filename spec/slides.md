@@ -71,6 +71,8 @@ hash.
 - `Space` moves forward
 - clicking the presentation deck moves forward, including empty side gutters
 - `Escape` or `Close` exits Slides Mode
+- right-click toggles annotation mode on or off and suppresses the browser
+  context menu
 
 Clicking an unrevealed Q&A answer on the active slide reveals that answer
 without moving forward. Once the answer is revealed, later clicks on it behave
@@ -90,6 +92,18 @@ When the presentation is already on its last slide and no active trace can move
 forward, pressing `ArrowRight`, pressing `Space`, or clicking the slide reveals
 the `Close` button and keeps it visible to signal that the deck is finished.
 Going backward one slide or trace step hides it again.
+
+## Annotations
+
+While presenting, right-clicking the presentation deck toggles annotation mode.
+Annotation mode changes the cursor to a simple pen cursor. In annotation mode,
+left-clicking and dragging on the active slide draws a `blueviolet` line on a
+slide-local `<canvas>` overlay.
+
+Each slide stores its own annotation canvas in the slide DOM while presentation
+mode is active, so annotations remain visible when navigating away from a slide
+and then back to it. The canvases are responsive and redraw when their slide is
+shown at a new size. Leaving Slides Mode removes the annotation canvases.
 
 ## Client event
 

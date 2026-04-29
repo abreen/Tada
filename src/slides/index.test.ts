@@ -281,6 +281,52 @@ function setCloseButtonBottom(win: Win, bottom: number): void {
   });
 }
 
+function setElementRect(
+  element: Element,
+  rect: { left: number; top: number; width: number; height: number },
+): void {
+  Object.defineProperty(element, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => ({
+      x: rect.left,
+      y: rect.top,
+      width: rect.width,
+      height: rect.height,
+      top: rect.top,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      left: rect.left,
+      toJSON() {
+        return {};
+      },
+    }),
+  });
+}
+
+function dispatchPointer(
+  win: Win,
+  target: EventTarget,
+  type: string,
+  options: {
+    clientX: number;
+    clientY: number;
+    button?: number;
+    pointerId?: number;
+  },
+): Event {
+  const event = new win.Event(type, { bubbles: true, cancelable: true });
+
+  Object.defineProperties(event, {
+    button: { value: options.button ?? 0 },
+    clientX: { value: options.clientX },
+    clientY: { value: options.clientY },
+    pointerId: { value: options.pointerId ?? 1 },
+  });
+
+  target.dispatchEvent(event);
+  return event;
+}
+
 function trackSlideScrollIntoView(win: Win): string[] {
   const calls: string[] = [];
 
@@ -531,6 +577,121 @@ describe('slides presentation controller', () => {
         .querySelector('.slide.is-active')
         ?.getAttribute('data-slide-index'),
     ).toBe('1');
+
+    cleanup?.();
+  });
+
+  test('right-click toggles annotation mode and pauses click navigation', () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    const traceNext = win.document.querySelector(
+      '.trace-next',
+    ) as HTMLButtonElement;
+    const tracePrev = win.document.querySelector(
+      '.trace-prev',
+    ) as HTMLButtonElement;
+    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
+
+    present.click();
+    traceNext.disabled = true;
+    tracePrev.disabled = true;
+
+    const openMenu = new win.MouseEvent('contextmenu', {
+      bubbles: true,
+      button: 2,
+      cancelable: true,
+    });
+    activeSlide.dispatchEvent(openMenu);
+
+    expect(openMenu.defaultPrevented).toBe(true);
+    expect(win.document.body.classList.contains('is-slides-annotating')).toBe(
+      true,
+    );
+
+    activeSlide.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('0');
+
+    activeSlide.dispatchEvent(
+      new win.MouseEvent('contextmenu', {
+        bubbles: true,
+        button: 2,
+        cancelable: true,
+      }),
+    );
+    expect(win.document.body.classList.contains('is-slides-annotating')).toBe(
+      false,
+    );
+
+    activeSlide.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('1');
+
+    cleanup?.();
+  });
+
+  test('annotation canvases stay on their slide and are removed on exit', () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    const slides = Array.from(
+      win.document.querySelectorAll<HTMLElement>('.slide'),
+    );
+
+    for (const slide of slides) {
+      setElementRect(slide, { left: 0, top: 0, width: 800, height: 600 });
+    }
+
+    present.click();
+    slides[0].dispatchEvent(
+      new win.MouseEvent('contextmenu', {
+        bubbles: true,
+        button: 2,
+        cancelable: true,
+      }),
+    );
+
+    const pointerDown = dispatchPointer(win, slides[0], 'pointerdown', {
+      clientX: 100,
+      clientY: 100,
+    });
+    dispatchPointer(win, win, 'pointermove', { clientX: 180, clientY: 160 });
+    dispatchPointer(win, win, 'pointerup', { clientX: 180, clientY: 160 });
+
+    const canvas = slides[0].querySelector('[data-slides-annotations]');
+
+    expect(pointerDown.defaultPrevented).toBe(true);
+    expect(canvas).toBeInstanceOf(win.HTMLCanvasElement);
+    expect(slides[1].querySelector('[data-slides-annotations]')).toBeNull();
+
+    dispatchKey(win, 'ArrowRight');
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('1');
+    dispatchKey(win, 'ArrowLeft');
+    expect(slides[0].querySelector('[data-slides-annotations]')).toBe(canvas);
+
+    dispatchKey(win, 'Escape');
+
+    expect(win.document.body.classList.contains('is-slides-annotating')).toBe(
+      false,
+    );
+    expect(win.document.querySelector('[data-slides-annotations]')).toBeNull();
 
     cleanup?.();
   });
