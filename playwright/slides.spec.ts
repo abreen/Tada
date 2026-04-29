@@ -468,6 +468,33 @@ test.describe('slides presentation mode', () => {
     await expect(page.locator('[data-slides-annotations]')).toHaveCount(0);
   });
 
+  test('presentation annotation cursors use dark mode strokes', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/slides.html');
+
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+
+    const deck = page.locator('main.body .slide-deck');
+    await page.mouse.click(80, 120, { button: 'right' });
+
+    const penCursor = decodeURIComponent(
+      await deck.evaluate(node => window.getComputedStyle(node).cursor),
+    );
+    expect(penCursor).toContain("stroke='white'");
+    expect(penCursor).not.toContain("stroke='black'");
+
+    await page.keyboard.down('Shift');
+    const eraserCursor = decodeURIComponent(
+      await deck.evaluate(node => window.getComputedStyle(node).cursor),
+    );
+    expect(eraserCursor).toContain("stroke='white'");
+    expect(eraserCursor).not.toContain("stroke='black'");
+    await page.keyboard.up('Shift');
+  });
+
   test('fullscreen presentation enters native fullscreen and never shows the toolbar', async ({
     page,
   }) => {

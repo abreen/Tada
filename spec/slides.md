@@ -99,7 +99,9 @@ While presenting, right-clicking the presentation deck toggles annotation mode.
 Annotation mode changes the cursor to a simple pen cursor. In annotation mode,
 left-clicking and dragging anywhere in the presentation viewport, including
 the margins outside the width-capped slide, draws a `blueviolet` line on a
-slide-associated `<canvas>` overlay.
+slide-associated `<canvas>` overlay. The custom annotation cursors use
+light- and dark-mode SVG variants so their strokes stay visible against the
+current presentation background.
 
 While annotation mode is active, holding `Shift` temporarily switches to an
 eraser cursor. Moving the pointer over the active slide while `Shift` is held

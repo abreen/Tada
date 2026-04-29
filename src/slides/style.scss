@@ -6,14 +6,24 @@
 }
 
 body.is-presenting {
-  --slides-annotation-cursor:
+  --slides-annotation-cursor-light:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg transform='rotate(45 12 12)'%3E%3Crect x='10' y='4.8' width='4' height='13.2' rx='2' fill='white' stroke='black' stroke-width='1.5'/%3E%3Cline x1='12' y1='18' x2='12' y2='20.8' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")
       6 18,
     crosshair;
-  --slides-eraser-cursor:
+  --slides-annotation-cursor-dark:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg transform='rotate(45 12 12)'%3E%3Crect x='10' y='4.8' width='4' height='13.2' rx='2' fill='black' stroke='white' stroke-width='1.5'/%3E%3Cline x1='12' y1='18' x2='12' y2='20.8' stroke='white' stroke-width='1.5' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")
+      6 18,
+    crosshair;
+  --slides-annotation-cursor: var(--slides-annotation-cursor-light);
+  --slides-eraser-cursor-light:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg transform='rotate(-45 12 12)'%3E%3Cpath d='M6 10 Q6 8.5 7.5 8.5 H16.5 Q18 8.5 18 10 V14 Q18 15.5 16.5 15.5 H7.5 Q6 15.5 6 14 Z' fill='white' stroke='black' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cline x1='10' y1='8.5' x2='10' y2='15.5' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")
       12 12,
     cell;
+  --slides-eraser-cursor-dark:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg transform='rotate(-45 12 12)'%3E%3Cpath d='M6 10 Q6 8.5 7.5 8.5 H16.5 Q18 8.5 18 10 V14 Q18 15.5 16.5 15.5 H7.5 Q6 15.5 6 14 Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cline x1='10' y1='8.5' x2='10' y2='15.5' stroke='white' stroke-width='1.5' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")
+      12 12,
+    cell;
+  --slides-eraser-cursor: var(--slides-eraser-cursor-light);
   --slides-scale: max(
     100%,
     min(
@@ -24,6 +34,13 @@ body.is-presenting {
   );
 
   overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  body.is-presenting {
+    --slides-annotation-cursor: var(--slides-annotation-cursor-dark);
+    --slides-eraser-cursor: var(--slides-eraser-cursor-dark);
+  }
 }
 
 body.is-presenting.is-presentation-cursor-hidden:not(.is-slides-annotating),
