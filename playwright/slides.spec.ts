@@ -250,10 +250,10 @@ test.describe('slides presentation mode', () => {
       )
       .toBe(true);
 
-    const cursor = await activeSlide.evaluate(
+    const penCursor = await activeSlide.evaluate(
       slide => window.getComputedStyle(slide).cursor,
     );
-    expect(cursor).toContain('data:image/svg+xml');
+    expect(penCursor).toContain('data:image/svg+xml');
 
     await page.mouse.move(rect.x + 120, rect.y + 120);
     await page.mouse.down();
@@ -296,6 +296,60 @@ test.describe('slides presentation mode', () => {
       });
 
     await expect.poll(violetPixels).toBeGreaterThan(0);
+    const pixelsBeforeErase = await violetPixels();
+
+    await page.keyboard.down('Shift');
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          document.body.classList.contains('is-slides-erasing'),
+        ),
+      )
+      .toBe(true);
+
+    const eraserCursor = await activeSlide.evaluate(
+      slide => window.getComputedStyle(slide).cursor,
+    );
+    expect(eraserCursor).toContain('data:image/svg+xml');
+    expect(eraserCursor).not.toBe(penCursor);
+
+    await page.mouse.move(rect.x + 170, rect.y + 155);
+    const eraserPreview = page.locator('[data-slides-eraser-preview]');
+    await expect(eraserPreview).toBeVisible();
+    const previewStyle = await eraserPreview.evaluate(node => {
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+
+      return {
+        backgroundColor: style.backgroundColor,
+        borderRadius: style.borderRadius,
+        borderTopColor: style.borderTopColor,
+        borderTopStyle: style.borderTopStyle,
+        borderTopWidth: Number.parseFloat(style.borderTopWidth),
+        height: rect.height,
+        width: rect.width,
+      };
+    });
+    expect(previewStyle.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(previewStyle.borderTopStyle).toBe('solid');
+    expect(previewStyle.borderTopWidth).toBeGreaterThan(0);
+    expect(previewStyle.borderTopColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(previewStyle.borderRadius).not.toBe('0px');
+    expect(previewStyle.width).toBeGreaterThan(0);
+    expect(previewStyle.height).toBe(previewStyle.width);
+
+    await page.mouse.move(rect.x + 220, rect.y + 190, { steps: 6 });
+    await page.keyboard.up('Shift');
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          document.body.classList.contains('is-slides-erasing'),
+        ),
+      )
+      .toBe(false);
+    await expect(eraserPreview).toBeHidden();
+
+    expect(await violetPixels()).toBeLessThan(pixelsBeforeErase);
 
     await activeSlide.click();
     await expect(activeSlide).toContainText('Intro');

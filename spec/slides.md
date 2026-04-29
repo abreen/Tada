@@ -100,6 +100,13 @@ Annotation mode changes the cursor to a simple pen cursor. In annotation mode,
 left-clicking and dragging on the active slide draws a `blueviolet` line on a
 slide-local `<canvas>` overlay.
 
+While annotation mode is active, holding `Shift` temporarily switches to an
+eraser cursor. Moving the pointer over the active slide while `Shift` is held
+erases annotation marks within an 18 px circular radius without needing a click
+or drag. A transparent preview ring with a `var(--bg2-color)` border follows
+the pointer to show the erase radius. Releasing `Shift` returns to the pen
+cursor.
+
 Each slide stores its own annotation canvas in the slide DOM while presentation
 mode is active, so annotations remain visible when navigating away from a slide
 and then back to it. The canvases are responsive and redraw when their slide is

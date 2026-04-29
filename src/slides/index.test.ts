@@ -201,6 +201,10 @@ function dispatchKey(win: Win, key: string): void {
   win.dispatchEvent(new win.KeyboardEvent('keydown', { key, bubbles: true }));
 }
 
+function dispatchKeyup(win: Win, key: string): void {
+  win.dispatchEvent(new win.KeyboardEvent('keyup', { key, bubbles: true }));
+}
+
 function markTraceReady(widget: HTMLElement | null): void {
   if (widget && !widget.querySelector('.trace-line-active')) {
     const doc = widget.ownerDocument;
@@ -692,6 +696,102 @@ describe('slides presentation controller', () => {
       false,
     );
     expect(win.document.querySelector('[data-slides-annotations]')).toBeNull();
+
+    cleanup?.();
+  });
+
+  test('Shift switches annotation mode to eraser until release or blur', () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
+
+    present.click();
+    dispatchKey(win, 'Shift');
+
+    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
+      false,
+    );
+
+    activeSlide.dispatchEvent(
+      new win.MouseEvent('contextmenu', {
+        bubbles: true,
+        button: 2,
+        cancelable: true,
+      }),
+    );
+
+    expect(win.document.body.classList.contains('is-slides-annotating')).toBe(
+      true,
+    );
+    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
+      true,
+    );
+
+    dispatchKeyup(win, 'Shift');
+    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
+      false,
+    );
+
+    dispatchKey(win, 'Shift');
+    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
+      true,
+    );
+
+    win.dispatchEvent(new win.Event('blur'));
+    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
+      false,
+    );
+
+    cleanup?.();
+  });
+
+  test('Shift eraser movement is active without a pointer press', () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
+    setElementRect(activeSlide, { left: 0, top: 0, width: 800, height: 600 });
+
+    present.click();
+    activeSlide.dispatchEvent(
+      new win.MouseEvent('contextmenu', {
+        bubbles: true,
+        button: 2,
+        cancelable: true,
+      }),
+    );
+    dispatchPointer(win, activeSlide, 'pointerdown', {
+      clientX: 100,
+      clientY: 100,
+    });
+    dispatchPointer(win, win, 'pointerup', { clientX: 100, clientY: 100 });
+
+    dispatchKey(win, 'Shift');
+    const eraserMove = dispatchPointer(win, win, 'pointermove', {
+      clientX: 100,
+      clientY: 100,
+    });
+    const eraserPreview = win.document.querySelector(
+      '[data-slides-eraser-preview]',
+    ) as HTMLElement;
+
+    expect(eraserMove.defaultPrevented).toBe(true);
+    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
+      true,
+    );
+    expect(eraserPreview.hidden).toBe(false);
+    expect(eraserPreview.style.left).toBe('100px');
+    expect(eraserPreview.style.top).toBe('100px');
+
+    dispatchKeyup(win, 'Shift');
+    expect(eraserPreview.hidden).toBe(true);
 
     cleanup?.();
   });
