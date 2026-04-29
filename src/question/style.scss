@@ -142,7 +142,7 @@
 
 .question-multiple-choice-option {
   position: relative;
-  padding: 0.5em calc(var(--question-result-icon-size) + 1em) 0.5em 0.5em;
+  padding: 0.25em calc(var(--question-result-icon-size) + 1em) 0.25em 0.5em;
   cursor: pointer;
   border: 0.125em solid var(--bg2-color);
   border-radius: var(--border-radius);
