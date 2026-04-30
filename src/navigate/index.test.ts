@@ -381,6 +381,22 @@ describe('same-page hash navigation', () => {
     expect(event.defaultPrevented).toBe(true);
     expect(win.location.hash).toBe('');
   });
+  test('scrolls to heading when clicking TOC link on same page', () => {
+    const win = createDOM(
+      '<h2 id="section">Section</h2><p>Content</p><a href="#section">Link</a>',
+      { url: 'http://localhost/page' },
+    );
+    setupGlobals(win);
+
+    const el = win.document.getElementById('section')!;
+    const spy = mock(() => {});
+    el.scrollIntoView = spy;
+
+    mount(win);
+    clickLink(win);
+
+    expect(spy).toHaveBeenCalled();
+  });
 });
 
 describe('cross-page navigation', () => {

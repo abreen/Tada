@@ -79,6 +79,10 @@ export default function mountNavigate(window: Window): () => void {
       closeHeaderDetails(window.document);
       if (url.hash) {
         globals.setLocationHash(window, url.hash);
+        const el = window.document.getElementById(url.hash.slice(1));
+        if (el) {
+          el.scrollIntoView();
+        }
       }
       return;
     }
