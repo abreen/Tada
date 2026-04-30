@@ -14,6 +14,36 @@
   min-height: 0;
 }
 
+.trace-content > .trace-resizer {
+  position: relative;
+  flex: 0 0 16px;
+  width: 100%;
+  margin-block: calc(-0.5 * var(--gap));
+  touch-action: none;
+  cursor: ns-resize;
+
+  &::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 25%;
+    height: 6px;
+    content: '';
+    background: var(--bg2-color);
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::before {
+    outline: 2px solid var(--theme-color);
+    outline-offset: 2px;
+  }
+}
+
 .trace-content > .trace-diagram {
   flex: 1 1 100%;
   min-height: 8rem;

@@ -7,12 +7,20 @@ interface WidgetState {
   currentStep: number;
 }
 
+interface TraceResizeState {
+  sourceHeight: number | null;
+  dragStartY: number | null;
+  dragStartSourceHeight: number;
+}
+
 interface WidgetElements {
   root: HTMLElement;
   sourceWrapper: HTMLElement;
   controls: HTMLElement;
   content: HTMLElement;
   diagram: HTMLElement;
+  resizer: HTMLElement | null;
+  resizeState: TraceResizeState;
 }
 
 function getStep(state: WidgetState): TraceChunkEntry {
@@ -216,6 +224,187 @@ function scaleDiagramSvg(diagram: HTMLElement, doc: Document): void {
   svg.setAttribute('height', String(baseHeight * scale));
 }
 
+function parseCssPixelValue(rawValue: string | null | undefined): number {
+  if (!rawValue || rawValue === 'none') {
+    return 0;
+  }
+
+  const parsed = Number.parseFloat(rawValue);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function elementHeight(element: HTMLElement | null): number {
+  if (!element) {
+    return 0;
+  }
+
+  return element.getBoundingClientRect().height || element.clientHeight;
+}
+
+function getTraceContentGap(content: HTMLElement, doc: Document): number {
+  const view = doc.defaultView;
+  if (!view) {
+    return 0;
+  }
+
+  const styles = view.getComputedStyle(content);
+  return parseCssPixelValue(styles.rowGap || styles.gap);
+}
+
+function getVisibleSourceContentHeight(
+  sourceWrapper: HTMLElement,
+): number | null {
+  const visibleSource = Array.from(
+    sourceWrapper.querySelectorAll('.trace-source'),
+  ).find(source => !(source as HTMLElement).hidden) as HTMLElement | undefined;
+
+  if (!visibleSource) {
+    return null;
+  }
+
+  return visibleSource.scrollHeight > 0 ? visibleSource.scrollHeight : null;
+}
+
+function getResizableSourceBounds(
+  elements: WidgetElements,
+  doc: Document,
+): { min: number; max: number } {
+  const view = doc.defaultView;
+  const sourceStyles = view?.getComputedStyle(elements.sourceWrapper);
+  const diagramStyles = view?.getComputedStyle(elements.diagram);
+  const minSourceHeight = Math.max(
+    0,
+    parseCssPixelValue(sourceStyles?.minHeight),
+  );
+  const minDiagramHeight = Math.max(
+    0,
+    parseCssPixelValue(diagramStyles?.minHeight),
+  );
+  const contentHeight = elementHeight(elements.content);
+  if (contentHeight === 0) {
+    return { min: minSourceHeight, max: Number.POSITIVE_INFINITY };
+  }
+
+  const directChildren = Array.from(elements.content.children).filter(
+    child => !child.hasAttribute('hidden'),
+  ).length;
+  const gapTotal =
+    Math.max(0, directChildren - 1) * getTraceContentGap(elements.content, doc);
+  const output = elements.content.querySelector(
+    ':scope > .trace-output',
+  ) as HTMLElement | null;
+  const fixedHeight = elementHeight(elements.resizer) + elementHeight(output);
+  const layoutMaxSourceHeight =
+    contentHeight - minDiagramHeight - fixedHeight - gapTotal;
+  const contentMaxSourceHeight = getVisibleSourceContentHeight(
+    elements.sourceWrapper,
+  );
+  const maxSourceHeight =
+    contentMaxSourceHeight === null
+      ? layoutMaxSourceHeight
+      : Math.min(layoutMaxSourceHeight, contentMaxSourceHeight);
+
+  return {
+    min: minSourceHeight,
+    max: Math.max(minSourceHeight, maxSourceHeight),
+  };
+}
+
+function applySourceHeight(
+  elements: WidgetElements,
+  doc: Document,
+  nextHeight: number,
+): void {
+  const bounds = getResizableSourceBounds(elements, doc);
+  const sourceHeight = Math.min(Math.max(nextHeight, bounds.min), bounds.max);
+  elements.resizeState.sourceHeight = sourceHeight;
+  elements.sourceWrapper.style.flex = `0 0 ${sourceHeight}px`;
+  elements.sourceWrapper.style.maxHeight = 'none';
+}
+
+function reclampSourceHeight(elements: WidgetElements, doc: Document): void {
+  if (elements.resizeState.sourceHeight === null) {
+    return;
+  }
+
+  applySourceHeight(elements, doc, elements.resizeState.sourceHeight);
+}
+
+function setupTraceResizer(elements: WidgetElements, doc: Document): void {
+  const resizer = elements.resizer;
+  if (!resizer) {
+    return;
+  }
+
+  resizer.addEventListener('pointerdown', (event: PointerEvent) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    elements.resizeState.dragStartY = event.clientY;
+    elements.resizeState.dragStartSourceHeight = elementHeight(
+      elements.sourceWrapper,
+    );
+    resizer.setPointerCapture?.(event.pointerId);
+  });
+
+  resizer.addEventListener('pointermove', (event: PointerEvent) => {
+    const dragStartY = elements.resizeState.dragStartY;
+    if (dragStartY === null) {
+      return;
+    }
+
+    if ((event.buttons & 1) !== 1) {
+      elements.resizeState.dragStartY = null;
+      resizer.releasePointerCapture?.(event.pointerId);
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const deltaY = event.clientY - dragStartY;
+    applySourceHeight(
+      elements,
+      doc,
+      elements.resizeState.dragStartSourceHeight - deltaY,
+    );
+  });
+
+  const endDrag = (event: PointerEvent): void => {
+    if (elements.resizeState.dragStartY === null) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    elements.resizeState.dragStartY = null;
+    resizer.releasePointerCapture?.(event.pointerId);
+  };
+
+  resizer.addEventListener('pointerup', endDrag);
+  resizer.addEventListener('pointercancel', endDrag);
+  resizer.addEventListener('click', (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+
+  resizer.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+      return;
+    }
+
+    event.preventDefault();
+    const currentHeight =
+      elements.resizeState.sourceHeight ??
+      elementHeight(elements.sourceWrapper);
+    const step = event.shiftKey ? 40 : 10;
+    const direction = event.key === 'ArrowUp' ? 1 : -1;
+    applySourceHeight(elements, doc, currentHeight + direction * step);
+  });
+}
+
 function updateOutput(
   content: HTMLElement,
   output: TraceOutputEvent[],
@@ -273,6 +462,7 @@ function renderWidgetState(
     output.push(...(s.output ?? []));
   }
   updateOutput(elements.content, output, doc);
+  reclampSourceHeight(elements, doc);
 
   const prevHeight = elements.diagram.scrollHeight;
   elements.diagram.innerHTML = entry.svg;
@@ -311,6 +501,7 @@ async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
   ) as HTMLElement;
   const content = root.querySelector('.trace-content') as HTMLElement;
   const diagram = root.querySelector('.trace-diagram') as HTMLElement;
+  const resizer = root.querySelector('.trace-resizer') as HTMLElement | null;
 
   const controls = root.querySelector('.trace-controls') as HTMLElement;
   const firstBtn = controls.querySelector('.trace-first') as HTMLButtonElement;
@@ -358,8 +549,15 @@ async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
     controls,
     content,
     diagram,
+    resizer,
+    resizeState: {
+      sourceHeight: null,
+      dragStartY: null,
+      dragStartSourceHeight: 0,
+    },
   };
 
+  setupTraceResizer(elements, doc);
   renderWidgetState(state, elements, doc);
 }
 

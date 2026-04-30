@@ -65,6 +65,7 @@ function widgetHtml(
     '</div>' +
     '<div class="trace-content">' +
     '<div class="trace-diagram"></div>' +
+    '<div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0"></div>' +
     '<div class="trace-source-wrapper">' +
     '<div class="trace-source" data-trace-source-file="Main.java">' +
     '<pre>' +
@@ -82,6 +83,32 @@ function widgetHtml(
 function createWindow(html: string) {
   const dom = new JSDOM(`<body>${html}</body>`, { url: 'http://localhost/' });
   return dom.window;
+}
+
+function setElementHeight(element: HTMLElement, height: number): void {
+  Object.defineProperty(element, 'clientHeight', {
+    configurable: true,
+    value: height,
+  });
+  element.getBoundingClientRect = () =>
+    ({
+      bottom: height,
+      height,
+      left: 0,
+      right: 0,
+      top: 0,
+      width: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }) as DOMRect;
+}
+
+function setElementScrollHeight(element: HTMLElement, height: number): void {
+  Object.defineProperty(element, 'scrollHeight', {
+    configurable: true,
+    value: height,
+  });
 }
 
 function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
@@ -288,6 +315,183 @@ describe('trace', () => {
     expect(diagram.innerHTML).toBe('<svg>step0</svg>');
   });
 
+  test('resizer exposes horizontal separator semantics', async () => {
+    setupDefaultFetch();
+    const win = createWindow(widgetHtml());
+    mount(win);
+    await flush();
+
+    const resizer = win.document.querySelector('.trace-resizer');
+    expect(resizer).not.toBeNull();
+    expect(resizer!.getAttribute('role')).toBe('separator');
+    expect(resizer!.getAttribute('aria-orientation')).toBe('horizontal');
+    expect(resizer!.getAttribute('tabindex')).toBe('0');
+  });
+
+  test('dragging resizer upward increases the source pane height', async () => {
+    setupDefaultFetch();
+    const win = createWindow(widgetHtml());
+    const content = win.document.querySelector('.trace-content') as HTMLElement;
+    const diagram = win.document.querySelector('.trace-diagram') as HTMLElement;
+    const resizer = win.document.querySelector('.trace-resizer') as HTMLElement;
+    const sourceWrapper = win.document.querySelector(
+      '.trace-source-wrapper',
+    ) as HTMLElement;
+    setElementHeight(content, 500);
+    setElementHeight(diagram, 250);
+    setElementHeight(resizer, 20);
+    setElementHeight(sourceWrapper, 80);
+
+    mount(win);
+    await flush();
+
+    resizer.dispatchEvent(
+      new win.MouseEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        clientY: 200,
+      }),
+    );
+    resizer.dispatchEvent(
+      new win.MouseEvent('pointermove', {
+        bubbles: true,
+        buttons: 1,
+        clientY: 170,
+      }),
+    );
+
+    expect(sourceWrapper.style.flex).toBe('0 0 110px');
+    expect(sourceWrapper.style.maxHeight).toBe('none');
+  });
+
+  test('resizing source pane clamps to the visible source content height', async () => {
+    setupDefaultFetch();
+    const win = createWindow(widgetHtml());
+    const content = win.document.querySelector('.trace-content') as HTMLElement;
+    const diagram = win.document.querySelector('.trace-diagram') as HTMLElement;
+    const resizer = win.document.querySelector('.trace-resizer') as HTMLElement;
+    const sourceWrapper = win.document.querySelector(
+      '.trace-source-wrapper',
+    ) as HTMLElement;
+    const source = win.document.querySelector('.trace-source') as HTMLElement;
+    sourceWrapper.style.minHeight = '50px';
+    setElementHeight(content, 500);
+    setElementHeight(diagram, 250);
+    setElementHeight(resizer, 16);
+    setElementHeight(sourceWrapper, 80);
+    setElementScrollHeight(source, 120);
+
+    mount(win);
+    await flush();
+
+    resizer.dispatchEvent(
+      new win.MouseEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        clientY: 200,
+      }),
+    );
+    resizer.dispatchEvent(
+      new win.MouseEvent('pointermove', {
+        bubbles: true,
+        buttons: 1,
+        clientY: 80,
+      }),
+    );
+
+    expect(sourceWrapper.style.flex).toBe('0 0 120px');
+  });
+
+  test('resizer clears stale drag state when pointer buttons are released elsewhere', async () => {
+    setupDefaultFetch();
+    const win = createWindow(widgetHtml());
+    const content = win.document.querySelector('.trace-content') as HTMLElement;
+    const diagram = win.document.querySelector('.trace-diagram') as HTMLElement;
+    const resizer = win.document.querySelector('.trace-resizer') as HTMLElement;
+    const sourceWrapper = win.document.querySelector(
+      '.trace-source-wrapper',
+    ) as HTMLElement;
+    setElementHeight(content, 500);
+    setElementHeight(diagram, 250);
+    setElementHeight(resizer, 16);
+    setElementHeight(sourceWrapper, 80);
+
+    mount(win);
+    await flush();
+
+    resizer.dispatchEvent(
+      new win.MouseEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        clientY: 200,
+      }),
+    );
+    resizer.dispatchEvent(
+      new win.MouseEvent('pointermove', {
+        bubbles: true,
+        buttons: 0,
+        clientY: 170,
+      }),
+    );
+    resizer.dispatchEvent(
+      new win.MouseEvent('pointermove', {
+        bubbles: true,
+        buttons: 1,
+        clientY: 140,
+      }),
+    );
+
+    expect(sourceWrapper.style.flex).toBe('');
+  });
+
+  test('resizer click does not bubble to parent containers', async () => {
+    setupDefaultFetch();
+    const win = createWindow(widgetHtml());
+    const content = win.document.querySelector('.trace-content') as HTMLElement;
+    const resizer = win.document.querySelector('.trace-resizer') as HTMLElement;
+    let contentClicks = 0;
+    content.addEventListener('click', () => {
+      contentClicks += 1;
+    });
+
+    mount(win);
+    await flush();
+
+    resizer.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+
+    expect(contentClicks).toBe(0);
+  });
+
+  test('keyboard resizing clamps source height to leave diagram space', async () => {
+    setupDefaultFetch();
+    const win = createWindow(widgetHtml());
+    const content = win.document.querySelector('.trace-content') as HTMLElement;
+    const diagram = win.document.querySelector('.trace-diagram') as HTMLElement;
+    const resizer = win.document.querySelector('.trace-resizer') as HTMLElement;
+    const sourceWrapper = win.document.querySelector(
+      '.trace-source-wrapper',
+    ) as HTMLElement;
+    diagram.style.minHeight = '128px';
+    sourceWrapper.style.minHeight = '50px';
+    setElementHeight(content, 200);
+    setElementHeight(diagram, 100);
+    setElementHeight(resizer, 20);
+    setElementHeight(sourceWrapper, 80);
+
+    mount(win);
+    await flush();
+
+    resizer.dispatchEvent(
+      new win.KeyboardEvent('keydown', {
+        bubbles: true,
+        key: 'ArrowUp',
+        shiftKey: true,
+      }),
+    );
+
+    expect(sourceWrapper.style.flex).toBe('0 0 52px');
+  });
+
   test('scales the current trace SVG from the slides scale when presentation mode starts and restores it on exit', async () => {
     const chunk = makeChunk([
       {
@@ -477,6 +681,7 @@ describe('trace', () => {
         </div>
         <div class="trace-content">
           <div class="trace-diagram"></div>
+          <div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0"></div>
           <div class="trace-source-wrapper">
             <div class="trace-source" data-trace-source-file="Main.java">
               <pre><span class="code-row"><span class="line-number" data-line="1">1</span><code>main</code></span></pre>

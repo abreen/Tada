@@ -33,7 +33,7 @@ function isInteractive(
     target instanceof view.Element ? target : target.parentElement;
   return Boolean(
     element?.closest(
-      'a, button, input, select, textarea, summary, label, [role="button"], [contenteditable=""], [contenteditable="true"]',
+      'a, button, input, select, textarea, summary, label, [role="button"], [role="separator"], [contenteditable=""], [contenteditable="true"]',
     ),
   );
 }

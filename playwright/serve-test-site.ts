@@ -126,6 +126,7 @@ slides: true
     </div>
     <div class="trace-content">
       <div class="trace-diagram"></div>
+      <div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0"></div>
       <div class="trace-source-wrapper">
         <div class="trace-source" data-trace-source-file="slides-trace.java">
           <pre><span class="code-row trace-line-active"><span class="line-number" data-line="1">1</span><code>trace demo</code></span></pre>
@@ -174,6 +175,7 @@ slides: true
     </div>
     <div class="trace-content">
       <div class="trace-diagram"></div>
+      <div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0"></div>
       <div class="trace-source-wrapper">
         <div class="trace-source" data-trace-source-file="slides-reset-trace.java">
           <pre><span class="code-row trace-line-active"><span class="line-number" data-line="1">1</span><code>trace reset demo</code></span>

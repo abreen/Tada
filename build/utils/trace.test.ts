@@ -650,6 +650,25 @@ public class Demo {
     expect(html).not.toContain('trace-output');
   });
 
+  test('rendered widget includes a resize handle between diagram and source', () => {
+    const html = renderTraceWidgetHtml({
+      highlightedSources: [
+        { file: 'Test.java', highlightedSource: '<pre>class Test {}</pre>' },
+      ],
+      manifestUrl: '/_traces/Test/manifest.json',
+      totalSteps: 1,
+    });
+
+    expect(html).toContain('class="trace-resizer"');
+    expect(html).toContain('role="separator"');
+    expect(html.indexOf('class="trace-diagram"')).toBeLessThan(
+      html.indexOf('class="trace-resizer"'),
+    );
+    expect(html.indexOf('class="trace-resizer"')).toBeLessThan(
+      html.indexOf('class="trace-source-wrapper"'),
+    );
+  });
+
   test('rendered widget disables controls until the client mounts', () => {
     const html = renderTraceWidgetHtml({
       highlightedSources: [

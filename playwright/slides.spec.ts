@@ -143,6 +143,15 @@ test.describe('slides presentation mode', () => {
         ),
       )
       .toBe(true);
+
+    const traceResizer = activeSlide.locator('.trace-resizer');
+    await expect(traceResizer).toBeVisible();
+    await expect(traceResizer).toHaveAttribute('role', 'separator');
+    await expect(traceResizer).toHaveAttribute(
+      'aria-orientation',
+      'horizontal',
+    );
+
     const traceLayout = await activeSlide
       .locator('.trace-body')
       .evaluate(traceBody => {

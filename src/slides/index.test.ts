@@ -553,6 +553,46 @@ describe('slides presentation controller', () => {
     cleanup?.();
   });
 
+  test('clicking a trace resizer does not advance slides', () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+
+    const present = win.document.querySelector(
+      '[data-slides-present]',
+    ) as HTMLButtonElement;
+    const traceNext = win.document.querySelector(
+      '.trace-next',
+    ) as HTMLButtonElement;
+    const tracePrev = win.document.querySelector(
+      '.trace-prev',
+    ) as HTMLButtonElement;
+    let nextClicks = 0;
+
+    traceNext.addEventListener('click', () => {
+      nextClicks += 1;
+    });
+    traceNext.disabled = true;
+    tracePrev.disabled = true;
+
+    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
+    const resizer = win.document.createElement('div');
+    resizer.className = 'trace-resizer';
+    resizer.setAttribute('role', 'separator');
+    activeSlide.append(resizer);
+
+    present.click();
+    resizer.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+
+    expect(nextClicks).toBe(0);
+    expect(
+      win.document
+        .querySelector('.slide.is-active')
+        ?.getAttribute('data-slide-index'),
+    ).toBe('0');
+
+    cleanup?.();
+  });
+
   test('clicking the slide deck outside the capped slide advances', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
