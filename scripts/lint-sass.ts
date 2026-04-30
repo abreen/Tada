@@ -6,7 +6,6 @@ import type { SiteVariables } from '../build/types';
 
 const packageDir = getPackageDir();
 const configFile = path.join(packageDir, 'stylelint.config.mjs');
-const templatePath = path.join(packageDir, 'templates/_theme.scss');
 const fix = process.argv.includes('--fix');
 const stylelintArgs = [
   'stylelint',
@@ -34,12 +33,12 @@ const lintThemeSiteVariables: SiteVariables = {
   tintAmount: 100,
 };
 
-async function runStylelint(args: string[], input?: string): Promise<number> {
+async function runStylelint(args: string[]): Promise<number> {
   const proc = Bun.spawn({
     cmd: ['bunx', ...stylelintArgs, ...args],
     cwd: packageDir,
     env: process.env,
-    stdin: input ? new TextEncoder().encode(input) : 'ignore',
+    stdin: 'ignore',
     stdout: 'inherit',
     stderr: 'inherit',
   });
@@ -56,11 +55,7 @@ async function main() {
 
     themeDir = renderThemeScss(lintThemeSiteVariables);
     const renderedThemePath = path.join(themeDir, 'config/_theme.scss');
-    const renderedTheme = fs.readFileSync(renderedThemePath, 'utf-8');
-    exitCode ||= await runStylelint(
-      ['--stdin', '--stdin-filename', templatePath],
-      renderedTheme,
-    );
+    exitCode ||= await runStylelint([renderedThemePath]);
   } finally {
     if (themeDir) {
       fs.rmSync(themeDir, { recursive: true, force: true });
