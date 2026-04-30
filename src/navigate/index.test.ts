@@ -341,6 +341,26 @@ describe('same-page hash navigation', () => {
     expect(setLocationHash).toHaveBeenCalledWith(win, '#section');
   });
 
+  test('does not manually scroll when changing same-page hash', () => {
+    const win = createDOM(
+      '<h2 id="section">Section</h2><a href="http://localhost/page#section">Link</a>',
+      { url: 'http://localhost/page' },
+    );
+    setupGlobals(win);
+    const section = win.document.getElementById('section')!;
+    const scrollIntoView = mock(() => {});
+    Object.defineProperty(section, 'scrollIntoView', {
+      value: scrollIntoView,
+      configurable: true,
+    });
+
+    mount(win);
+    clickLink(win);
+
+    expect(win.location.hash).toBe('#section');
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
   test('clears search input', () => {
     const win = createDOM('<a href="http://localhost/#section">Link</a>', {
       searchValue: 'hello',
@@ -381,16 +401,57 @@ describe('same-page hash navigation', () => {
     expect(event.defaultPrevented).toBe(true);
     expect(win.location.hash).toBe('');
   });
-  test('scrolls to heading when clicking TOC link on same page', () => {
+
+  test('scrolls to heading when clicking the current same-page hash', () => {
     const win = createDOM(
       '<h2 id="section">Section</h2><p>Content</p><a href="#section">Link</a>',
-      { url: 'http://localhost/page' },
+      { url: 'http://localhost/page#section' },
     );
     setupGlobals(win);
 
     const el = win.document.getElementById('section')!;
     const spy = mock(() => {});
     el.scrollIntoView = spy;
+
+    mount(win);
+    clickLink(win);
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('scrolls to heading with decoded hash when clicking current hash', () => {
+    const win = createDOM(
+      '<h2 id="hello world">Hello World</h2><a href="#hello%20world">Link</a>',
+      { url: 'http://localhost/page#hello%20world' },
+    );
+    setupGlobals(win);
+
+    const el = win.document.getElementById('hello world')!;
+    const spy = mock(() => {});
+    Object.defineProperty(el, 'scrollIntoView', {
+      value: spy,
+      configurable: true,
+    });
+
+    mount(win);
+    clickLink(win);
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('scrolls to heading whose generated id contains percent encoding', () => {
+    const win = createDOM(
+      '<h2 id="caf%C3%A9">Cafe</h2><a href="#caf%C3%A9">Link</a>',
+      { url: 'http://localhost/page#caf%C3%A9' },
+    );
+    setupGlobals(win);
+
+    const el = win.document.getElementById('caf%C3%A9')!;
+    const spy = mock(() => {});
+    Object.defineProperty(el, 'scrollIntoView', {
+      value: spy,
+      configurable: true,
+    });
 
     mount(win);
     clickLink(win);
@@ -874,6 +935,26 @@ describe('popstate handling', () => {
     });
 
     win.history.pushState({ navIndex: 999 }, '', '/page#section');
+    dispatchPopState(win, { navIndex: 999 });
+
+    expect(scrollIntoViewMock).toHaveBeenCalled();
+  });
+
+  test('same-page popstate scrolls to element with decoded hash', () => {
+    const win = createDOM('<div id="hello world">Content</div>', {
+      url: 'http://localhost/page',
+    });
+    setupGlobals(win);
+    mount(win);
+
+    const section = win.document.getElementById('hello world')!;
+    const scrollIntoViewMock = mock(() => {});
+    Object.defineProperty(section, 'scrollIntoView', {
+      value: scrollIntoViewMock,
+      configurable: true,
+    });
+
+    win.history.pushState({ navIndex: 999 }, '', '/page#hello%20world');
     dispatchPopState(win, { navIndex: 999 });
 
     expect(scrollIntoViewMock).toHaveBeenCalled();

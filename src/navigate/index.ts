@@ -13,6 +13,7 @@ import {
   setHistoryIndex,
 } from './runtime';
 import { globals } from '../globals';
+import { getHashTarget } from '../hash-target';
 
 function findAnchor(event: MouseEvent): HTMLAnchorElement | null {
   const target = event.target as HTMLElement | null;
@@ -78,10 +79,10 @@ export default function mountNavigate(window: Window): () => void {
       clearSearch(window.document);
       closeHeaderDetails(window.document);
       if (url.hash) {
-        globals.setLocationHash(window, url.hash);
-        const el = window.document.getElementById(url.hash.slice(1));
-        if (el) {
-          el.scrollIntoView();
+        if (url.hash === window.location.hash) {
+          getHashTarget(window.document, url.hash)?.scrollIntoView();
+        } else {
+          globals.setLocationHash(window, url.hash);
         }
       }
       return;
@@ -116,12 +117,8 @@ export default function mountNavigate(window: Window): () => void {
       }
 
       // Same page, different hash: fall back to the fragment target
-      const hash = window.location.hash.slice(1);
-      if (hash) {
-        const el = window.document.getElementById(hash);
-        if (el) {
-          el.scrollIntoView();
-        }
+      if (window.location.hash) {
+        getHashTarget(window.document, window.location.hash)?.scrollIntoView();
       } else {
         window.scrollTo({ top: 0 });
       }

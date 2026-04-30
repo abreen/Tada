@@ -21,6 +21,7 @@ import mountTop from './top';
 import mountNavigate from './navigate';
 import mountPageUpdate from './page-update';
 import { mountPerPageComponents } from './navigate/lifecycle';
+import { getHashTarget } from './hash-target';
 
 import { scheduleTask, formatDuration } from './util';
 
@@ -68,11 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // finished mutating the DOM. On a fresh cold load the browser already
   // scrolled, so this is a harmless re-align.
   if (window.location.hash) {
-    const id = window.location.hash.slice(1);
-    const el = window.document.getElementById(id);
-    if (el) {
-      el.scrollIntoView();
-    }
+    getHashTarget(window.document, window.location.hash)?.scrollIntoView();
   }
 
   for (const [name, reason] of Object.entries(failed)) {
