@@ -43,6 +43,13 @@ Functional tests are CPU intensive and may take over 2 minutes, even on powerful
 - In `src/`, dunder variables like `__IS_DEV__` and `__SITE_BASE_PATH__` are replaced at build time; they are the only exception to the globals rule
 - The dunder variables are initialized for unit tests in `test/unit-test-preload.ts`; tests can set them on `globalThis` when needed
 
+## Playwright test rules
+
+- Use Playwright for real browser behavior: navigation, scrolling, focus, fullscreen, pointer and keyboard input, visibility, accessibility state, browser APIs, and cursor changes tied to interaction modes
+- Do not use Playwright to lock down incidental styling like exact colors, borders, shadows, fonts, pixel-perfect dimensions, screenshots, or decorative CSS
+- Geometry checks are allowed only when geometry is the behavior under test, such as scroll restoration or target-in-viewport checks, and should use broad user-observable outcomes
+- Prefer role, text, URL, DOM state, accessibility attributes, and interaction outcomes over computed styles or style-only classes
+
 ## Code style/formatting
 
 The pre-commit hook runs the code formatter. Do not run formatting commands manually.

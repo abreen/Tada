@@ -1,4 +1,54 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
+
+async function cursorFor(locator: Locator) {
+  return locator.evaluate(
+    (node: HTMLElement) => window.getComputedStyle(node).cursor,
+  );
+}
+
+async function nonTransparentPixels(locator: Locator) {
+  return locator.evaluate((canvas: HTMLCanvasElement) => {
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return 0;
+    }
+
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    let count = 0;
+    for (let i = 3; i < data.length; i += 4) {
+      if ((data[i] ?? 0) > 0) {
+        count += 1;
+      }
+    }
+    return count;
+  });
+}
+
+async function nonTransparentPixelsInRect(
+  locator: Locator,
+  rect: { x: number; y: number; width: number; height: number },
+) {
+  return locator.evaluate((canvas: HTMLCanvasElement, rect) => {
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return 0;
+    }
+
+    const dpr = canvas.width / window.innerWidth;
+    const x = Math.max(0, Math.floor(rect.x * dpr));
+    const y = Math.max(0, Math.floor(rect.y * dpr));
+    const width = Math.max(1, Math.floor(rect.width * dpr));
+    const height = Math.max(1, Math.floor(rect.height * dpr));
+    const { data } = context.getImageData(x, y, width, height);
+    let count = 0;
+    for (let i = 3; i < data.length; i += 4) {
+      if ((data[i] ?? 0) > 0) {
+        count += 1;
+      }
+    }
+    return count;
+  }, rect);
+}
 
 test.describe('slides presentation mode', () => {
   test('Full screen checkbox can be toggled', async ({ page }) => {
@@ -15,9 +65,7 @@ test.describe('slides presentation mode', () => {
     await expect(checkbox).toBeChecked();
   });
 
-  test('presentation mode caps slide width and supports browser interactions', async ({
-    page,
-  }) => {
+  test('presentation mode supports browser interactions', async ({ page }) => {
     await page.goto('/slides.html');
     await page.addStyleTag({
       content:
@@ -29,7 +77,6 @@ test.describe('slides presentation mode', () => {
 
     const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
     const closeButton = page.locator('[data-slides-close]');
-    const overlay = page.locator('[data-slides-overlay]');
     const traceSlide = page
       .locator('main.body .slide-deck .slide')
       .filter({ hasText: 'End' });
@@ -38,53 +85,6 @@ test.describe('slides presentation mode', () => {
     await expect(traceSlide).toBeHidden();
     await expect(page.locator('[data-slides-counter]')).toHaveCount(0);
     await expect(closeButton).toBeHidden();
-
-    const metrics = await activeSlide.evaluate(slide => {
-      const deck = slide.closest('.slide-deck') as HTMLElement;
-      const style = window.getComputedStyle(slide);
-      const rect = slide.getBoundingClientRect();
-      const deckRect = deck.getBoundingClientRect();
-
-      return {
-        position: style.position,
-        overflowY: style.overflowY,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-        deckWidth: deckRect.width,
-        deckHeight: deckRect.height,
-        innerWidth: window.innerWidth,
-        innerHeight: window.innerHeight,
-      };
-    });
-
-    expect(metrics.position).toBe('fixed');
-    expect(metrics.deckWidth).toBe(metrics.innerWidth);
-    expect(metrics.deckHeight).toBe(metrics.innerHeight);
-    expect(metrics.overflowY).toBe('auto');
-    expect(metrics.top).toBe(0);
-    expect(metrics.width).toBeLessThan(metrics.innerWidth);
-    expect(metrics.width).toBeLessThanOrEqual(metrics.innerWidth);
-    expect(metrics.height).toBe(metrics.innerHeight);
-    expect(metrics.width).toBeLessThan(metrics.innerWidth - 8);
-
-    const overlayStyles = await overlay.evaluate(node => {
-      const style = window.getComputedStyle(node);
-      return {
-        backgroundColor: style.backgroundColor,
-        boxShadow: style.boxShadow,
-        borderRadius: style.borderRadius,
-      };
-    });
-    const activeSlideStyles = await activeSlide.evaluate(slide => {
-      const style = window.getComputedStyle(slide);
-      return { userSelect: style.userSelect };
-    });
-
-    expect(overlayStyles.backgroundColor).toBe('rgba(0, 0, 0, 0)');
-    expect(overlayStyles.boxShadow).toBe('none');
-    expect(overlayStyles.borderRadius).toBe('0px');
-    expect(activeSlideStyles.userSelect).toBe('none');
 
     const revealBottom = await closeButton.evaluate(button => {
       const overlay = button.closest('[data-slides-overlay]') as HTMLElement;
@@ -101,6 +101,7 @@ test.describe('slides presentation mode', () => {
 
       return bottom;
     });
+    const viewport = page.viewportSize() ?? { width: 1280, height: 720 };
 
     await page.mouse.move(100, revealBottom + 40);
     await expect(closeButton).toBeHidden();
@@ -108,8 +109,10 @@ test.describe('slides presentation mode', () => {
     await page.mouse.move(100, Math.max(1, revealBottom - 1));
     await expect(closeButton).toBeVisible();
 
-    const sideGutterX = (metrics.innerWidth - metrics.width) / 4;
-    await page.mouse.click(sideGutterX, metrics.innerHeight - 24);
+    const activeSlideBox = await activeSlide.boundingBox();
+    const deckClickX =
+      activeSlideBox && activeSlideBox.x > 2 ? activeSlideBox.x / 2 : 20;
+    await page.mouse.click(deckClickX, viewport.height - 24);
     await expect(activeSlide).toContainText('Middle');
     await expect(closeButton).toBeHidden();
     await expect
@@ -152,25 +155,6 @@ test.describe('slides presentation mode', () => {
       'horizontal',
     );
 
-    const traceLayout = await activeSlide
-      .locator('.trace-body')
-      .evaluate(traceBody => {
-        const slide = traceBody.closest('.slide') as HTMLElement;
-        const slideStyle = window.getComputedStyle(slide);
-        const slideRect = slide.getBoundingClientRect();
-        const traceRect = traceBody.getBoundingClientRect();
-        const paddingBottom = Number.parseFloat(slideStyle.paddingBottom);
-
-        return {
-          traceBottom: traceRect.bottom,
-          contentBottom: slideRect.bottom - paddingBottom,
-        };
-      });
-
-    expect(traceLayout.traceBottom).toBeLessThanOrEqual(
-      traceLayout.contentBottom + 1,
-    );
-
     await page.locator('.question-a-body').click();
     await expect(closeButton).toBeHidden();
     await expect(page.locator('.question-a-body')).toHaveAttribute(
@@ -196,41 +180,24 @@ test.describe('slides presentation mode', () => {
     expect(await page.evaluate(() => window.location.hash)).toBe('');
   });
 
-  test('presentation content scales down on small viewports', async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1200, height: 800 });
+  test('presentation remains operable on small viewports', async ({ page }) => {
+    await page.setViewportSize({ width: 420, height: 360 });
     await page.goto('/slides.html');
 
     await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
     await page.getByRole('button', { name: 'Present', exact: true }).click();
 
     const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
-    const largeFontSize = await activeSlide.evaluate(slide =>
-      Number.parseFloat(window.getComputedStyle(slide).fontSize),
-    );
-    expect(largeFontSize).toBeCloseTo(24, 1);
-
-    await page.setViewportSize({ width: 420, height: 360 });
-
-    const smallMetrics = await activeSlide.evaluate(slide => {
-      const style = window.getComputedStyle(slide);
-      const rect = slide.getBoundingClientRect();
-
-      return {
-        fontSize: Number.parseFloat(style.fontSize),
-        width: rect.width,
-        height: rect.height,
-        innerWidth: window.innerWidth,
-        innerHeight: window.innerHeight,
-      };
-    });
-
-    expect(smallMetrics.fontSize).toBeLessThan(largeFontSize);
-    expect(smallMetrics.width).toBeLessThanOrEqual(smallMetrics.innerWidth);
-    expect(smallMetrics.height).toBe(smallMetrics.innerHeight);
+    await expect(activeSlide).toContainText('Intro');
+    await page.keyboard.press('ArrowRight');
+    await expect(activeSlide).toContainText('Middle');
 
     await page.keyboard.press('Escape');
+    await expect
+      .poll(async () =>
+        page.evaluate(() => document.body.classList.contains('is-presenting')),
+      )
+      .toBe(false);
   });
 
   test('presentation annotations draw and persist per slide', async ({
@@ -264,92 +231,18 @@ test.describe('slides presentation mode', () => {
       )
       .toBe(true);
 
-    const penCursor = await deck.evaluate(
-      node => window.getComputedStyle(node).cursor,
-    );
+    const penCursor = await cursorFor(deck);
     expect(penCursor).toContain('data:image/svg+xml');
 
     const introCanvas = page.locator(
       '[data-slides-annotations][data-slide-index="0"]',
     );
-    const violetPixels = async () =>
-      introCanvas.evaluate(canvas => {
-        const annotationCanvas = canvas as HTMLCanvasElement;
-        const context = annotationCanvas.getContext('2d');
-        if (!context) {
-          return 0;
-        }
-
-        const { data } = context.getImageData(
-          0,
-          0,
-          annotationCanvas.width,
-          annotationCanvas.height,
-        );
-        let count = 0;
-
-        for (let i = 0; i < data.length; i += 4) {
-          const red = data[i] ?? 0;
-          const green = data[i + 1] ?? 0;
-          const blue = data[i + 2] ?? 0;
-          const alpha = data[i + 3] ?? 0;
-
-          if (
-            alpha > 0 &&
-            Math.abs(red - 138) < 24 &&
-            Math.abs(green - 43) < 24 &&
-            Math.abs(blue - 226) < 24
-          ) {
-            count += 1;
-          }
-        }
-
-        return count;
-      });
-    const violetPixelsInRect = async (rect: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    }) =>
-      introCanvas.evaluate((canvas, rect) => {
-        const annotationCanvas = canvas as HTMLCanvasElement;
-        const context = annotationCanvas.getContext('2d');
-        if (!context) {
-          return 0;
-        }
-
-        const dpr = annotationCanvas.width / window.innerWidth;
-        const x = Math.max(0, Math.floor(rect.x * dpr));
-        const y = Math.max(0, Math.floor(rect.y * dpr));
-        const width = Math.max(1, Math.floor(rect.width * dpr));
-        const height = Math.max(1, Math.floor(rect.height * dpr));
-        const { data } = context.getImageData(x, y, width, height);
-        let count = 0;
-
-        for (let i = 0; i < data.length; i += 4) {
-          const red = data[i] ?? 0;
-          const green = data[i + 1] ?? 0;
-          const blue = data[i + 2] ?? 0;
-          const alpha = data[i + 3] ?? 0;
-
-          if (
-            alpha > 0 &&
-            Math.abs(red - 138) < 24 &&
-            Math.abs(green - 43) < 24 &&
-            Math.abs(blue - 226) < 24
-          ) {
-            count += 1;
-          }
-        }
-
-        return count;
-      }, rect);
+    const paintedPixels = () => nonTransparentPixels(introCanvas);
 
     await page.mouse.click(marginX, marginY);
     await expect
       .poll(() =>
-        violetPixelsInRect({
+        nonTransparentPixelsInRect(introCanvas, {
           x: marginX - 4,
           y: marginY - 4,
           width: 8,
@@ -363,7 +256,7 @@ test.describe('slides presentation mode', () => {
     await page.mouse.move(marginX + 120, marginY + 80, { steps: 8 });
     await page.mouse.up();
 
-    await expect.poll(violetPixels).toBeGreaterThan(0);
+    await expect.poll(paintedPixels).toBeGreaterThan(0);
     await page.mouse.move(marginX + 24, marginY + 260);
     await page.mouse.down();
     await page.mouse.move(marginX + 72, marginY + 260, { steps: 3 });
@@ -372,7 +265,7 @@ test.describe('slides presentation mode', () => {
     await page.mouse.move(marginX + 120, marginY + 360, { steps: 3 });
     await page.mouse.up();
     expect(
-      await violetPixelsInRect({
+      await nonTransparentPixelsInRect(introCanvas, {
         x: marginX + 62,
         y: marginY + 292,
         width: 20,
@@ -380,7 +273,7 @@ test.describe('slides presentation mode', () => {
       }),
     ).toBe(0);
 
-    const pixelsBeforeErase = await violetPixels();
+    const pixelsBeforeErase = await paintedPixels();
 
     await page.keyboard.down('Shift');
     await expect
@@ -391,36 +284,13 @@ test.describe('slides presentation mode', () => {
       )
       .toBe(true);
 
-    const eraserCursor = await deck.evaluate(
-      node => window.getComputedStyle(node).cursor,
-    );
+    const eraserCursor = await cursorFor(deck);
     expect(eraserCursor).toContain('data:image/svg+xml');
     expect(eraserCursor).not.toBe(penCursor);
 
     await page.mouse.move(marginX + 40, marginY + 24);
     const eraserPreview = page.locator('[data-slides-eraser-preview]');
     await expect(eraserPreview).toBeVisible();
-    const previewStyle = await eraserPreview.evaluate(node => {
-      const style = window.getComputedStyle(node);
-      const rect = node.getBoundingClientRect();
-
-      return {
-        backgroundColor: style.backgroundColor,
-        borderRadius: style.borderRadius,
-        borderTopColor: style.borderTopColor,
-        borderTopStyle: style.borderTopStyle,
-        borderTopWidth: Number.parseFloat(style.borderTopWidth),
-        height: rect.height,
-        width: rect.width,
-      };
-    });
-    expect(previewStyle.backgroundColor).toBe('rgba(0, 0, 0, 0)');
-    expect(previewStyle.borderTopStyle).toBe('solid');
-    expect(previewStyle.borderTopWidth).toBeGreaterThan(0);
-    expect(previewStyle.borderTopColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(previewStyle.borderRadius).not.toBe('0px');
-    expect(previewStyle.width).toBeGreaterThan(0);
-    expect(previewStyle.height).toBe(previewStyle.width);
 
     await page.mouse.move(marginX + 100, marginY + 64, { steps: 6 });
     await page.keyboard.up('Shift');
@@ -433,7 +303,7 @@ test.describe('slides presentation mode', () => {
       .toBe(false);
     await expect(eraserPreview).toBeHidden();
 
-    expect(await violetPixels()).toBeLessThan(pixelsBeforeErase);
+    expect(await paintedPixels()).toBeLessThan(pixelsBeforeErase);
 
     await activeSlide.click();
     await expect(activeSlide).toContainText('Intro');
@@ -448,7 +318,7 @@ test.describe('slides presentation mode', () => {
     await page.keyboard.press('ArrowLeft');
     await expect(activeSlide).toContainText('Intro');
     await expect(introCanvas).toBeVisible();
-    await expect.poll(violetPixels).toBeGreaterThan(0);
+    await expect.poll(paintedPixels).toBeGreaterThan(0);
     const canvasWidthBeforeResize = await introCanvas.evaluate(
       canvas => (canvas as HTMLCanvasElement).width,
     );
@@ -459,7 +329,7 @@ test.describe('slides presentation mode', () => {
         introCanvas.evaluate(canvas => (canvas as HTMLCanvasElement).width),
       )
       .toBeGreaterThan(canvasWidthBeforeResize);
-    await expect.poll(violetPixels).toBeGreaterThan(0);
+    await expect.poll(paintedPixels).toBeGreaterThan(0);
 
     await page.mouse.click(marginX, marginY, { button: 'right' });
     await expect
@@ -477,7 +347,7 @@ test.describe('slides presentation mode', () => {
     await expect(page.locator('[data-slides-annotations]')).toHaveCount(0);
   });
 
-  test('presentation annotation cursors use dark mode strokes', async ({
+  test('presentation annotation cursors work in dark mode', async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
@@ -489,18 +359,13 @@ test.describe('slides presentation mode', () => {
     const deck = page.locator('main.body .slide-deck');
     await page.mouse.click(80, 120, { button: 'right' });
 
-    const penCursor = decodeURIComponent(
-      await deck.evaluate(node => window.getComputedStyle(node).cursor),
-    );
-    expect(penCursor).toContain("stroke='white'");
-    expect(penCursor).not.toContain("stroke='black'");
+    const penCursor = await cursorFor(deck);
+    expect(penCursor).toContain('data:image/svg+xml');
 
     await page.keyboard.down('Shift');
-    const eraserCursor = decodeURIComponent(
-      await deck.evaluate(node => window.getComputedStyle(node).cursor),
-    );
-    expect(eraserCursor).toContain("stroke='white'");
-    expect(eraserCursor).not.toContain("stroke='black'");
+    const eraserCursor = await cursorFor(deck);
+    expect(eraserCursor).toContain('data:image/svg+xml');
+    expect(eraserCursor).not.toBe(penCursor);
     await page.keyboard.up('Shift');
   });
 

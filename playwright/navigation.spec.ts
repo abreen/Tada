@@ -1,4 +1,16 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+type WindowWithNavMarker = Window & { __navMarker?: string };
+
+async function setNavMarker(page: Page) {
+  await page.evaluate(() => {
+    (window as WindowWithNavMarker).__navMarker = 'alive';
+  });
+}
+
+async function getNavMarker(page: Page) {
+  return page.evaluate(() => (window as WindowWithNavMarker).__navMarker);
+}
 
 test.describe('graceful degradation without JS', () => {
   test('links work with JavaScript disabled', async ({ browser }) => {
@@ -21,16 +33,14 @@ test.describe('client-side navigation', () => {
     page,
   }) => {
     await page.goto('/index.html');
-    await page.evaluate(() => {
-      (window as any).__navMarker = 'alive';
-    });
+    await setNavMarker(page);
 
     // Click the Markdown examples link in the page body
     await page.locator('main.body a[href="/markdown.html"]').click();
     await expect(page).toHaveURL(/markdown\.html/);
     await expect(page.locator('h1')).toContainText('Markdown Examples');
 
-    const marker = await page.evaluate(() => (window as any).__navMarker);
+    const marker = await getNavMarker(page);
     expect(marker).toBe('alive');
   });
 
@@ -138,9 +148,7 @@ test.describe('client-side navigation', () => {
     page,
   }) => {
     await page.goto('/index.html');
-    await page.evaluate(() => {
-      (window as any).__navMarker = 'alive';
-    });
+    await setNavMarker(page);
 
     // Type a search query
     const searchInput = page.locator('input[name="quick-search"]');
@@ -166,12 +174,13 @@ test.describe('client-side navigation', () => {
     });
     expect(value).toBe('');
 
-    // Results container must not have is-showing class
     const resultsContainer = page.locator('.results-container');
-    await expect(resultsContainer).not.toHaveClass(/is-showing/);
+    await expect(resultsContainer).toHaveAttribute('aria-hidden', 'true');
+    await expect(resultsContainer).toHaveAttribute('inert', '');
+    await expect(searchInput).toHaveAttribute('aria-expanded', 'false');
 
     // Should be SPA navigation (no full reload)
-    const marker = await page.evaluate(() => (window as any).__navMarker);
+    const marker = await getNavMarker(page);
     expect(marker).toBe('alive');
   });
 
@@ -202,7 +211,9 @@ test.describe('client-side navigation', () => {
 
     // Results should be dismissed
     const resultsContainer = page.locator('.results-container');
-    await expect(resultsContainer).not.toHaveClass(/is-showing/);
+    await expect(resultsContainer).toHaveAttribute('aria-hidden', 'true');
+    await expect(resultsContainer).toHaveAttribute('inert', '');
+    await expect(searchInput).toHaveAttribute('aria-expanded', 'false');
 
     // Search input should be cleared
     const value = await page.evaluate(() => {
@@ -241,7 +252,9 @@ test.describe('client-side navigation', () => {
 
     // Results should be dismissed
     const resultsContainer = page.locator('.results-container');
-    await expect(resultsContainer).not.toHaveClass(/is-showing/);
+    await expect(resultsContainer).toHaveAttribute('aria-hidden', 'true');
+    await expect(resultsContainer).toHaveAttribute('inert', '');
+    await expect(searchInput).toHaveAttribute('aria-expanded', 'false');
 
     // Search input should be cleared
     const value = await page.evaluate(() => {
@@ -251,36 +264,5 @@ test.describe('client-side navigation', () => {
       return input?.value ?? '';
     });
     expect(value).toBe('');
-  });
-
-  test('header shimmer appears on slow connections', async ({ page }) => {
-    await page.goto('/index.html');
-
-    // Throttle network after the page is fully loaded
-    const client = await page.context().newCDPSession(page);
-    await client.send('Network.enable');
-    await client.send('Network.emulateNetworkConditions', {
-      offline: false,
-      downloadThroughput: (10 * 1024) / 8,
-      uploadThroughput: (10 * 1024) / 8,
-      latency: 2000,
-    });
-
-    await page.locator('main.body a[href="/markdown.html"]').click();
-
-    // The header should get the loading class while fetching
-    await expect(page.locator('header.loading')).toBeVisible({ timeout: 5000 });
-
-    // Remove throttling so the fetch can complete
-    await client.send('Network.emulateNetworkConditions', {
-      offline: false,
-      downloadThroughput: -1,
-      uploadThroughput: -1,
-      latency: 0,
-    });
-
-    // After navigation completes, the class should be removed
-    await expect(page).toHaveURL(/markdown\.html/, { timeout: 15000 });
-    await expect(page.locator('header')).not.toHaveClass(/loading/);
   });
 });
