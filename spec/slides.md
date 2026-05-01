@@ -76,7 +76,8 @@ hash.
 
 Clicking an unrevealed Q&A answer on the active slide reveals that answer
 without moving forward. Once the answer is revealed, later clicks on it behave
-like normal active-slide clicks and move forward.
+like normal active-slide clicks and move forward. The `Click to reveal` or
+`Tap to reveal` answer hint is hidden while presenting.
 
 Clicking an unanswered multiple choice option on the active slide selects that
 option and reveals the correct answer without moving forward. Once the multiple

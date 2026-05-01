@@ -112,6 +112,10 @@
   }
 }
 
+.js body.is-presenting .question-a-body::after {
+  display: none;
+}
+
 .js .question-a-body[data-revealed] {
   cursor: unset;
 
