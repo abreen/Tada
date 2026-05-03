@@ -1,6 +1,6 @@
 {
   "name": "@abreen/tada",
-  "version": "1.15.8",
+  "version": "1.15.9",
   "type": "module",
   "description": "A static site generator",
   "license": "MIT",
