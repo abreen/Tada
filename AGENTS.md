@@ -64,3 +64,8 @@ Functional tests are CPU intensive and may take over 2 minutes, even on powerful
 ## Code style/formatting
 
 The pre-commit hook runs the code formatter. Do not run formatting commands manually.
+
+## Security threat model
+
+When generating a site, the author's content is trusted. Authors can write raw HTML/JavaScript on their pages and use Lodash expressions in content, front matter, and configuration files.
+Do not report security problems that assume an author is a malicious actor.
