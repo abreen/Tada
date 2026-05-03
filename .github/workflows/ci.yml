@@ -52,7 +52,7 @@ jobs:
     - run: bun install
 
     - name: Run unit tests
-      run: bun test
+      run: bun run test:unit
 
   functional-test:
     needs: check-version-commit
@@ -107,7 +107,7 @@ jobs:
     - run: bun install
 
     - name: Run unit tests
-      run: bun test
+      run: bun run test:unit
 
   functional-test-windows:
     needs: check-version-commit

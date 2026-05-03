@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
+import { flushMicrotasks } from '../../test-helpers';
 import type { TraceManifest, TraceChunkEntry, TraceOutputEvent } from './types';
 import mount from './index';
 
@@ -130,9 +131,7 @@ function setupFetch(responses: Record<string, unknown>): void {
 }
 
 async function flush(): Promise<void> {
-  for (let i = 0; i < 10; i++) {
-    await new Promise(r => setTimeout(r, 0));
-  }
+  await flushMicrotasks();
 }
 
 function setupDefaultFetch(): void {

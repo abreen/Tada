@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
-import { deferred } from '../../test-helpers';
+import { deferred, flushMicrotasks } from '../../test-helpers';
 
 const mockTeardown = mock(() => {});
 const mockMount = mock(async () => mockTeardown);
@@ -45,9 +45,7 @@ function htmlResponse(html: string): Response {
 }
 
 async function flush() {
-  for (let i = 0; i < 6; i++) {
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
+  await flushMicrotasks(6);
 }
 
 function mockScrollTo(win: Window) {

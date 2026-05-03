@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
 import mountSearch, { resetPagefindForTest } from './index';
-import { deferred } from '../../test-helpers';
+import { deferred, flushMicrotasks } from '../../test-helpers';
 
 type MockPagefindResult = {
   meta?: {
@@ -69,9 +69,7 @@ function focusEvent(
 }
 
 async function flush() {
-  for (let i = 0; i < 5; i++) {
-    await new Promise(r => setTimeout(r, 0));
-  }
+  await flushMicrotasks(20);
 }
 
 function searchResult(title: string, url: string) {

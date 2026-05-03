@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeEach, mock } from 'bun:test';
 import * as jsdom from 'jsdom';
 import { createGlobals } from '../globals.test';
-import { deferred } from '../../test-helpers';
+import { deferred, flushMicrotasks } from '../../test-helpers';
 
 // Mock the lifecycle module so we can track calls
 const mockTeardown = mock(() => {});
@@ -112,9 +112,7 @@ function htmlResponse(html: string, ok = true): Response {
 }
 
 async function flush(): Promise<void> {
-  for (let i = 0; i < 10; i++) {
-    await new Promise(r => setTimeout(r, 0));
-  }
+  await flushMicrotasks();
 }
 
 function waitForNavigation(win: Win): Promise<void> {
@@ -910,7 +908,7 @@ describe('fetch error paths', () => {
     mount(win);
 
     clickLink(win, '#link1');
-    await new Promise(r => setTimeout(r, 0));
+    await flush();
 
     clickLink(win, '#link2');
     await flush();

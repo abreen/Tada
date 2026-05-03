@@ -1,8 +1,17 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  mock,
+  test,
+} from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
 import mount, { mountPageUpdate } from './index';
 import { NAVIGATION_EVENT } from '../navigate/runtime';
+import { flushMicrotasks } from '../../test-helpers';
 
 function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
   mock.module('../globals', () => ({ globals: createGlobals(overrides) }));
@@ -25,13 +34,20 @@ function responseWithHeaders(headers: Record<string, string>, ok = true) {
 }
 
 async function flush() {
-  for (let i = 0; i < 6; i++) {
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
+  await flushMicrotasks(6);
+}
+
+async function advancePolling(ms: number) {
+  jest.advanceTimersByTime(ms);
+  await flush();
 }
 
 beforeEach(() => {
   mockGlobals();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('page-update mount', () => {
@@ -73,6 +89,7 @@ describe('page-update behavior', () => {
   });
 
   test('shows the toast when the validator changes', async () => {
+    jest.useFakeTimers();
     const win = create();
     let count = 0;
     mockGlobals({
@@ -84,8 +101,7 @@ describe('page-update behavior', () => {
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     await flush();
-    await new Promise(resolve => setTimeout(resolve, 20));
-    await flush();
+    await advancePolling(10);
 
     expect(
       win.document
@@ -97,6 +113,7 @@ describe('page-update behavior', () => {
   });
 
   test('falls back to Last-Modified when ETag is missing', async () => {
+    jest.useFakeTimers();
     const win = create();
     let count = 0;
     mockGlobals({
@@ -110,8 +127,7 @@ describe('page-update behavior', () => {
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     await flush();
-    await new Promise(resolve => setTimeout(resolve, 20));
-    await flush();
+    await advancePolling(10);
 
     expect(
       win.document
@@ -123,13 +139,13 @@ describe('page-update behavior', () => {
   });
 
   test('stays silent when no validators are present', async () => {
+    jest.useFakeTimers();
     const win = create();
     mockGlobals({ fetch: mock(async () => responseWithHeaders({})) });
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     await flush();
-    await new Promise(resolve => setTimeout(resolve, 20));
-    await flush();
+    await advancePolling(10);
 
     expect(
       win.document
@@ -141,6 +157,7 @@ describe('page-update behavior', () => {
   });
 
   test('dismiss hides the toast for the same detected validator', async () => {
+    jest.useFakeTimers();
     const win = create();
     let count = 0;
     mockGlobals({
@@ -152,15 +169,13 @@ describe('page-update behavior', () => {
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     await flush();
-    await new Promise(resolve => setTimeout(resolve, 20));
-    await flush();
+    await advancePolling(10);
 
     const dismiss = win.document.querySelectorAll(
       '.page-update-toast button',
     )[1] as HTMLButtonElement;
     dismiss.click();
-    await new Promise(resolve => setTimeout(resolve, 20));
-    await flush();
+    await advancePolling(10);
 
     expect(
       win.document
@@ -221,6 +236,7 @@ describe('page-update behavior', () => {
   });
 
   test('reload uses the injected refresh function', async () => {
+    jest.useFakeTimers();
     const win = create();
     let count = 0;
     mockGlobals({
@@ -233,8 +249,7 @@ describe('page-update behavior', () => {
     const refreshPage = mock(async () => {});
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10, refreshPage });
     await flush();
-    await new Promise(resolve => setTimeout(resolve, 20));
-    await flush();
+    await advancePolling(10);
 
     const reload = win.document.querySelectorAll(
       '.page-update-toast button',
@@ -248,6 +263,7 @@ describe('page-update behavior', () => {
   });
 
   test('stops polling while hidden and checks immediately when visible again', async () => {
+    jest.useFakeTimers();
     const win = create();
     const visibility = { hidden: false };
     const fetchMock = mock(async () => responseWithHeaders({ ETag: '"v1"' }));
@@ -265,8 +281,7 @@ describe('page-update behavior', () => {
     visibility.hidden = true;
     win.document.dispatchEvent(new win.Event('visibilitychange'));
     const hiddenCount = fetchMock.mock.calls.length;
-    await new Promise(resolve => setTimeout(resolve, 30));
-    await flush();
+    await advancePolling(1000);
     expect(fetchMock.mock.calls.length).toBe(hiddenCount);
 
     visibility.hidden = false;
@@ -278,6 +293,7 @@ describe('page-update behavior', () => {
   });
 
   test('resets state after internal navigation', async () => {
+    jest.useFakeTimers();
     const win = create();
     let count = 0;
     mockGlobals({
@@ -289,8 +305,7 @@ describe('page-update behavior', () => {
 
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     await flush();
-    await new Promise(resolve => setTimeout(resolve, 20));
-    await flush();
+    await advancePolling(10);
 
     expect(
       win.document

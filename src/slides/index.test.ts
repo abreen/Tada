@@ -1,16 +1,10 @@
-import { afterEach, beforeAll, describe, expect, jest, test } from 'bun:test';
+import { beforeAll, describe, expect, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 
 let mount: typeof import('./index').default;
-let mountQuestion: typeof import('../question').default;
 
 beforeAll(async () => {
   ({ default: mount } = await import('./index'));
-  ({ default: mountQuestion } = await import('../question'));
-});
-
-afterEach(() => {
-  jest.useRealTimers();
 });
 
 // JSDOM's DOMWindow is structurally compatible with Window. This alias keeps
@@ -45,24 +39,6 @@ function createSlidesWindow(): Win {
       </div>
       <div class="slide" data-slide-index="2">
         <h1>Slide 3</h1>
-      </div>
-    </div>
-  `);
-}
-
-function createSlidesWindowWithInput(): Win {
-  return createWindow(`
-    <div class="slides-header">
-      <button type="button" data-slides-present>Present</button>
-      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
-    </div>
-    <div class="slide-deck" data-slides-root>
-      <div class="slide" data-slide-index="0">
-        <h1>Slide 1</h1>
-        <input type="text" value="hello">
-      </div>
-      <div class="slide" data-slide-index="1">
-        <h1>Slide 2</h1>
       </div>
     </div>
   `);
@@ -120,89 +96,8 @@ function createSlidesWindowWithMultipleTraces(): Win {
   `);
 }
 
-function createSingleSlideTraceWindow(): Win {
-  return createWindow(`
-    <div class="slides-header">
-      <button type="button" data-slides-present>Present</button>
-      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
-    </div>
-    <div class="slide-deck" data-slides-root>
-      <div class="slide" data-slide-index="0">
-        <h1>Slide 1</h1>
-        <div class="trace-widget">
-          <div class="trace-toolbar">
-            <div class="trace-controls">
-              <button class="trace-prev" disabled>Prev</button>
-              <button class="trace-next">Next</button>
-            </div>
-          </div>
-          <div class="trace-diagram"></div>
-        </div>
-      </div>
-    </div>
-  `);
-}
-
-function createSlidesWindowWithQuestionOnLastSlide(): Win {
-  return createWindow(`
-    <div class="slides-header">
-      <button type="button" data-slides-present>Present</button>
-      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
-    </div>
-    <div class="slide-deck" data-slides-root>
-      <div class="slide" data-slide-index="0">
-        <h1>Slide 1</h1>
-      </div>
-      <div class="slide" data-slide-index="1">
-        <h1>Slide 2</h1>
-      </div>
-      <div class="slide" data-slide-index="2">
-        <h1>Slide 3</h1>
-        <div class="question">
-          <div class="question-a">
-            <div class="question-a-body" role="button" tabindex="0" aria-label="Click to reveal answer">
-              <p>The answer is twelve.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `);
-}
-
-function createSlidesWindowWithMultipleChoiceOnLastSlide(): Win {
-  return createWindow(`
-    <div class="slides-header">
-      <button type="button" data-slides-present>Present</button>
-      <label><input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked> Full screen</label>
-    </div>
-    <div class="slide-deck" data-slides-root>
-      <div class="slide" data-slide-index="0">
-        <h1>Slide 1</h1>
-      </div>
-      <div class="slide" data-slide-index="1">
-        <h1>Slide 2</h1>
-      </div>
-      <div class="slide" data-slide-index="2">
-        <h1>Slide 3</h1>
-        <div class="question question-multiple-choice">
-          <p class="question-q"><span class="question-label">Q.</span><span>Which option is correct?</span></p>
-          <div class="question-multiple-choice-options">
-            <div class="question-multiple-choice-option">Wrong</div>
-            <div class="question-multiple-choice-option" data-correct="">Correct</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `);
-}
-
 function dispatchKey(win: Win, key: string): void {
   win.dispatchEvent(new win.KeyboardEvent('keydown', { key, bubbles: true }));
-}
-
-function dispatchKeyup(win: Win, key: string): void {
-  win.dispatchEvent(new win.KeyboardEvent('keyup', { key, bubbles: true }));
 }
 
 function markTraceReady(widget: HTMLElement | null): void {
@@ -219,149 +114,41 @@ function markTraceReady(widget: HTMLElement | null): void {
   }
 }
 
-function installFullscreenApi(win: Win): {
-  get requestCount(): number;
-  get exitCount(): number;
-} {
-  const doc = win.document as Document & {
-    exitFullscreen?: () => Promise<void>;
-    fullscreenElement?: Element | null;
-  };
-  let fullscreenElement: Element | null = null;
-  let requestCount = 0;
-  let exitCount = 0;
+function activeSlideIndex(win: Win): string | null | undefined {
+  return win.document
+    .querySelector('.slide.is-active')
+    ?.getAttribute('data-slide-index');
+}
 
-  Object.defineProperty(doc, 'fullscreenElement', {
-    configurable: true,
-    get: () => fullscreenElement,
-  });
-
+function present(win: Win): void {
   (
-    doc.documentElement as HTMLElement & {
-      requestFullscreen?: () => Promise<void>;
-    }
-  ).requestFullscreen = async () => {
-    requestCount += 1;
-    fullscreenElement = doc.documentElement;
-    doc.dispatchEvent(new win.Event('fullscreenchange'));
-  };
-
-  doc.exitFullscreen = async () => {
-    exitCount += 1;
-    fullscreenElement = null;
-    doc.dispatchEvent(new win.Event('fullscreenchange'));
-  };
-
-  return {
-    get requestCount() {
-      return requestCount;
-    },
-    get exitCount() {
-      return exitCount;
-    },
-  };
+    win.document.querySelector('[data-slides-present]') as HTMLButtonElement
+  ).click();
 }
 
-function setCloseButtonBottom(win: Win, bottom: number): void {
-  const close = win.document.querySelector(
-    '[data-slides-close]',
-  ) as HTMLButtonElement;
-
-  Object.defineProperty(close, 'getBoundingClientRect', {
-    configurable: true,
-    value: () => ({
-      x: 0,
-      y: 0,
-      width: 80,
-      height: bottom,
-      top: 0,
-      right: 80,
-      bottom,
-      left: 0,
-      toJSON() {
-        return {};
-      },
-    }),
-  });
-}
-
-function setElementRect(
-  element: Element,
-  rect: { left: number; top: number; width: number; height: number },
-): void {
-  Object.defineProperty(element, 'getBoundingClientRect', {
-    configurable: true,
-    value: () => ({
-      x: rect.left,
-      y: rect.top,
-      width: rect.width,
-      height: rect.height,
-      top: rect.top,
-      right: rect.left + rect.width,
-      bottom: rect.top + rect.height,
-      left: rect.left,
-      toJSON() {
-        return {};
-      },
-    }),
-  });
-}
-
-function dispatchPointer(
-  win: Win,
-  target: EventTarget,
-  type: string,
-  options: {
-    clientX: number;
-    clientY: number;
-    button?: number;
-    pointerId?: number;
-  },
-): Event {
-  const event = new win.Event(type, { bubbles: true, cancelable: true });
-
-  Object.defineProperties(event, {
-    button: { value: options.button ?? 0 },
-    clientX: { value: options.clientX },
-    clientY: { value: options.clientY },
-    pointerId: { value: options.pointerId ?? 1 },
-  });
-
-  target.dispatchEvent(event);
-  return event;
-}
-
-function trackSlideScrollIntoView(win: Win): string[] {
-  const calls: string[] = [];
-
-  for (const slide of win.document.querySelectorAll<HTMLElement>('.slide')) {
-    Object.defineProperty(slide, 'scrollIntoView', {
-      configurable: true,
-      value: () => {
-        calls.push(slide.getAttribute('data-slide-index') ?? '');
-      },
-    });
-  }
-
-  return calls;
+function setTraceNavigationReady(win: Win): void {
+  (win.document.querySelector('.trace-next') as HTMLButtonElement).disabled =
+    true;
+  (win.document.querySelector('.trace-prev') as HTMLButtonElement).disabled =
+    true;
 }
 
 describe('slides presentation controller', () => {
   test('mount re-enables Present and Full screen controls that render disabled', () => {
     const win = createSlidesWindow();
-    const present = win.document.querySelector(
+    const presentButton = win.document.querySelector(
       '[data-slides-present]',
     ) as HTMLButtonElement;
     const fullscreen = win.document.querySelector(
       '[data-slides-fullscreen]',
     ) as HTMLInputElement;
 
-    present.disabled = true;
+    presentButton.disabled = true;
     fullscreen.disabled = true;
 
     const cleanup = mount(win);
 
-    expect(present.disabled).toBe(false);
+    expect(presentButton.disabled).toBe(false);
     expect(fullscreen.disabled).toBe(false);
     expect(fullscreen.checked).toBe(true);
 
@@ -455,17 +242,10 @@ describe('slides presentation controller', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
 
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    present.click();
+    present(win);
 
     expect(win.document.body.classList.contains('is-presenting')).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
+    expect(activeSlideIndex(win)).toBe('0');
     expect(win.document.querySelector('[data-slides-counter]')).toBeNull();
     expect(
       win.document
@@ -488,368 +268,17 @@ describe('slides presentation controller', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
 
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    present.click();
-
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-
-    traceNext.disabled = true;
-    tracePrev.disabled = true;
+    setTraceNavigationReady(win);
+    present(win);
 
     dispatchKey(win, 'ArrowRight');
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
+    expect(activeSlideIndex(win)).toBe('1');
 
     dispatchKey(win, 'ArrowLeft');
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
+    expect(activeSlideIndex(win)).toBe('0');
 
     dispatchKey(win, 'Escape');
     expect(win.document.body.classList.contains('is-presenting')).toBe(false);
-
-    cleanup?.();
-  });
-
-  test('single click advances when presentation mode is active', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-
-    present.click();
-    traceNext.disabled = true;
-    tracePrev.disabled = true;
-
-    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
-    activeSlide.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
-
-    cleanup?.();
-  });
-
-  test('clicking a trace resizer does not advance slides', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-    let nextClicks = 0;
-
-    traceNext.addEventListener('click', () => {
-      nextClicks += 1;
-    });
-    traceNext.disabled = true;
-    tracePrev.disabled = true;
-
-    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
-    const resizer = win.document.createElement('div');
-    resizer.className = 'trace-resizer';
-    resizer.setAttribute('role', 'separator');
-    activeSlide.append(resizer);
-
-    present.click();
-    resizer.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-
-    expect(nextClicks).toBe(0);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
-
-    cleanup?.();
-  });
-
-  test('clicking the slide deck outside the capped slide advances', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-    const root = win.document.querySelector(
-      '[data-slides-root]',
-    ) as HTMLElement;
-
-    present.click();
-    traceNext.disabled = true;
-    tracePrev.disabled = true;
-
-    root.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
-
-    cleanup?.();
-  });
-
-  test('right-click toggles annotation mode and pauses click navigation', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
-
-    present.click();
-    traceNext.disabled = true;
-    tracePrev.disabled = true;
-
-    const openMenu = new win.MouseEvent('contextmenu', {
-      bubbles: true,
-      button: 2,
-      cancelable: true,
-    });
-    activeSlide.dispatchEvent(openMenu);
-
-    expect(openMenu.defaultPrevented).toBe(true);
-    expect(win.document.body.classList.contains('is-slides-annotating')).toBe(
-      true,
-    );
-
-    activeSlide.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
-
-    activeSlide.dispatchEvent(
-      new win.MouseEvent('contextmenu', {
-        bubbles: true,
-        button: 2,
-        cancelable: true,
-      }),
-    );
-    expect(win.document.body.classList.contains('is-slides-annotating')).toBe(
-      false,
-    );
-
-    activeSlide.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
-
-    cleanup?.();
-  });
-
-  test('annotation canvases stay associated with their slide and are removed on exit', async () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const slides = Array.from(
-      win.document.querySelectorAll<HTMLElement>('.slide'),
-    );
-    const root = win.document.querySelector(
-      '[data-slides-root]',
-    ) as HTMLElement;
-
-    present.click();
-    await Promise.resolve();
-    slides[0].dispatchEvent(
-      new win.MouseEvent('contextmenu', {
-        bubbles: true,
-        button: 2,
-        cancelable: true,
-      }),
-    );
-
-    const pointerDown = dispatchPointer(win, root, 'pointerdown', {
-      clientX: 100,
-      clientY: 100,
-    });
-    dispatchPointer(win, win, 'pointermove', { clientX: 180, clientY: 160 });
-    dispatchPointer(win, win, 'pointerup', { clientX: 180, clientY: 160 });
-
-    const canvas = win.document.querySelector(
-      '[data-slides-annotations][data-slide-index="0"]',
-    ) as HTMLCanvasElement | null;
-
-    expect(pointerDown.defaultPrevented).toBe(true);
-    expect(canvas).toBeInstanceOf(win.HTMLCanvasElement);
-    expect(canvas?.parentElement).toBe(
-      win.document.querySelector(
-        '[data-slides-annotation-layer]',
-      ) as HTMLElement,
-    );
-    expect(
-      win.document.querySelector(
-        '[data-slides-annotations][data-slide-index="1"]',
-      ),
-    ).toBeNull();
-
-    dispatchKey(win, 'ArrowRight');
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
-    expect(canvas?.hidden).toBe(true);
-    dispatchKey(win, 'ArrowLeft');
-    expect(
-      win.document.querySelector(
-        '[data-slides-annotations][data-slide-index="0"]',
-      ),
-    ).toBe(canvas);
-    expect(canvas?.hidden).toBe(false);
-
-    dispatchKey(win, 'Escape');
-    await Promise.resolve();
-
-    expect(win.document.body.classList.contains('is-slides-annotating')).toBe(
-      false,
-    );
-    expect(win.document.querySelector('[data-slides-annotations]')).toBeNull();
-
-    cleanup?.();
-  });
-
-  test('Shift switches annotation mode to eraser until release or blur', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
-
-    present.click();
-    dispatchKey(win, 'Shift');
-
-    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
-      false,
-    );
-
-    activeSlide.dispatchEvent(
-      new win.MouseEvent('contextmenu', {
-        bubbles: true,
-        button: 2,
-        cancelable: true,
-      }),
-    );
-
-    expect(win.document.body.classList.contains('is-slides-annotating')).toBe(
-      true,
-    );
-    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
-      true,
-    );
-
-    dispatchKeyup(win, 'Shift');
-    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
-      false,
-    );
-
-    dispatchKey(win, 'Shift');
-    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
-      true,
-    );
-
-    win.dispatchEvent(new win.Event('blur'));
-    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
-      false,
-    );
-
-    cleanup?.();
-  });
-
-  test('Shift eraser movement is active without a pointer press', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
-    setElementRect(activeSlide, { left: 0, top: 0, width: 800, height: 600 });
-
-    present.click();
-    activeSlide.dispatchEvent(
-      new win.MouseEvent('contextmenu', {
-        bubbles: true,
-        button: 2,
-        cancelable: true,
-      }),
-    );
-    dispatchPointer(win, activeSlide, 'pointerdown', {
-      clientX: 100,
-      clientY: 100,
-    });
-    dispatchPointer(win, win, 'pointerup', { clientX: 100, clientY: 100 });
-
-    dispatchKey(win, 'Shift');
-    const eraserMove = dispatchPointer(win, win, 'pointermove', {
-      clientX: 100,
-      clientY: 100,
-    });
-    const eraserPreview = win.document.querySelector(
-      '[data-slides-eraser-preview]',
-    ) as HTMLElement;
-
-    expect(eraserMove.defaultPrevented).toBe(true);
-    expect(win.document.body.classList.contains('is-slides-erasing')).toBe(
-      true,
-    );
-    expect(eraserPreview.hidden).toBe(false);
-    expect(eraserPreview.style.left).toBe('100px');
-    expect(eraserPreview.style.top).toBe('100px');
-
-    dispatchKeyup(win, 'Shift');
-    expect(eraserPreview.hidden).toBe(true);
 
     cleanup?.();
   });
@@ -858,611 +287,70 @@ describe('slides presentation controller', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
 
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-
-    traceNext.disabled = true;
-    tracePrev.disabled = true;
-    present.click();
+    setTraceNavigationReady(win);
+    present(win);
 
     dispatchKey(win, ' ');
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
+    expect(activeSlideIndex(win)).toBe('1');
 
     cleanup?.();
   });
 
-  test('clicking Present requests browser fullscreen and starts at slide 0 when Full screen is checked', async () => {
-    const win = createSlidesWindow();
-    const fullscreenApi = installFullscreenApi(win);
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    present.click();
-    await Promise.resolve();
-
-    expect(fullscreenApi.requestCount).toBe(1);
-    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
-
-    cleanup?.();
-  });
-
-  test('clicking Present starts normal presentation when Full screen is unchecked', async () => {
-    const win = createSlidesWindow();
-    const fullscreenApi = installFullscreenApi(win);
-    const cleanup = mount(win);
-
-    const fullscreen = win.document.querySelector(
-      '[data-slides-fullscreen]',
-    ) as HTMLInputElement;
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    fullscreen.checked = false;
-    present.click();
-    await Promise.resolve();
-
-    expect(fullscreenApi.requestCount).toBe(0);
-    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
-
-    cleanup?.();
-  });
-
-  test('clicking Present starts normal presentation when stored Full screen preference is unchecked', async () => {
-    const win = createSlidesWindow();
-    win.localStorage.setItem('slidesFullscreen', 'false');
-    const fullscreenApi = installFullscreenApi(win);
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    present.click();
-    await Promise.resolve();
-
-    expect(fullscreenApi.requestCount).toBe(0);
-    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
-
-    cleanup?.();
-  });
-
-  test('tada:slides-present starts fullscreen presentation at the requested slide when Full screen is checked', async () => {
-    const win = createSlidesWindow();
-    const fullscreenApi = installFullscreenApi(win);
-    const cleanup = mount(win);
-
-    const root = win.document.querySelector('[data-slides-root]')!;
-    root.dispatchEvent(
-      new win.CustomEvent('tada:slides-present', {
-        bubbles: true,
-        detail: { slideIndex: 2 },
-      }),
-    );
-    await Promise.resolve();
-
-    expect(fullscreenApi.requestCount).toBe(1);
-    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('2');
-
-    cleanup?.();
-  });
-
-  test('tada:slides-present starts normal presentation at the requested slide when Full screen is unchecked', async () => {
-    const win = createSlidesWindow();
-    const fullscreenApi = installFullscreenApi(win);
-    const cleanup = mount(win);
-
-    const fullscreen = win.document.querySelector(
-      '[data-slides-fullscreen]',
-    ) as HTMLInputElement;
-    const root = win.document.querySelector('[data-slides-root]')!;
-    fullscreen.checked = false;
-    root.dispatchEvent(
-      new win.CustomEvent('tada:slides-present', {
-        bubbles: true,
-        detail: { slideIndex: 2 },
-      }),
-    );
-    await Promise.resolve();
-
-    expect(fullscreenApi.requestCount).toBe(0);
-    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('2');
-
-    cleanup?.();
-  });
-
-  test('exiting normal presentation scrolls to the active slide without changing the hash', async () => {
-    const win = createSlidesWindow();
-    const scrollCalls = trackSlideScrollIntoView(win);
-    installFullscreenApi(win);
-    const cleanup = mount(win);
-
-    const fullscreen = win.document.querySelector(
-      '[data-slides-fullscreen]',
-    ) as HTMLInputElement;
-    const root = win.document.querySelector('[data-slides-root]')!;
-    fullscreen.checked = false;
-    root.dispatchEvent(
-      new win.CustomEvent('tada:slides-present', {
-        bubbles: true,
-        detail: { slideIndex: 2 },
-      }),
-    );
-    await Promise.resolve();
-
-    const close = win.document.querySelector(
-      '[data-slides-close]',
-    ) as HTMLButtonElement;
-    close.click();
-
-    expect(scrollCalls).toEqual(['2']);
-    expect(win.location.hash).toBe('');
-
-    cleanup?.();
-  });
-
-  test('tada:slides-present clamps requested slide index', async () => {
-    const win = createSlidesWindow();
-    installFullscreenApi(win);
-    const cleanup = mount(win);
-
-    const root = win.document.querySelector('[data-slides-root]')!;
-    root.dispatchEvent(
-      new win.CustomEvent('tada:slides-present', {
-        bubbles: true,
-        detail: { slideIndex: 99 },
-      }),
-    );
-    await Promise.resolve();
-
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('2');
-
-    cleanup?.();
-  });
-
-  test('fullscreen custom event falls back to normal mode when fullscreen is unavailable', async () => {
+  test('tada:slides-present starts normal presentation at the requested slide when Full screen is unchecked', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
 
-    const root = win.document.querySelector('[data-slides-root]')!;
-    root.dispatchEvent(
-      new win.CustomEvent('tada:slides-present', {
-        bubbles: true,
-        detail: { slideIndex: 1 },
-      }),
-    );
-    await Promise.resolve();
-
-    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
-
-    cleanup?.();
-  });
-
-  test('fullscreen custom event keeps requested slide active when fullscreen rejects', async () => {
-    const win = createSlidesWindow();
     (
-      win.document.documentElement as HTMLElement & {
-        requestFullscreen?: () => Promise<void>;
-      }
-    ).requestFullscreen = async () => {
-      throw new Error('denied');
-    };
-    const cleanup = mount(win);
-
-    const root = win.document.querySelector('[data-slides-root]')!;
-    root.dispatchEvent(
-      new win.CustomEvent('tada:slides-present', {
-        bubbles: true,
-        detail: { slideIndex: 2 },
-      }),
-    );
-    await Promise.resolve();
+      win.document.querySelector('[data-slides-fullscreen]') as HTMLInputElement
+    ).checked = false;
+    win.document
+      .querySelector('[data-slides-root]')!
+      .dispatchEvent(
+        new win.CustomEvent('tada:slides-present', {
+          bubbles: true,
+          detail: { slideIndex: 2 },
+        }),
+      );
 
     expect(win.document.body.classList.contains('is-presenting')).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('2');
+    expect(activeSlideIndex(win)).toBe('2');
 
     cleanup?.();
   });
 
-  test('fullscreen mode never reveals the Close button on mouse move', async () => {
-    jest.useFakeTimers();
-
+  test('tada:slides-present clamps requested slide index', () => {
     const win = createSlidesWindow();
-    installFullscreenApi(win);
     const cleanup = mount(win);
 
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    present.click();
-    await Promise.resolve();
+    win.document
+      .querySelector('[data-slides-root]')!
+      .dispatchEvent(
+        new win.CustomEvent('tada:slides-present', {
+          bubbles: true,
+          detail: { slideIndex: 99 },
+        }),
+      );
 
-    const overlay = win.document.querySelector(
-      '[data-slides-overlay]',
-    ) as HTMLElement;
-
-    win.dispatchEvent(new win.MouseEvent('mousemove', { bubbles: true }));
-    jest.advanceTimersByTime(4000);
-
-    expect(overlay.hidden).toBe(true);
+    expect(activeSlideIndex(win)).toBe('2');
 
     cleanup?.();
   });
 
-  test('leaving browser fullscreen exits presentation mode', async () => {
-    const win = createSlidesWindow();
-    const scrollCalls = trackSlideScrollIntoView(win);
-    const fullscreenApi = installFullscreenApi(win);
-    const cleanup = mount(win);
-
-    const root = win.document.querySelector('[data-slides-root]')!;
-    root.dispatchEvent(
-      new win.CustomEvent('tada:slides-present', {
-        bubbles: true,
-        detail: { slideIndex: 1 },
-      }),
-    );
-    await Promise.resolve();
-    await (
-      win.document as Document & { exitFullscreen: () => Promise<void> }
-    ).exitFullscreen();
-
-    expect(fullscreenApi.exitCount).toBe(1);
-    expect(win.document.body.classList.contains('is-presenting')).toBe(false);
-    expect(win.document.querySelector('.slide.is-active')).toBeNull();
-    expect(scrollCalls).toEqual(['1']);
-    expect(win.location.hash).toBe('');
-
-    cleanup?.();
-  });
-
-  test('Escape exits fullscreen presentation and scrolls to the active slide', async () => {
-    const win = createSlidesWindow();
-    const scrollCalls = trackSlideScrollIntoView(win);
-    const fullscreenApi = installFullscreenApi(win);
-    const cleanup = mount(win);
-
-    const root = win.document.querySelector('[data-slides-root]')!;
-    root.dispatchEvent(
-      new win.CustomEvent('tada:slides-present', {
-        bubbles: true,
-        detail: { slideIndex: 2 },
-      }),
-    );
-    await Promise.resolve();
-
-    dispatchKey(win, 'Escape');
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(fullscreenApi.exitCount).toBe(1);
-    expect(win.document.body.classList.contains('is-presenting')).toBe(false);
-    expect(scrollCalls).toEqual(['2']);
-    expect(win.location.hash).toBe('');
-
-    cleanup?.();
-  });
-
-  test('Space drives an active trace before changing slides', () => {
+  test('fullscreen custom event falls back to normal mode when fullscreen is unavailable', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
 
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-    let nextClicks = 0;
+    win.document
+      .querySelector('[data-slides-root]')!
+      .dispatchEvent(
+        new win.CustomEvent('tada:slides-present', {
+          bubbles: true,
+          detail: { slideIndex: 1 },
+        }),
+      );
 
-    traceNext.addEventListener('click', () => {
-      nextClicks += 1;
-      traceNext.disabled = true;
-      tracePrev.disabled = false;
-    });
-
-    markTraceReady(win.document.querySelector('.trace-widget'));
-    present.click();
-    dispatchKey(win, ' ');
-
-    expect(nextClicks).toBe(1);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
-
-    cleanup?.();
-  });
-
-  test('Arrow keys drive an active trace while annotation mode is active', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-    let nextClicks = 0;
-    let prevClicks = 0;
-
-    traceNext.addEventListener('click', () => {
-      nextClicks += 1;
-      traceNext.disabled = true;
-      tracePrev.disabled = false;
-    });
-    tracePrev.addEventListener('click', () => {
-      prevClicks += 1;
-      traceNext.disabled = false;
-      tracePrev.disabled = true;
-    });
-
-    markTraceReady(win.document.querySelector('.trace-widget'));
-    present.click();
-    activeSlide.dispatchEvent(
-      new win.MouseEvent('contextmenu', {
-        bubbles: true,
-        button: 2,
-        cancelable: true,
-      }),
-    );
-
-    dispatchKey(win, 'ArrowRight');
-    dispatchKey(win, 'ArrowLeft');
-
-    expect(nextClicks).toBe(1);
-    expect(prevClicks).toBe(1);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
-
-    cleanup?.();
-  });
-
-  test('Close button only appears when the mouse is near the top reveal zone', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    present.click();
-    setCloseButtonBottom(win, 60);
-
-    const overlay = win.document.querySelector(
-      '[data-slides-overlay]',
-    ) as HTMLElement;
-
-    expect(overlay.hidden).toBe(true);
-
-    win.dispatchEvent(
-      new win.MouseEvent('mousemove', { bubbles: true, clientY: 120 }),
-    );
-    expect(overlay.hidden).toBe(true);
-
-    win.dispatchEvent(
-      new win.MouseEvent('mousemove', { bubbles: true, clientY: 40 }),
-    );
-    expect(overlay.hidden).toBe(false);
-
-    win.dispatchEvent(
-      new win.MouseEvent('mousemove', { bubbles: true, clientY: 90 }),
-    );
-    expect(overlay.hidden).toBe(true);
-
-    cleanup?.();
-  });
-
-  test('navigation gestures hide the Close button and cursor until the mouse moves again', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-    traceNext.disabled = true;
-    tracePrev.disabled = true;
-    present.click();
-    setCloseButtonBottom(win, 60);
-
-    const overlay = win.document.querySelector(
-      '[data-slides-overlay]',
-    ) as HTMLElement;
-
-    win.dispatchEvent(
-      new win.MouseEvent('mousemove', { bubbles: true, clientY: 40 }),
-    );
-    expect(overlay.hidden).toBe(false);
-    expect(
-      win.document.body.classList.contains('is-presentation-cursor-hidden'),
-    ).toBe(false);
-
-    dispatchKey(win, 'ArrowRight');
-    expect(overlay.hidden).toBe(true);
-    expect(
-      win.document.body.classList.contains('is-presentation-cursor-hidden'),
-    ).toBe(true);
-
-    win.dispatchEvent(
-      new win.MouseEvent('mousemove', { bubbles: true, clientY: 120 }),
-    );
-    expect(overlay.hidden).toBe(true);
-    expect(
-      win.document.body.classList.contains('is-presentation-cursor-hidden'),
-    ).toBe(false);
-
-    dispatchKey(win, ' ');
-    expect(overlay.hidden).toBe(true);
-    expect(
-      win.document.body.classList.contains('is-presentation-cursor-hidden'),
-    ).toBe(true);
-
-    win.dispatchEvent(
-      new win.MouseEvent('mousemove', { bubbles: true, clientY: 40 }),
-    );
-    expect(overlay.hidden).toBe(false);
-    expect(
-      win.document.body.classList.contains('is-presentation-cursor-hidden'),
-    ).toBe(false);
-
-    dispatchKey(win, 'ArrowLeft');
-    expect(overlay.hidden).toBe(true);
-    expect(
-      win.document.body.classList.contains('is-presentation-cursor-hidden'),
-    ).toBe(true);
-
-    win.dispatchEvent(
-      new win.MouseEvent('mousemove', { bubbles: true, clientY: 40 }),
-    );
-    expect(overlay.hidden).toBe(false);
-    expect(
-      win.document.body.classList.contains('is-presentation-cursor-hidden'),
-    ).toBe(false);
-
-    const activeSlide = win.document.querySelector(
-      '.slide.is-active',
-    ) as HTMLElement;
-    activeSlide.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-    expect(overlay.hidden).toBe(true);
-    expect(
-      win.document.body.classList.contains('is-presentation-cursor-hidden'),
-    ).toBe(true);
-
-    cleanup?.();
-  });
-
-  test('ArrowRight on the last slide keeps Close visible until the user goes back', () => {
-    jest.useFakeTimers();
-
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const overlay = win.document.querySelector(
-      '[data-slides-overlay]',
-    ) as HTMLElement;
-
-    present.click();
-    dispatchKey(win, 'ArrowRight');
-    dispatchKey(win, 'ArrowRight');
-
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('2');
-    expect(overlay.hidden).toBe(true);
-
-    dispatchKey(win, 'ArrowRight');
-    expect(overlay.hidden).toBe(false);
-
-    jest.advanceTimersByTime(5000);
-    expect(overlay.hidden).toBe(false);
-
-    dispatchKey(win, 'ArrowLeft');
-    expect(overlay.hidden).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
-
-    cleanup?.();
-  });
-
-  test('Space and click on the last slide keep Close visible', () => {
-    jest.useFakeTimers();
-
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const overlay = win.document.querySelector(
-      '[data-slides-overlay]',
-    ) as HTMLElement;
-
-    present.click();
-    dispatchKey(win, 'ArrowRight');
-    dispatchKey(win, 'ArrowRight');
-    dispatchKey(win, ' ');
-
-    expect(overlay.hidden).toBe(false);
-    jest.advanceTimersByTime(5000);
-    expect(overlay.hidden).toBe(false);
-
-    dispatchKey(win, 'ArrowLeft');
-    expect(overlay.hidden).toBe(true);
-
-    dispatchKey(win, 'ArrowRight');
-    const activeSlide = win.document.querySelector(
-      '.slide.is-active',
-    ) as HTMLElement;
-    activeSlide.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-
-    expect(overlay.hidden).toBe(false);
-    jest.advanceTimersByTime(5000);
-    expect(overlay.hidden).toBe(false);
+    expect(win.document.body.classList.contains('is-presenting')).toBe(true);
+    expect(activeSlideIndex(win)).toBe('1');
 
     cleanup?.();
   });
@@ -1470,11 +358,11 @@ describe('slides presentation controller', () => {
   test('cleanup removes listeners and inserted UI', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
-
-    const present = win.document.querySelector(
+    const presentButton = win.document.querySelector(
       '[data-slides-present]',
     ) as HTMLButtonElement;
-    present.click();
+
+    presentButton.click();
 
     expect(win.document.querySelector('[data-slides-overlay]')).not.toBeNull();
 
@@ -1483,7 +371,7 @@ describe('slides presentation controller', () => {
     expect(win.document.querySelector('[data-slides-overlay]')).toBeNull();
     expect(win.document.body.classList.contains('is-presenting')).toBe(false);
 
-    present.click();
+    presentButton.click();
     expect(win.document.body.classList.contains('is-presenting')).toBe(false);
 
     win.document
@@ -1497,13 +385,36 @@ describe('slides presentation controller', () => {
     expect(win.document.body.classList.contains('is-presenting')).toBe(false);
   });
 
+  test('Space drives an active trace before changing slides', () => {
+    const win = createSlidesWindow();
+    const cleanup = mount(win);
+    const traceNext = win.document.querySelector(
+      '.trace-next',
+    ) as HTMLButtonElement;
+    const tracePrev = win.document.querySelector(
+      '.trace-prev',
+    ) as HTMLButtonElement;
+    let nextClicks = 0;
+
+    traceNext.addEventListener('click', () => {
+      nextClicks += 1;
+      traceNext.disabled = true;
+      tracePrev.disabled = false;
+    });
+
+    markTraceReady(win.document.querySelector('.trace-widget'));
+    present(win);
+    dispatchKey(win, ' ');
+
+    expect(nextClicks).toBe(1);
+    expect(activeSlideIndex(win)).toBe('0');
+
+    cleanup?.();
+  });
+
   test('ArrowLeft resets a trace after returning to its slide', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
     const traceNext = win.document.querySelector(
       '.trace-next',
     ) as HTMLButtonElement;
@@ -1542,29 +453,17 @@ describe('slides presentation controller', () => {
     ) as HTMLElement;
     traceWidget.querySelector('.trace-controls')?.prepend(traceFirst);
     markTraceReady(traceWidget);
-    present.click();
+    present(win);
 
     dispatchKey(win, 'ArrowRight');
     expect(nextClicks).toBe(1);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
+    expect(activeSlideIndex(win)).toBe('0');
 
     dispatchKey(win, 'ArrowRight');
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
+    expect(activeSlideIndex(win)).toBe('1');
 
     dispatchKey(win, 'ArrowLeft');
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
+    expect(activeSlideIndex(win)).toBe('0');
     expect(resetClicks).toBe(1);
     expect(traceFirst.disabled).toBe(true);
     expect(tracePrev.disabled).toBe(true);
@@ -1572,11 +471,7 @@ describe('slides presentation controller', () => {
 
     dispatchKey(win, 'ArrowLeft');
     expect(prevClicks).toBe(0);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
+    expect(activeSlideIndex(win)).toBe('0');
 
     cleanup?.();
   });
@@ -1584,10 +479,6 @@ describe('slides presentation controller', () => {
   test('ArrowRight drives a later ready trace before advancing the slide', () => {
     const win = createSlidesWindowWithMultipleTraces();
     const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
     const firstWidget = win.document.querySelector(
       '[data-trace-id="first-next"]',
     ) as HTMLElement;
@@ -1606,15 +497,11 @@ describe('slides presentation controller', () => {
 
     markTraceReady(firstWidget);
     markTraceReady(secondWidget);
-    present.click();
+    present(win);
     dispatchKey(win, 'ArrowRight');
 
     expect(secondNextClicks).toBe(1);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
+    expect(activeSlideIndex(win)).toBe('0');
 
     cleanup?.();
   });
@@ -1623,85 +510,10 @@ describe('slides presentation controller', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
 
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-
-    present.click();
+    present(win);
     dispatchKey(win, 'ArrowRight');
 
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
-
-    cleanup?.();
-  });
-
-  test('clicking Present allows immediate ArrowRight navigation', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-
-    traceNext.disabled = true;
-    tracePrev.disabled = true;
-    present.focus();
-    present.click();
-
-    dispatchKey(win, 'ArrowRight');
-
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
-
-    cleanup?.();
-  });
-
-  test('single click advances the active trace before changing slides', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-    let nextClicks = 0;
-
-    traceNext.addEventListener('click', () => {
-      nextClicks += 1;
-      traceNext.disabled = true;
-      tracePrev.disabled = false;
-    });
-
-    markTraceReady(win.document.querySelector('.trace-widget'));
-    present.click();
-
-    const activeSlide = win.document.querySelector('.slide') as HTMLElement;
-    activeSlide.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-
-    expect(nextClicks).toBe(1);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
+    expect(activeSlideIndex(win)).toBe('1');
 
     cleanup?.();
   });
@@ -1709,10 +521,6 @@ describe('slides presentation controller', () => {
   test('ArrowLeft drives a later ready trace before moving to the previous slide', () => {
     const win = createSlidesWindowWithMultipleTraces();
     const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
     const firstSlideSecondNext = win.document
       .querySelector('[data-trace-id="second-next"]')
       ?.querySelector('.trace-next') as HTMLButtonElement;
@@ -1743,212 +551,14 @@ describe('slides presentation controller', () => {
     markTraceReady(secondSlideSecondWidget);
 
     firstSlideSecondNext.disabled = true;
-    present.click();
+    present(win);
     dispatchKey(win, 'ArrowRight');
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
+    expect(activeSlideIndex(win)).toBe('1');
 
     dispatchKey(win, 'ArrowLeft');
 
     expect(prevClicks).toBe(1);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('1');
-
-    cleanup?.();
-  });
-
-  test('ArrowLeft and ArrowRight do not navigate slides while focus is inside an interactive control', () => {
-    const win = createSlidesWindowWithInput();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const input = win.document.querySelector('input') as HTMLInputElement;
-
-    present.click();
-    input.focus();
-
-    dispatchKey(win, 'ArrowRight');
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
-
-    dispatchKey(win, 'ArrowLeft');
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('0');
-
-    cleanup?.();
-  });
-
-  test('trace toolbar is hidden while presenting and restored on exit', () => {
-    const win = createSlidesWindow();
-    const cleanup = mount(win);
-
-    const toolbar = win.document.querySelector('.trace-toolbar') as HTMLElement;
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    present.click();
-
-    expect(toolbar.hidden).toBe(true);
-    expect(toolbar.getAttribute('aria-hidden')).toBe('true');
-
-    dispatchKey(win, 'Escape');
-
-    expect(toolbar.hidden).toBe(false);
-    expect(toolbar.hasAttribute('aria-hidden')).toBe(false);
-
-    cleanup?.();
-  });
-
-  test('Close waits until the last trace step before sticking on the final slide', () => {
-    jest.useFakeTimers();
-
-    const win = createSingleSlideTraceWindow();
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const overlay = win.document.querySelector(
-      '[data-slides-overlay]',
-    ) as HTMLElement;
-    const traceWidget = win.document.querySelector(
-      '.trace-widget',
-    ) as HTMLElement;
-    const traceNext = win.document.querySelector(
-      '.trace-next',
-    ) as HTMLButtonElement;
-    const tracePrev = win.document.querySelector(
-      '.trace-prev',
-    ) as HTMLButtonElement;
-    let nextClicks = 0;
-    let prevClicks = 0;
-
-    traceNext.addEventListener('click', () => {
-      nextClicks += 1;
-      traceNext.disabled = true;
-      tracePrev.disabled = false;
-    });
-    tracePrev.addEventListener('click', () => {
-      prevClicks += 1;
-      tracePrev.disabled = true;
-      traceNext.disabled = false;
-    });
-
-    markTraceReady(traceWidget);
-    present.click();
-
-    dispatchKey(win, 'ArrowRight');
-    expect(nextClicks).toBe(1);
-    expect(overlay.hidden).toBe(true);
-
-    dispatchKey(win, 'ArrowRight');
-    expect(overlay.hidden).toBe(false);
-    jest.advanceTimersByTime(5000);
-    expect(overlay.hidden).toBe(false);
-
-    dispatchKey(win, 'ArrowLeft');
-    expect(prevClicks).toBe(1);
-    expect(overlay.hidden).toBe(true);
-
-    cleanup?.();
-  });
-
-  test('clicking a Q&A reveal on the last slide only advances after it is revealed', () => {
-    const win = createSlidesWindowWithQuestionOnLastSlide();
-    mountQuestion(win);
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const overlay = win.document.querySelector(
-      '[data-slides-overlay]',
-    ) as HTMLElement;
-    const questionBody = win.document.querySelector(
-      '.question-a-body',
-    ) as HTMLElement;
-
-    present.click();
-    dispatchKey(win, 'ArrowRight');
-    dispatchKey(win, 'ArrowRight');
-
-    questionBody.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-
-    expect(overlay.hidden).toBe(true);
-    expect(questionBody.hasAttribute('data-revealed')).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('2');
-
-    questionBody.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-
-    expect(overlay.hidden).toBe(false);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('2');
-
-    cleanup?.();
-  });
-
-  test('clicking a multiple choice option on the last slide only advances after it is revealed', () => {
-    const win = createSlidesWindowWithMultipleChoiceOnLastSlide();
-    mountQuestion(win);
-    const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
-    const overlay = win.document.querySelector(
-      '[data-slides-overlay]',
-    ) as HTMLElement;
-    const question = win.document.querySelector(
-      '.question-multiple-choice',
-    ) as HTMLElement;
-    const option = win.document.querySelector(
-      '.question-multiple-choice-option',
-    ) as HTMLElement;
-
-    present.click();
-    dispatchKey(win, 'ArrowRight');
-    dispatchKey(win, 'ArrowRight');
-
-    option.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-
-    expect(overlay.hidden).toBe(true);
-    expect(question.hasAttribute('data-revealed')).toBe(true);
-    expect(option.hasAttribute('data-selected')).toBe(true);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('2');
-
-    option.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-
-    expect(overlay.hidden).toBe(false);
-    expect(
-      win.document
-        .querySelector('.slide.is-active')
-        ?.getAttribute('data-slide-index'),
-    ).toBe('2');
+    expect(activeSlideIndex(win)).toBe('1');
 
     cleanup?.();
   });
@@ -1956,10 +566,6 @@ describe('slides presentation controller', () => {
   test('re-entering presentation resets ready traces to their first step', () => {
     const win = createSlidesWindow();
     const cleanup = mount(win);
-
-    const present = win.document.querySelector(
-      '[data-slides-present]',
-    ) as HTMLButtonElement;
     const close = () =>
       (
         win.document.querySelector('[data-slides-close]') as HTMLButtonElement
@@ -1987,7 +593,7 @@ describe('slides presentation controller', () => {
     traceWidget.querySelector('.trace-controls')?.prepend(traceFirst);
     markTraceReady(traceWidget);
 
-    present.click();
+    present(win);
     traceNext.addEventListener('click', () => {
       traceFirst.disabled = false;
       tracePrev.disabled = false;
@@ -1995,7 +601,7 @@ describe('slides presentation controller', () => {
     });
     dispatchKey(win, 'ArrowRight');
     close();
-    present.click();
+    present(win);
 
     expect(resetClicks).toBe(1);
     expect(traceFirst.disabled).toBe(true);

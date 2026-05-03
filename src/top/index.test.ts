@@ -1,4 +1,13 @@
-import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  mock,
+  test,
+} from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
 
@@ -16,6 +25,10 @@ beforeAll(async () => {
 
 beforeEach(() => {
   mockGlobals();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 function create(html = '', url = 'http://localhost/') {
@@ -59,7 +72,8 @@ describe('top', () => {
     cleanup!();
   });
 
-  test('shows link when scrolled past threshold', async () => {
+  test('shows link when scrolled past threshold', () => {
+    jest.useFakeTimers();
     const win = create();
     mount(win);
 
@@ -70,13 +84,14 @@ describe('top', () => {
     win.dispatchEvent(new win.Event('scroll'));
 
     // debounce is 50ms
-    await new Promise(r => setTimeout(r, 80));
+    jest.advanceTimersByTime(50);
 
     expect(link.classList.contains('is-visible')).toBe(true);
     expect(link.getAttribute('tabindex')).toBe('0');
   });
 
-  test('hides link when scrolled back to top', async () => {
+  test('hides link when scrolled back to top', () => {
+    jest.useFakeTimers();
     const win = create();
     mount(win);
 
@@ -84,12 +99,12 @@ describe('top', () => {
 
     Object.defineProperty(win, 'scrollY', { value: 300, writable: true });
     win.dispatchEvent(new win.Event('scroll'));
-    await new Promise(r => setTimeout(r, 80));
+    jest.advanceTimersByTime(50);
     expect(link.classList.contains('is-visible')).toBe(true);
 
     Object.defineProperty(win, 'scrollY', { value: 0, writable: true });
     win.dispatchEvent(new win.Event('scroll'));
-    await new Promise(r => setTimeout(r, 80));
+    jest.advanceTimersByTime(50);
     expect(link.classList.contains('is-visible')).toBe(false);
     expect(link.getAttribute('tabindex')).toBe('-1');
   });

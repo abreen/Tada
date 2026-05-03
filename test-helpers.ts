@@ -7,3 +7,9 @@ export function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
+
+export async function flushMicrotasks(turns = 10): Promise<void> {
+  for (let i = 0; i < turns; i++) {
+    await Promise.resolve();
+  }
+}
