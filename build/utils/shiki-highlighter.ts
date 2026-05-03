@@ -64,10 +64,7 @@ export async function initHighlighter(
   }
 }
 
-export function getHighlighter(): HighlighterGeneric<
-  BundledLanguage,
-  BundledTheme
-> {
+function getHighlighter(): HighlighterGeneric<BundledLanguage, BundledTheme> {
   if (!highlighter) {
     throw new Error('Shiki highlighter not initialized');
   }

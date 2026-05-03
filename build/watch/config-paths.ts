@@ -6,7 +6,7 @@ import {
 } from '../config-files';
 import { getProjectConfigDir } from '../templates';
 
-export type WatchConfigPathKind = 'site' | 'nav' | 'authors';
+type WatchConfigPathKind = 'site' | 'nav' | 'authors';
 
 function getConfigPathEntries(): Array<{
   kind: WatchConfigPathKind;

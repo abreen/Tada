@@ -1,5 +1,5 @@
 interface TraceToolbarState {
-  hidden: boolean;
+  hidden: HTMLElement['hidden'];
   ariaHidden: string | null;
 }
 

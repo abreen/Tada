@@ -1,6 +1,6 @@
 import { bundledLanguages } from 'shiki';
 import type { BundledLanguage } from 'shiki';
-import { getSiteConfigBaseName, type SiteEnv } from './config-files';
+import type { SiteEnv } from './config-files';
 import { loadSiteConfig } from './config-loader';
 import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { getProjectDir } from './utils/paths';
@@ -162,8 +162,6 @@ export function getDevSiteVariables(): SiteVariables {
 export function getProdSiteVariables(): SiteVariables {
   return getSiteVariables('prod');
 }
-
-export { getSiteConfigBaseName };
 
 function getValidatedSiteConfigRoot(
   value: unknown,

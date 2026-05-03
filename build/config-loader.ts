@@ -115,7 +115,7 @@ function interpolateConfigValue(
   return value;
 }
 
-export function loadResolvedConfigFile<
+function loadResolvedConfigFile<
   T = unknown,
   Name extends ConfigName = ConfigName,
 >(

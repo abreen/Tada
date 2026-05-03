@@ -144,4 +144,4 @@ function compileAndSetValidator(
   validators[name] = compileJsonSchema(schema);
 }
 
-export { getHtmlTemplatesDir, getProjectConfigDir };
+export { getProjectConfigDir };

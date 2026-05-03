@@ -5,7 +5,7 @@ export type SiteEnv = 'dev' | 'prod';
 export type SiteConfigName = 'site.dev' | 'site.prod';
 export type ProjectConfigName = 'nav' | 'authors';
 export type ConfigName = SiteConfigName | ProjectConfigName;
-export type ProjectConfigExtension = '.yaml' | '.yml' | '.json';
+type ProjectConfigExtension = '.yaml' | '.yml' | '.json';
 
 export interface ResolvedProjectConfigFile<
   Name extends ConfigName = ConfigName,
@@ -18,21 +18,21 @@ export interface ResolvedProjectConfigFile<
   required: boolean;
 }
 
-export const CONFIG_FILE_EXTENSIONS = ['.yaml', '.yml', '.json'] as const;
-export const DEFAULT_CONFIG_FILE_EXTENSION = '.yaml' as const;
+const CONFIG_FILE_EXTENSIONS = ['.yaml', '.yml', '.json'] as const;
+const DEFAULT_CONFIG_FILE_EXTENSION = '.yaml' as const;
 
-export const SITE_CONFIG_BASE_NAMES = {
+const SITE_CONFIG_BASE_NAMES = {
   dev: 'site.dev',
   prod: 'site.prod',
 } as const satisfies Record<SiteEnv, SiteConfigName>;
 
-export const PROJECT_CONFIG_BASE_NAMES = {
+const PROJECT_CONFIG_BASE_NAMES = {
   nav: 'nav',
   authors: 'authors',
 } as const satisfies Record<ProjectConfigName, ProjectConfigName>;
 
-export const REQUIRED_PROJECT_CONFIG_NAMES = ['nav'] as const;
-export const OPTIONAL_PROJECT_CONFIG_NAMES = ['authors'] as const;
+const REQUIRED_PROJECT_CONFIG_NAMES = ['nav'] as const;
+const OPTIONAL_PROJECT_CONFIG_NAMES = ['authors'] as const;
 export const PROJECT_CONFIG_NAMES = [
   ...REQUIRED_PROJECT_CONFIG_NAMES,
   ...OPTIONAL_PROJECT_CONFIG_NAMES,
@@ -66,7 +66,7 @@ export function getProjectConfigBaseName(
   return PROJECT_CONFIG_BASE_NAMES[name];
 }
 
-export function getSupportedConfigFileNames(baseName: string): string[] {
+function getSupportedConfigFileNames(baseName: string): string[] {
   return CONFIG_FILE_EXTENSIONS.map(ext => `${baseName}${ext}`);
 }
 
@@ -83,19 +83,15 @@ export function getSupportedConfigFileNamesText(baseName: string): string {
   return joinWithOr(getSupportedConfigFileNames(baseName));
 }
 
-export function getDefaultConfigFileName(baseName: string): string {
+function getDefaultConfigFileName(baseName: string): string {
   return `${baseName}${DEFAULT_CONFIG_FILE_EXTENSION}`;
 }
 
-export function getDefaultConfigFilePath(
+function getDefaultConfigFilePath(
   projectDir: string,
   baseName: string,
 ): string {
   return path.join(projectDir, getDefaultConfigFileName(baseName));
-}
-
-export function getDefaultSiteConfigFileName(env: SiteEnv): string {
-  return getDefaultConfigFileName(getSiteConfigBaseName(env));
 }
 
 export function getDefaultSiteConfigPath(
@@ -105,12 +101,6 @@ export function getDefaultSiteConfigPath(
   return getDefaultConfigFilePath(projectDir, getSiteConfigBaseName(env));
 }
 
-export function getDefaultProjectConfigFileName(
-  name: ProjectConfigName,
-): string {
-  return getDefaultConfigFileName(getProjectConfigBaseName(name));
-}
-
 export function getDefaultProjectConfigFilePath(
   projectDir: string,
   name: ProjectConfigName,
@@ -118,7 +108,7 @@ export function getDefaultProjectConfigFilePath(
   return getDefaultConfigFilePath(projectDir, getProjectConfigBaseName(name));
 }
 
-export function resolveConfigFile<Name extends ConfigName = ConfigName>(
+function resolveConfigFile<Name extends ConfigName = ConfigName>(
   projectDir: string,
   {
     name,

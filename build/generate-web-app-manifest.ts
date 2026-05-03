@@ -67,5 +67,3 @@ export function generateWebAppManifest(
     JSON.stringify(manifest),
   );
 }
-
-export { createManifest };

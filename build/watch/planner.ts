@@ -14,7 +14,7 @@ export interface TadaIncrementalWatchPlan {
   publicToRemove: Set<string>;
 }
 
-export type TadaWatchPlan = { kind: 'full' } | TadaIncrementalWatchPlan;
+type TadaWatchPlan = { kind: 'full' } | TadaIncrementalWatchPlan;
 
 export function diffAuthorKeys(previous: unknown, next: unknown): Set<string> {
   const previousMap =

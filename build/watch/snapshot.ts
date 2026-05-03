@@ -1,11 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { normalizeOutputPath } from '../util';
 import {
   type TadaProjectScan,
   assertNoOutputPathConflicts,
-  scanProject,
-  updateProjectScan,
 } from '../source-model';
 import type { Asset, HtmlOutputAnalysis, SiteVariables } from '../types';
 import type { TadaBuildMeta } from './compiler-types';
@@ -60,7 +57,7 @@ function buildReverseMap(
   return reverse;
 }
 
-export function collectOutputOwners(snapshot: {
+function collectOutputOwners(snapshot: {
   contentRecords: Map<string, TadaSourceRecord>;
   publicRecords: Map<string, TadaSourceRecord>;
 }): Map<string, TadaOutputOwner> {
@@ -164,7 +161,7 @@ export function collectSourceHtmlAnalysis(
   return htmlAnalysisByOutputPath;
 }
 
-export function collectHtmlAssetsByPath(
+function collectHtmlAssetsByPath(
   contentRecords: Map<string, TadaSourceRecord>,
 ): Map<string, string> {
   const htmlAssetsByPath = new Map<string, string>();
@@ -178,7 +175,7 @@ export function collectHtmlAssetsByPath(
   return htmlAssetsByPath;
 }
 
-export function collectHtmlAnalysisByPath(
+function collectHtmlAnalysisByPath(
   contentRecords: Map<string, TadaSourceRecord>,
 ): Map<string, HtmlOutputAnalysis> {
   const htmlAnalysisByPath = new Map<string, HtmlOutputAnalysis>();
@@ -201,13 +198,4 @@ export function createBuildMeta(snapshot: TadaSnapshot): TadaBuildMeta {
   };
 }
 
-export function normalizeInternalTarget(target: string): string {
-  return normalizeOutputPath(target);
-}
-
-export {
-  assertNoOutputPathConflicts,
-  scanProject,
-  updateProjectScan,
-  type TadaProjectScan,
-};
+export { assertNoOutputPathConflicts, type TadaProjectScan };

@@ -1,4 +1,4 @@
-export type SubResult = { title: string; url: string; excerpt: string };
+type SubResult = { title: string; url: string; excerpt: string };
 export type Result = {
   title: string;
   titleHtml: string | null;

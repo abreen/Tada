@@ -8,12 +8,12 @@ interface MutoolOutput {
   stderr: string;
 }
 
-export interface PdfPage {
+interface PdfPage {
   pageNumber: number;
   content: string;
 }
 
-export interface PdfExtractResult {
+interface PdfExtractResult {
   pages: PdfPage[];
   hasExtractedText: boolean;
 }

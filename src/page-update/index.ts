@@ -11,7 +11,7 @@ import { globals } from '../globals';
 
 const POLL_INTERVAL_MS = 600_000;
 
-export interface PageUpdateOptions {
+interface PageUpdateOptions {
   pollIntervalMs?: number;
   refreshPage?: (window: Window) => Promise<void>;
 }

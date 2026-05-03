@@ -158,5 +158,3 @@ export async function generateFavicons(
   );
   fs.writeFileSync(path.join(distDir, `${filenameBase}.ico`), icoBuffer);
 }
-
-export { createFaviconSvg };

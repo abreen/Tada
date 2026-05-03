@@ -37,7 +37,7 @@ function resolveTargetToAssetTarget(target: string): string | null {
   return path.posix.extname(normalizedTarget) ? normalizedTarget : null;
 }
 
-export function collectOutgoingHtmlAssetPaths(
+function collectOutgoingHtmlAssetPaths(
   analysis: HtmlOutputAnalysis,
   knownHtmlAssetPaths: Set<string>,
 ): string[] {

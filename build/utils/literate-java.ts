@@ -32,7 +32,7 @@ export function runJavac(
   }
 }
 
-export function getExecError(err: unknown): string {
+function getExecError(err: unknown): string {
   const execErr = err as { stderr?: Buffer; message: string };
   return execErr.stderr ? execErr.stderr.toString() : execErr.message;
 }

@@ -176,4 +176,4 @@ export async function bundle(
   }
 }
 
-export { renderThemeScss, createDefine };
+export { renderThemeScss };

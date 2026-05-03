@@ -23,7 +23,7 @@ interface MarkdownPartialsEnv {
   [PARTIAL_CONTEXT_STACK_KEY]?: MarkdownPartialContext[];
 }
 
-export interface MarkdownPartialsOptions {
+interface MarkdownPartialsOptions {
   filePath: string;
   templateParams: Record<string, unknown>;
   dependencyCollector?: RenderDependencyCollector;

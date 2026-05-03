@@ -1,5 +1,5 @@
-export type HeadingLevel = '1' | '2' | '3' | '4' | '5' | '6';
-export type AlertType = 'warning' | 'note';
+type HeadingLevel = '1' | '2' | '3' | '4' | '5' | '6';
+type AlertType = 'warning' | 'note';
 
 export type Alert = { type: AlertType; title: string };
 export type Heading = { level: HeadingLevel; innerHtml: string; id: string };

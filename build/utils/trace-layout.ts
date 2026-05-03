@@ -33,7 +33,7 @@ const MIN_VALUE_WIDTH = 40;
 const MIN_ARRAY_CELL_WIDTH = 48;
 
 /** Information collected about a heap object across all trace steps. */
-export interface ObjectInfo {
+interface ObjectInfo {
   id: string;
   type: string;
   firstStep: number;
@@ -61,7 +61,7 @@ export interface ObjectInfo {
 }
 
 /** A tree node used to build the hierarchy for d3-flextree. */
-export interface TreeNode {
+interface TreeNode {
   id: string;
   width: number;
   height: number;
