@@ -60,6 +60,7 @@ test.describe('client-side navigation', () => {
     await page.goto('/markdown.html');
     const externalLink = page.locator('main.body a.external').first();
     await expect(externalLink).toHaveAttribute('target', '_blank');
+    await expect(externalLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   test('ctrl+click does not trigger client-side navigation', async ({

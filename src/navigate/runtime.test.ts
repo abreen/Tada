@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
+import { deferred } from '../../test-helpers';
 
 const mockTeardown = mock(() => {});
 const mockMount = mock(async () => mockTeardown);
@@ -12,6 +13,7 @@ mock.module('./lifecycle', () => ({
 import {
   NAVIGATION_EVENT,
   initNavigation,
+  navigateToUrl,
   refreshCurrentPage,
 } from './runtime';
 
@@ -34,8 +36,8 @@ function createDOM(
   return dom.window;
 }
 
-function createPageHTML() {
-  return `<html><head><title>New</title><meta name="generator" content="${GENERATOR}"><meta name="description" content="updated"></head><body class="post"><div class="container"><p>Updated</p></div></body></html>`;
+function createPageHTML(title = 'New', content = 'Updated') {
+  return `<html><head><title>${title}</title><meta name="generator" content="${GENERATOR}"><meta name="description" content="updated"></head><body class="post"><div class="container"><p>${content}</p></div></body></html>`;
 }
 
 function htmlResponse(html: string): Response {
@@ -48,10 +50,107 @@ async function flush() {
   }
 }
 
+function mockScrollTo(win: Window) {
+  Object.defineProperty(win, 'scrollTo', {
+    value: mock(() => {}),
+    configurable: true,
+  });
+}
+
 beforeEach(() => {
   mockGlobals();
   mockTeardown.mockClear();
   mockMount.mockClear();
+});
+
+describe('navigateToUrl race handling', () => {
+  test('does not swap a stale navigation after its response body resolves', async () => {
+    const win = createDOM();
+    mockScrollTo(win);
+    initNavigation(win);
+
+    const firstBody = deferred<string>();
+    let callCount = 0;
+    mockGlobals({
+      fetch: mock(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            ok: true,
+            text: mock(() => firstBody.promise),
+          } as unknown as Response;
+        }
+
+        return htmlResponse(createPageHTML('Fresh', 'Fresh content'));
+      }),
+    });
+
+    const firstNavigation = navigateToUrl(win, {
+      url: 'http://localhost/first',
+      scrollTarget: null,
+      direction: 'forward',
+      pushHistory: true,
+      useViewTransition: false,
+    });
+    await flush();
+
+    await navigateToUrl(win, {
+      url: 'http://localhost/second',
+      scrollTarget: null,
+      direction: 'forward',
+      pushHistory: true,
+      useViewTransition: false,
+    });
+
+    firstBody.resolve(createPageHTML('Stale', 'Stale content'));
+    await firstNavigation;
+
+    expect(win.document.title).toBe('Fresh');
+    expect(win.document.querySelector('.container')?.innerHTML).toContain(
+      'Fresh content',
+    );
+    expect(win.document.querySelector('.container')?.innerHTML).not.toContain(
+      'Stale content',
+    );
+  });
+
+  test('handles abort errors while reading the response body', async () => {
+    const win = createDOM();
+    mockScrollTo(win);
+    initNavigation(win);
+
+    const setLocationHref = mock(() => {});
+    mockGlobals({
+      fetch: mock(async () => ({
+        ok: true,
+        text: mock(async () => {
+          const err = new Error('The operation was aborted.');
+          err.name = 'AbortError';
+          throw err;
+        }),
+      })) as unknown as typeof fetch,
+      ...({ setLocationHref } as unknown as Partial<
+        import('../globals').Globals
+      >),
+    });
+
+    await navigateToUrl(win, {
+      url: 'http://localhost/other',
+      scrollTarget: null,
+      direction: 'forward',
+      pushHistory: true,
+      useViewTransition: false,
+    });
+
+    expect(win.document.querySelector('.container')?.innerHTML).toContain(
+      'Original',
+    );
+    expect(mockTeardown).not.toHaveBeenCalled();
+    expect(setLocationHref).not.toHaveBeenCalled();
+    expect(
+      win.document.querySelector('header')?.classList.contains('loading'),
+    ).toBe(false);
+  });
 });
 
 describe('refreshCurrentPage', () => {

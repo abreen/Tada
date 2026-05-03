@@ -28,7 +28,7 @@ describe('external-links-plugin', () => {
     );
 
     expect(html).toContain(
-      '<a href="https://outside.example/docs" class="external" target="_blank">',
+      '<a href="https://outside.example/docs" class="external" target="_blank" rel="noopener noreferrer">',
     );
     expect(html).toContain('<a href="https://example.com/docs">Internal</a>');
     expect(html).toContain('<a href="mailto:test@example.com">Mail</a>');
@@ -41,7 +41,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[Markdown examples page](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank">Markdown examples <span class="external-link-tail">page</span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer">Markdown examples <span class="external-link-tail">page</span></a>',
     );
   });
 
@@ -52,7 +52,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[click](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank"><span class="external-link-tail">click</span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer"><span class="external-link-tail">click</span></a>',
     );
   });
 
@@ -75,7 +75,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[**bold link**](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank"><strong>bold <span class="external-link-tail">link</span></strong></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer"><strong>bold <span class="external-link-tail">link</span></strong></a>',
     );
   });
 
@@ -86,7 +86,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[**bold**](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank"><span class="external-link-tail"><strong>bold</strong></span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer"><span class="external-link-tail"><strong>bold</strong></span></a>',
     );
   });
 
@@ -97,7 +97,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[hello   world](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank">hello   <span class="external-link-tail">world</span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer">hello   <span class="external-link-tail">world</span></a>',
     );
   });
 
@@ -110,7 +110,7 @@ describe('external-links-plugin', () => {
     // The space at the end of "click " is the split point; everything
     // after it (including the em_open/text/em_close) goes inside the span.
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank">click <span class="external-link-tail"><em>here</em></span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer">click <span class="external-link-tail"><em>here</em></span></a>',
     );
   });
 
@@ -121,7 +121,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[install `tada`](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank">install <span class="external-link-tail"><code>tada</code></span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer">install <span class="external-link-tail"><code>tada</code></span></a>',
     );
   });
 
@@ -132,7 +132,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[my-long-link](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank">my-long-<span class="external-link-tail">link</span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer">my-long-<span class="external-link-tail">link</span></a>',
     );
   });
 
@@ -143,7 +143,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[hello world-bound](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank">hello world-<span class="external-link-tail">bound</span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer">hello world-<span class="external-link-tail">bound</span></a>',
     );
   });
 
@@ -154,7 +154,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[my-link-](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank">my-<span class="external-link-tail">link-</span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer">my-<span class="external-link-tail">link-</span></a>',
     );
   });
 
@@ -165,7 +165,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[a-](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank"><span class="external-link-tail">a-</span></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer"><span class="external-link-tail">a-</span></a>',
     );
   });
 
@@ -176,7 +176,7 @@ describe('external-links-plugin', () => {
     const html = md.render('[**bold *and italic***](https://example.com)');
 
     expect(html).toContain(
-      '<a href="https://example.com" class="external" target="_blank"><strong>bold <em>and <span class="external-link-tail">italic</span></em></strong></a>',
+      '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer"><strong>bold <em>and <span class="external-link-tail">italic</span></em></strong></a>',
     );
   });
 });

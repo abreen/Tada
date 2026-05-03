@@ -48,9 +48,10 @@ class TestNavigationRendering:
 
     def test_nav_external_link_has_target_blank(self, built_dev_site):
         html = (built_dev_site / 'dist' / 'index.html').read_text()
-        # External link should have both the URL and target="_blank"
+        # External link should have URL, new-tab target, and opener hardening
         assert 'href="https://example.com"' in html
         assert 'target="_blank"' in html
+        assert 'rel="noopener noreferrer"' in html
         # Verify the external link contains Example text
         assert 'Example</a>' in html
 

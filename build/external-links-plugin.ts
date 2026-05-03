@@ -175,6 +175,7 @@ export default function externalLinks(
       const newClassAttr = classAttr ? `${classAttr} external` : 'external';
       token.attrSet('class', newClassAttr);
       token.attrSet('target', '_blank');
+      token.attrSet('rel', 'noopener noreferrer');
       log.debug`${href} -> "${newClassAttr}"`;
 
       const closeIdx = findMatchingClose(children, i);

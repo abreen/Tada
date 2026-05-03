@@ -92,9 +92,7 @@ function createDefine(
   };
 }
 
-function createScssPlugin(siteVariables: SiteVariables) {
-  const themeDir = renderThemeScss(siteVariables);
-
+function createScssPlugin(themeDir: string) {
   return {
     name: 'scss',
     setup(build: PluginBuilder) {
@@ -121,30 +119,36 @@ export async function bundle(
     path.resolve(packageDir, 'src/critical.scss'),
   ];
 
-  const result = await Bun.build({
-    entrypoints,
-    outdir: resolvedDistDir,
-    naming: getBundleNaming(),
-    minify: mode === 'production',
-    sourcemap: isDev ? 'inline' : 'none',
-    define: createDefine(siteVariables, isDev),
-    external: ['*.woff2'],
-    plugins: [createScssPlugin(siteVariables)],
-  });
+  const themeDir = renderThemeScss(siteVariables);
 
-  if (!result.success) {
-    const messages = result.logs
-      .filter(log => log.level === 'error')
-      .map(log => log.message || String(log));
-    throw new Error(`Bundle failed:\n${messages.join('\n')}`);
+  try {
+    const result = await Bun.build({
+      entrypoints,
+      outdir: resolvedDistDir,
+      naming: getBundleNaming(),
+      minify: mode === 'production',
+      sourcemap: isDev ? 'inline' : 'none',
+      define: createDefine(siteVariables, isDev),
+      external: ['*.woff2'],
+      plugins: [createScssPlugin(themeDir)],
+    });
+
+    if (!result.success) {
+      const messages = result.logs
+        .filter(log => log.level === 'error')
+        .map(log => log.message || String(log));
+      throw new Error(`Bundle failed:\n${messages.join('\n')}`);
+    }
+
+    // Return the output filenames for asset tag injection
+    const assetFiles = result.outputs.map(output =>
+      toPosix(path.relative(resolvedDistDir, output.path)),
+    );
+
+    return assetFiles;
+  } finally {
+    fs.rmSync(themeDir, { recursive: true, force: true });
   }
-
-  // Return the output filenames for asset tag injection
-  const assetFiles = result.outputs.map(output =>
-    toPosix(path.relative(resolvedDistDir, output.path)),
-  );
-
-  return assetFiles;
 }
 
 export { renderThemeScss, createDefine };

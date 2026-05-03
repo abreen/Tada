@@ -130,6 +130,14 @@ function getLocationKey(window: Window): string {
   );
 }
 
+function isAbortError(err: unknown): boolean {
+  return err instanceof Error && err.name === 'AbortError';
+}
+
+function isActiveNavigation(controller: AbortController): boolean {
+  return currentAbortController === controller && !controller.signal.aborted;
+}
+
 export function initNavigation(window: Window): void {
   currentAbortController = null;
   historyIndex = 0;
@@ -191,6 +199,8 @@ export async function navigateToUrl(
 
   const controller = new AbortController();
   currentAbortController = controller;
+  document.documentElement.classList.remove('nav-forward', 'nav-back');
+  cleanupViewTransitionNames(document);
 
   const header = document.querySelector('header');
   header?.classList.add('loading');
@@ -199,11 +209,18 @@ export async function navigateToUrl(
   try {
     response = await globals.fetch(url, { signal: controller.signal });
   } catch (err: unknown) {
+    if (!isActiveNavigation(controller)) {
+      return;
+    }
     header?.classList.remove('loading');
-    if (err instanceof Error && err.name === 'AbortError') {
+    if (isAbortError(err)) {
       return;
     }
     globals.setLocationHref(window, url);
+    return;
+  }
+
+  if (!isActiveNavigation(controller)) {
     return;
   }
 
@@ -213,7 +230,25 @@ export async function navigateToUrl(
     return;
   }
 
-  const html = await response.text();
+  let html: string;
+  try {
+    html = await response.text();
+  } catch (err: unknown) {
+    if (!isActiveNavigation(controller)) {
+      return;
+    }
+    header?.classList.remove('loading');
+    if (isAbortError(err)) {
+      return;
+    }
+    globals.setLocationHref(window, url);
+    return;
+  }
+
+  if (!isActiveNavigation(controller)) {
+    return;
+  }
+
   header?.classList.remove('loading');
 
   const DOMParserCtor = (window as unknown as { DOMParser: typeof DOMParser })
@@ -233,7 +268,11 @@ export async function navigateToUrl(
 
   const parsed = new URL(url);
 
-  const doSwap = () => {
+  const doSwap = (): boolean => {
+    if (!isActiveNavigation(controller)) {
+      return false;
+    }
+
     teardownPerPageComponents();
     swapContent(document, newDoc);
     updateHead(document, newDoc);
@@ -257,6 +296,7 @@ export async function navigateToUrl(
 
     scrollByIndex.set(historyIndex, window.scrollY);
     scrollByLocation.set(getLocationKey(window), window.scrollY);
+    return true;
   };
 
   const transitionDoc = document as Document & {
@@ -295,7 +335,9 @@ export async function navigateToUrl(
     );
 
     const transition = transitionDoc.startViewTransition(() => {
-      doSwap();
+      if (!doSwap()) {
+        return;
+      }
 
       const newTitleEl = document.querySelector('.title-and-info');
       const newHeaderHeight =
@@ -323,13 +365,23 @@ export async function navigateToUrl(
     });
 
     await transition.finished;
+    if (!isActiveNavigation(controller)) {
+      return;
+    }
+
     document.documentElement.classList.remove('nav-forward', 'nav-back');
     cleanupViewTransitionNames(document);
   } else {
-    doSwap();
+    if (!doSwap()) {
+      return;
+    }
   }
 
   await mountPerPageComponents(window);
+  if (!isActiveNavigation(controller)) {
+    return;
+  }
+
   currentAbortController = null;
   dispatchNavigationEvent(window);
 }

@@ -4,8 +4,9 @@ Site navigation is defined in `nav.yaml`/`nav.yml`/`nav.json` at the
 project root. `tada init` creates `nav.yaml` by default. The file is an array
 of sections, each with a title and a list of links.
 
-Each link has display text and either an internal path or an external URL. Links
-can be marked as disabled (rendered but not clickable).
+Each link has display text and either an internal path or an external URL.
+External links open in a new tab with `rel="noopener noreferrer"`. Links can be
+marked as disabled (rendered but not clickable).
 
 The navigation is validated against a JSON schema at build time. Internal links
 are also validated against the set of known pages; a broken link fails the

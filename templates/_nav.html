@@ -8,7 +8,7 @@
           <a
             class="<%= cx({disabled: link.disabled, external: link.external}) %>"
             <% if (!link.disabled) { %>href="<%= link.internal || link.external %>"<% } %>
-            <% if (link.external) { %>target="_blank"<% } %>
+            <% if (link.external) { %>target="_blank" rel="noopener noreferrer"<% } %>
           >
             <%= link.text %></a>
         </li>

@@ -12,7 +12,7 @@ const NAV_TEMPLATE = `<nav>
           <a
             class="<%= cx({disabled: link.disabled, external: link.external}) %>"
             <% if (!link.disabled) { %>href="<%= link.internal || link.external %>"<% } %>
-            <% if (link.external) { %>target="_blank"<% } %>
+            <% if (link.external) { %>target="_blank" rel="noopener noreferrer"<% } %>
           >
             <%= link.text %></a>
         </li>
@@ -37,6 +37,7 @@ describe('_nav.html template', () => {
 
     const html = renderNav(navData);
     expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
     expect(html).toContain('href="https://example.com"');
     expect(html).toContain('class="external"');
   });
@@ -63,6 +64,7 @@ describe('_nav.html template', () => {
 
     const html = renderNav(navData);
     expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
     expect(html).not.toContain('href=');
     expect(html).toContain('disabled');
     expect(html).toContain('external');

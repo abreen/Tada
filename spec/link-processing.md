@@ -37,8 +37,9 @@ not rewritten. Anchors with a `download` attribute keep the raw file target.
 ## External link marking
 
 Links to domains not listed in `internalDomains` are automatically marked as
-external during Markdown rendering. External links open in a new tab. Raw HTML
-content is not decorated with this feature.
+external during Markdown rendering. External links open in a new tab with
+`rel="noopener noreferrer"`. Raw HTML content is not decorated with this
+feature.
 
 
 ## Internal link validation
