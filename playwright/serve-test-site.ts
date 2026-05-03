@@ -11,6 +11,7 @@ const coveragePreload = path.join(
 const siteDir = path.join(repoDir, 'playwright', '.test-site');
 const slidesPath = path.join(siteDir, 'content', 'slides.md');
 const resetSlidesPath = path.join(siteDir, 'content', 'slides-reset.md');
+const timezonesPath = path.join(siteDir, 'content', 'timezones.md');
 const traceDir = path.join(siteDir, 'public', 'trace');
 const resetTraceDir = path.join(siteDir, 'public', 'trace-reset');
 const coverageEnabled = process.argv.slice(2).includes('--coverage');
@@ -202,6 +203,27 @@ slides: true
 ---
 
 # Wrap
+`,
+);
+writeFileSync(
+  timezonesPath,
+  `---
+title: Timezones
+---
+
+<%= renderTimeZoneChooser() %>
+
+<%= renderTimeZoneChooser() %>
+
+Default meeting: <time datetime="17:40">5:40 PM</time>
+
+Previous-day meeting: <time datetime="01:30">1:30 AM</time>
+
+Next-day meeting: <time datetime="23:30">11:30 PM</time>
+
+Plain same-period meeting: <time datetime="17:40">5:40</time>
+
+Plain period-changing meeting: <time datetime="11:30">11:30</time>
 `,
 );
 

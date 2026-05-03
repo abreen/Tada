@@ -9,9 +9,16 @@ import {
 } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
-import mount, { mountPageUpdate } from './index';
-import { NAVIGATION_EVENT } from '../navigate/runtime';
 import { flushMicrotasks } from '../../test-helpers';
+
+const NAVIGATION_EVENT = 'tada:navigation';
+
+mock.module('../navigate/runtime', () => ({
+  NAVIGATION_EVENT,
+  refreshCurrentPage: mock(async () => {}),
+}));
+
+const { default: mount, mountPageUpdate } = await import('./index');
 
 function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
   mock.module('../globals', () => ({ globals: createGlobals(overrides) }));

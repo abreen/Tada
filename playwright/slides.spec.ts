@@ -65,6 +65,46 @@ test.describe('slides presentation mode', () => {
     await expect(checkbox).toBeChecked();
   });
 
+  test('Full screen preference persists across reloads', async ({ page }) => {
+    await page.goto('/slides.html');
+
+    const checkbox = page.getByRole('checkbox', { name: 'Full screen' });
+    await expect(checkbox).toBeChecked();
+
+    await checkbox.uncheck();
+    await expect(checkbox).not.toBeChecked();
+    await page.reload();
+    await expect(checkbox).not.toBeChecked();
+
+    await checkbox.check();
+    await page.reload();
+    await expect(checkbox).toBeChecked();
+  });
+
+  test('custom presentation event can start at a slide', async ({ page }) => {
+    await page.goto('/slides.html');
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
+
+    await page.evaluate(() => {
+      document
+        .querySelector('[data-slides-root]')
+        ?.dispatchEvent(
+          new CustomEvent('tada:slides-present', {
+            bubbles: true,
+            detail: { slideIndex: 1 },
+          }),
+        );
+    });
+
+    const activeSlide = page.locator('main.body .slide-deck .slide.is-active');
+    await expect(activeSlide).toContainText('Middle');
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.body.classList.contains('is-presenting')),
+      )
+      .toBe(true);
+  });
+
   test('presentation mode supports browser interactions', async ({ page }) => {
     await page.goto('/slides.html');
     await page.addStyleTag({

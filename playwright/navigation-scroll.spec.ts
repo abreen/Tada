@@ -29,6 +29,42 @@ test.describe('scroll and hash behavior', () => {
     expect(targetTop).toBeGreaterThanOrEqual(-50); // allow slight overshoot
   });
 
+  test('clicking the active hash link scrolls the current target again', async ({
+    page,
+  }) => {
+    await page.goto('/markdown.html');
+
+    const tocLink = page.locator('nav.toc ol a').first();
+    const href = await tocLink.getAttribute('href');
+    expect(href).toBeTruthy();
+    await page.goto(`/markdown.html${href}`);
+
+    await page.evaluate(() => {
+      const target = document.querySelector(
+        window.location.hash,
+      ) as HTMLElement | null;
+      const scopedWindow = window as Window & { __sameHashScrolled?: boolean };
+      scopedWindow.__sameHashScrolled = false;
+      if (target) {
+        target.scrollIntoView = () => {
+          scopedWindow.__sameHashScrolled = true;
+        };
+      }
+    });
+
+    await page.locator(`nav.toc ol a[href="${href}"]`).click();
+
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as Window & { __sameHashScrolled?: boolean })
+              .__sameHashScrolled === true,
+        ),
+      )
+      .toBe(true);
+  });
+
   test('hash in cross-page navigation scrolls to target', async ({ page }) => {
     // First, find a heading ID on the markdown page
     await page.goto('/markdown.html');

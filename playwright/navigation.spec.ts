@@ -266,4 +266,59 @@ test.describe('client-side navigation', () => {
     });
     expect(value).toBe('');
   });
+
+  test('search keyboard controls focus and dismiss results', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+
+    await page.evaluate(() => {
+      const main = document.querySelector('main.body');
+      const input = document.createElement('input');
+      input.id = 'other-input';
+      input.setAttribute('aria-label', 'Other input');
+      const button = document.createElement('button');
+      button.id = 'return-focus';
+      button.textContent = 'Return focus';
+      main?.prepend(input, button);
+    });
+
+    const searchInput = page.locator('input[name="quick-search"]');
+    const otherInput = page.getByLabel('Other input');
+    const returnFocus = page.getByRole('button', { name: 'Return focus' });
+
+    await otherInput.focus();
+    await page.keyboard.press('/');
+    await expect(otherInput).toHaveValue('/');
+    await expect(searchInput).not.toBeFocused();
+
+    await returnFocus.focus();
+    await page.keyboard.press('/');
+    await expect(searchInput).toBeFocused();
+
+    await searchInput.fill('markdown');
+    const results = page.locator('.results-container .results a');
+    await expect(results.first()).toBeVisible({ timeout: 5000 });
+
+    await page.keyboard.press('ArrowDown');
+    await expect(results.first()).toBeFocused();
+    await expect(
+      page.locator('.results-container [role="option"]').first(),
+    ).toHaveAttribute('aria-selected', 'true');
+
+    await page.keyboard.press('ArrowDown');
+    await expect(results.nth(1)).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(results.first()).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(searchInput).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    const resultsContainer = page.locator('.results-container');
+    await expect(resultsContainer).toHaveAttribute('aria-hidden', 'true');
+    await expect(resultsContainer).toHaveAttribute('inert', '');
+
+    await page.keyboard.press('Escape');
+    await expect(returnFocus).toBeFocused();
+  });
 });

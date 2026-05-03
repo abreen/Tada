@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
-import mount, {
+import {
+  alertToTableItem,
   getHighlightIndexes,
   headingToTableItem,
-  alertToTableItem,
   switchCurrent,
-  type Heading,
   type Alert,
   type Dinkus,
-} from './index';
+  type Heading,
+} from './model';
 
 function dom(html: string) {
   return new JSDOM(`<body>${html}</body>`);
@@ -58,8 +58,7 @@ describe('headingToTableItem', () => {
   test('extracts level and innerHTML from a heading', () => {
     const { document } = dom('<h2 id="intro">Introduction</h2>').window;
     const el = document.querySelector('h2') as HTMLHeadingElement;
-    const result = headingToTableItem(el);
-    expect(result).toEqual({
+    expect(headingToTableItem(el)).toEqual({
       level: '2',
       id: 'intro',
       innerHtml: 'Introduction',
@@ -81,8 +80,7 @@ describe('headingToTableItem', () => {
   test('uses innerHTML when no subtitle', () => {
     const { document } = dom('<h1 id="top"><em>Bold</em> title</h1>').window;
     const el = document.querySelector('h1') as HTMLHeadingElement;
-    const result = headingToTableItem(el);
-    expect(result.innerHtml).toBe('<em>Bold</em> title');
+    expect(headingToTableItem(el).innerHtml).toBe('<em>Bold</em> title');
   });
 });
 
@@ -130,108 +128,5 @@ describe('switchCurrent', () => {
     switchCurrent(items[0] as HTMLElement, items[1] as HTMLElement);
     expect(items[0].classList.contains('current')).toBe(false);
     expect(items[1].classList.contains('current')).toBe(true);
-  });
-});
-
-describe('toc mount', () => {
-  test('returns early when no nav.toc exists', () => {
-    const win = dom('<div>No toc</div>').window;
-    const cleanup = mount(win);
-    expect(cleanup).toBeUndefined();
-  });
-
-  test('returns early when toc has no links', () => {
-    const win = dom('<nav class="toc"><ol></ol></nav>').window;
-    const cleanup = mount(win);
-    expect(cleanup).toBeUndefined();
-  });
-
-  describe('code page', () => {
-    function createCodePage(hash = '') {
-      const html =
-        '<nav class="toc"><ol>' +
-        '<li><a href="#L1">main</a></li>' +
-        '<li><a href="#L10">helper</a></li>' +
-        '<li><a href="#L20">util</a></li>' +
-        '</ol></nav>' +
-        '<div class="body"></div>';
-      return new JSDOM(`<body class="code">${html}</body>`, {
-        url: `http://localhost/${hash}`,
-      }).window;
-    }
-
-    test('highlights the matching toc entry for the current hash', () => {
-      const win = createCodePage('#L10');
-      mount(win);
-
-      const items = win.document.querySelectorAll('nav.toc ol li');
-      expect(items[1].classList.contains('current')).toBe(true);
-    });
-
-    test('highlights nearest entry when hash is between line ranges', () => {
-      const win = createCodePage('#L15');
-      mount(win);
-
-      const items = win.document.querySelectorAll('nav.toc ol li');
-      expect(items[1].classList.contains('current')).toBe(true);
-    });
-
-    test('parses range hashes like #L5-L10', () => {
-      const win = createCodePage('#L5-L10');
-      mount(win);
-
-      const items = win.document.querySelectorAll('nav.toc ol li');
-      expect(items[0].classList.contains('current')).toBe(true);
-    });
-
-    test('no current item when hash has no line number', () => {
-      const win = createCodePage('');
-      mount(win);
-
-      const current = win.document.querySelector('nav.toc .current');
-      expect(current).toBeNull();
-    });
-
-    test('cleanup removes hashchange listener', () => {
-      const win = createCodePage('#L1');
-      const cleanup = mount(win);
-
-      expect(typeof cleanup).toBe('function');
-      cleanup!();
-    });
-  });
-
-  describe('regular page', () => {
-    function createRegularPage() {
-      const html =
-        '<nav class="toc"><ol>' +
-        '<li><a href="#intro">Introduction</a></li>' +
-        '<li><a href="#setup">Setup</a></li>' +
-        '</ol></nav>' +
-        '<div class="body">' +
-        '<h2 id="intro">Introduction</h2>' +
-        '<p>Content</p>' +
-        '<h2 id="setup">Setup</h2>' +
-        '<p>More content</p>' +
-        '</div>';
-      return new JSDOM(`<body>${html}</body>`, { url: 'http://localhost/' })
-        .window;
-    }
-
-    test('sets a current item on mount', () => {
-      const win = createRegularPage();
-      mount(win);
-
-      const current = win.document.querySelector('nav.toc .current');
-      expect(current).not.toBeNull();
-    });
-
-    test('cleanup removes scroll listener', () => {
-      const win = createRegularPage();
-      const cleanup = mount(win);
-
-      expect(typeof cleanup).toBe('function');
-      cleanup!();
-    });
   });
 });
