@@ -3,11 +3,17 @@ import path from 'path';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
+const coveragePreload = path.join(
+  repoDir,
+  'scripts',
+  'coverage-preload-playwright.ts',
+);
 const siteDir = path.join(repoDir, 'playwright', '.test-site');
 const slidesPath = path.join(siteDir, 'content', 'slides.md');
 const resetSlidesPath = path.join(siteDir, 'content', 'slides-reset.md');
 const traceDir = path.join(siteDir, 'public', 'trace');
 const resetTraceDir = path.join(siteDir, 'public', 'trace-reset');
+const coverageEnabled = process.argv.slice(2).includes('--coverage');
 
 async function run(args: string[], cwd = repoDir): Promise<void> {
   const proc = Bun.spawn(args, {
@@ -21,11 +27,18 @@ async function run(args: string[], cwd = repoDir): Promise<void> {
   }
 }
 
+async function runTada(args: string[], cwd = repoDir): Promise<void> {
+  const command = ['bun'];
+  if (coverageEnabled) {
+    command.push('--preload', coveragePreload);
+  }
+  command.push(tada, ...args);
+  await run(command, cwd);
+}
+
 rmSync(siteDir, { recursive: true, force: true });
 
-await run([
-  'bun',
-  tada,
+await runTada([
   'init',
   siteDir,
   '--no-interactive',
@@ -192,5 +205,5 @@ slides: true
 `,
 );
 
-await run(['bun', tada, 'dev'], siteDir);
-await run(['bun', tada, 'serve', '--port', '8081'], siteDir);
+await runTada(['dev'], siteDir);
+await runTada(['serve', '--port', '8081'], siteDir);

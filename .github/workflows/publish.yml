@@ -79,7 +79,7 @@ jobs:
 
     - name: Run functional tests with coverage (shard ${{ matrix.shard }}/5)
       run: >
-        TADA_COVERAGE=1 bun run test:functional
+        bun run test:functional --coverage
         --shard ${{ matrix.shard }} --num-shards 5
 
     - name: Upload functional coverage
@@ -158,11 +158,18 @@ jobs:
     - name: Install Playwright browsers
       run: bunx playwright install --with-deps chromium
 
-    - name: Run Playwright tests
-      run: bun run test:playwright
+    - name: Run Playwright tests with coverage
+      run: bun run test:playwright --coverage
+
+    - name: Upload Playwright coverage
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      if: always()
+      with:
+        name: coverage-playwright
+        path: coverage/playwright/
 
   coverage:
-    needs: [unit-test, functional-test]
+    needs: [unit-test, functional-test, playwright]
     runs-on: ubuntu-latest
 
     steps:
@@ -185,6 +192,12 @@ jobs:
         pattern: coverage-functional-*
         path: coverage/functional/
         merge-multiple: true
+
+    - name: Download Playwright coverage
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      with:
+        name: coverage-playwright
+        path: coverage/playwright/
 
     - name: Generate coverage report
       run: bun run scripts/coverage-report.ts

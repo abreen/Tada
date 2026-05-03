@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './test-fixtures';
 
 test.describe('timezone chooser without JS', () => {
   test('select is hidden and default timezone text shows', async ({

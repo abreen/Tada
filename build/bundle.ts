@@ -19,6 +19,19 @@ import type { SiteVariables } from './types';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import pkg from '../package.json' with { type: 'json' };
 
+interface BunBuildPlugin {
+  name: string;
+  setup(build: PluginBuilder): void;
+}
+
+interface CoverageHooks {
+  createBundlePlugin(): BunBuildPlugin;
+}
+
+interface CoverageGlobal {
+  __tadaCoverage?: CoverageHooks;
+}
+
 export function getBundleNaming(): string {
   const version = pkg.version.replace(/[^a-zA-Z0-9.-]/g, '-');
   return `[name].bundle.tada-${version}.[ext]`;
@@ -106,6 +119,12 @@ function createScssPlugin(themeDir: string) {
   };
 }
 
+function getCoverageBundlePlugin(): BunBuildPlugin | null {
+  return (
+    (globalThis as CoverageGlobal).__tadaCoverage?.createBundlePlugin() ?? null
+  );
+}
+
 export async function bundle(
   siteVariables: SiteVariables,
   { mode = 'development', distDir }: { mode?: string; distDir?: string } = {},
@@ -122,6 +141,12 @@ export async function bundle(
   const themeDir = renderThemeScss(siteVariables);
 
   try {
+    const plugins = [createScssPlugin(themeDir)];
+    const coverageBundlePlugin = getCoverageBundlePlugin();
+    if (coverageBundlePlugin) {
+      plugins.push(coverageBundlePlugin);
+    }
+
     const result = await Bun.build({
       entrypoints,
       outdir: resolvedDistDir,
@@ -130,7 +155,7 @@ export async function bundle(
       sourcemap: isDev ? 'inline' : 'none',
       define: createDefine(siteVariables, isDev),
       external: ['*.woff2'],
-      plugins: [createScssPlugin(themeDir)],
+      plugins,
     });
 
     if (!result.success) {

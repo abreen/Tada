@@ -41,7 +41,7 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 - Run functional tests: `bun run test:functional`
 - Run a single functional test file: `bun run test:functional functional_tests/test_init.py`
 - Run the entire test suite: `bun run test:all`
-- Run unit & functional tests, collecting coverage: `bun run test:coverage`
+- Run all test suites, collecting coverage: `bun run test:coverage`
 
 Functional tests are CPU intensive and may take over 2 minutes, even on powerful machines.
 

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './test-fixtures';
 
 test.describe('scroll and hash behavior', () => {
   test('same-page hash links scroll to target', async ({ page }) => {

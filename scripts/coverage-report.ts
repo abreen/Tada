@@ -10,6 +10,7 @@ import { createInstrumenter } from 'istanbul-lib-instrument';
 const coverageDir = path.resolve(import.meta.dir, '..', 'coverage');
 const packageDir = path.resolve(import.meta.dir, '..');
 const functionalDir = path.join(coverageDir, 'functional');
+const playwrightDir = path.join(coverageDir, 'playwright');
 const unitLcovPath = path.join(coverageDir, 'unit', 'lcov.info');
 const outputDir = path.join(coverageDir, 'report');
 const excludedCoveragePaths = new Set([
@@ -23,15 +24,17 @@ function isCoverageExcluded(filePath: string): boolean {
 
 const map = libCoverage.createCoverageMap({});
 
-// Merge functional test coverage (Istanbul JSON files)
-if (fs.existsSync(functionalDir)) {
-  for (const file of fs.readdirSync(functionalDir)) {
+// Merge Bun and browser Istanbul JSON coverage.
+for (const suiteDir of [functionalDir, playwrightDir]) {
+  if (!fs.existsSync(suiteDir)) {
+    continue;
+  }
+
+  for (const file of fs.readdirSync(suiteDir)) {
     if (!file.endsWith('.json')) {
       continue;
     }
-    const data = JSON.parse(
-      fs.readFileSync(path.join(functionalDir, file), 'utf8'),
-    );
+    const data = JSON.parse(fs.readFileSync(path.join(suiteDir, file), 'utf8'));
     for (const filePath of Object.keys(data)) {
       if (isCoverageExcluded(filePath)) {
         delete data[filePath];

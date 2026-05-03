@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './test-fixtures';
 
 // Helper to navigate via JS click (avoids visibility/details issues)
 async function clickLink(page: any, href: string) {

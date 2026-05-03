@@ -28,6 +28,20 @@ def pytest_addoption(parser):
     parser.addoption(
         '--num-shards', type=int, default=1, help='Total number of shards to split tests across'
     )
+    parser.addoption(
+        '--coverage',
+        action='store_true',
+        default=False,
+        help='Collect Tada Istanbul coverage while running functional tests',
+    )
+
+
+COVERAGE_ENABLED = False
+
+
+def pytest_configure(config):
+    global COVERAGE_ENABLED
+    COVERAGE_ENABLED = config.getoption('--coverage')
 
 
 def pytest_collection_modifyitems(config, items):
@@ -97,13 +111,13 @@ def set_site_config(site_dir, overrides, config_file=SITE_DEV_CONFIG_FILE):
     write_structured_file(config_path, config)
 
 
-COVERAGE_PRELOAD = PACKAGE_DIR / 'scripts' / 'coverage-preload.ts'
+COVERAGE_PRELOAD = PACKAGE_DIR / 'scripts' / 'coverage-preload-functional.ts'
 
 
 def _bun_command(*args):
     """Build the bun command, injecting --preload for coverage if enabled."""
     cmd = ['bun']
-    if os.environ.get('TADA_COVERAGE'):
+    if COVERAGE_ENABLED:
         cmd.extend(['--preload', str(COVERAGE_PRELOAD)])
     cmd.append(str(TADA_BIN))
     cmd.extend(args)

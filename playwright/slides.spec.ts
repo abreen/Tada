@@ -1,4 +1,4 @@
-import { test, expect, type Locator } from '@playwright/test';
+import { test, expect, type Locator } from './test-fixtures';
 
 async function cursorFor(locator: Locator) {
   return locator.evaluate(
