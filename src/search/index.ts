@@ -40,11 +40,6 @@ interface Pagefind {
 
 let pagefind: Pagefind | null = null;
 
-// Unit tests need to clear the module-scoped Pagefind instance between cases.
-export function resetPagefindForTest() {
-  pagefind = null;
-}
-
 type SubResult = { title: string; url: string; excerpt: string };
 
 type State = {

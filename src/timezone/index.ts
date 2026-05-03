@@ -6,8 +6,6 @@ import {
   type PeriodStyle,
 } from './time-format';
 
-export { detectPeriodStyle, normalizeHM, to12Hour } from './time-format';
-
 const STORAGE_KEY = 'timezoneSelection';
 const TIMEZONE_SELECT_LABEL = 'Time zone';
 

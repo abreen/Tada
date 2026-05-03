@@ -9,14 +9,6 @@ import {
 
 const LATENCY_MS = 50;
 
-export {
-  alertToTableItem,
-  getHighlightIndexes,
-  headingToTableItem,
-  switchCurrent,
-} from './model';
-export type { Alert, AlertType, Dinkus, Heading, HeadingLevel } from './model';
-
 function getContainer(parent: HTMLElement): HTMLElement | null {
   return parent.querySelector('nav.toc');
 }
