@@ -7,6 +7,9 @@ of sections, each with a title and a list of links.
 Each link has display text and either an internal path or an external URL.
 External links open in a new tab with `rel="noopener noreferrer"`. Links can be
 marked as disabled (rendered but not clickable).
+Authored nav URLs are encoded when rendered so spaces and HTML-significant
+characters do not appear raw in `href` attributes, while existing percent
+escapes remain intact.
 
 The navigation is validated against a JSON schema at build time. Internal links
 are also validated against the set of known pages; a broken link fails the

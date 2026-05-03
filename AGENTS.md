@@ -48,11 +48,11 @@ Functional tests are CPU intensive and may take over 2 minutes, even on powerful
 ## Unit test rules
 
 - Never rely on JSDOM to test browser behavior like navigation, instead use a Playwright test
-- Never read or modify real files/directories in a unit test
-- If you need to test creating/reading/writing files, write a functional test
+- Never create, read or modify real files/directories in a unit test, instead use functional tests
+  - The only exception is Lodash templates: use unit tests in `templates/` that read the `.html` files and render them
 - Never mock globals; instead mock the `globals.ts` module (either `build/globals.ts` or `src/globals.ts`)
-- In `src/`, dunder variables like `__IS_DEV__` and `__SITE_BASE_PATH__` are replaced at build time; they are the only exception to the globals rule
-- The dunder variables are initialized for unit tests in `test/unit-test-preload.ts`; tests can set them on `globalThis` when needed
+  - The only exception is dunder variables like `__IS_DEV__` and `__SITE_BASE_PATH__`: they are replaced at build time
+  - Dunder variables are initialized for unit tests in `unit-test-preload.ts`; tests can set them on `globalThis` when needed
 
 ## Playwright test rules
 

@@ -23,6 +23,7 @@ interface TemplateGlobals {
   readableDate: (date: string | Date | null | undefined) => string;
   classNames: (obj: Record<string, unknown>) => string;
   cx: (obj: Record<string, unknown>) => string;
+  encodeAuthoredUrl: (value: string) => string;
   renderTimeZoneChooser: () => string;
 }
 
@@ -51,8 +52,14 @@ export default function createTemplateGlobals(
     readableDate,
     classNames,
     cx: classNames,
+    encodeAuthoredUrl,
     renderTimeZoneChooser,
   };
+}
+
+// Encode raw authored URL text, but preserve percent escapes authors already wrote.
+export function encodeAuthoredUrl(value: string): string {
+  return encodeURI(value).replace(/%25([0-9a-fA-F]{2})/g, '%$1');
 }
 
 function isoDate(str: string | null | undefined): string | null {

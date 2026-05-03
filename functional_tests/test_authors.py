@@ -54,6 +54,30 @@ class TestAuthorsFeature:
         html = (site_dir / 'dist' / 'index.html').read_text()
         assert '/images/jdoe.png' in html
 
+    def test_author_external_profile_url_is_encoded(self, site_dir):
+        """External author profile URLs should pass validation and render encoded."""
+        authors_path = site_dir / AUTHORS_CONFIG_FILE
+        write_structured_file(
+            authors_path,
+            {
+                'jdoe': {
+                    'name': 'Jane Doe',
+                    'avatar': '/images/jdoe.png',
+                    'url': ('https://example.com/people/Jane Doe?q=hello%20world<tag>"'),
+                }
+            },
+        )
+        (site_dir / 'content' / 'index.md').write_text(
+            '---\ntitle: Home\nauthor: jdoe\n---\n\nHello world.\n'
+        )
+
+        result = run_tada('dev', cwd=str(site_dir))
+
+        assert result.returncode == 0, f'dev build failed: {result.stderr}'
+        html = (site_dir / 'dist' / 'index.html').read_text()
+        assert 'href="https://example.com/people/Jane%20Doe?q=hello%20world%3Ctag%3E%22"' in html
+        assert 'hello%2520world' not in html
+
     def test_unknown_author_fails_build(self, site_dir):
         """Referencing an author not in the authors config should fail the build."""
         (site_dir / 'content' / 'index.md').write_text(

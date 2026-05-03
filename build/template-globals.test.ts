@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import createTemplateGlobals from './template-globals';
+import createTemplateGlobals, { encodeAuthoredUrl } from './template-globals';
 import type { SiteVariables } from './types';
 
 const baseSite: SiteVariables = {
@@ -31,6 +31,11 @@ describe('createTemplateGlobals', () => {
     expect(g.cx).toBe(g.classNames);
   });
 
+  test('includes encodeAuthoredUrl helper', () => {
+    const g = makeGlobals();
+    expect(g.encodeAuthoredUrl).toBe(encodeAuthoredUrl);
+  });
+
   test('renderTimeZoneChooser includes hidden disabled select, inline script, and noscript', () => {
     const g = makeGlobals('index', { defaultTimeZone: 'America/New_York' });
     const html = g.renderTimeZoneChooser();
@@ -38,6 +43,26 @@ describe('createTemplateGlobals', () => {
       '<select class="time-zone" hidden disabled aria-label="Time zone">',
     );
     expect(html).toContain('<noscript>Times shown in ET.</noscript>');
+  });
+});
+
+describe('encodeAuthoredUrl', () => {
+  test('encodes spaces and HTML-significant characters', () => {
+    expect(
+      encodeAuthoredUrl('https://example.com/my page?q=<tag>"quote"'),
+    ).toBe('https://example.com/my%20page?q=%3Ctag%3E%22quote%22');
+  });
+
+  test('preserves existing percent escapes', () => {
+    expect(encodeAuthoredUrl('https://example.com/a%2Fb?q=hello%20world')).toBe(
+      'https://example.com/a%2Fb?q=hello%20world',
+    );
+  });
+
+  test('encodes invalid percent signs', () => {
+    expect(encodeAuthoredUrl('https://example.com/search?q=100%')).toBe(
+      'https://example.com/search?q=100%25',
+    );
   });
 });
 

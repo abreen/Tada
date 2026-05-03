@@ -33,7 +33,7 @@
     "check-deps": "bun run scripts/check-deps.ts",
     "init-example": "bun run bin/tada.ts init example --no-interactive",
     "iew": "bun run scripts/init-example-watch.ts",
-    "lint": "eslint src/ build/ bin/",
+    "lint": "eslint src/ build/ bin/ templates/*.test.ts",
     "lint:sass": "bun run scripts/lint-sass.ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"**/*.{ts,js,scss,json}\"",

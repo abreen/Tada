@@ -1,4 +1,5 @@
 import path from 'path';
+import { encodeAuthoredUrl } from './template-globals';
 import { normalizeOutputPath } from './utils/paths';
 
 interface NavLink {
@@ -22,6 +23,51 @@ function requireRootRelativePath(
   }
 
   return `${errorPrefix} must start with "/": "${value}"`;
+}
+
+const SPECIAL_URL_SCHEMES = new Set([
+  'file',
+  'ftp',
+  'http',
+  'https',
+  'ws',
+  'wss',
+]);
+
+function isValidAbsoluteAuthorUrl(value: string): boolean {
+  if (value.trim() !== value) {
+    return false;
+  }
+
+  const schemeMatch = value.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/);
+  if (!schemeMatch) {
+    return false;
+  }
+
+  const scheme = schemeMatch[1].toLowerCase();
+  if (
+    SPECIAL_URL_SCHEMES.has(scheme) &&
+    !value.startsWith(`${schemeMatch[1]}://`)
+  ) {
+    return false;
+  }
+
+  try {
+    new URL(encodeAuthoredUrl(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getInternalHrefTarget(href: string): string {
+  const { pathname } = splitHref(href);
+  const normalized = normalizeOutputPath(pathname);
+  try {
+    return normalizeOutputPath(decodeURIComponent(normalized));
+  } catch {
+    return normalized;
+  }
 }
 
 export function validateNavLinks(
@@ -97,6 +143,10 @@ export function validateAuthorLinks(
     }
 
     if (author.url) {
+      if (isValidAbsoluteAuthorUrl(author.url)) {
+        continue;
+      }
+
       const urlRootRelativeError = requireRootRelativePath(
         author.url,
         `${fileName}: url for "${key}"`,
@@ -104,7 +154,7 @@ export function validateAuthorLinks(
       if (urlRootRelativeError) {
         errors.push(urlRootRelativeError);
       } else {
-        const urlPath = normalizeOutputPath(author.url);
+        const urlPath = getInternalHrefTarget(author.url);
         if (!validTargets.has(urlPath)) {
           errors.push(`${fileName}: broken url for "${key}": "${author.url}"`);
         }

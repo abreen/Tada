@@ -144,6 +144,10 @@ const unitTestFsImports = [
   },
 ];
 
+const templateTestFsImports = unitTestFsImports.filter(({ name }) =>
+  name.startsWith('node:'),
+);
+
 export default [
   { ignores: ['dist/', 'example/', 'node_modules/'] },
   eslint.configs.recommended,
@@ -167,6 +171,12 @@ export default [
       'no-restricted-globals': ['error', ...unitTestGlobalRules],
       'no-restricted-imports': ['error', { paths: unitTestFsImports }],
       'no-restricted-properties': ['error', ...unitTestGlobalPropertyRules],
+    },
+  },
+  {
+    files: ['templates/**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: templateTestFsImports }],
     },
   },
   {

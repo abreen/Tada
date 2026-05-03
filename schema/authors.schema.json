@@ -6,7 +6,7 @@
     "properties": {
       "name": { "type": "string" },
       "avatar": { "type": "string", "pattern": "^\\/[-a-zA-Z0-9_./#]*$" },
-      "url": { "type": "string", "pattern": "^\\/[-a-zA-Z0-9_./#]*$" }
+      "url": { "type": "string", "minLength": 1 }
     },
     "additionalProperties": false
   }

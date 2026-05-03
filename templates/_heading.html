@@ -1,6 +1,6 @@
 <div class="title-and-info" data-pagefind-body>
   <% if (page.parent) { %>
-  <a class="breadcrumb" href="<%= page.parent %>" data-pagefind-ignore><%= page.parentLabel %></a>
+  <a class="breadcrumb" href="<%- encodeAuthoredUrl(page.parent) %>" data-pagefind-ignore><%= page.parentLabel %></a>
   <% } %>
   <h1 data-pagefind-weight="10" data-pagefind-meta="title_html[data-title-html]" data-title-html="<%- page.titleHtml %>"><%= page.titleHtml %></h1>
 

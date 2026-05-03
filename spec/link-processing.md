@@ -53,8 +53,9 @@ This validation covers:
 
 - Links in rendered page content from Markdown and `.html` sources
 - `internal` links in the nav config (these paths must be root-relative)
-- `url` and `avatar` paths in the authors config (these paths must be
-  root-relative)
+- `avatar` paths in the authors config (these paths must be root-relative)
+- Root-relative `url` values in the authors config; absolute author URLs are
+  allowed and are not checked against build targets
 - `parent` breadcrumb links in front matter
 
 Hrefs are percent-decoded before being matched against the set of known output

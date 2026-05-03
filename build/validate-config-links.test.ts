@@ -131,6 +131,76 @@ describe('validateAuthorLinks', () => {
     expect(errors[0]).toContain('alex');
   });
 
+  test('passes for valid absolute author url', () => {
+    const validTargets = new Set(['/avatars/alex.jpg']);
+    const authorsData = {
+      alex: {
+        name: 'Alex',
+        avatar: '/avatars/alex.jpg',
+        url: 'https://example.com/people/Alex Doe.html?q=hello%20world',
+      },
+    };
+    expect(validateAuthorLinks(authorsData, validTargets)).toEqual([]);
+  });
+
+  test('passes for valid non-http absolute author url', () => {
+    const validTargets = new Set(['/avatars/alex.jpg']);
+    const authorsData = {
+      alex: {
+        name: 'Alex',
+        avatar: '/avatars/alex.jpg',
+        url: 'mailto:alex@example.com',
+      },
+    };
+    expect(validateAuthorLinks(authorsData, validTargets)).toEqual([]);
+  });
+
+  test('rejects absolute author url with leading or trailing whitespace', () => {
+    const validTargets = new Set(['/avatars/alex.jpg']);
+    const authorsData = {
+      alex: {
+        name: 'Alex',
+        avatar: '/avatars/alex.jpg',
+        url: ' https://example.com',
+      },
+      bob: {
+        name: 'Bob',
+        avatar: '/avatars/alex.jpg',
+        url: 'https://example.com ',
+      },
+    };
+    const errors = validateAuthorLinks(authorsData, validTargets);
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toContain(' https://example.com');
+    expect(errors[1]).toContain('https://example.com ');
+  });
+
+  test('rejects special-scheme author urls without slashes', () => {
+    const validTargets = new Set(['/avatars/alex.jpg']);
+    const authorsData = {
+      alex: {
+        name: 'Alex',
+        avatar: '/avatars/alex.jpg',
+        url: 'https:example.com',
+      },
+    };
+    const errors = validateAuthorLinks(authorsData, validTargets);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('https:example.com');
+  });
+
+  test('passes for valid internal author url with query and fragment', () => {
+    const validTargets = new Set(['/about/alex.html', '/avatars/alex.jpg']);
+    const authorsData = {
+      alex: {
+        name: 'Alex',
+        avatar: '/avatars/alex.jpg',
+        url: '/about/alex.html?tab=profile#bio',
+      },
+    };
+    expect(validateAuthorLinks(authorsData, validTargets)).toEqual([]);
+  });
+
   test('reports broken avatar path', () => {
     const validTargets = new Set<string>();
     const authorsData = {
@@ -190,6 +260,16 @@ describe('validateAuthorLinks', () => {
     expect(errors).toHaveLength(2);
     expect(errors[0]).toContain('must start with "/"');
     expect(errors[1]).toContain('must start with "/"');
+  });
+
+  test('rejects invalid author url', () => {
+    const validTargets = new Set(['/avatars/alex.jpg']);
+    const authorsData = {
+      alex: { name: 'Alex', avatar: '/avatars/alex.jpg', url: 'not-a-url' },
+    };
+    const errors = validateAuthorLinks(authorsData, validTargets);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('not-a-url');
   });
 });
 
