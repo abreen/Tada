@@ -14,6 +14,17 @@ Each feature is documented in `spec/`. Use the relevant spec to answer behavior 
 
 After changing code, update the relevant spec if behavior, defaults, options, dependencies, or UI details no longer match. For broader audits, use `git log` to spot stale specs, then verify against the code before editing.
 
+## Progressive enhancement
+
+New features must work with client-side JavaScript turned off. Treat JS as progressive enhancement over useful build-time HTML. This is a static site generator; do as much as possible at build time.
+
+- Render core content, links, anchors, and fallbacks in `build/` or `templates/`, not only in `src/`
+- Gate JS-only CSS behind `.js`; do not hide content by default and reveal it only from client code
+- Render client-only controls `disabled`, `hidden`, or inert until mounted
+- Use `<noscript>` or build-time fallback HTML when a feature cannot provide equivalent no-JS behavior
+
+Existing patterns: nav and TOCs navigate without client routing; header nav and Markdown details expand without JS; timezone rendering shows the default timezone without JS; code downloads work without the File System Access API.
+
 ## Commands
 
 This repository is the Tada package, not a Tada site. Do not run `tada dev` or `tada prod` in this directory because there is no site here.
