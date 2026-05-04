@@ -283,6 +283,46 @@ test.describe('scroll and hash behavior', () => {
     expect(scrollY).toBe(0);
   });
 
+  test('back-to-top preserves SPA history state', async ({ page }) => {
+    await page.goto('/markdown.html');
+
+    await page.evaluate(() => {
+      const link = document.createElement('a');
+      link.href = '/lectures/01/Rectangle.java.html';
+      link.textContent = 'test code page link';
+      link.id = 'test-code-page-link';
+      document.querySelector('main.body')!.appendChild(link);
+    });
+    await page.locator('#test-code-page-link').click();
+    await expect(page).toHaveURL(/Rectangle\.java\.html$/);
+
+    const navIndexBefore = await page.evaluate(
+      () =>
+        (window.history.state as { navIndex?: unknown } | null)?.navIndex ??
+        null,
+    );
+    expect(typeof navIndexBefore).toBe('number');
+
+    await page.evaluate(() => window.scrollTo({ top: 700 }));
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(250);
+
+    await page
+      .locator('a.button.is-visible', { hasText: 'Back to top' })
+      .click();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeLessThan(10);
+
+    const navIndexAfter = await page.evaluate(
+      () =>
+        (window.history.state as { navIndex?: unknown } | null)?.navIndex ??
+        null,
+    );
+    expect(navIndexAfter).toBe(navIndexBefore);
+  });
+
   test('per-page components re-mount after navigation', async ({ page }) => {
     await page.goto('/markdown.html');
     await expect(page.locator('nav.toc')).toBeVisible();

@@ -30,11 +30,12 @@ export default (window: Window) => {
   link.onclick = e => {
     e.preventDefault();
     const cleanUrl = window.location.pathname + window.location.search;
+    const historyState = window.history.state;
     if (window.location.hash) {
       globals.setLocationHash(window, '');
-      window.history.replaceState(null, '', cleanUrl);
+      window.history.replaceState(historyState, '', cleanUrl);
     } else {
-      window.history.replaceState(null, '', cleanUrl);
+      window.history.replaceState(historyState, '', cleanUrl);
     }
     window.scrollTo({ top: 0 });
     const toc = window.document.querySelector('nav.toc') as HTMLElement | null;

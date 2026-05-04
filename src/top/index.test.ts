@@ -137,13 +137,15 @@ describe('top', () => {
     const link = win.document.querySelector('a.button') as HTMLAnchorElement;
     win.scrollTo = (() => {}) as typeof win.scrollTo;
 
-    const replaced: string[] = [];
+    const state = { navIndex: 2 };
+    win.history.replaceState(state, '', win.location.href);
+    const replaced: Array<{ data: unknown; url: string }> = [];
     win.history.replaceState = (
-      _data: unknown,
+      data: unknown,
       _title: string,
       url?: string,
     ) => {
-      replaced.push(url!);
+      replaced.push({ data, url: url! });
     };
 
     const event = new win.MouseEvent('click', {
@@ -155,7 +157,7 @@ describe('top', () => {
     // location.hash assignment clears the fragment so :target updates,
     // then replaceState strips any trailing '#' from the URL.
     expect(win.location.hash).toBe('');
-    expect(replaced).toEqual(['/page']);
+    expect(replaced).toEqual([{ data: state, url: '/page' }]);
   });
 
   test('onclick clears hash through setLocationHash global when hash is present', () => {
@@ -185,13 +187,15 @@ describe('top', () => {
     const link = win.document.querySelector('a.button') as HTMLAnchorElement;
     win.scrollTo = (() => {}) as typeof win.scrollTo;
 
-    const replaced: string[] = [];
+    const state = { navIndex: 2 };
+    win.history.replaceState(state, '', win.location.href);
+    const replaced: Array<{ data: unknown; url: string }> = [];
     win.history.replaceState = (
-      _data: unknown,
+      data: unknown,
       _title: string,
       url?: string,
     ) => {
-      replaced.push(url!);
+      replaced.push({ data, url: url! });
     };
 
     const event = new win.MouseEvent('click', {
@@ -200,7 +204,7 @@ describe('top', () => {
     });
     link.dispatchEvent(event);
 
-    expect(replaced).toEqual(['/page']);
+    expect(replaced).toEqual([{ data: state, url: '/page' }]);
   });
 
   test('onclick resets toc scroll position when toc exists', () => {
