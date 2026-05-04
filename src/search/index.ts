@@ -8,8 +8,6 @@ import {
 } from '../validators';
 import { globals } from '../globals';
 
-const MAX_RESULTS = 24;
-
 interface PagefindSubResult {
   title?: string;
   url: string;
@@ -61,8 +59,7 @@ async function doSearch(query: string, window: Window): Promise<SearchState> {
   }
 
   const search = await pagefind.search(query);
-  const slice = search.results.slice(0, MAX_RESULTS);
-  const data = await Promise.all(slice.map(r => r.data()));
+  const data = await Promise.all(search.results.map(r => r.data()));
 
   const titlePostfix = __SITE_TITLE_POSTFIX__;
   const results: Result[] = data.map((d: PagefindResult) => {
@@ -139,9 +136,9 @@ function render(
   ol.tabIndex = -1;
   ol.setAttribute('aria-label', 'Search results');
 
-  const totalVisible = Math.min(state.results.length, MAX_RESULTS);
+  const totalVisible = state.results.length;
 
-  state.results.slice(0, MAX_RESULTS).forEach((result, i) => {
+  state.results.forEach((result, i) => {
     const a = doc.createElement('a');
     a.id = `result-${i}`;
     a.className = 'result';
@@ -175,7 +172,7 @@ function render(
     li.setAttribute('aria-labelledby', `title-${i}`);
     li.appendChild(a);
 
-    const subsToShow = result.subResults.slice(0, 5);
+    const subsToShow = result.subResults;
     if (subsToShow.length > 0) {
       const subList = doc.createElement('ul');
       subList.className = 'sub-results';
@@ -250,10 +247,8 @@ function render(
       countSpan.textContent = 'No results';
     } else if (n === 1) {
       countSpan.textContent = 'One result';
-    } else if (n <= MAX_RESULTS) {
-      countSpan.textContent = `${n} results`;
     } else {
-      countSpan.textContent = `Showing first ${MAX_RESULTS} results`;
+      countSpan.textContent = `${n} results`;
     }
   }
 

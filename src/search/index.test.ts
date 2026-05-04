@@ -234,21 +234,19 @@ async function flush() {
 }
 
 describe('search UI', () => {
-  test('keeps loading while Pagefind imports and reruns the current query', async () => {
+  test('keeps loading while Pagefind imports and renders every result', async () => {
     const pagefindLoad = deferred<unknown>();
     const pagefind = {
       init: mock(async () => {}),
       search: mock(async () => ({
-        results: [
-          {
-            data: async () => ({
-              meta: { title: 'Alpha' },
-              url: '/alpha/',
-              excerpt: 'Matched alpha',
-              score: 1,
-            }),
-          },
-        ],
+        results: Array.from({ length: 26 }, (_, i) => ({
+          data: async () => ({
+            meta: { title: `Alpha ${i + 1}` },
+            url: `/alpha-${i + 1}/`,
+            excerpt: `Matched alpha ${i + 1}`,
+            score: 26 - i,
+          }),
+        })),
       })),
     };
 
@@ -278,10 +276,11 @@ describe('search UI', () => {
     expect(pagefind.init).toHaveBeenCalled();
     expect(pagefind.search).toHaveBeenCalledWith('alpha');
     expect(win.document.querySelector('.results-count')?.textContent).toBe(
-      'One result',
+      '26 results',
     );
-    expect(win.document.querySelector('a.result')?.getAttribute('href')).toBe(
-      '/alpha/',
-    );
+    const results = win.document.querySelectorAll('a.result');
+    expect(results).toHaveLength(26);
+    expect(results[0]?.getAttribute('href')).toBe('/alpha-1/');
+    expect(results[25]?.getAttribute('href')).toBe('/alpha-26/');
   });
 });
