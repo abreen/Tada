@@ -1,11 +1,6 @@
 import { getElement, applyBasePath } from '../util';
 import { getPdfPageNumber, groupPdfResults } from './pdf-utils';
 import type { Result } from './pdf-utils';
-import {
-  getResponseValidators,
-  hasResponseValidatorsChanged,
-  type ResponseValidators,
-} from '../validators';
 import { globals } from '../globals';
 
 interface PagefindSubResult {
@@ -281,9 +276,6 @@ export default (window: Window) => {
   // Unhide (hidden via inline style in template to prevent FOUC)
   resultsDiv.style.display = '';
 
-  let entryValidators: ResponseValidators = { etag: null, lastModified: null };
-  let lastIndexCheck = 0;
-  let indexCheckInFlight = false;
   let pagefindLoadPromise: Promise<void> | null = null;
 
   async function loadPagefind() {
@@ -298,51 +290,12 @@ export default (window: Window) => {
 
       await loadedPagefind.init();
       pagefind = loadedPagefind;
-
-      const res = await globals.fetch(
-        applyBasePath('/pagefind/pagefind-entry.json'),
-        { cache: 'no-cache' },
-      );
-
-      if (res.ok) {
-        entryValidators = getResponseValidators(res);
-      }
     })();
 
     try {
       await pagefindLoadPromise;
     } finally {
       pagefindLoadPromise = null;
-    }
-  }
-
-  async function checkForIndexUpdate() {
-    if (indexCheckInFlight || globals.now() - lastIndexCheck < 3000) {
-      return;
-    }
-    lastIndexCheck = globals.now();
-    indexCheckInFlight = true;
-    try {
-      const res = await globals.fetch(
-        applyBasePath('/pagefind/pagefind-entry.json'),
-        { method: 'HEAD', cache: 'no-cache' },
-      );
-      if (!res.ok) {
-        return;
-      }
-      const newValidators = getResponseValidators(res);
-      if (hasResponseValidatorsChanged(entryValidators, newValidators)) {
-        invalidateUpdates();
-        pagefind = null;
-        pagefindLoadPromise = null;
-        await loadPagefind();
-        const updateId = ++latestUpdateId;
-        await update(updateId);
-      }
-    } catch {
-      // best-effort
-    } finally {
-      indexCheckInFlight = false;
     }
   }
 
@@ -433,7 +386,6 @@ export default (window: Window) => {
     if (previous && !resultsContainer.contains(previous)) {
       previousFocus = previous;
     }
-    checkForIndexUpdate().catch(() => {});
     if (!state.showResults) {
       state.showResults = true;
       queueUpdate();

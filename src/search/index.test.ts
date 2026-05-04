@@ -250,10 +250,7 @@ describe('search UI', () => {
       })),
     };
 
-    mockGlobals({
-      importModule: mock(async () => pagefindLoad.promise),
-      fetch: mock(async () => new Response('', { status: 404 })),
-    });
+    mockGlobals({ importModule: mock(async () => pagefindLoad.promise) });
 
     const win = createSearchWindow();
     mount(win);
