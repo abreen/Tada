@@ -289,25 +289,35 @@ export default (window: Window) => {
   let entryValidators: ResponseValidators = { etag: null, lastModified: null };
   let lastIndexCheck = 0;
   let indexCheckInFlight = false;
+  let pagefindLoadPromise: Promise<void> | null = null;
 
   async function loadPagefind() {
     if (pagefind) {
       return;
     }
 
-    pagefind = (await globals.importModule(
-      applyBasePath('/pagefind/pagefind.js'),
-    )) as Pagefind;
+    pagefindLoadPromise ??= (async () => {
+      const loadedPagefind = (await globals.importModule(
+        applyBasePath('/pagefind/pagefind.js'),
+      )) as Pagefind;
 
-    await pagefind.init();
+      await loadedPagefind.init();
+      pagefind = loadedPagefind;
 
-    const res = await globals.fetch(
-      applyBasePath('/pagefind/pagefind-entry.json'),
-      { cache: 'no-cache' },
-    );
+      const res = await globals.fetch(
+        applyBasePath('/pagefind/pagefind-entry.json'),
+        { cache: 'no-cache' },
+      );
 
-    if (res.ok) {
-      entryValidators = getResponseValidators(res);
+      if (res.ok) {
+        entryValidators = getResponseValidators(res);
+      }
+    })();
+
+    try {
+      await pagefindLoadPromise;
+    } finally {
+      pagefindLoadPromise = null;
     }
   }
 
@@ -329,6 +339,7 @@ export default (window: Window) => {
       if (hasResponseValidatorsChanged(entryValidators, newValidators)) {
         invalidateUpdates();
         pagefind = null;
+        pagefindLoadPromise = null;
         await loadPagefind();
         const updateId = ++latestUpdateId;
         await update(updateId);
@@ -339,10 +350,6 @@ export default (window: Window) => {
       indexCheckInFlight = false;
     }
   }
-
-  loadPagefind().catch(err => {
-    console.log(`failed to load Pagefind: ${err}`);
-  });
 
   const state: State = {
     value: '',
@@ -362,10 +369,11 @@ export default (window: Window) => {
     if (updateId !== latestUpdateId) {
       return;
     }
-    if (nextState) {
-      state.results = nextState.results;
-      state.totalResults = nextState.totalResults;
+    if (!nextState) {
+      return;
     }
+    state.results = nextState.results;
+    state.totalResults = nextState.totalResults;
     if (!state.showResults) {
       return;
     }
@@ -380,6 +388,19 @@ export default (window: Window) => {
   function invalidateUpdates() {
     latestUpdateId += 1;
   }
+
+  loadPagefind()
+    .then(() => {
+      if (state.showResults) {
+        queueUpdate();
+      }
+    })
+    .catch(err => {
+      console.log(`failed to load Pagefind: ${err}`);
+      if (state.showResults) {
+        render(input!, resultsContainer, state, false);
+      }
+    });
 
   function hide() {
     if (!state.showResults) {

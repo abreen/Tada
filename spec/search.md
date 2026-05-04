@@ -27,3 +27,6 @@ excluded from production build manifests
 A search combobox in the site header queries the Pagefind index. Results show
 excerpts and support keyboard navigation. PDF results are grouped by document,
 with individual page numbers shown as sub-results sorted by page number.
+If the user opens or types into the combobox before Pagefind finishes loading,
+the results panel shows a loading state and reruns the current query once the
+index is ready.

@@ -1,6 +1,16 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
+import { JSDOM } from 'jsdom';
+import { deferred, flushMicrotasks } from '../../test-helpers';
+import { createGlobals } from '../globals.test';
 import { getPdfPageNumber, getPdfBaseUrl, groupPdfResults } from './pdf-utils';
 import type { Result } from './pdf-utils';
+
+function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
+  mock.module('../globals', () => ({ globals: createGlobals(overrides) }));
+}
+
+mockGlobals();
+const { default: mount } = await import('./index');
 
 describe('getPdfPageNumber', () => {
   test('returns page number from meta string', () => {
@@ -201,5 +211,77 @@ describe('groupPdfResults', () => {
     expect(grouped).toHaveLength(2);
     const urls = grouped.map(r => r.url).sort();
     expect(urls).toEqual(['/a.pdf', '/b.pdf']);
+  });
+});
+
+function createSearchWindow() {
+  const dom = new JSDOM(
+    `<body>
+      <header>
+        <input type="search" class="quick-search" name="quick-search" />
+        <div class="results-container" aria-hidden="true" inert>
+          <div class="results" style="display: none"></div>
+        </div>
+      </header>
+    </body>`,
+    { url: 'http://localhost/' },
+  );
+  return dom.window;
+}
+
+async function flush() {
+  await flushMicrotasks();
+}
+
+describe('search UI', () => {
+  test('keeps loading while Pagefind imports and reruns the current query', async () => {
+    const pagefindLoad = deferred<unknown>();
+    const pagefind = {
+      init: mock(async () => {}),
+      search: mock(async () => ({
+        results: [
+          {
+            data: async () => ({
+              meta: { title: 'Alpha' },
+              url: '/alpha/',
+              excerpt: 'Matched alpha',
+              score: 1,
+            }),
+          },
+        ],
+      })),
+    };
+
+    mockGlobals({
+      importModule: mock(async () => pagefindLoad.promise),
+      fetch: mock(async () => new Response('', { status: 404 })),
+    });
+
+    const win = createSearchWindow();
+    mount(win);
+    const input = win.document.querySelector(
+      'input.quick-search',
+    ) as HTMLInputElement;
+
+    input.dispatchEvent(new win.Event('focus'));
+    input.value = 'alpha';
+    input.dispatchEvent(new win.Event('input', { bubbles: true }));
+    await flush();
+
+    const count = win.document.querySelector('.results-count');
+    expect(count?.textContent).toBe('Loading\u2026');
+    expect(pagefind.search).not.toHaveBeenCalled();
+
+    pagefindLoad.resolve(pagefind);
+    await flush();
+
+    expect(pagefind.init).toHaveBeenCalled();
+    expect(pagefind.search).toHaveBeenCalledWith('alpha');
+    expect(win.document.querySelector('.results-count')?.textContent).toBe(
+      'One result',
+    );
+    expect(win.document.querySelector('a.result')?.getAttribute('href')).toBe(
+      '/alpha/',
+    );
   });
 });
