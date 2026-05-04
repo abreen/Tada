@@ -45,6 +45,16 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 
 Functional tests are CPU intensive and may take over 2 minutes, even on powerful machines.
 
+## Fixing a bug
+
+Use red/green test-driven development to fix bugs.
+
+1. Reproduce the bug by writing or updating a test and verify it fails for the correct reason
+2. Update the code to fix the bug
+3. Verify the test now passes
+
+Use the correct type of test (unit, Playwright, or functional) following the rules below.
+
 ## Unit test rules
 
 - Never rely on JSDOM to test browser behavior like navigation, instead use a Playwright test
