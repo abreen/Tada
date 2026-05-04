@@ -87,6 +87,18 @@ describe('isEligibleLink', () => {
     ).toBe(true);
   });
 
+  test('eligible: exact non-root base path', () => {
+    expect(isEligibleLink('http://localhost/course1', origin, '/course1')).toBe(
+      true,
+    );
+  });
+
+  test('ineligible: link whose first segment only starts with base path', () => {
+    expect(
+      isEligibleLink('http://localhost/course10/page.html', origin, '/course1'),
+    ).toBe(false);
+  });
+
   test('ineligible: link outside base path', () => {
     expect(
       isEligibleLink('http://localhost/course2/page.html', origin, '/course1/'),

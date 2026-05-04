@@ -45,7 +45,14 @@ export function isEligibleLink(
     return false;
   }
 
-  if (!url.pathname.startsWith(basePath)) {
+  const normalizedBasePath = basePath.endsWith('/')
+    ? basePath.slice(0, -1) || '/'
+    : basePath;
+  if (
+    normalizedBasePath !== '/' &&
+    url.pathname !== normalizedBasePath &&
+    !url.pathname.startsWith(`${normalizedBasePath}/`)
+  ) {
     return false;
   }
 
