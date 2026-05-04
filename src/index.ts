@@ -3,7 +3,7 @@ import './style.scss';
 import './anchor/style.scss';
 import './code.scss';
 import './code/style.scss';
-import './literate/style.scss';
+import './literate.scss';
 import './header/style.scss';
 import './print/style.scss';
 import './question/style.scss';
