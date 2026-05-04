@@ -1,6 +1,7 @@
 import { getElement, applyBasePath } from '../util';
 import { getPdfPageNumber, groupPdfResults } from './pdf-utils';
 import type { Result } from './pdf-utils';
+import { PAGE_UPDATE_REFRESH_EVENT } from '../page-update';
 import { globals } from '../globals';
 
 interface PagefindSubResult {
@@ -27,7 +28,9 @@ interface PagefindSearchResult {
 }
 
 interface Pagefind {
+  destroy(): Promise<void>;
   init(): Promise<void>;
+  options(options: { basePath: string }): Promise<void>;
   search(query: string): Promise<{ results: PagefindSearchResult[] }>;
 }
 
@@ -276,26 +279,53 @@ export default (window: Window) => {
   // Unhide (hidden via inline style in template to prevent FOUC)
   resultsDiv.style.display = '';
 
-  let pagefindLoadPromise: Promise<void> | null = null;
+  let pagefindLoadPromise: Promise<boolean> | null = null;
+  let pagefindLoadGeneration = 0;
 
-  async function loadPagefind() {
+  function pagefindModulePath(generation: number) {
+    const path = applyBasePath('/pagefind/pagefind.js');
+    if (generation === 0) {
+      return path;
+    }
+    return `${path}?tada-pagefind-refresh=${generation}`;
+  }
+
+  async function loadPagefind(): Promise<boolean> {
     if (pagefind) {
-      return;
+      return true;
     }
 
+    const generation = pagefindLoadGeneration;
     pagefindLoadPromise ??= (async () => {
       const loadedPagefind = (await globals.importModule(
-        applyBasePath('/pagefind/pagefind.js'),
+        pagefindModulePath(generation),
       )) as Pagefind;
 
+      if (generation !== pagefindLoadGeneration) {
+        return false;
+      }
+      if (generation > 0) {
+        await loadedPagefind.options({ basePath: applyBasePath('/pagefind/') });
+      }
+      if (generation !== pagefindLoadGeneration) {
+        return false;
+      }
       await loadedPagefind.init();
+      if (generation !== pagefindLoadGeneration) {
+        await loadedPagefind.destroy();
+        return false;
+      }
       pagefind = loadedPagefind;
+      return true;
     })();
 
+    const promise = pagefindLoadPromise;
     try {
-      await pagefindLoadPromise;
+      return await promise;
     } finally {
-      pagefindLoadPromise = null;
+      if (pagefindLoadPromise === promise) {
+        pagefindLoadPromise = null;
+      }
     }
   }
 
@@ -337,18 +367,54 @@ export default (window: Window) => {
     latestUpdateId += 1;
   }
 
-  loadPagefind()
-    .then(() => {
-      if (state.showResults) {
-        queueUpdate();
+  function loadPagefindAndUpdate() {
+    loadPagefind()
+      .then(loadedCurrentPagefind => {
+        if (loadedCurrentPagefind && state.showResults) {
+          queueUpdate();
+        }
+      })
+      .catch(err => {
+        console.log(`failed to load Pagefind: ${err}`);
+        if (state.showResults) {
+          render(input!, resultsContainer, state, false);
+        }
+      });
+  }
+
+  function invalidatePagefind() {
+    pagefindLoadGeneration += 1;
+    pagefind = null;
+    pagefindLoadPromise = null;
+    invalidateUpdates();
+  }
+
+  async function reloadPagefindAfterPageUpdateRefresh() {
+    const stalePagefind = pagefind;
+    invalidatePagefind();
+    if (state.showResults) {
+      render(input!, resultsContainer, state, true);
+    }
+    if (stalePagefind) {
+      try {
+        await stalePagefind.destroy();
+      } catch (err) {
+        console.log(`failed to destroy Pagefind: ${err}`);
       }
-    })
-    .catch(err => {
-      console.log(`failed to load Pagefind: ${err}`);
+    }
+    loadPagefindAndUpdate();
+  }
+
+  function handlePageUpdateRefresh() {
+    reloadPagefindAfterPageUpdateRefresh().catch(err => {
+      console.log(`failed to reload Pagefind: ${err}`);
       if (state.showResults) {
         render(input!, resultsContainer, state, false);
       }
     });
+  }
+
+  loadPagefindAndUpdate();
 
   function hide() {
     if (!state.showResults) {
@@ -531,8 +597,13 @@ export default (window: Window) => {
   window.addEventListener('pointerdown', handleWindowPointerDown);
   window.addEventListener('pointermove', handleWindowPointerMove);
   window.addEventListener('keydown', handleWindowKeyDown);
+  window.addEventListener(PAGE_UPDATE_REFRESH_EVENT, handlePageUpdateRefresh);
 
   return () => {
+    window.removeEventListener(
+      PAGE_UPDATE_REFRESH_EVENT,
+      handlePageUpdateRefresh,
+    );
     window.removeEventListener('keydown', handleWindowKeyDown);
     window.removeEventListener('pointermove', handleWindowPointerMove);
     window.removeEventListener('pointerdown', handleWindowPointerDown);

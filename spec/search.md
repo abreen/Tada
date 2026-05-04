@@ -32,3 +32,5 @@ count reflects the number of grouped top-level results.
 If the user opens or types into the combobox before Pagefind finishes loading,
 the results panel shows a loading state and reruns the current query once the
 index is ready.
+After a page-update refresh completes, the client discards any loaded Pagefind
+instance and reloads it so later searches use the refreshed index.

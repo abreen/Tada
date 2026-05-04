@@ -9,7 +9,7 @@ import {
 } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import { createGlobals } from '../globals.test';
-import { flushMicrotasks } from '../../test-helpers';
+import { deferred, flushMicrotasks } from '../../test-helpers';
 
 const NAVIGATION_EVENT = 'tada:navigation';
 
@@ -18,7 +18,11 @@ mock.module('../navigate/runtime', () => ({
   refreshCurrentPage: mock(async () => {}),
 }));
 
-const { default: mount, mountPageUpdate } = await import('./index');
+const {
+  default: mount,
+  mountPageUpdate,
+  PAGE_UPDATE_REFRESH_EVENT,
+} = await import('./index');
 
 function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
   mock.module('../globals', () => ({ globals: createGlobals(overrides) }));
@@ -242,7 +246,7 @@ describe('page-update behavior', () => {
     cleanup?.();
   });
 
-  test('reload uses the injected refresh function', async () => {
+  test('reload uses the injected refresh function and then dispatches a refresh event', async () => {
     jest.useFakeTimers();
     const win = create();
     let count = 0;
@@ -253,7 +257,15 @@ describe('page-update behavior', () => {
       }),
     });
 
-    const refreshPage = mock(async () => {});
+    const refreshDone = deferred<void>();
+    const refreshPage = mock(async () => {
+      await refreshDone.promise;
+    });
+    let refreshEvents = 0;
+    win.addEventListener(PAGE_UPDATE_REFRESH_EVENT, () => {
+      refreshEvents += 1;
+    });
+
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10, refreshPage });
     await flush();
     await advancePolling(10);
@@ -265,6 +277,12 @@ describe('page-update behavior', () => {
     await flush();
 
     expect(refreshPage).toHaveBeenCalledWith(win);
+    expect(refreshEvents).toBe(0);
+
+    refreshDone.resolve();
+    await flush();
+
+    expect(refreshEvents).toBe(1);
 
     cleanup?.();
   });

@@ -11,6 +11,7 @@ function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
 
 mockGlobals();
 const { default: mount } = await import('./index');
+const { PAGE_UPDATE_REFRESH_EVENT } = await import('../page-update');
 
 describe('getPdfPageNumber', () => {
   test('returns page number from meta string', () => {
@@ -236,21 +237,53 @@ async function flush() {
 describe('search UI', () => {
   test('keeps loading while Pagefind imports and renders every result', async () => {
     const pagefindLoad = deferred<unknown>();
+    let availableIndex: 'initial' | 'reloaded' = 'initial';
+    let activeIndex: 'initial' | 'reloaded' = 'initial';
+    let initialized = false;
+
     const pagefind = {
-      init: mock(async () => {}),
+      destroy: mock(async () => {
+        initialized = false;
+      }),
+      init: mock(async () => {
+        if (initialized) {
+          return;
+        }
+        initialized = true;
+        activeIndex = availableIndex;
+      }),
+      options: mock(async () => {}),
       search: mock(async () => ({
-        results: Array.from({ length: 26 }, (_, i) => ({
-          data: async () => ({
-            meta: { title: `Alpha ${i + 1}` },
-            url: `/alpha-${i + 1}/`,
-            excerpt: `Matched alpha ${i + 1}`,
-            score: 26 - i,
-          }),
-        })),
+        results:
+          activeIndex === 'initial'
+            ? Array.from({ length: 26 }, (_, i) => ({
+                data: async () => ({
+                  meta: { title: `Alpha ${i + 1}` },
+                  url: `/alpha-${i + 1}/`,
+                  excerpt: `Matched alpha ${i + 1}`,
+                  score: 26 - i,
+                }),
+              }))
+            : [
+                {
+                  data: async () => ({
+                    meta: { title: 'Reloaded alpha' },
+                    url: '/reloaded-alpha/',
+                    excerpt: 'Matched the reloaded index',
+                    score: 1,
+                  }),
+                },
+              ],
       })),
     };
 
-    mockGlobals({ importModule: mock(async () => pagefindLoad.promise) });
+    let importCount = 0;
+    const importModule = mock(async (_specifier: string) => {
+      importCount += 1;
+      return importCount === 1 ? pagefindLoad.promise : pagefind;
+    });
+
+    mockGlobals({ importModule });
 
     const win = createSearchWindow();
     mount(win);
@@ -271,6 +304,7 @@ describe('search UI', () => {
     await flush();
 
     expect(pagefind.init).toHaveBeenCalled();
+    expect(importModule).toHaveBeenCalledTimes(1);
     expect(pagefind.search).toHaveBeenCalledWith('alpha');
     expect(win.document.querySelector('.results-count')?.textContent).toBe(
       '26 results',
@@ -279,5 +313,24 @@ describe('search UI', () => {
     expect(results).toHaveLength(26);
     expect(results[0]?.getAttribute('href')).toBe('/alpha-1/');
     expect(results[25]?.getAttribute('href')).toBe('/alpha-26/');
+
+    availableIndex = 'reloaded';
+    win.dispatchEvent(new win.Event(PAGE_UPDATE_REFRESH_EVENT));
+    await flush();
+
+    expect(pagefind.destroy).toHaveBeenCalled();
+    expect(importModule).toHaveBeenCalledTimes(2);
+    expect(importModule.mock.calls[1]?.[0]).toBe(
+      '/pagefind/pagefind.js?tada-pagefind-refresh=1',
+    );
+    expect(pagefind.options).toHaveBeenCalledWith({ basePath: '/pagefind/' });
+    expect(pagefind.init).toHaveBeenCalledTimes(2);
+    expect(pagefind.search).toHaveBeenLastCalledWith('alpha');
+    expect(win.document.querySelector('.results-count')?.textContent).toBe(
+      'One result',
+    );
+    expect(win.document.querySelector('a.result')?.getAttribute('href')).toBe(
+      '/reloaded-alpha/',
+    );
   });
 });

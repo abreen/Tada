@@ -10,6 +10,7 @@ import { NAVIGATION_EVENT, refreshCurrentPage } from '../navigate/runtime';
 import { globals } from '../globals';
 
 const POLL_INTERVAL_MS = 600_000;
+export const PAGE_UPDATE_REFRESH_EVENT = 'tada:page-update-refresh';
 
 interface PageUpdateOptions {
   pollIntervalMs?: number;
@@ -247,7 +248,10 @@ export function mountPageUpdate(
   }
 
   function handleReloadClick() {
-    void refreshPage(window);
+    void refreshPage(window).then(() => {
+      const EventCtor = (window as unknown as { Event: typeof Event }).Event;
+      window.dispatchEvent(new EventCtor(PAGE_UPDATE_REFRESH_EVENT));
+    });
   }
 
   reloadButton.addEventListener('click', handleReloadClick);
