@@ -6,6 +6,8 @@
 /// See [`rectangle.py`](./rectangle.py) for a Python version of this class.
 ///
 /// Here's `vars.foobar`: <%= vars.foobar %>
+///
+/// Here's some LaTeX: $\frac{n(n-1)}{2}$ is $O(n^2)$
 public class Rectangle {
     private int width;
     private int height;

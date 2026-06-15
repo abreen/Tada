@@ -138,15 +138,15 @@ test.describe('scroll and hash behavior', () => {
   }) => {
     await page.goto('/lectures/01/Rectangle.java.html');
 
-    // Click line 9
-    await page.locator('a.line-number#L9').click();
-    await expect(page).toHaveURL(/#L9$/);
+    // Click line 11
+    await page.locator('a.line-number#L11').click();
+    await expect(page).toHaveURL(/#L11$/);
 
     let matches = await page.evaluate(() => ({
-      l9: document.getElementById('L9')?.matches(':target') ?? false,
+      l11: document.getElementById('L11')?.matches(':target') ?? false,
       l40: document.getElementById('L40')?.matches(':target') ?? false,
     }));
-    expect(matches.l9).toBe(true);
+    expect(matches.l11).toBe(true);
     expect(matches.l40).toBe(false);
 
     // Click line 40
@@ -154,10 +154,10 @@ test.describe('scroll and hash behavior', () => {
     await expect(page).toHaveURL(/#L40$/);
 
     matches = await page.evaluate(() => ({
-      l9: document.getElementById('L9')?.matches(':target') ?? false,
+      l11: document.getElementById('L11')?.matches(':target') ?? false,
       l40: document.getElementById('L40')?.matches(':target') ?? false,
     }));
-    expect(matches.l9).toBe(false);
+    expect(matches.l11).toBe(false);
     expect(matches.l40).toBe(true);
   });
 
@@ -172,22 +172,22 @@ test.describe('scroll and hash behavior', () => {
     // Inject a link to a code page with a hash and click it
     await page.evaluate(() => {
       const a = document.createElement('a');
-      a.href = '/lectures/01/Rectangle.java.html#L22';
-      a.textContent = 'jump to L22';
+      a.href = '/lectures/01/Rectangle.java.html#L24';
+      a.textContent = 'jump to L24';
       a.id = 'test-cross-hash-link';
       document.querySelector('main.body')!.appendChild(a);
     });
 
     await page.locator('#test-cross-hash-link').click();
-    await expect(page).toHaveURL(/Rectangle\.java\.html#L22$/);
+    await expect(page).toHaveURL(/Rectangle\.java\.html#L24$/);
 
     // Should have been SPA navigation
     const marker = await page.evaluate(() => (window as any).__navMarker);
     expect(marker).toBe('alive');
 
-    // L22 should match :target
+    // L24 should match :target
     const isTarget = await page.evaluate(
-      () => document.getElementById('L22')?.matches(':target') ?? false,
+      () => document.getElementById('L24')?.matches(':target') ?? false,
     );
     expect(isTarget).toBe(true);
   });
@@ -231,9 +231,9 @@ test.describe('scroll and hash behavior', () => {
   test('TOC current-line indicator follows hash clicks', async ({ page }) => {
     await page.goto('/lectures/01/Rectangle.java.html');
 
-    // Click line 22
-    await page.locator('a.line-number#L22').click();
-    await expect(page).toHaveURL(/#L22$/);
+    // Click line 24
+    await page.locator('a.line-number#L24').click();
+    await expect(page).toHaveURL(/#L24$/);
 
     // Wait for the TOC current-line indicator to appear (TOC mount is
     // asynchronous and may settle after the initial click).
