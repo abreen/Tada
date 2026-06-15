@@ -359,13 +359,10 @@ export function renderCodePageAsset({
     isWatchMode: isWatchMode(assetFiles),
   });
 
+  const templateHtml = render('code.html', templateParameters) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: injectAssetTags(
-      render('code.html', templateParameters) as string,
-      assetFiles,
-      distDir,
-    ),
+    html: preparePageTemplateHtml({ templateHtml, assetFiles, distDir }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,

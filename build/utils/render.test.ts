@@ -4,6 +4,7 @@ import { createFsModuleMock } from '../test-helpers';
 import type { SiteVariables } from '../types';
 
 const files = new Map<string, string>();
+let mockedCodeHtml = '<div class="code-body">rendered code</div>';
 
 function resolvePath(filePath: string): string {
   return path.resolve(filePath);
@@ -54,7 +55,7 @@ mock.module('./code', () => ({
     return '<pre></pre>';
   },
   renderCodeWithComments() {
-    return '<div class="code-body">rendered code</div>';
+    return mockedCodeHtml;
   },
   rewriteProseLinks(lines: string[]) {
     return lines;
@@ -72,6 +73,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   files.clear();
+  mockedCodeHtml = '<div class="code-body">rendered code</div>';
 });
 
 const siteVariables = {
@@ -167,6 +169,28 @@ describe('renderCodePageAsset', () => {
     expect(html).toContain('<link href="/course/styles.css" rel="stylesheet">');
     expect(html).toContain('<script defer="" src="/course/app.js"></script>');
     expect(html).not.toContain('href="/katex/katex.min.css"');
+  });
+
+  test('injects the KaTeX stylesheet into code pages with math', () => {
+    mockedCodeHtml =
+      '<div class="code-prose"><span class="katex">x</span></div>';
+    const contentDir = '/virtual/content';
+    const filePath = path.join(contentDir, 'labs', 'example.java');
+    writeFile(filePath, '/// $x$\npublic class Example {}\n');
+
+    const [pageAsset] = renderCodePageAsset({
+      filePath,
+      contentDir,
+      distDir: '/virtual/dist',
+      siteVariables,
+      assetFiles: ['app.js', 'styles.css'],
+      validInternalTargets: new Set(),
+      literateJavaOutputPaths: new Set(),
+    });
+
+    const html = pageAsset.content.toString();
+
+    expect(html).toContain('href="/course/katex/katex.min.css"');
   });
 });
 

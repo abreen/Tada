@@ -259,6 +259,42 @@ describe('renderCodeWithComments', () => {
     expect(html).not.toContain('href="./Pair.java.html"');
   });
 
+  test('renders KaTeX math in Java Markdown comments', () => {
+    const source =
+      '/// The equation $E = mc^2$ is famous.\npublic class Foo {}\n';
+    const html = renderCodeWithComments(source, 'java', {
+      base: '',
+      basePath: '/',
+      internalDomains: [],
+      title: 'Test',
+      titlePostfix: ' - Test',
+      themeColor: 'steelblue',
+      defaultTimeZone: 'America/New_York',
+      features: { search: true, favicon: true, footer: true },
+    } as SiteVariables);
+
+    expect(html).toContain('class="katex"');
+    expect(html).toContain('aria-label="E, equals, m, c, squared"');
+  });
+
+  test('throws on invalid LaTeX in Java Markdown comments', () => {
+    const source =
+      '/// Invalid $\\invalidcommand{$ math.\npublic class Foo {}\n';
+
+    expect(() =>
+      renderCodeWithComments(source, 'java', {
+        base: '',
+        basePath: '/',
+        internalDomains: [],
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+        defaultTimeZone: 'America/New_York',
+        features: { search: true, favicon: true, footer: true },
+      } as SiteVariables),
+    ).toThrow();
+  });
+
   test('does not substitute <%= %> by itself (templating happens in renderCodePageAsset)', () => {
     const source = '# Supplied as part of <%= vars.fullCourseName %>\n';
     const html = renderCodeWithComments(source, 'text', {

@@ -16,7 +16,9 @@ Each code page includes:
 Java files that use Markdown documentation comments (`///`, introduced in Java
 25) receive special treatment. Consecutive `///` lines are extracted, rendered as
 Markdown, and displayed inline between the surrounding code segments. The
-rendered prose preserves the indentation level of the original comments.
+rendered prose preserves the indentation level of the original comments. These
+comments support the same build-time KaTeX math syntax as Markdown pages, so
+authors can write inline math such as `$E = mc^2$` and display math with `$$`.
 
 When a user copies a section that includes rendered prose, the original `///`
 comment lines are restored in the clipboard so that pasted text is valid Java

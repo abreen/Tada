@@ -7,6 +7,7 @@ import { getExtensionToShikiLanguage } from '../site-variables';
 import { highlightCode } from './shiki-highlighter';
 import externalLinksPlugin from '../external-links-plugin';
 import { createApplyBasePath } from './paths';
+import katexPlugin from './katex';
 import { splitLines } from './literate-java';
 import type { JavaTocEntry, SiteVariables } from '../types';
 
@@ -40,10 +41,9 @@ const log = makeLogger(import.meta.url);
 const PROSE_LINE = /^\s*\/\/\/(\s|$)/;
 
 function createCodeMarkdown(siteVariables: SiteVariables): MarkdownIt {
-  return new MarkdownIt({ html: true, typographer: true }).use(
-    externalLinksPlugin,
-    siteVariables,
-  );
+  return new MarkdownIt({ html: true, typographer: true })
+    .use(externalLinksPlugin, siteVariables)
+    .use(katexPlugin);
 }
 
 // Matches Markdown links: [text](url)
