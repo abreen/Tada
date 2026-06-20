@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
 import { createFsModuleMock } from '../test-helpers';
 import type { SiteVariables } from '../types';
+import { initHighlighter } from './shiki-highlighter';
 
 const files = new Map<string, string>();
 let mockedCodeHtml = '<div class="code-body">rendered code</div>';
@@ -67,6 +68,7 @@ let renderCodePageAsset: typeof import('./render').renderCodePageAsset;
 let renderPlainTextPageAsset: typeof import('./render').renderPlainTextPageAsset;
 
 beforeAll(async () => {
+  await initHighlighter(['text']);
   ({ preparePageTemplateHtml, renderCodePageAsset, renderPlainTextPageAsset } =
     await import('./render'));
 });
@@ -398,6 +400,39 @@ describe('renderPlainTextPageAsset', () => {
     expect(html).toContain('<p>First paragraph</p>');
     expect(html).toContain('<p>Second paragraph</p>');
     expect(html).not.toContain('First paragraphSecond paragraph');
+  });
+
+  test('renders separate fenced blocks from a CRLF partial inside a list item', () => {
+    const contentDir = '/virtual/content';
+    writeFile(
+      path.join(contentDir, '_verify.md'),
+      [
+        '1. Run the command:',
+        '   ```',
+        '   java -version',
+        '   ```',
+        '   You should see output like this:',
+        '   ```',
+        '   openjdk version "25.0.1"',
+        '   ```',
+      ].join('\r\n'),
+    );
+
+    const html = renderMarkdownPage({
+      contentDir,
+      source: [
+        '---',
+        'title: CRLF Partial',
+        '---',
+        '',
+        '{{{ _verify.md }}}',
+        '',
+      ].join('\n'),
+    });
+
+    expect(html.match(/<pre /g)).toHaveLength(2);
+    expect(html).toMatch(/<\/pre>You should see output like this:<pre /);
+    expect(html).not.toContain('<span>```</span>');
   });
 
   test('keeps escaped and code triple-curly text literal', () => {

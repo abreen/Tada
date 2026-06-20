@@ -104,7 +104,7 @@ function tokenizePartialContent(
 
   try {
     const childState = new state.md.block.State(
-      content,
+      content.replace(/\r\n?/g, '\n'),
       state.md,
       state.env,
       state.tokens,

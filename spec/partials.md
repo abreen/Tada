@@ -52,6 +52,9 @@ partial render in the context where the directive appears.
 
 Partials do not have their own front matter.
 
+Partial line endings are normalized before Markdown parsing, so LF and CRLF
+partials render identically on every platform.
+
 ## Template context
 
 Partials receive the same template parameters as the including page. This
