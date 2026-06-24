@@ -1,18 +1,18 @@
 ---
 title: Lectures
 author: alex
-description: An example page for <%= site.title %>.
+description: "An example page for {site.title}."
 ---
 
-<%= renderTimeZoneChooser() %>
+<TimeZoneChooser />
 
 One-hour lectures are held weekly at <time datetime="17:40">5:40 PM</time>.
 Each lecture is recorded and made available by password-protected link.
 Return to this page to access the recordings.
 
-<<< details More details
+<Details summary="More details">
 Here is a sample collapsible with more information.
-<<<
+</Details>
 
 Following lecture, an optional office hour is held, during which you may ask
 questions and get hints for the problem sets.

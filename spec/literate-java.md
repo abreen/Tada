@@ -1,5 +1,10 @@
 # Literate Java
 
+Literate Java prose is MDX 3 and may use Tada's built-in JSX components. Java
+code is collected from every Java or unlabelled fence, including fences nested
+inside components. Every collected fence is visible; Tada 1 hidden fences in
+triple-hyphen comments are removed without replacement.
+
 Files ending in `.java.md` are treated as literate Java pages. These are
 Markdown files that contain embedded Java code blocks. The Java code blocks are
 extracted and concatenated into a `.java` source file. The `.java` source files

@@ -8,7 +8,7 @@ A build runs in five phases:
    web manifest (if enabled)
 3. **Copy**: copy static files from `public/` and non-page assets from
    `content/` into the output directory
-4. **Render**: process Markdown, HTML, and code pages into HTML output
+4. **Render**: process Markdown, MDX, HTML, and code pages into HTML output
 5. **Post-build**: run search indexing (if enabled); generate the build
    manifest (production only)
 

@@ -88,7 +88,9 @@ class TestInitBare:
     def test_creates_minimal_content(self, site_dir):
         content_dir = site_dir / 'content'
         assert content_dir.is_dir()
-        assert (content_dir / 'index.md').exists()
+        index = content_dir / 'index.md'
+        assert index.exists()
+        assert index.read_text().startswith('---\ntitle: Home\n---\n')
         all_files = [f for f in content_dir.rglob('*') if f.is_file()]
         assert len(all_files) == 1
 

@@ -1,6 +1,6 @@
 {
   "name": "@abreen/tada",
-  "version": "1.15.12",
+  "version": "2.0.0",
   "type": "module",
   "description": "A static site generator",
   "license": "MIT",
@@ -56,7 +56,7 @@
     "win32"
   ],
   "dependencies": {
-    "@vscode/markdown-it-katex": "^1.1.2",
+    "@mdx-js/mdx": "^3.1.1",
     "ajv": "^8.18.0",
     "chokidar": "^4.0.3",
     "culori": "^4.0.2",
@@ -68,10 +68,6 @@
     "katex": "^0.16.45",
     "lodash": "^4.18.1",
     "markdown-it": "^14.1.1",
-    "markdown-it-anchor": "^9.2.0",
-    "markdown-it-container": "^4.0.0",
-    "markdown-it-deflist": "^3.0.0",
-    "markdown-it-footnote": "^4.0.0",
     "pagefind": "^1.5.2",
     "png-to-ico": "^3.0.1",
     "quote-quote": "^1.2.0",
@@ -106,7 +102,6 @@
     "@types/istanbul-lib-report": "^3.0.3",
     "@types/istanbul-reports": "^3.0.4",
     "@types/lodash": "^4.17.24",
-    "@types/markdown-it-container": "^4.0.0",
     "@types/node": "^25.6.0",
     "eslint": "^10.2.1",
     "husky": "^9.1.7",

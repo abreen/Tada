@@ -22,7 +22,7 @@ class TestMultiFileTraces:
             'void main() {\n    int value = 7;\n    System.out.println(value);\n}\n'
         )
         (labs_dir / 'index.md').write_text(
-            "---\ntitle: Trace Lab\n---\n\n<%= renderTrace('UnnamedDemo.java') %>\n"
+            '---\ntitle: Trace Lab\n---\n\n<Trace source="UnnamedDemo.java" />\n'
         )
 
         result = run_tada('dev', cwd=str(site_dir), timeout=180)
@@ -62,7 +62,8 @@ class TestMultiFileTraces:
             '---\n'
             'title: Trace Lab\n'
             '---\n\n'
-            "<%= renderTrace('ArrayBagDemo.java', ['../../lectures/bag/ArrayBag.java']) %>\n"
+            '<Trace source="ArrayBagDemo.java" '
+            'companions={["../../lectures/bag/ArrayBag.java"]} />\n'
         )
 
         result = run_tada('dev', cwd=str(site_dir), timeout=180)
@@ -87,7 +88,10 @@ class TestMultiFileTraces:
             'from helper import double\nvalue = double(3)\nprint(value)\n'
         )
         (labs_dir / 'index.md').write_text(
-            "---\ntitle: Trace Lab\n---\n\n<%= renderTrace('trace_import.py', ['helper.py']) %>\n"
+            '---\n'
+            'title: Trace Lab\n'
+            '---\n\n'
+            '<Trace source="trace_import.py" companions={["helper.py"]} />\n'
         )
 
         result = run_tada('dev', cwd=str(site_dir), timeout=180)

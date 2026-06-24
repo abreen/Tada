@@ -2,6 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import {
   getProcessedExtensions,
   extensionIsMarkdown,
+  extensionIsMdx,
+  extensionIsMdxContent,
+  extensionIsPlainTextPage,
   isLiterateJava,
   isPartial,
 } from './file-types';
@@ -11,13 +14,19 @@ describe('getProcessedExtensions', () => {
     expect(getProcessedExtensions(['java'])).toEqual([
       'md',
       'markdown',
+      'mdx',
       'html',
       'java',
     ]);
   });
 
   test('works with empty code extensions', () => {
-    expect(getProcessedExtensions([])).toEqual(['md', 'markdown', 'html']);
+    expect(getProcessedExtensions([])).toEqual([
+      'md',
+      'markdown',
+      'mdx',
+      'html',
+    ]);
   });
 });
 
@@ -34,8 +43,49 @@ describe('extensionIsMarkdown', () => {
     expect(extensionIsMarkdown('.html')).toBe(false);
   });
 
+  test('returns false for .mdx', () => {
+    expect(extensionIsMarkdown('.mdx')).toBe(false);
+  });
+
   test('returns false for .txt', () => {
     expect(extensionIsMarkdown('.txt')).toBe(false);
+  });
+});
+
+describe('extensionIsMdx', () => {
+  test('returns true for .mdx', () => {
+    expect(extensionIsMdx('.mdx')).toBe(true);
+  });
+
+  test('returns false for Markdown and HTML', () => {
+    expect(extensionIsMdx('.md')).toBe(false);
+    expect(extensionIsMdx('.html')).toBe(false);
+  });
+});
+
+describe('extensionIsMdxContent', () => {
+  test('returns true for every Markdown content extension', () => {
+    expect(extensionIsMdxContent('.md')).toBe(true);
+    expect(extensionIsMdxContent('.markdown')).toBe(true);
+    expect(extensionIsMdxContent('.mdx')).toBe(true);
+  });
+
+  test('returns false for HTML and copied content', () => {
+    expect(extensionIsMdxContent('.html')).toBe(false);
+    expect(extensionIsMdxContent('.txt')).toBe(false);
+  });
+});
+
+describe('extensionIsPlainTextPage', () => {
+  test('returns true for Markdown, MDX, and HTML page extensions', () => {
+    expect(extensionIsPlainTextPage('.md')).toBe(true);
+    expect(extensionIsPlainTextPage('.markdown')).toBe(true);
+    expect(extensionIsPlainTextPage('.mdx')).toBe(true);
+    expect(extensionIsPlainTextPage('.html')).toBe(true);
+  });
+
+  test('returns false for copied content extensions', () => {
+    expect(extensionIsPlainTextPage('.txt')).toBe(false);
   });
 });
 

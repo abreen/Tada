@@ -1,5 +1,3 @@
-import type MarkdownIt from 'markdown-it';
-import { convertMarkdown as curlyQuote } from 'quote-quote';
 import type { JavaTocEntry } from './types';
 
 interface HeadingItem {
@@ -21,94 +19,6 @@ interface AlertItem {
 }
 
 type TocItem = HeadingItem | DinkusItem | AlertItem;
-
-export function tocPlugin(md: MarkdownIt): void {
-  md.core.ruler.push('toc_collector', state => {
-    if (!state.env) {
-      return;
-    }
-
-    const tokens = state.tokens;
-    const items: TocItem[] = [];
-    const containerStack: string[] = [];
-
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i];
-
-      // Headings (included at any nesting level)
-      if (token.type === 'heading_open') {
-        const inline = tokens[i + 1];
-        if (!inline || inline.type !== 'inline') {
-          continue;
-        }
-
-        const level = token.tag[1]; // 'h2' -> '2'
-        const id = token.attrGet('id') || '';
-        const innerHtml = md.renderer.renderInline(
-          inline.children ?? [],
-          md.options,
-          state.env,
-        );
-
-        items.push({ kind: 'heading', level, id, innerHtml });
-        continue;
-      }
-
-      // Thematic breaks / dinkuses (only at top level)
-      if (
-        token.type === 'hr' &&
-        containerStack.length === 0 &&
-        !state.env?.slides
-      ) {
-        items.push({ kind: 'dinkus' });
-        continue;
-      }
-
-      // Alerts (only at top level or directly inside a section)
-      // Must be checked before generic container tracking below
-      if (token.type === 'container_alert_open') {
-        const depth = containerStack.length;
-        const parentIsSection = depth === 1 && containerStack[0] === 'section';
-
-        if (depth === 0 || parentIsSection) {
-          const match = token.info
-            .trim()
-            .match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
-          if (match) {
-            const type = match[1];
-            let title = (match[2] || match[3])?.trim();
-            if (title) {
-              title = md.utils.escapeHtml(curlyQuote(title));
-            } else {
-              title = type === 'warning' ? 'Warning' : 'Note';
-            }
-            items.push({ kind: 'alert', type, title });
-          }
-        }
-        // Fall through to push 'alert' onto container stack
-      }
-
-      // Track container nesting
-      if (token.type.startsWith('container_') && token.type.endsWith('_open')) {
-        const containerType = token.type.slice(
-          'container_'.length,
-          -'_open'.length,
-        );
-        containerStack.push(containerType);
-        continue;
-      }
-      if (
-        token.type.startsWith('container_') &&
-        token.type.endsWith('_close')
-      ) {
-        containerStack.pop();
-        continue;
-      }
-    }
-
-    state.env.tocItems = items;
-  });
-}
 
 export function generateTocHtml(
   tocItems: TocItem[],

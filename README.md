@@ -22,10 +22,10 @@ A static site generator. The successor to Presto.
   * Dynamic table of contents for each method/function
   * Converts new Markdown comment syntax ([added in Java 23][jep467]) to HTML
   * Indexed by Pagefind (classes, interfaces, methods, and fields)
-- Interactive execution traces via `renderTrace()`
+- Interactive execution traces via `<Trace>`
   * Supports Java and Python source files
   * Renders step-by-step source highlighting, output, and memory diagrams
-- Slides mode: separate content by `---` and present sections as full-screen slides
+- Slides mode via `<Slides>` and `<Slide>` components
   * Click icon near slide titles to start presenting at that slide
   * Right-click in presentation mode to annotate
   * Hold Shift while annotating to erase
@@ -36,15 +36,11 @@ A static site generator. The successor to Presto.
 - Internal links automatically prefixed with base path, if specified
 - Time zone chooser (automatically adjusts `<datetime>` elements)
 - LaTeX math rendered at build time via [KaTeX][katex]
-- Extended Markdown syntax
-  * `<<< details ... <<<` renders a collapsible box
-  * `::: section ... :::` renders a special section with a fancy background
-  * `!!! note ... !!!` and `!!! warning ... !!!` render alert boxes
-  * `??? question ... ???` renders a Q&A section; answer is hidden until click
-    - To display clickable multiple choice options, use a [task list][task-list]
-  * `+++ ... +++ ... +++` renders a two-column layout
-  * Special heading subtitles with `## Heading # A subtitle here`
-  * `{{{ _partial.md }}}` syntax for including partials
+- MDX 3 for `.md`, `.markdown`, and `.mdx`
+  * Built-in static JSX components for alerts, details, sections, columns,
+    questions, partials, slides, traces, subtitles, and time zones
+  * Native `page`, `site`, and `vars` expressions
+  * No React or MDX runtime shipped to the browser
 - Automatically generated favicon
   * Text, color, font and font weight taken from config file
 
@@ -62,7 +58,7 @@ A static site generator. The successor to Presto.
 > pages. You can also turn off `features.search` in the config to disable
 > search entirely.
 
-If you plan to use `renderTrace()` to generate traces of Java or Python code,
+If you plan to use `<Trace>` to generate traces of Java or Python code,
 the appropriate compiler/interpreter must be installed.
 
 ## Installation
@@ -256,7 +252,7 @@ vars:
 | `shikiLanguages` | *Optional*, list of Shiki languages permitted in code blocks |
 | `faviconColor` | *Optional*, background color for favicon (defaults to `themeColor`) |
 | `faviconFontWeight` | *Optional*, font weight used for favicon text (default `700`) |
-| `vars` | Arbitrary key/value variables exposed to templates/content as `vars.*` (e.g., `<%= vars.staffEmail %>`) |
+| `vars` | Arbitrary key/value variables exposed to MDX as `vars.*` (e.g., `{vars.staffEmail}`) |
 
 #### `nav.yaml`
 
@@ -321,74 +317,32 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `author` | Author handle (e.g. `jsmith`) resolved to a full object via the authors config |
 | `description` | Meta description for the page |
 | `toc` | Set to `true` to show a table of contents |
-| `slides` | Set to `true` on Markdown pages to treat top-level `---` as slide separators and add presentation controls |
 | `parent` & `parentLabel` | URL and label for a breadcrumb link displayed above the title |
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
 
 You may also add arbitrary fields in a page's front matter, and access them
-using Lodash syntax (see below).
+using native MDX expressions.
 
-### Variable substitution
+### Expressions
 
-Plain text content (e.g., HTML and Markdown) are processed using [Lodash
-templates][lodash].
+Markdown content uses native MDX expressions: `{site.title}`, `{page.title}`,
+and `{vars.staffEmail}`. Front matter, nav, and authors values support quoted
+`{site.path}` and `{vars.path}` expressions. HTML bodies and ordinary source
+files are literal; Java `///` prose comments receive `site` and `vars`.
 
-- Site config values are available under `site` (e.g., `site.title`)
-- Page variables (from front matter) are available under `page`
-- Custom variables from the `"vars"` property of the config are available
-  under `vars` (e.g., `<%= vars.staffEmail %>`)
+### Partials
 
-### Markdown partials
+Include reusable MDX fragments with `<Partial source="_fragment.md" />`. Partial
+paths resolve relative to the declaring file, nested dependencies are watched,
+and cycles are rejected. See [`spec/partials.md`](spec/partials.md).
 
-Use the `{{{ _partial.md }}}` syntax to include a partial (a fragment of
-Markdown in a separate file whose name must start with `_`) at that particular
-location in a Markdown file.
-
-This is useful for reducing duplication across multiple documents which use the
-exact same content, or for breaking up a large document into building blocks
-which are easier to edit.
-
-Partials are never built into their own pages, and they don't have front matter.
-
-The `{{{ ... }}}` syntax is not a simple string replacement; instead, the
-Markdown syntax tree of the partial is *added* to the syntax tree of the
-Markdown file that includes it. This is a powerful feature because it allows you
-to include content as a subtree.
-
-For example, this partial `_groceries.md`
-
-```
-* apples
-* oranges
-* pears
-```
-
-can be inserted as a sub-list of a larger list in a Markdown page
-
-```
-title: To do list
-
-* Grocery shopping
-  {{{ _groceries.md }}}
-* Car wash
-```
-
-which results in:
-
-```
-* Grocery shopping
-  * apples
-  * oranges
-  * pears
-* Car wash
-```
+Tada 2 intentionally removes Tada 1 authored syntax. See the
+[2.0 migration guide](spec/migration-2.md).
 
 
 [inter]: https://fonts.google.com/specimen/Inter
-[lodash]: https://lodash.info/doc/template
 [front-matter]: https://www.npmjs.com/package/front-matter
 [pagefind]: https://pagefind.app/
 [jep467]: https://openjdk.org/jeps/467
 [katex]: https://katex.org/
 [homebrew]: https://brew.sh/
-[task-list]: https://github.github.com/gfm/#task-list-items-extension-

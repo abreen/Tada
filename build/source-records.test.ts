@@ -57,7 +57,7 @@ function makeScan(overrides: Partial<TadaProjectScan> = {}): TadaProjectScan {
     publicFiles: new Set(),
     validTargets: new Set(),
     literateJavaOutputPaths: new Set(),
-    processedExts: new Set(['md', 'markdown', 'html', 'ts', 'java']),
+    processedExts: new Set(['md', 'markdown', 'mdx', 'html', 'ts', 'java']),
     contentOwners: new Map(),
     publicOwners: new Map(),
     sourceOutputPaths: new Map(),
@@ -134,6 +134,16 @@ describe('classifySourceRenderKind', () => {
 
   test('classifies markdown pages as plain text pages', () => {
     const filePath = sitePath('content', 'notes', 'index.md');
+    const scan = makeScan({
+      contentFiles: new Set([filePath]),
+      buildContentFiles: new Set([filePath]),
+    });
+
+    expectRenderKind(filePath, scan, 'plain-text-page');
+  });
+
+  test('classifies MDX pages as plain text pages', () => {
+    const filePath = sitePath('content', 'notes', 'index.mdx');
     const scan = makeScan({
       contentFiles: new Set([filePath]),
       buildContentFiles: new Set([filePath]),

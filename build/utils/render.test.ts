@@ -1,11 +1,18 @@
 import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
 import { createFsModuleMock } from '../test-helpers';
-import type { SiteVariables } from '../types';
+import type {
+  RenderPlainTextOptions,
+  SiteVariables,
+  TraceToolAvailability,
+} from '../types';
 import { initHighlighter } from './shiki-highlighter';
 
 const files = new Map<string, string>();
 let mockedCodeHtml = '<div class="code-body">rendered code</div>';
+let renderedCodeSource = '';
+let renderedCodeFilePath: string | undefined;
+let renderedCodeDependencyCollector: unknown;
 
 function resolvePath(filePath: string): string {
   return path.resolve(filePath);
@@ -55,7 +62,17 @@ mock.module('./code', () => ({
   renderCodeSegment() {
     return '<pre></pre>';
   },
-  renderCodeWithComments() {
+  renderCodeWithComments(
+    source: string,
+    _language: string,
+    _siteVariables: SiteVariables,
+    _pageDirPath?: string,
+    filePath?: string,
+    dependencyCollector?: unknown,
+  ) {
+    renderedCodeSource = source;
+    renderedCodeFilePath = filePath;
+    renderedCodeDependencyCollector = dependencyCollector;
     return mockedCodeHtml;
   },
   rewriteProseLinks(lines: string[]) {
@@ -68,7 +85,7 @@ let renderCodePageAsset: typeof import('./render').renderCodePageAsset;
 let renderPlainTextPageAsset: typeof import('./render').renderPlainTextPageAsset;
 
 beforeAll(async () => {
-  await initHighlighter(['text']);
+  await initHighlighter(['text', 'java', 'ts']);
   ({ preparePageTemplateHtml, renderCodePageAsset, renderPlainTextPageAsset } =
     await import('./render'));
 });
@@ -76,6 +93,9 @@ beforeAll(async () => {
 beforeEach(() => {
   files.clear();
   mockedCodeHtml = '<div class="code-body">rendered code</div>';
+  renderedCodeSource = '';
+  renderedCodeFilePath = undefined;
+  renderedCodeDependencyCollector = undefined;
 });
 
 const siteVariables = {
@@ -87,6 +107,8 @@ const siteVariables = {
   defaultTimeZone: 'America/New_York',
   features: { search: true, favicon: true, footer: true },
   extensionToShikiLanguage: { ts: 'ts' },
+  shikiLanguages: ['ts'],
+  vars: { course: 'CSCI E-22' },
 } as SiteVariables;
 
 function renderMarkdownPage({
@@ -94,6 +116,8 @@ function renderMarkdownPage({
   relativePath = 'page.md',
   source,
   dependencyCollector,
+  traceCache,
+  traceToolAvailability,
 }: {
   contentDir: string;
   relativePath?: string;
@@ -101,7 +125,10 @@ function renderMarkdownPage({
   dependencyCollector?: {
     partials?: Set<string>;
     internalTargets?: Set<string>;
+    traceFiles?: Set<string>;
   };
+  traceCache?: NonNullable<RenderPlainTextOptions['traceCache']>;
+  traceToolAvailability?: TraceToolAvailability;
 }): string {
   const filePath = path.join(contentDir, relativePath);
   writeFile(filePath, source);
@@ -115,6 +142,8 @@ function renderMarkdownPage({
     assetFiles: [],
     literateJavaOutputPaths: new Set(),
     dependencyCollector,
+    traceCache,
+    traceToolAvailability,
   });
 
   return pageAsset.content.toString();
@@ -194,337 +223,282 @@ describe('renderCodePageAsset', () => {
 
     expect(html).toContain('href="/course/katex/katex.min.css"');
   });
+
+  test('passes raw Java prose expressions to the MDX renderer', () => {
+    const contentDir = '/virtual/content';
+    const filePath = path.join(contentDir, 'labs', 'example.java');
+    const source = '/// {vars.course}\npublic class Example {}\n';
+    writeFile(filePath, source);
+
+    renderCodePageAsset({
+      filePath,
+      contentDir,
+      distDir: '/virtual/dist',
+      siteVariables: { ...siteVariables, vars: { course: '*literal*' } },
+      assetFiles: [],
+      validInternalTargets: new Set(),
+      literateJavaOutputPaths: new Set(),
+    });
+
+    expect(renderedCodeSource).toBe(source);
+  });
+
+  test('passes Java source context to the MDX renderer', () => {
+    const contentDir = '/virtual/content';
+    const filePath = path.join(contentDir, 'labs', 'example.java');
+    const dependencyCollector = { partials: new Set<string>() };
+    writeFile(filePath, '/// <Partial source="_notes.md" />\n');
+
+    renderCodePageAsset({
+      filePath,
+      contentDir,
+      distDir: '/virtual/dist',
+      siteVariables,
+      assetFiles: [],
+      validInternalTargets: new Set(),
+      literateJavaOutputPaths: new Set(),
+      dependencyCollector,
+    });
+
+    expect(renderedCodeFilePath).toBe(filePath);
+    expect(renderedCodeDependencyCollector).toBe(dependencyCollector);
+  });
 });
 
 describe('renderPlainTextPageAsset', () => {
-  test('includes a basic Markdown partial block', () => {
+  test('renders an MDX page to the same output path shape as Markdown', () => {
     const contentDir = '/virtual/content';
-    const partialPath = path.join(contentDir, '_partial.md');
-    writeFile(partialPath, '**Hello** from partial');
+    const filePath = path.join(contentDir, 'docs', 'page.mdx');
+    writeFile(filePath, '---\ntitle: MDX Output\n---\n\n# Hello');
+
+    const [pageAsset] = renderPlainTextPageAsset({
+      filePath,
+      contentDir,
+      distDir: '/virtual/dist',
+      siteVariables,
+      validInternalTargets: new Set(),
+      assetFiles: [],
+      literateJavaOutputPaths: new Set(),
+    });
+
+    expect(pageAsset.assetPath).toBe('docs/page.html');
+    expect(pageAsset.content.toString()).toContain('<h1 id="hello">Hello</h1>');
+  });
+
+  test('renders recursive MDX partial components relative to their files', () => {
+    const contentDir = '/virtual/content';
+    writeFile(
+      path.join(contentDir, '_outer.md'),
+      'Outer {vars.course}.\n\n<Partial source="subdir/_inner.mdx" />',
+    );
+    writeFile(
+      path.join(contentDir, 'subdir', '_inner.mdx'),
+      'Inner **content**.',
+    );
     const dependencyCollector = { partials: new Set<string>() };
 
     const html = renderMarkdownPage({
       contentDir,
-      source: '---\ntitle: Partial Test\n---\n\n{{{ _partial.md }}}\n',
+      source: '---\ntitle: Partial Test\n---\n\n<Partial source="_outer.md" />',
       dependencyCollector,
     });
 
-    expect(html).toContain('<strong>Hello</strong> from partial');
+    expect(html).toContain('Outer CSCI E-22.');
+    expect(html).toContain('Inner <strong>content</strong>.');
     expect([...dependencyCollector.partials]).toEqual([
-      path.resolve(partialPath),
+      path.resolve(contentDir, '_outer.md'),
+      path.resolve(contentDir, 'subdir', '_inner.mdx'),
     ]);
   });
 
-  test('processes Lodash expressions in Markdown partials', () => {
+  test('validates partial paths, children, cycles, and depth', () => {
     const contentDir = '/virtual/content';
     writeFile(
-      path.join(contentDir, '_partial.md'),
-      'Page: <%= page.title %>, site: <%= site.title %>',
+      path.join(contentDir, '_cycle.md'),
+      '<Partial source="_cycle.md" />',
     );
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: '---\ntitle: Partial Context\n---\n\n{{{ _partial.md }}}\n',
-    });
-
-    expect(html).toContain('Page: Partial Context, site: Course');
-  });
-
-  test('supports nested partials relative to the partial file', () => {
-    const contentDir = '/virtual/content';
-    const outerPath = path.join(contentDir, 'subdir', '_outer.md');
-    const innerPath = path.join(contentDir, 'subdir', '_inner.md');
-    writeFile(outerPath, 'Outer then\n\n{{{ _inner.md }}}');
-    writeFile(innerPath, 'Inner in subdir');
-    const dependencyCollector = { partials: new Set<string>() };
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: '---\ntitle: Nested\n---\n\n{{{ subdir/_outer.md }}}\n',
-      dependencyCollector,
-    });
-
-    expect(html).toContain('Outer then');
-    expect(html).toContain('Inner in subdir');
-    expect([...dependencyCollector.partials]).toEqual([
-      path.resolve(outerPath),
-      path.resolve(innerPath),
-    ]);
-  });
-
-  test('strips HTML comments from Markdown partials', () => {
-    const contentDir = '/virtual/content';
-    writeFile(
-      path.join(contentDir, '_partial.md'),
-      'before<!--- hidden --->after',
-    );
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: '---\ntitle: Comments\n---\n\n{{{ _partial.md }}}\n',
-    });
-
-    expect(html).toContain('beforeafter');
-    expect(html).not.toContain('hidden');
-  });
-
-  test('removes commented-out partial blocks before resolving includes', () => {
-    const contentDir = '/virtual/content';
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: [
-        '---',
-        'title: Commented Include',
-        '---',
-        '',
-        'Before',
-        '',
-        '<!--- {{{ _missing.md }}} --->',
-        '',
-        'After',
-        '',
-      ].join('\n'),
-    });
-
-    expect(html).toContain('<p>Before</p>');
-    expect(html).toContain('<p>After</p>');
-    expect(html).not.toContain('_missing.md');
-  });
-
-  test('renders partial blocks inside list items and blockquotes', () => {
-    const contentDir = '/virtual/content';
-    writeFile(path.join(contentDir, '_item.md'), 'included **item**');
-    writeFile(path.join(contentDir, '_quote.md'), 'Quoted partial');
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: [
-        '---',
-        'title: Context',
-        '---',
-        '',
-        '- {{{ _item.md }}}',
-        '',
-        '> {{{ _quote.md }}}',
-        '',
-      ].join('\n'),
-    });
-
-    expect(html).toContain('<ul class="styled-list">');
-    expect(html).toContain('included <strong>item</strong>');
-    expect(html).toContain('<blockquote>');
-    expect(html).toContain('Quoted partial');
-  });
-
-  test('renders an indented partial list as a nested sub-list', () => {
-    const contentDir = '/virtual/content';
-    writeFile(
-      path.join(contentDir, '_groceries.md'),
-      '* apples\n* oranges\n* pears\n',
-    );
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: [
-        '---',
-        'title: To do list',
-        '---',
-        '',
-        '* Grocery shopping',
-        '  {{{ _groceries.md }}}',
-        '* Car wash',
-        '',
-      ].join('\n'),
-    });
-
-    expect(html).toContain(
-      '<li><div class="styled-list-item">Grocery shopping\n<ul class="styled-list">',
-    );
-    expect(html).toContain(
-      '<li><div class="styled-list-item">apples</div></li>',
-    );
-    expect(html).toContain(
-      '<li><div class="styled-list-item">oranges</div></li>',
-    );
-    expect(html).toContain(
-      '<li><div class="styled-list-item">pears</div></li>',
-    );
-    expect(html).toContain(
-      '</ul>\n</div></li>\n<li><div class="styled-list-item">Car wash</div></li>',
-    );
-  });
-
-  test('renders partial blocks inside alert containers', () => {
-    const contentDir = '/virtual/content';
-    writeFile(path.join(contentDir, '_partial.md'), 'Included **note** body');
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: [
-        '---',
-        'title: Alert Partial',
-        '---',
-        '',
-        '!!! note',
-        '{{{ _partial.md }}}',
-        '!!!',
-        '',
-      ].join('\n'),
-    });
-
-    expect(html).toContain('<div class="alert note">');
-    expect(html).toContain('<p class="title" id="note">Note</p>');
-    expect(html).toContain('Included <strong>note</strong> body');
-  });
-
-  test('preserves paragraphs from loose partial blocks inside list items', () => {
-    const contentDir = '/virtual/content';
-    writeFile(
-      path.join(contentDir, '_item.md'),
-      'First paragraph\n\nSecond paragraph',
-    );
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: [
-        '---',
-        'title: Loose List Partial',
-        '---',
-        '',
-        '- {{{ _item.md }}}',
-        '',
-      ].join('\n'),
-    });
-
-    expect(html).toContain('<p>First paragraph</p>');
-    expect(html).toContain('<p>Second paragraph</p>');
-    expect(html).not.toContain('First paragraphSecond paragraph');
-  });
-
-  test('renders separate fenced blocks from a CRLF partial inside a list item', () => {
-    const contentDir = '/virtual/content';
-    writeFile(
-      path.join(contentDir, '_verify.md'),
-      [
-        '1. Run the command:',
-        '   ```',
-        '   java -version',
-        '   ```',
-        '   You should see output like this:',
-        '   ```',
-        '   openjdk version "25.0.1"',
-        '   ```',
-      ].join('\r\n'),
-    );
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: [
-        '---',
-        'title: CRLF Partial',
-        '---',
-        '',
-        '{{{ _verify.md }}}',
-        '',
-      ].join('\n'),
-    });
-
-    expect(html.match(/<pre /g)).toHaveLength(2);
-    expect(html).toMatch(/<\/pre>You should see output like this:<pre /);
-    expect(html).not.toContain('<span>```</span>');
-  });
-
-  test('keeps escaped and code triple-curly text literal', () => {
-    const contentDir = '/virtual/content';
-    writeFile(path.join(contentDir, '_partial.md'), 'Should not render');
-
-    const html = renderMarkdownPage({
-      contentDir,
-      source: [
-        '---',
-        'title: Escaped',
-        '---',
-        '',
-        '\\{{{ _partial.md }}}',
-        '',
-        'Use `{{{ source }}}` inline.',
-        '',
-        '    {{{ code_block }}}',
-        '',
-      ].join('\n'),
-    });
-
-    expect(html).toContain('{{{ _partial.md }}}');
-    expect(html).toContain('<code>{{{ source }}}</code>');
-    expect(html).toContain('{{{ code_block }}}');
-    expect(html).not.toContain('Should not render');
-  });
-
-  test('throws when a Markdown partial is missing', () => {
-    const contentDir = '/virtual/content';
 
     expect(() =>
       renderMarkdownPage({
         contentDir,
-        source: '---\ntitle: Missing\n---\n\n{{{ _missing.md }}}\n',
+        source: '---\ntitle: Missing\n---\n\n<Partial source="_missing.md" />',
       }),
     ).toThrow('partial not found');
-  });
-
-  test('throws when a partial target does not start with underscore', () => {
-    const contentDir = '/virtual/content';
-    writeFile(path.join(contentDir, 'notpartial.md'), 'content');
-
     expect(() =>
       renderMarkdownPage({
         contentDir,
-        source: '---\ntitle: Bad Partial\n---\n\n{{{ notpartial.md }}}\n',
+        source: '---\ntitle: Bad\n---\n\n<Partial source="page.md" />',
       }),
     ).toThrow('must start with "_"');
-  });
-
-  test('throws when a partial target is HTML', () => {
-    const contentDir = '/virtual/content';
-    writeFile(path.join(contentDir, '_partial.html'), '<p>HTML partial</p>');
-
     expect(() =>
       renderMarkdownPage({
         contentDir,
-        source: '---\ntitle: HTML Partial\n---\n\n{{{ _partial.html }}}\n',
+        source: '---\ntitle: Bad\n---\n\n<Partial source="_partial.html" />',
       }),
-    ).toThrow('must be a Markdown file');
-  });
-
-  test('throws when max partial depth is exceeded', () => {
-    const contentDir = '/virtual/content';
-    for (let i = 0; i <= 10; i++) {
-      const content = i < 10 ? `{{{ _${i + 1}.md }}}` : 'end';
-      writeFile(path.join(contentDir, `_${i}.md`), content);
-    }
-
-    expect(() =>
-      renderMarkdownPage({
-        contentDir,
-        source: '---\ntitle: Depth\n---\n\n{{{ _0.md }}}\n',
-      }),
-    ).toThrow('maximum include depth');
-  });
-
-  test('does not expose the old Lodash include helper', () => {
-    const contentDir = '/virtual/content';
-    writeFile(path.join(contentDir, '_partial.md'), 'Should not render');
-
+    ).toThrow('must be a .md, .markdown, or .mdx file');
     expect(() =>
       renderMarkdownPage({
         contentDir,
         source:
-          "---\ntitle: Removed Include\n---\n\n<%= include('_partial.md') %>\n",
+          '---\ntitle: Bad\n---\n\n<Partial source="_cycle.md">No</Partial>',
       }),
-    ).toThrow('include is not defined');
+    ).toThrow('<Partial> does not accept children');
+    expect(() =>
+      renderMarkdownPage({
+        contentDir,
+        source: '---\ntitle: Cycle\n---\n\n<Partial source="_cycle.md" />',
+      }),
+    ).toThrow('partial cycle');
   });
 
-  test('rejects slides front matter on HTML content pages', () => {
+  test('renders the MDX TimeZoneChooser component', () => {
+    const html = renderMarkdownPage({
+      contentDir: '/virtual/content',
+      relativePath: 'timezone.mdx',
+      source: '---\ntitle: Time Zone\n---\n\n<TimeZoneChooser />\n',
+    });
+
+    expect(html).toContain('class="time-zone"');
+    expect(html).toContain('Times shown in ET.');
+  });
+
+  test('highlights fenced code through the MDX component runtime', () => {
+    const html = renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source: '---\ntitle: Code\n---\n\n```ts\nconst answer = 42;\n```\n',
+    });
+
+    expect(html).toContain('<pre class="shiki');
+    expect(html).toContain('answer');
+  });
+
+  test('binds page values in MDX expressions', () => {
+    const html = renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source: '---\ntitle: MDX Title\n---\n\n# {page.title}\n',
+    });
+
+    expect(html).toContain('<h1 id="mdx-title">MDX Title</h1>');
+  });
+
+  test('renders JSX components from .md pages', () => {
+    const html = renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source: '---\ntitle: Time Zone\n---\n\n<TimeZoneChooser />\n',
+    });
+
+    expect(html).toContain('class="time-zone"');
+  });
+
+  test('resolves structured expressions in front matter', () => {
+    const contentDir = '/virtual/content';
+    const filePath = path.join(contentDir, 'page.md');
+    writeFile(
+      filePath,
+      '---\ntitle: "Course {vars.course}"\nmetadata: "{site.features}"\n---\n\n# {page.title}',
+    );
+
+    const [pageAsset] = renderPlainTextPageAsset({
+      filePath,
+      contentDir,
+      distDir: '/virtual/dist',
+      siteVariables,
+      validInternalTargets: new Set(),
+      assetFiles: [],
+      literateJavaOutputPaths: new Set(),
+    });
+
+    expect(pageAsset.content.toString()).toContain(
+      '<h1 id="course-csci-e-22">Course CSCI E-22</h1>',
+    );
+  });
+
+  test('renders the MDX Trace component through the existing trace helper', () => {
+    const contentDir = '/virtual/content';
+    const sourcePath = path.join(contentDir, 'Demo.java');
+    const companionPath = path.join(contentDir, 'Helper.java');
+    writeFile(
+      sourcePath,
+      'class Demo { public static void main(String[] args) {} }\n',
+    );
+    writeFile(companionPath, 'class Helper {}\n');
+    const dependencyCollector = { traceFiles: new Set<string>() };
+
+    const html = renderMarkdownPage({
+      contentDir,
+      relativePath: 'trace.mdx',
+      source: [
+        '---',
+        'title: Trace',
+        '---',
+        '',
+        '<Trace source="Demo.java" companions={["Helper.java"]} />',
+        '',
+      ].join('\n'),
+      dependencyCollector,
+      traceCache: new Map(),
+      traceToolAvailability: { java: false },
+    });
+
+    expect(html).toContain('trace-widget trace-disabled');
+    expect(html).toContain('Demo.java');
+    expect(html).toContain('Helper.java');
+    expect([...dependencyCollector.traceFiles]).toEqual([
+      path.resolve(sourcePath),
+      path.resolve(companionPath),
+    ]);
+  });
+
+  test('validates MDX Trace props before rendering', () => {
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        relativePath: 'trace.mdx',
+        source: '---\ntitle: Trace\n---\n\n<Trace />\n',
+        traceCache: new Map(),
+      }),
+    ).toThrow('<Trace> requires a string "source" prop');
+
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        relativePath: 'trace.mdx',
+        source:
+          '---\ntitle: Trace\n---\n\n<Trace source="Demo.java" companions="Helper.java" />\n',
+        traceCache: new Map(),
+      }),
+    ).toThrow('"companions" prop must be an array of strings');
+
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        relativePath: 'trace.mdx',
+        source:
+          '---\ntitle: Trace\n---\n\n<Trace source="Demo.java" unknown="x" />\n',
+        traceCache: new Map(),
+      }),
+    ).toThrow('<Trace> does not accept "unknown"');
+  });
+
+  test('rejects MDX import and export statements', () => {
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        relativePath: 'bad.mdx',
+        source: '---\ntitle: Bad MDX\n---\n\nimport x from "./x.js"\n\n# Hi\n',
+      }),
+    ).toThrow('MDX import/export statements are not supported');
+
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        relativePath: 'bad.mdx',
+        source: '---\ntitle: Bad MDX\n---\n\nexport const x = 1\n\n# Hi\n',
+      }),
+    ).toThrow('MDX import/export statements are not supported');
+  });
+
+  test('rejects legacy slides front matter with a component migration', () => {
     const contentDir = '/virtual/content';
     const filePath = path.join(contentDir, 'slides.html');
     writeFile(
@@ -549,7 +523,7 @@ describe('renderPlainTextPageAsset', () => {
         assetFiles: [],
         literateJavaOutputPaths: new Set(),
       }),
-    ).toThrow('slides mode is only supported on Markdown pages');
+    ).toThrow('use <Slides> and <Slide> components');
   });
 
   test('tracks relative breadcrumb parents from the declaring page', () => {
@@ -558,9 +532,11 @@ describe('renderPlainTextPageAsset', () => {
     writeFile(
       filePath,
       [
+        '---',
         'title: Child page',
         'parent: ../index.html?view=full#overview',
         'parentLabel: Docs',
+        '---',
         '',
         '<p>Hello</p>',
       ].join('\n'),
@@ -590,9 +566,11 @@ describe('renderPlainTextPageAsset', () => {
     writeFile(
       filePath,
       [
+        '---',
         'title: Topic index',
         'parent: ?view=full#overview',
         'parentLabel: Topic',
+        '---',
         '',
         '<p>Hello</p>',
       ].join('\n'),

@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { parseConfigText } from './config-loader';
+import {
+  parseConfigText,
+  resolveProjectConfigExpressions,
+} from './config-loader';
 
 describe('parseConfigText', () => {
   test('parses YAML objects', () => {
@@ -31,5 +34,32 @@ describe('parseConfigText', () => {
       title: 'Intro to Computer Science',
       defaultTimeZone: 'America/New_York',
     });
+  });
+});
+
+describe('resolveProjectConfigExpressions', () => {
+  const site = {
+    title: 'CS 22',
+    vars: { course: 'CSCI E-22', sections: ['one', 'two'] },
+  } as never;
+
+  test('resolves brace expressions recursively and preserves values', () => {
+    expect(
+      resolveProjectConfigExpressions(
+        [{ label: '{site.title}: {vars.course}', sections: '{vars.sections}' }],
+        site,
+        'nav.yaml',
+      ),
+    ).toEqual([{ label: 'CS 22: CSCI E-22', sections: ['one', 'two'] }]);
+  });
+
+  test('does not process legacy Lodash expressions', () => {
+    expect(
+      resolveProjectConfigExpressions(
+        '<%= site.title %>',
+        site,
+        'authors.yaml',
+      ),
+    ).toBe('<%= site.title %>');
   });
 });

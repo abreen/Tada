@@ -40,7 +40,7 @@ routes), use `path.posix` methods directly.
 
 ## URL encoding and link validation
 
-markdown-it percent-encodes link hrefs during parsing (for example,
+The MDX Markdown parser percent-encodes link hrefs during parsing (for example,
 `[x](</my notes.md>)` becomes `/my%20notes.md` in the token). Internal lookup
 sets like `validTargets` store raw filesystem-derived paths (for example,
 `/my notes.md`), so code that looks up an incoming href against one of these

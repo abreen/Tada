@@ -12,13 +12,13 @@ class TestTableOfContents:
         (site / 'content' / 'with-toc.md').write_text(
             '---\ntitle: With TOC\ntoc: true\n---\n\n'
             '## First Section\n\nText.\n\n'
-            '!!! note\n'
+            '<Note>\n'
             'Something to note.\n'
-            '!!!\n\n'
+            '</Note>\n\n'
             '## Second Section\n\nMore text.\n\n'
-            '!!! warning Be careful\n'
+            '<Warning title="Be careful">\n'
             'Danger ahead.\n'
-            '!!!\n'
+            '</Warning>\n'
         )
 
         (site / 'content' / 'without-toc.md').write_text(

@@ -8,6 +8,6 @@ author: alex
 
 Here is a page constructed from multiple partials.
 
-{{{ _pr1.md }}}
+<Partial source="_pr1.md" />
 
-{{{ subdir/_pr2.md }}}
+<Partial source="subdir/_pr2.md" />

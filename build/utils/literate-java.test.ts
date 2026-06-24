@@ -1,5 +1,96 @@
 import { describe, test, expect } from 'bun:test';
-import { hasMainMethod, deriveClassName } from './literate-java';
+import {
+  hasMainMethod,
+  deriveClassName,
+  parseLiterateJava,
+} from './literate-java';
+import type { SiteVariables } from '../types';
+
+const siteVariables = { extensionToShikiLanguage: {} } as SiteVariables;
+
+describe('parseLiterateJava', () => {
+  test('collects visible Java fences from an MDX document', () => {
+    const result = parseLiterateJava(
+      [
+        '---',
+        'title: Demo',
+        '---',
+        '',
+        '<Note>Prose with {site.title}.</Note>',
+        '',
+        '```java',
+        'class Demo {}',
+        '```',
+        '',
+        '```text',
+        'not Java',
+        '```',
+      ].join('\n'),
+      siteVariables,
+    );
+
+    expect(result.javaSource).toBe('class Demo {}\n');
+    expect(result.codeBlocks).toEqual([
+      {
+        javaStartLine: 1,
+        javaEndLine: 1,
+        content: 'class Demo {}\n',
+        hidden: false,
+      },
+    ]);
+    expect(result.visibleBlockIndices).toEqual([0]);
+  });
+
+  test('collects Java fences nested inside JSX components', () => {
+    const result = parseLiterateJava(
+      [
+        '---',
+        'title: Demo',
+        '---',
+        '',
+        '<Details summary="Helper">',
+        '',
+        '```java',
+        'static void helper() {}',
+        '```',
+        '',
+        '</Details>',
+      ].join('\n'),
+      siteVariables,
+    );
+
+    expect(result.javaSource).toBe('static void helper() {}\n');
+  });
+
+  test('collects Java fences when prose contains TeX braces', () => {
+    const result = parseLiterateJava(
+      [
+        '---',
+        'title: Demo',
+        '---',
+        '',
+        'The label is $\\text{hello world}$.',
+        '',
+        '```java',
+        'class Demo {}',
+        '```',
+      ].join('\n'),
+      siteVariables,
+    );
+
+    expect(result.javaSource).toBe('class Demo {}\n');
+    expect(result.content).toContain('$\\text{hello world}$');
+  });
+
+  test('rejects the removed hidden-fence syntax', () => {
+    expect(() =>
+      parseLiterateJava(
+        '---\ntitle: Demo\n---\n\n<!---\n```java\nclass Hidden {}\n```\n-->',
+        siteVariables,
+      ),
+    ).toThrow('use native MDX comments');
+  });
+});
 
 describe('hasMainMethod', () => {
   test('returns true for standard main method', () => {

@@ -1,5 +1,9 @@
 # HTML Content
 
+HTML page bodies are literal static HTML in Tada 2. They do not run authored
+Lodash or MDX expressions. Front matter still supports structured `site` and
+`vars` expressions, and internal package templates continue to use Lodash.
+
 Files with the `.html` extension in the content directory are treated as page
 content. They support the same front matter format as Markdown files.
 

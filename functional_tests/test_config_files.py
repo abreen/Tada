@@ -24,7 +24,7 @@ class TestConfigFileVariants:
         (site / NAV_CONFIG_FILE).write_text(
             '\n'.join(
                 [
-                    '- title: Welcome to <%= site.title %>',
+                    '- title: "Welcome to {site.title}"',
                     '  links:',
                     '    - text: Home',
                     '      internal: /index.html',

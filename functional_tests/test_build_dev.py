@@ -105,7 +105,7 @@ class TestDevBuildDefaultContent:
     def test_template_variables_resolve_in_partials(self, built_dev_site):
         page = built_dev_site / 'dist' / 'lectures' / '02' / 'index.html'
         html = page.read_text()
-        # _pr1.md uses <%= page.title %> which should resolve to "Lecture 2"
+        # _pr1.md uses {page.title}, which should resolve to "Lecture 2"
         assert 'Lecture 2' in html
 
 

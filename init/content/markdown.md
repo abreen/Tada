@@ -31,14 +31,14 @@ also alerts (notes and warnings) `<hr>` elements.
 
 ## Basic syntax
 
-<!---
-This HTML comment starting with three hyphens is removed during the build
-and does not appear in the HTML source for the page.
--->
+{/*
+This native MDX comment is removed during the build and does not appear in the
+HTML source for the page.
+*/}
 
-Tada uses [MarkdownIt][markdown-it] to render Markdown files, which is
-[standards-compliant][commonmark]. It supports all the features of Markdown
-that Presto did.
+Tada uses [MDX 3][mdx] to render `.md`, `.markdown`, and `.mdx` files. MDX
+combines [CommonMark][commonmark] with JSX components and JavaScript
+expressions. Tada evaluates it at build time and emits static HTML.
 
 Here is *italic* and **bold** and `monospace` and ***italic-and-bold***!
 
@@ -56,21 +56,16 @@ Here is *italic* and **bold** and `monospace` and ***italic-and-bold***!
 
 ### Code blocks
 
-There are two ways to get a code block. You can indent 4 or more spaces from
-the current indentation level (same as Presto):
+Use three backticks for a code block. Add a language name for syntax
+highlighting:
 
-    public static void main(String[] args) {
-      System.out.println("foobar");
-    }
-
-You can also use three backticks without needing to indent, and it supports
-specifying the name of a language for syntax highlighting, like this:
-
-    ```java
-    public static void main(String[] args) {
-      System.out.println("foobar");
-    }
-    ```
+````text
+```java
+public static void main(String[] args) {
+  System.out.println("foobar");
+}
+```
+````
 
 Which is highlighted using [Shiki][shiki] at build time:
 
@@ -88,7 +83,7 @@ public static void main(String[] args) {
 
 ### Tables
 
-By default, MarkdownIt supports [the table syntax from GitHub "flavored" Markdown][flavored].
+Tada supports [the table syntax from GitHub-flavored Markdown][flavored].
 
 Here's a basic table:
 
@@ -146,28 +141,28 @@ $$
 
 ## Additional syntax
 
-!!! note Headings are links
+<Note title="Headings are links">
 All headings are clickable. When you click them, the URL is updated with a
 unique hash that links back to the heading.
-!!!
+</Note>
 
 
 ### Heading subtitles
 
-Write headings using an extra `#` at the end
+Use the `Subtitle` component inside a heading:
 
 ```
-## Heading # Subtitle
+## Heading <Subtitle>Subtitle</Subtitle>
 ```
 
 to render a subtitle inside the heading, like these:
 
-## Course Logistics # Week 1 Overview
+## Course Logistics <Subtitle>Week 1 Overview</Subtitle>
 
-### Course Logistics # Week 1 Overview
+### Course Logistics <Subtitle>Week 1 Overview</Subtitle>
 *20 points, 5 points per part*
 
-#### Course Logistics # Week 1 Overview
+#### Course Logistics <Subtitle>Week 1 Overview</Subtitle>
 *20 points, 5 points per part*
 
 The subtitle is given special text styling, and a horizontal line is added
@@ -177,7 +172,7 @@ the table of contents.
 
 ### Footnotes
 
-Footnotes follow standard MarkdownIt syntax. This sentence references a
+Footnotes use the standard Markdown syntax. This sentence references a
 footnote.[^example-footnote]
 
 
@@ -207,17 +202,17 @@ headings, so you may [link directly to a definition](#binary-tree):
 Use
 
 ```
-<<< details Title of *collapsible*
+<Details summary={<>Title of <em>collapsible</em></>}>
 Here's the content that is visible when expanded.
-<<<
+</Details>
 ```
 
 to create a collapsible section (the `<details>` element):
 
-<<< details Title of *collapsible*
+<Details summary={<>Title of <em>collapsible</em></>}>
 Here's the content that is visible when expanded. (When the page is being
 printed, all collapsibles are automatically opened.)
-<<<
+</Details>
 
 
 ### Alerts
@@ -226,7 +221,7 @@ Brightly colored boxes that call attention to specific warnings or information.
 The `note` variation is blue and is styled with an information icon.
 The `warning` variation is yellow and styled with a warning triangle.
 
-!!! note
+<Note>
 - Here's a bullet point
 - Here's another point
 - Here's the final bullet point.
@@ -236,15 +231,15 @@ An example of `monospace` text.
 1. Ordered list item one
 2. Ordered list item two
 3. Ordered list item three
-!!!
+</Note>
 
-!!! warning
+<Warning>
 Beware of this rule.
 
 A time zone chooser for testing styles (see the "time zone chooser" section
 below):
 
-<%= renderTimeZoneChooser() %>
+<TimeZoneChooser />
 
 A `<time>` element for testing styles: <time datetime="15:00">3 pm</time>
 
@@ -252,19 +247,19 @@ Testing [internal link style](./markdown.html)
 Testing [external link style](https://www.google.com)
 
 Testing <dfn>definition</dfn> style
-!!!
+</Warning>
 
 You can specify a custom title:
 
 ```
-!!! warning Double-check your answers
+<Warning title="Double-check your answers">
 No partial credit is offered for these questions, double-check your answers!
-!!!
+</Warning>
 ```
 
-!!! warning Double-check your answers
+<Warning title="Double-check your answers">
 No partial credit is offered for these questions, double-check your answers!
-!!!
+</Warning>
 
 Like with headings and definition list terms, custom alert titles have an `id`
 attribute which allows you to link directly to them. They also appear in the
@@ -276,32 +271,32 @@ table of contents alongside headings.
 Use
 
 ```
-??? question What is a base case? Give an example.
+<Question prompt="What is a base case? Give an example.">
 
 The <dfn>base case</dfn> is the simplest version of the problem that can be
 solved directly without any further recursive calls. For recursive methods that
 process strings, the base case is the empty string.
-???
+</Question>
 ```
 
 to create a Q&A section whose answer is hidden by default and can be clicked
 to reveal:
 
-??? question What is a base case? Give an example.
+<Question prompt="What is a base case? Give an example.">
 The <dfn>base case</dfn> is the simplest version of the problem that can be
 solved directly without any further recursive calls. For recursive methods that
 process strings, the base case is the empty string.
-???
+</Question>
 
-If the body is a [task list][task-list] with exactly one `[x]` option, it
-becomes a multiple choice question with clickable options:
+Use `MultipleChoice` with two or more `Choice` children and exactly one
+`correct` choice for clickable options:
 
-??? question Which is correct for obtaining the number of characters in a `String`?
-- [ ] `word.size()`
-- [x] `word.length()`
-- [ ] `word.count()`
-- [ ] `word.length`
-???
+<MultipleChoice prompt={<>Which is correct for obtaining the number of characters in a <code>String</code>?</>}>
+  <Choice><code>word.size()</code></Choice>
+  <Choice correct><code>word.length()</code></Choice>
+  <Choice><code>word.count()</code></Choice>
+  <Choice><code>word.length</code></Choice>
+</MultipleChoice>
 
 
 ### Generic section
@@ -313,7 +308,7 @@ different background.
 Use
 
 ```
-::: section
+<Section>
 
 ### Submitting your work
 
@@ -322,12 +317,12 @@ this problem set.
 
 ...
 
-:::
+</Section>
 ```
 
 to create:
 
-::: section
+<Section>
 
 ### Submitting your work
 
@@ -341,29 +336,30 @@ this problem set.
 
 Email the files you changed to the course staff.
 
-:::
+</Section>
 
 ### Two-column layout
 
 Use
 
 ```
-+++
-Content in the first column (on the left)...
-+++
-Content in the second column (on the right)...
-+++
+<Columns>
+  <Column>Content in the first column (on the left)...</Column>
+  <Column>Content in the second column (on the right)...</Column>
+</Columns>
 ```
 
 to arrange Markdown content in two columns:
 
-+++
+<Columns>
+<Column>
 Here is a paragraph in the first column. It can contain any Markdown you want,
 including lists:
 1. One
 2. Two
 3. Three
-+++
+</Column>
+<Column>
 Here's a paragraph in the second column. We'll use a code block on this side:
 ```java
 // Return true if the number is odd
@@ -371,7 +367,8 @@ static boolean isOdd(int n) {
   return n % 2 == 1;
 }
 ```
-+++
+</Column>
+</Columns>
 
 ---
 
@@ -383,16 +380,15 @@ These features aren't Markdown-specific, but are included here for reference.
 
 Allows the user to see times in their local time zone.
 
-Insert the time zone chooser using Lodash templates, calling the
-`renderTimeZoneChooser()` function (made available on any page as a global):
+Insert the built-in time zone chooser component:
 
 ```
-<%= '\x3C%= renderTimeZoneChooser() %\x3E' %>
+<TimeZoneChooser />
 ```
 
 To produce:
 
-<%= renderTimeZoneChooser() %>
+<TimeZoneChooser />
 
 Then, wrap your times in `<time datetime="...">` elements and they will be
 updated when the user makes a time zone selection.
@@ -443,7 +439,7 @@ Here's a time range:
 [^footnote-3]: Also known as "FIFO".
 
 [front-matter]: https://www.npmjs.com/package/front-matter
-[markdown-it]: https://markdown-it.github.io/
+[mdx]: https://mdxjs.com/
 [commonmark]: https://spec.commonmark.org/
 [flavored]: https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/organizing-information-with-tables
 [presto]: https://github.com/abreen/presto

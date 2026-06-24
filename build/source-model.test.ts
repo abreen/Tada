@@ -138,11 +138,11 @@ function seedProject(): void {
 
   writeFile(
     path.join(projectRoot, 'content', 'index.md'),
-    'title: Home\n\n# Home',
+    '---\ntitle: Home\n---\n\n# Home',
   );
   writeFile(
     path.join(projectRoot, 'content', 'markdown.md'),
-    'title: Markdown\n\n# Markdown',
+    '---\ntitle: Markdown\n---\n\n# Markdown',
   );
   writeFile(
     path.join(projectRoot, 'content', 'lectures', '02', '_pr1.md'),
@@ -150,7 +150,7 @@ function seedProject(): void {
   );
   writeFile(
     path.join(projectRoot, 'content', 'labs', '00', 'VowelCounter.java.md'),
-    'title: Vowel Counter\n\n```java\nclass VowelCounter {}\n```',
+    '---\ntitle: Vowel Counter\n---\n\n```java\nclass VowelCounter {}\n```',
   );
   writeFile(
     path.join(projectRoot, 'content', 'labs', '01', 'SearchTreeDemo.java'),
@@ -180,6 +180,17 @@ describe('getSourceOutputPaths', () => {
       getSourceOutputPaths({
         contentDir,
         filePath: '/tmp/site/content/about.md',
+        processedExts: getProcessedExts(['ts']),
+        buildContent: true,
+      }),
+    ).toEqual(new Set(['about.html']));
+  });
+
+  test('derives MDX output paths', () => {
+    expect(
+      getSourceOutputPaths({
+        contentDir,
+        filePath: '/tmp/site/content/about.mdx',
         processedExts: getProcessedExts(['ts']),
         buildContent: true,
       }),
@@ -230,6 +241,16 @@ describe('getSourceTargetPaths', () => {
         buildContent: true,
       }),
     ).toEqual(new Set(['/docs/index.html', '/docs/', '/docs']));
+
+    expect(
+      getSourceTargetPaths({
+        kind: 'content',
+        rootDir: '/tmp/site/content',
+        filePath: '/tmp/site/content/mdx/index.mdx',
+        processedExts: getProcessedExts(['ts']),
+        buildContent: true,
+      }),
+    ).toEqual(new Set(['/mdx/index.html', '/mdx/', '/mdx']));
   });
 
   test('adds raw and rendered targets for code files', () => {
@@ -407,7 +428,7 @@ describe('updateProjectScan', () => {
 
     files.delete(removedContentPath);
     files.delete(removedPublicPath);
-    writeFile(addedContentPath, 'title: Docs\n\n# Docs');
+    writeFile(addedContentPath, '---\ntitle: Docs\n---\n\n# Docs');
     writeFile(addedPublicPath, '<svg></svg>');
     writeFile(changedCodePath, 'class SearchTreeDemo { int nodes = 1; }');
 

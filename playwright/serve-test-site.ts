@@ -114,16 +114,20 @@ writeFileSync(
   slidesPath,
   `---
 title: Slides
-slides: true
 ---
+
+<Slides>
+<Slide>
 
 # Intro
 
----
+</Slide>
+<Slide>
 
 # Middle
 
----
+</Slide>
+<Slide>
 
 # End
 
@@ -151,28 +155,34 @@ slides: true
   </div>
 </div>
 
-??? question What is three times four?
+<Question prompt="What is three times four?">
 
 The answer is twelve.
 
-???
+</Question>
 
-??? question Which option is correct?
-- [ ] Eleven
-- [x] Twelve
-???
+<MultipleChoice prompt="Which option is correct?">
+  <Choice>Eleven</Choice>
+  <Choice correct>Twelve</Choice>
+</MultipleChoice>
+
+</Slide>
+</Slides>
 `,
 );
 writeFileSync(
   resetSlidesPath,
   `---
 title: Slides Reset
-slides: true
 ---
+
+<Slides>
+<Slide>
 
 # Intro
 
----
+</Slide>
+<Slide>
 
 # Trace
 
@@ -200,9 +210,13 @@ slides: true
   </div>
 </div>
 
----
+</Slide>
+<Slide>
 
 # Wrap
+
+</Slide>
+</Slides>
 `,
 );
 writeFileSync(
@@ -211,9 +225,9 @@ writeFileSync(
 title: Timezones
 ---
 
-<%= renderTimeZoneChooser() %>
+<TimeZoneChooser />
 
-<%= renderTimeZoneChooser() %>
+<TimeZoneChooser />
 
 Default meeting: <time datetime="17:40">5:40 PM</time>
 

@@ -14,11 +14,14 @@ Each code page includes:
 ## Markdown documentation comments
 
 Java files that use Markdown documentation comments (`///`, introduced in Java
-25) receive special treatment. Consecutive `///` lines are extracted, rendered as
-Markdown, and displayed inline between the surrounding code segments. The
+25) receive special treatment. Consecutive `///` lines are extracted, rendered
+as MDX, and displayed inline between the surrounding code segments. Built-in
+JSX components and immutable `site` and `vars` expressions are available. The
 rendered prose preserves the indentation level of the original comments. These
 comments support the same build-time KaTeX math syntax as Markdown pages, so
 authors can write inline math such as `$E = mc^2$` and display math with `$$`.
+`Partial` sources resolve relative to the Java file, and edits to those partials
+rebuild the code page in watch mode.
 
 When a user copies a section that includes rendered prose, the original `///`
 comment lines are restored in the clipboard so that pasted text is valid Java
@@ -37,16 +40,10 @@ Links to code files elsewhere on the site are automatically rewritten to point
 to the generated HTML page instead of the raw source file
 (see [Markdown Link Processing](markdown-link-processing.md)).
 
-## Template substitution
+## Literal source
 
-Mapped source code files are run through the Lodash template engine before the
-code page is rendered and before the downloadable copy is written. Template
-holes use the same `<%= %>`, `<% %>`, and `<%- %>` delimiters as the rest of
-Tada and have access to `vars` and `site`. This lets authors interpolate site
-configuration values directly into their source code, for example a course name
-embedded in a header comment.
-
-Substitution runs before Java prose link rewriting, so an interpolated value
-may contain a Markdown link that is then rewritten to a full URL as usual.
-When an extension is not mapped in `extensionToShikiLanguage`, source files are
-copied unchanged and no substitution is performed.
+Ordinary source code is never template-processed. Braces, JavaScript template
+expressions, and legacy Lodash delimiters remain literal. Only Java `///` prose
+comments in mapped Java code pages resolve simple `{site.path}` and
+`{vars.path}` values in downloaded source; their rendered form uses native MDX
+expressions. Unmapped source files are copied byte-for-byte.

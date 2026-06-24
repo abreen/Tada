@@ -1,15 +1,17 @@
-import MarkdownIt from 'markdown-it';
 import path from 'path';
 import { parse as parseJava } from 'java-parser';
 import { JSDOM } from 'jsdom';
 import { makeLogger } from '../log';
 import { getExtensionToShikiLanguage } from '../site-variables';
 import { highlightCode } from './shiki-highlighter';
-import externalLinksPlugin from '../external-links-plugin';
 import { createApplyBasePath } from './paths';
-import katexPlugin from './katex';
 import { splitLines } from './literate-java';
-import type { JavaTocEntry, SiteVariables } from '../types';
+import { renderMdx } from './mdx';
+import type {
+  JavaTocEntry,
+  RenderDependencyCollector,
+  SiteVariables,
+} from '../types';
 
 interface CstNode {
   name?: string;
@@ -39,12 +41,6 @@ interface CodeSegment {
 const log = makeLogger(import.meta.url);
 
 const PROSE_LINE = /^\s*\/\/\/(\s|$)/;
-
-function createCodeMarkdown(siteVariables: SiteVariables): MarkdownIt {
-  return new MarkdownIt({ html: true, typographer: true })
-    .use(externalLinksPlugin, siteVariables)
-    .use(katexPlugin);
-}
 
 // Matches Markdown links: [text](url)
 const MARKDOWN_LINK = /\[([^\]]*)\]\(([^)]+)\)/g;
@@ -501,8 +497,9 @@ export function renderCodeWithComments(
   lang: string,
   siteVariables: SiteVariables,
   pageDirPath?: string,
+  sourceFilePath?: string,
+  dependencyCollector?: RenderDependencyCollector,
 ): string {
-  const md = createCodeMarkdown(siteVariables);
   const lines = splitLines(sourceCode);
 
   // Group lines into segments
@@ -555,7 +552,16 @@ export function renderCodeWithComments(
           ? rewriteProseLinks(segment.lines, siteVariables, pageDirPath)
           : segment.lines;
         const source = escapeAttr(rewrittenLines.join('\n'));
-        return `<div class="code-prose" data-prose-source="${source}" style="--prose-indent: ${indent}ch"><div class="code-prose-gutter"></div><div class="code-prose-content">${md.render(prose)}</div></div>`;
+        const proseHtml = renderMdx(prose, {
+          filePath: sourceFilePath || 'Java prose comment',
+          templateParams: {
+            page: {},
+            site: siteVariables,
+            vars: siteVariables.vars || {},
+          },
+          dependencyCollector,
+        });
+        return `<div class="code-prose" data-prose-source="${source}" style="--prose-indent: ${indent}ch"><div class="code-prose-gutter"></div><div class="code-prose-content">${proseHtml}</div></div>`;
       }
     })
     .join('');

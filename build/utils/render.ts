@@ -23,9 +23,8 @@ import {
   renderCodeWithComments,
   rewriteProseLinks,
 } from './code';
-import { extensionIsMarkdown } from './file-types';
+import { extensionIsMdxContent } from './file-types';
 import { createTraceHelpers } from './trace';
-import { stripHtmlComments } from './html-comments';
 import { finalizeHtmlPage } from './final-html';
 import {
   createApplyBasePath,
@@ -33,10 +32,12 @@ import {
   toPosix,
   toUrlPath,
 } from './paths';
-import { applySourceTemplate } from './source-template';
+import { applySourceExpressions } from './source-template';
 import pkg from '../../package.json' with { type: 'json' };
 import { parseFrontMatterAndContent } from './front-matter';
 import { createMarkdown } from './markdown';
+import { renderMdx } from './mdx';
+import { resolveStructuredExpressions } from './structured-expressions';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
 import {
   parseLiterateJava,
@@ -59,8 +60,6 @@ import type {
 const log = makeLogger(import.meta.url);
 
 const tadaVersion: string = pkg.version;
-
-export { stripHtmlComments } from './html-comments';
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 
@@ -321,7 +320,7 @@ export function renderCodePageAsset({
   const lang =
     getExtensionToShikiLanguage(siteVariables)[ext.slice(1).toLowerCase()];
   const rawSource = fs.readFileSync(filePath, 'utf-8');
-  const sourceCode = applySourceTemplate(rawSource, siteVariables, filePath);
+  const sourceCode = applySourceExpressions(rawSource, siteVariables, filePath);
   const pageDirPath = toPosix(path.relative(contentDir, dir));
   const sourceUrlPath = normalizeOutputPath(
     `/${toUrlPath(path.relative(contentDir, filePath))}.html`,
@@ -329,10 +328,12 @@ export function renderCodePageAsset({
 
   log.info`Rendering code page ${B`${subPath + ext}`}`;
   const content = renderCodeWithComments(
-    sourceCode,
+    rawSource,
     lang,
     siteVariables,
     pageDirPath,
+    filePath,
+    dependencyCollector,
   );
   const codeFilePath = normalizeOutputPath(
     `/${toUrlPath(path.relative(contentDir, filePath))}`,
@@ -393,7 +394,7 @@ export function renderCopiedContentAsset({
   log.info`${label} ${B`${relPath}`}`;
 
   const rawSource = fs.readFileSync(filePath, 'utf-8');
-  const templated = applySourceTemplate(rawSource, siteVariables, filePath);
+  const templated = applySourceExpressions(rawSource, siteVariables, filePath);
 
   if (filePath.endsWith('.java')) {
     const pageDirPath = toPosix(
@@ -453,9 +454,9 @@ function renderPlainTextContent(
   const ext = path.extname(filePath);
   const raw = fs.readFileSync(filePath, 'utf-8');
   const { pageVariables, content } = parseFrontMatterAndContent(raw, ext);
-  if (pageVariables.slides === true && !extensionIsMarkdown(ext)) {
+  if (pageVariables.slides === true) {
     throw new Error(
-      `${filePath}: slides mode is only supported on Markdown pages`,
+      `${filePath}: Tada 1.x "slides: true" was removed; use <Slides> and <Slide> components`,
     );
   }
   const frontMatterMd = createMarkdown(siteVariables, {
@@ -464,19 +465,11 @@ function renderPlainTextContent(
   });
 
   // Handle substitutions inside front matter using siteVariables
-  const siteOnlyParams = createTemplateParameters({
-    pageVariables: {},
-    siteVariables,
-    content: null,
-    subPath,
-    isWatchMode,
-  });
-  const pageVariablesProcessed: Record<string, unknown> = Object.fromEntries(
-    Object.entries(pageVariables).map(([k, v]) => [
-      k,
-      typeof v === 'string' ? _.template(v)(siteOnlyParams) : v,
-    ]),
-  );
+  const pageVariablesProcessed = resolveStructuredExpressions(
+    pageVariables,
+    { site: siteVariables, vars: siteVariables.vars || {} },
+    filePath,
+  ) as Record<string, unknown>;
 
   // Render title and description as inline Markdown
   renderInlineField(frontMatterMd, pageVariablesProcessed, 'title');
@@ -501,12 +494,10 @@ function renderPlainTextContent(
     dependencyCollector?.internalTargets?.add(resolvedParentTarget);
   }
 
-  const strippedContent = stripHtmlComments(content);
-
   const params = createTemplateParameters({
     pageVariables: pageVariablesProcessed,
     siteVariables,
-    content: strippedContent,
+    content,
     subPath,
     isWatchMode,
   });
@@ -525,29 +516,20 @@ function renderPlainTextContent(
     params.renderTrace = helpers.renderTrace;
   }
 
-  let html: string;
-  try {
-    html = _.template(strippedContent)(params);
-  } catch (err: unknown) {
-    throw new Error(
-      `${filePath}: Lodash template error in page or template: ${(err as Error).message}`,
-      { cause: err },
-    );
-  }
+  let html = content;
 
   let tocItems: unknown[] | null = null;
   let alertIds: string[] = [];
-  if (extensionIsMarkdown(ext)) {
-    const md = createMarkdown(siteVariables, {
+  if (extensionIsMdxContent(ext)) {
+    const metadata = { tocItems: [] as unknown[], alertIds: [] as string[] };
+    html = renderMdx(html!, {
       filePath,
-      slides: pageVariables.slides === true,
       templateParams: params,
       dependencyCollector,
+      metadata,
     });
-    const env: Record<string, unknown> = { alertIds: [] as string[] };
-    html = md.render(html!, env);
-    tocItems = (env.tocItems as unknown[] | undefined) || null;
-    alertIds = env.alertIds as string[];
+    tocItems = metadata.tocItems;
+    alertIds = metadata.alertIds;
   }
 
   return {
@@ -577,12 +559,18 @@ export function renderLiterateJavaPageAsset({
 
   const raw = fs.readFileSync(filePath, 'utf-8');
   const {
-    pageVariables,
+    pageVariables: rawPageVariables,
     content,
     javaSource,
     codeBlocks,
     visibleBlockIndices,
   } = parseLiterateJava(raw, siteVariables);
+
+  const pageVariables = resolveStructuredExpressions(
+    rawPageVariables,
+    { site: siteVariables, vars: siteVariables.vars || {} },
+    filePath,
+  ) as Record<string, unknown>;
 
   validateFrontMatter(pageVariables, filePath);
 
@@ -615,26 +603,15 @@ export function renderLiterateJavaPageAsset({
     }
   }
 
-  // Render full markdown with a custom fence rule that replaces fences
-  // with Shiki-highlighted code blocks and optional JDI output columns
+  // Render MDX with a fence hook that adds line numbers and JDI output.
   const sourceUrlPath = `/${subPath}.java.html`;
-  const md = createMarkdown(siteVariables, { filePath });
   let fenceIndex = 0;
-  const defaultFence = md.renderer.rules.fence!;
-
-  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
-    const token = tokens[idx];
-    const lang = token.info.trim();
-
-    // Non-Java fences render with the default renderer (no line numbers)
+  const renderFence = (code: string, lang: string): string | null => {
     if (lang !== '' && lang !== 'java') {
-      return defaultFence(tokens, idx, options, env, self);
+      return null;
     }
 
-    const code = token.content;
-    const lines = code.endsWith('\n')
-      ? code.slice(0, -1).split('\n')
-      : code.split('\n');
+    const lines = code.split('\n');
 
     // Dedent: strip common leading whitespace for display
     const minIndent = lines.reduce((min, line) => {
@@ -659,15 +636,33 @@ export function renderLiterateJavaPageAsset({
         : null;
 
     if (output) {
-      const escapedOutput = md.utils.escapeHtml(output);
+      const escapedOutput = _.escape(output);
       return `<div class="literate-code-output">${codeHtml}<pre>${escapedOutput}</pre></div>`;
     }
 
     return codeHtml;
   };
 
-  const env: Record<string, unknown> = { alertIds: [] as string[] };
-  const contentHtml = md.render(stripHtmlComments(content), env);
+  const frontMatterMd = createMarkdown(siteVariables, {
+    validatorOptions: { enabled: false },
+  });
+  renderInlineField(frontMatterMd, pageVariables, 'title');
+
+  const templateParameters = createTemplateParameters({
+    pageVariables,
+    siteVariables,
+    content: null,
+    subPath,
+    isWatchMode: isWatchMode(assetFiles),
+  });
+  const metadata = { tocItems: [] as unknown[], alertIds: [] as string[] };
+  const contentHtml = renderMdx(content, {
+    filePath,
+    templateParams: templateParameters,
+    dependencyCollector,
+    metadata,
+    renderFence,
+  });
 
   // Build page variables
   const javaFileName = `${className}.java`;
@@ -675,21 +670,20 @@ export function renderLiterateJavaPageAsset({
     `/${toUrlPath(path.relative(contentDir, path.join(dir, javaFileName)))}`,
   );
 
-  renderInlineField(md, pageVariables, 'title');
   pageVariables.template = 'literate';
   pageVariables.codeFilePath = codeFilePath;
   pageVariables.downloadName = javaFileName;
 
-  if (pageVariables.toc && env.tocItems) {
+  if (pageVariables.toc && metadata.tocItems.length > 0) {
     pageVariables.tocHtml = generateTocHtml(
-      env.tocItems as Parameters<typeof generateTocHtml>[0],
-      env.alertIds as string[],
+      metadata.tocItems as Parameters<typeof generateTocHtml>[0],
+      metadata.alertIds,
     );
   }
 
   resolveAuthor(pageVariables, filePath, dependencyCollector);
 
-  const templateParameters = createTemplateParameters({
+  const finalTemplateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,
     content: contentHtml,
@@ -697,7 +691,10 @@ export function renderLiterateJavaPageAsset({
     isWatchMode: isWatchMode(assetFiles),
   });
 
-  const templateHtml = render('literate.html', templateParameters) as string;
+  const templateHtml = render(
+    'literate.html',
+    finalTemplateParameters,
+  ) as string;
   const finalized = finalizeHtmlPage({
     filePath,
     html: preparePageTemplateHtml({ templateHtml, assetFiles, distDir }),

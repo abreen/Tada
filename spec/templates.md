@@ -23,7 +23,7 @@ Utility functions are available for formatting dates, rendering other templates,
 loading project config files, generating CSS class strings, and rendering the
 time zone chooser.
 
-Site config values are accessible in templates. You may also use site config
-values in the `nav.*` and `authors.*` config files. In those config files,
-Lodash templating is only supported inside individual values; it cannot
-generate or conditionally modify the YAML/JSON structure itself.
+Site config values are accessible in templates. Values in `nav.*` and
+`authors.*` may use quoted `{site.path}` and `{vars.path}` expressions. A
+whole-value expression preserves its native type. Site config files themselves
+define `site` and `vars` and are not interpolated.

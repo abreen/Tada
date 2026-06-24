@@ -61,6 +61,6 @@ This validation covers:
 Hrefs are percent-decoded before being matched against the set of known output
 paths, which means a link to a file with a space in its name works when written
 as either `[x](</my notes.md>)` (angle-bracket form) or `[x](/my%20notes.md)`
-(percent-encoded form). The bare form `[x](/my notes.md)` is rejected by
-markdown-it's own parser before reaching the validator, per the CommonMark
+(percent-encoded form). The bare form `[x](/my notes.md)` is rejected by the
+MDX Markdown parser before reaching the validator, per the CommonMark
 link-destination grammar.

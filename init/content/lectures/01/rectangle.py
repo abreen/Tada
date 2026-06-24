@@ -1,7 +1,7 @@
 #
 # rectangle.py
 #
-# Here's vars.foobar: <%= vars.foobar %>
+# Ordinary source is literal, including {vars.foobar}.
 #
 class Rectangle:
     """A rectangle with integer side lengths.

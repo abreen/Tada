@@ -15,7 +15,8 @@ class TestSlidesFeature:
         output = result.stdout + result.stderr
 
         assert result.returncode != 0
-        assert 'slides.html: slides mode is only supported on Markdown pages' in output
+        assert 'slides.html' in output
+        assert 'use <Slides> and <Slide> components' in output
 
     def test_slide_pages_render_slide_markup_and_present_control(self, tmp_path):
         site = init_site(tmp_path, bare=True)
@@ -23,18 +24,24 @@ class TestSlidesFeature:
         (site / 'content' / 'slides.md').write_text(
             '---\n'
             'title: Slide Deck\n'
-            'slides: true\n'
             '---\n'
+            '\n'
+            '<Slides>\n'
+            '<Slide>\n'
             '\n'
             '# First Slide\n'
             '\n'
             'Intro content.\n'
             '\n'
-            '---\n'
+            '</Slide>\n'
+            '<Slide>\n'
             '\n'
             '# Second Slide\n'
             '\n'
             'More content.\n'
+            '\n'
+            '</Slide>\n'
+            '</Slides>\n'
         )
         (site / 'content' / 'plain.md').write_text(
             '---\n'

@@ -313,6 +313,27 @@ describe('renderCodeWithComments', () => {
     // (renderCodePageAsset) is expected to template first.
     expect(html).toContain('&lt;%=');
   });
+
+  test('renders MDX components and expressions in Java prose comments', () => {
+    const source =
+      '/// <Note title="Course">{site.title}: {vars.fullCourseName}</Note>\n' +
+      'public class Foo {}\n';
+    const html = renderCodeWithComments(source, 'java', {
+      base: '',
+      basePath: '/',
+      internalDomains: [],
+      title: 'Test',
+      titlePostfix: ' - Test',
+      themeColor: 'steelblue',
+      defaultTimeZone: 'America/New_York',
+      features: { search: true, favicon: true, footer: true },
+      vars: { fullCourseName: '*CS 0*' },
+    } as SiteVariables);
+
+    expect(html).toContain('<div class="alert note">');
+    expect(html).toContain('Test: *CS 0*');
+    expect(html).not.toContain('<em>CS 0</em>');
+  });
 });
 
 describe('rewriteProseLinks', () => {

@@ -2,7 +2,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import { createMarkdown } from './markdown';
+import { createProcessor } from '@mdx-js/mdx';
+import { assertNoLegacyMdxSyntax, protectMdxMath } from './mdx';
 import { makeLogger } from '../log';
 import { parseFrontMatterAndContent } from './front-matter';
 import type {
@@ -49,36 +50,43 @@ let runnerClassDir: string | null = null;
 
 const MAIN_PATTERN = /\bvoid\s+main\s*\(/m;
 
+interface MdxNode {
+  type: string;
+  lang?: string | null;
+  value?: string;
+  children?: MdxNode[];
+}
+
 export function parseLiterateJava(
   rawContent: string,
-  siteVariables: SiteVariables,
+  _siteVariables: SiteVariables,
 ): LiterateJavaParseResult {
   const { pageVariables, content } = parseFrontMatterAndContent(
     rawContent,
     '.md',
   );
+  assertNoLegacyMdxSyntax(content, 'literate Java content');
 
-  const md = createMarkdown(siteVariables, {
-    validatorOptions: { enabled: false },
-  });
-  const tokens = md.parse(content, {});
+  const tree = createProcessor({ format: 'mdx' }).parse(
+    protectMdxMath(content),
+  ) as MdxNode;
 
   const codeBlocks: LiterateCodeBlock[] = [];
   let javaLine = 1;
 
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
-    if (token.type !== 'fence' && token.type !== 'hidden_fence') {
-      continue;
+  const collectCode = (node: MdxNode): void => {
+    if (node.type !== 'code') {
+      node.children?.forEach(collectCode);
+      return;
     }
 
     // Skip fences with a non-Java language tag (e.g., ```text)
-    const lang = token.info.trim();
-    if (token.type === 'fence' && lang !== '' && lang !== 'java') {
-      continue;
+    const lang = node.lang?.trim() || '';
+    if (lang !== '' && lang !== 'java') {
+      return;
     }
 
-    const code = token.content;
+    const code = `${node.value || ''}\n`;
     const codeLines = code.endsWith('\n')
       ? code.slice(0, -1).split('\n')
       : code.split('\n');
@@ -86,17 +94,19 @@ export function parseLiterateJava(
     const javaEndLine = javaLine + codeLines.length - 1;
     javaLine = javaEndLine + 1;
 
-    const hidden = token.type === 'hidden_fence';
-    codeBlocks.push({ javaStartLine, javaEndLine, content: code, hidden });
-  }
+    codeBlocks.push({
+      javaStartLine,
+      javaEndLine,
+      content: code,
+      hidden: false,
+    });
+  };
+  tree.children?.forEach(collectCode);
 
   const javaSource = codeBlocks.map(b => b.content).join('');
-  const visibleBlockIndices = codeBlocks
-    .map((b, i) => (b.hidden ? null : i))
-    .filter((i): i is number => i !== null);
+  const visibleBlockIndices = codeBlocks.map((_block, index) => index);
 
-  const hiddenCount = codeBlocks.length - visibleBlockIndices.length;
-  log.debug`Parsed ${codeBlocks.length} code block(s) (${hiddenCount} hidden), ${javaSource.split('\n').length} Java line(s)`;
+  log.debug`Parsed ${codeBlocks.length} visible code block(s), ${javaSource.split('\n').length} Java line(s)`;
 
   return {
     pageVariables,

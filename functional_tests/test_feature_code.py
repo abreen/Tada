@@ -36,14 +36,17 @@ def _init_code_site(tmp_path):
 
 
 def _write_marker_code_files(site):
-    """Create a .py and a .java file under content/ that both reference
-    <%= vars.foobar %>. Used by the templating functional tests."""
+    """Create Python source and a Java prose comment that reference vars."""
     code_dir = site / 'content' / 'marker'
     code_dir.mkdir(parents=True, exist_ok=True)
-    (code_dir / 'marker.py').write_text("# marker = <%= vars.foobar %>\nprint('hi')\n")
+    (code_dir / 'marker.py').write_text("# marker = {vars.foobar}\nprint('hi')\n")
     (code_dir / 'Marker.java').write_text(
-        '/// marker = <%= vars.foobar %>\npublic class Marker {}\n'
+        '/// marker = {vars.foobar}\n'
+        '///\n'
+        '/// <Partial source="_notes.md" />\n'
+        'public class Marker {}\n'
     )
+    (code_dir / '_notes.md').write_text('Included **partial**.\n')
     (code_dir / 'index.md').write_text('---\ntitle: Marker\n---\n')
 
 
@@ -219,47 +222,46 @@ class TestCodeProseLinksRewritten:
         assert 'https://example.edu/course/about/index.html' in html
 
 
-class TestCodeSourceTemplating:
-    """When source-code extensions are mapped, files in content/ are run
-    through the Lodash template engine before the code page and the
-    downloadable copy are written."""
+class TestCodeSourceExpressions:
+    """Ordinary source is literal; Java prose comments receive vars."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
-        set_site_config(site, {'vars': {'foobar': MARKER}})
+        set_site_config(site, {'vars': {'foobar': f'*{MARKER}*'}})
         set_site_config(site, {'extensionToShikiLanguage': {'java': 'java', 'py': 'python'}})
         _write_marker_code_files(site)
         yield site
 
-    def test_py_page_substitutes_vars(self, built_dev_site):
-        """marker.py.html should contain the marker value, not the raw
-        <%= %> template syntax."""
+    def test_py_page_keeps_expression_literal(self, built_dev_site):
         html = (built_dev_site / 'dist' / 'marker' / 'marker.py.html').read_text()
-        assert MARKER in html
-        assert 'vars.foobar' not in html
+        assert MARKER not in html
+        assert 'vars.foobar' in html
 
-    def test_py_download_substitutes_vars(self, built_dev_site):
-        """The copied marker.py file should have the var substituted."""
+    def test_py_download_keeps_expression_literal(self, built_dev_site):
         py = (built_dev_site / 'dist' / 'marker' / 'marker.py').read_text()
-        assert MARKER in py
-        assert '<%= vars.foobar %>' not in py
+        assert MARKER not in py
+        assert '{vars.foobar}' in py
 
     def test_java_page_substitutes_vars(self, built_dev_site):
         """Marker.java.html should contain the marker value."""
         html = (built_dev_site / 'dist' / 'marker' / 'Marker.java.html').read_text()
-        assert MARKER in html
-        assert 'vars.foobar' not in html
+        assert f'<p>marker = *{MARKER}*</p>' in html
+        assert f'<em>{MARKER}</em>' not in html
+
+    def test_java_page_resolves_adjacent_partial(self, built_dev_site):
+        html = (built_dev_site / 'dist' / 'marker' / 'Marker.java.html').read_text()
+        assert 'Included <strong>partial</strong>.' in html
 
     def test_java_download_substitutes_vars(self, built_dev_site):
         """The copied Marker.java file should have the var substituted."""
         java = (built_dev_site / 'dist' / 'marker' / 'Marker.java').read_text()
         assert MARKER in java
-        assert '<%= vars.foobar %>' not in java
+        assert '{vars.foobar}' not in java
 
 
-class TestCodeSourceTemplatingDisabled:
-    """When source-code extensions are not mapped, source files are copied as-is."""
+class TestCodeSourceExpressionsWithoutPages:
+    """Unmapped source files are copied without content processing."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
@@ -270,15 +272,12 @@ class TestCodeSourceTemplatingDisabled:
         yield site
 
     def test_py_download_is_literal_source(self, built_dev_site):
-        """When no source-code extensions are mapped, the raw <%= %> syntax is preserved
-        and the marker value is NOT substituted."""
+        """Python remains literal when copied."""
         py = (built_dev_site / 'dist' / 'marker' / 'marker.py').read_text()
-        assert '<%= vars.foobar %>' in py
+        assert '{vars.foobar}' in py
         assert MARKER not in py
 
     def test_java_download_is_literal_source(self, built_dev_site):
-        """When no source-code extensions are mapped, the raw <%= %> syntax is preserved
-        and the marker value is NOT substituted."""
         java = (built_dev_site / 'dist' / 'marker' / 'Marker.java').read_text()
-        assert '<%= vars.foobar %>' in java
+        assert '{vars.foobar}' in java
         assert MARKER not in java

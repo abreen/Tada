@@ -2,25 +2,14 @@ import { describe, expect, test } from 'bun:test';
 import { parseFrontMatterAndContent, parseFrontMatter } from './front-matter';
 
 describe('parseFrontMatter', () => {
-  test('parses markdown front matter separated by blank line', () => {
-    const raw = 'title: Hello\nauthor: Alice\n\nBody content here.';
-    const result = parseFrontMatter(raw, '.md');
-    expect(result.frontMatter).toBe('title: Hello\nauthor: Alice');
-    expect(result.content).toBe('\nBody content here.');
-  });
-
-  test('handles .markdown extension', () => {
-    const raw = 'title: Test\n\nContent.';
-    const result = parseFrontMatter(raw, '.markdown');
-    expect(result.frontMatter).toBe('title: Test');
-  });
-
-  test('handles .html extension', () => {
-    const raw = 'title: Page\nlayout: full\n\n<h1>Hi</h1>';
-    const result = parseFrontMatter(raw, '.html');
-    expect(result.frontMatter).toBe('title: Page\nlayout: full');
-    expect(result.content).toBe('\n<h1>Hi</h1>');
-  });
+  test.each(['.md', '.markdown', '.mdx', '.html'])(
+    'requires an opening delimiter for %s pages',
+    ext => {
+      expect(() => parseFrontMatter('title: Hello\n\nBody.', ext)).toThrow(
+        'Front matter must start with ---',
+      );
+    },
+  );
 
   test('returns null frontMatter for unknown extensions', () => {
     const raw = 'title: Nope\n\nContent';
@@ -29,16 +18,9 @@ describe('parseFrontMatter', () => {
     expect(result.content).toBe(raw);
   });
 
-  test('returns null frontMatter when content starts with blank line', () => {
-    const raw = '\nNo front matter here.';
-    const result = parseFrontMatter(raw, '.md');
-    expect(result.frontMatter).toBe(null);
-    expect(result.content).toBe(raw);
-  });
-
   test('handles YAML multiline pipe syntax', () => {
     const raw =
-      'title: Hello\ndescription: |\n  This is a\n  multiline value\n\nBody.';
+      '---\ntitle: Hello\ndescription: |\n  This is a\n  multiline value\n---\nBody.';
     const result = parseFrontMatter(raw, '.md');
     expect(result.frontMatter).toContain('description: |');
     expect(result.frontMatter).toContain('  This is a');
@@ -56,7 +38,7 @@ describe('parseFrontMatter', () => {
     const raw = '---\ntitle: Hello\n---\n\nBody content here.';
     const result = parseFrontMatter(raw, '.md');
     expect(result.frontMatter).toBe('title: Hello');
-    expect(result.content).toBe('\nBody content here.');
+    expect(result.content).toBe('Body content here.');
   });
 
   test('parses standard format with blank lines inside front matter', () => {
@@ -92,13 +74,17 @@ describe('parseFrontMatter', () => {
     expect(() => parseFrontMatter(raw, '.md')).toThrow(/closing.*---/i);
   });
 
+  test('requires --- rather than ... as the closing delimiter', () => {
+    const raw = '---\ntitle: Hello\n...\nBody.';
+    expect(() => parseFrontMatter(raw, '.md')).toThrow(/closing.*---/i);
+  });
+
   test('does not treat horizontal rule inside body as front matter', () => {
-    const raw = 'title: Hello\n\nFirst paragraph.\n\n---\n\nSecond paragraph.';
+    const raw =
+      '---\ntitle: Hello\n---\n\nFirst paragraph.\n\n---\n\nSecond paragraph.';
     const result = parseFrontMatter(raw, '.md');
     expect(result.frontMatter).toBe('title: Hello');
-    expect(result.content).toBe(
-      '\nFirst paragraph.\n\n---\n\nSecond paragraph.',
-    );
+    expect(result.content).toBe('First paragraph.\n\n---\n\nSecond paragraph.');
   });
 
   test('accepts trailing whitespace on closing --- delimiter', () => {
@@ -118,7 +104,7 @@ describe('parseFrontMatter', () => {
 
 describe('parseFrontMatterAndContent', () => {
   test('returns parsed pageVariables and content', () => {
-    const raw = 'title: Hello World\nauthor: Bob\n\n# Main Content';
+    const raw = '---\ntitle: Hello World\nauthor: Bob\n---\n# Main Content';
     const result = parseFrontMatterAndContent(raw, '.md');
     expect(result.pageVariables.title).toBe('Hello World');
     expect(result.pageVariables.author).toBe('Bob');
@@ -126,21 +112,21 @@ describe('parseFrontMatterAndContent', () => {
   });
 
   test('handles content with no front matter fields', () => {
-    const raw = '\nJust content, no front matter.';
+    const raw = '---\n---\nJust content, no front matter.';
     const result = parseFrontMatterAndContent(raw, '.md');
     expect(result.pageVariables).toEqual({});
-    expect(result.content).toBe(raw);
+    expect(result.content).toBe('Just content, no front matter.');
   });
 
   test('handles boolean and numeric front matter values', () => {
-    const raw = 'toc: true\norder: 5\n\nContent.';
+    const raw = '---\ntoc: true\norder: 5\n---\nContent.';
     const result = parseFrontMatterAndContent(raw, '.md');
     expect(result.pageVariables.toc).toBe(true);
     expect(result.pageVariables.order).toBe(5);
   });
 
   test('handles Windows-style line endings', () => {
-    const raw = 'title: Hello\r\n\r\nBody content.';
+    const raw = '---\r\ntitle: Hello\r\n---\r\nBody content.';
     const result = parseFrontMatterAndContent(raw, '.md');
     expect(result.pageVariables.title).toBe('Hello');
   });

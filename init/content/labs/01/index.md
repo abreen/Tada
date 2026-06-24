@@ -3,7 +3,7 @@ parent: /labs/index.html
 parentLabel: Labs
 title: Lab 1
 author: alex
-description: A lab page for <%= site.title %> demonstrating the trace feature.
+description: "A lab page for {site.title} demonstrating the trace feature."
 ---
 
 In this lab, we'll examine memory diagrams.
@@ -12,24 +12,24 @@ In this lab, we'll examine memory diagrams.
 
 A simple program with an array, recursion, and a string.
 
-<%= renderTrace('TraceDemo.java') %>
+<Trace source="TraceDemo.java" />
 
 ### Python version
 
 Here's a similar trace, but of a Python script:
 
-<%= renderTrace('trace_demo.py') %>
+<Trace source="trace_demo.py" />
 
 ## Binary search tree
 
 Building a binary search tree with parent references.
 
-!!! note
+<Note>
 The `@trace-ignore` hint (used in a comment next to the `parent` field,
 see [`SearchTreeDemo.java`](./SearchTreeDemo.java)) allows
 [d3-flextree](https://www.npmjs.com/package/d3-flextree) to visually arrange
 the nodes as a standard binary tree. Without the hint, the parent references
 confuse the algorithm and lead to a more awkward layout.
-!!!
+</Note>
 
-<%= renderTrace('SearchTreeDemo.java') %>
+<Trace source="SearchTreeDemo.java" />

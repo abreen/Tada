@@ -3,7 +3,7 @@ import path from 'path';
 import { parseFrontMatterAndContent } from './utils/front-matter';
 import { getExtensionToShikiLanguage } from './site-variables';
 import {
-  extensionIsMarkdown,
+  extensionIsPlainTextPage,
   getProcessedExtensions,
   isLiterateJava,
   isPartial,
@@ -36,7 +36,7 @@ export interface TadaProjectScan {
 
 export function shouldSkipContentFile(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
-  if (!(extensionIsMarkdown(ext) || ext === '.html')) {
+  if (!extensionIsPlainTextPage(ext)) {
     return false;
   }
 
@@ -237,10 +237,7 @@ export function getSourceOutputPaths({
     return outputs;
   }
 
-  if (
-    extensionIsMarkdown(parsed.ext.toLowerCase()) ||
-    parsed.ext.toLowerCase() === '.html'
-  ) {
+  if (extensionIsPlainTextPage(parsed.ext.toLowerCase())) {
     outputs.add(toPosix(path.join(parsed.dir, `${parsed.name}.html`)));
     return outputs;
   }
@@ -291,10 +288,7 @@ export function getSourceTargetPaths({
     return targets;
   }
 
-  if (
-    extensionIsMarkdown(parsed.ext.toLowerCase()) ||
-    parsed.ext.toLowerCase() === '.html'
-  ) {
+  if (extensionIsPlainTextPage(parsed.ext.toLowerCase())) {
     addGeneratedRouteAliases(targets, `/${subPath}.html`);
     return targets;
   }

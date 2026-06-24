@@ -4,22 +4,25 @@ Traces are interactive step-by-step visualizations of program execution. The
 trace data model is language-agnostic. Tada currently supports trace backends
 for `.java` and `.py` source files.
 
-A trace is embedded in a page using the `renderTrace` template function:
+A trace is embedded with the built-in component:
 
-```
-<%= renderTrace('MyProgram.java') %>
-<%= renderTrace('my_program.py') %>
-<%= renderTrace('Demo.java', ['../../lectures/bag/ArrayBag.java']) %>
+```mdx
+<Trace source="MyProgram.java" />
+<Trace source="my_program.py" />
+<Trace
+  source="Demo.java"
+  companions={["../../lectures/bag/ArrayBag.java"]}
+/>
 ```
 
-The first argument is the primary source file, resolved relative to the page.
-The optional second argument is an explicit array of companion source files,
+`source` is the primary source file, resolved relative to the page.
+`companions` is an optional explicit array of companion source files,
 also resolved relative to the page. Companions are non-transitive: every source
 file that should be traced must be listed.
 
 ## Build processing
 
-At build time, `renderTrace` picks a backend by file extension and executes the
+At build time, `Trace` picks a backend by file extension and executes the
 target program to produce a JSONL trace (one JSON object per execution step).
 The primary file and companions must all use the same supported extension. Tada
 copies them into a temporary flat workspace using only their basenames, then
@@ -42,7 +45,7 @@ each source entry is `{ file, source, lineToSteps }`. Chunk entries are
 `{ file, line, output, svg }`, so each execution step names the source file that
 owns the active line.
 
-If the runtime needed for a trace backend is not available, `renderTrace` logs a
+If the runtime needed for a trace backend is not available, `Trace` logs a
 warning and emits a disabled widget for that source file. Java traces require
 `javac`; Python traces require Python. On Windows, Tada first tries `python`,
 then `python3`, then the same commands through PowerShell. The disabled

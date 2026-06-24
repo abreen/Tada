@@ -8,7 +8,7 @@ import {
   renderPlainTextPageAsset,
   toPosix,
 } from './util';
-import { extensionIsMarkdown, isLiterateJava } from './utils/file-types';
+import { extensionIsPlainTextPage, isLiterateJava } from './utils/file-types';
 import type {
   Asset,
   RenderDependencyCollector,
@@ -118,7 +118,7 @@ export function classifySourceRenderKind({
     return 'literate-java';
   }
 
-  if (extensionIsMarkdown(lowerExt) || lowerExt === '.html') {
+  if (extensionIsPlainTextPage(lowerExt)) {
     return 'plain-text-page';
   }
 

@@ -1,8 +1,7 @@
 # Math (LaTeX)
 
-LaTeX math expressions are rendered at build time using KaTeX via the
-`@vscode/markdown-it-katex` markdown-it plugin. No client-side JavaScript is
-needed for math rendering.
+LaTeX math expressions are recognized by Tada's MDX transform and rendered at
+build time with KaTeX. No client-side JavaScript is needed for math rendering.
 
 
 ## Syntax
@@ -30,10 +29,8 @@ MathML that KaTeX already embeds in its output.
 
 ## Error handling
 
-Invalid LaTeX syntax causes the build to fail. The `@vscode/markdown-it-katex`
-plugin's built-in renderers swallow KaTeX parse errors, so Tada overrides the
-renderer rules with direct `katex.renderToString()` calls that let
-`katex.ParseError` propagate.
+Invalid LaTeX syntax causes the build to fail. Tada calls
+`katex.renderToString()` with `throwOnError`, so `katex.ParseError` propagates.
 
 
 ## Stylesheet

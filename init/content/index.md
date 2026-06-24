@@ -1,6 +1,6 @@
 ---
 title: Home
-description: The home page for <%= site.title %>.
+description: "The home page for {site.title}."
 author: alex
 published: 2026-03-20
 toolName: Tada
@@ -8,7 +8,7 @@ toolName: Tada
 
 ## Welcome
 
-This is an example site built with <%= page.toolName %>.
+This is an example site built with {page.toolName}.
 
 
 ## Getting started
@@ -19,15 +19,13 @@ if you won't use the `author` front matter field.
 
 See the [Markdown examples page](/markdown.html) for syntax examples.
 
-!!! note
+<Note>
 For more documentation, see the [GitHub page](https://github.com/abreen/Tada).
-<% if (vars.testCoveragePercent) { %>
-- <%= vars.testCoveragePercent %>% of <%= page.toolName %>'s code is covered by
+- {vars.testCoveragePercent}% of {page.toolName}'s code is covered by
   automated tests (unit tests, [Playwright](https://playwright.dev/) browser
   tests, and functional, black-box tests which exercise functionality using the
-  CLI). See [the test coverage metrics](<%= vars.testCoverageUrl %>).
-- <%= page.toolName %>'s features and behavior are
+  CLI). See <a href={vars.testCoverageUrl}>the test coverage metrics</a>.
+- {page.toolName}'s features and behavior are
   [documented in Markdown](https://github.com/abreen/Tada/tree/main/spec) for
   easy reading by people and LLMs.
-<% } %>
-!!!
+</Note>

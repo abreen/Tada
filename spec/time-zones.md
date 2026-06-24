@@ -4,10 +4,10 @@ Each site has a default time zone set in the config. A client-side time zone
 chooser lets visitors select their preferred zone. The selection is stored in
 the browser's local storage.
 
-To place the time zone chooser on a page:
+Place the chooser with the built-in component:
 
-```
-<%= renderTimeZoneChooser() %>
+```mdx
+<TimeZoneChooser />
 ```
 
 All `<time>` elements on the page are reformatted to display in the chosen time

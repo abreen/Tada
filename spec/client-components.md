@@ -23,8 +23,8 @@ them in the bundle. Shared utilities are in `src/util.ts`.
 - **Header navigation**: collapsible header with logo, title, and nav links
 - **Page update toast**: floating bottom toast that checks the current page
   for newer validators and offers an in-place refresh
-- **Slides**: page-local presentation mode for Markdown pages with
-  `slides: true`; it reads slide wrapper markup, opens from a `Present` button,
+- **Slides**: page-local presentation mode for pages containing `<Slides>`; it
+  reads static slide wrapper markup, opens from a `Present` button,
   chooses fullscreen from a `Full screen` checkbox, opens from slide-heading
   presentation buttons via a local custom event, and shows one slide at a time
   with keyboard and click navigation (see [Slides Mode](slides.md))

@@ -21,16 +21,16 @@ running program. The other two streams are the standard out and standard error.
       <path d="M0,0 L8,4 L0,8 Z" stroke="currentColor" fill="currentColor"></path>
     </marker>
   </defs>
-  <!-- Java program box -->
+  {/* Java program box */}
   <rect x="155" y="60" width="100" height="60" stroke-width="2" stroke="currentColor"></rect>
   <text x="205" y="95" text-anchor="middle" fill="currentColor">Program</text>
-  <!-- stdin arrow (incoming from left) -->
+  {/* stdin arrow (incoming from left) */}
   <path d="M20 90H143" marker-end="url(#arrow)" stroke="currentColor"></path>
   <text x="80" y="82" text-anchor="middle" fill="currentColor" font-family="var(--mono-font)">stdin</text>
-  <!-- stdout arrow (outgoing, upper right) -->
+  {/* stdout arrow (outgoing, upper right) */}
   <path d="M267 75H390" marker-end="url(#arrow)" stroke="currentColor"></path>
   <text x="328" y="67" text-anchor="middle" fill="currentColor" font-family="var(--mono-font)">stdout</text>
-  <!-- stderr arrow (outgoing, lower right) -->
+  {/* stderr arrow (outgoing, lower right) */}
   <path d="M267 105H390" marker-end="url(#arrow)" stroke="currentColor"></path>
   <text x="328" y="125" text-anchor="middle" fill="currentColor" font-family="var(--mono-font)">stderr</text>
 </svg>
@@ -62,14 +62,11 @@ Let's implement a program that uses `System.in.read()` to get all the characters
 from the standard in, counting how many characters are vowels. When there are
 no more characters in the stream, the program prints the total number of vowels.
 
-<!---
-Hiding the first few lines keeps us focused on the program's logic,
-and avoids discussion of IOException.
+The class and method declarations are part of the visible literate program.
 ```
 public class VowelCounter {
     public static void main(String[] args) throws Exception {
 ```
--->
 
 We'll start the program with a `numVowels` counter initialized to zero,
 the additive identity.
@@ -98,12 +95,10 @@ we test whether `ch` is a vowel:
             }
 ```
 
-<!---
-Hide the closing brace of the `while` loop to avoid indenting the conditional.
+The loop's closing brace remains visible.
 ```
         }
 ```
--->
 
 Putting lower case and upper case vowels into a `String` allows us to use the
 `indexOf()` method to check if `ch` is one of those characters. If `ch` is
@@ -122,10 +117,8 @@ Then the last line of the program, which prints the total count, will output 3:
         System.out.println("vowels: " + numVowels);
 ```
 
-<!---
-Hiding the closing braces.
+The final braces close the method and class.
 ```
     }
 }
 ```
--->

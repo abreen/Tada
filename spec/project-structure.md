@@ -13,11 +13,11 @@ content/              Pages and assets
 public/               Static files copied to output as-is
 ```
 
-The `content/` directory contains pages (Markdown, HTML, or source code files)
-and assets (images, PDFs, etc.). Processed files become HTML pages; everything
-else is copied unchanged. The `public/` directory is also copied to the output
-root. If a file in `content/` and a file in `public/` would produce the same
-output path, the build fails.
+The `content/` directory contains pages (Markdown, MDX, HTML, or source code
+files) and assets (images, PDFs, etc.). Processed files become HTML pages;
+everything else is copied unchanged. The `public/` directory is also copied to
+the output root. If a file in `content/` and a file in `public/` would produce
+the same output path, the build fails.
 
 The output directory is `dist/` for development builds.
 

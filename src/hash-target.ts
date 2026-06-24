@@ -1,5 +1,5 @@
 /*
- * markdown-it-anchor's slugifier uses encodeURIComponent() so generated
+ * Tada heading IDs use encodeURIComponent(), so generated
  * heading IDs can safely be used as URL hashes.
  *
  * Tada also allows raw HTML, so an author can create a decoded ID like

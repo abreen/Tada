@@ -1,5 +1,4 @@
 import fs from 'fs';
-import _ from 'lodash';
 import {
   resolveProjectConfigFile,
   resolveSiteConfigFile,
@@ -10,6 +9,7 @@ import {
   type SiteEnv,
 } from './config-files';
 import type { SiteVariables } from './types';
+import { resolveStructuredExpressions } from './utils/structured-expressions';
 
 export interface LoadedProjectConfigFile<
   T = unknown,
@@ -17,13 +17,6 @@ export interface LoadedProjectConfigFile<
 > extends ResolvedProjectConfigFile<Name> {
   value: T;
 }
-
-interface ConfigTemplateContext {
-  vars: Record<string, unknown>;
-  site: SiteVariables;
-}
-
-const EXACT_INTERPOLATION_RE = /^\s*<%=\s*([\s\S]+?)\s*%>\s*$/;
 
 export function parseConfigText(text: string, fileName: string): unknown {
   try {
@@ -33,86 +26,16 @@ export function parseConfigText(text: string, fileName: string): unknown {
     throw new Error(`${fileName}: ${message}`, { cause: error });
   }
 }
-
-function getTemplateErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function renderConfigTemplateString(
-  value: string,
-  context: ConfigTemplateContext,
-  fileName: string,
-): string {
-  try {
-    return _.template(value)(context);
-  } catch (error) {
-    throw new Error(
-      `${fileName}: Lodash template error in config: ${getTemplateErrorMessage(error)}`,
-      { cause: error },
-    );
-  }
-}
-
-function evaluateConfigTemplateExpression(
-  expression: string,
-  context: ConfigTemplateContext,
-  fileName: string,
-): unknown {
-  let captured: unknown;
-
-  try {
-    _.template(`<% __capture(( ${expression} )); %>`)({
-      ...context,
-      __capture(value: unknown) {
-        captured = value;
-      },
-    });
-  } catch (error) {
-    throw new Error(
-      `${fileName}: Lodash template error in config: ${getTemplateErrorMessage(error)}`,
-      { cause: error },
-    );
-  }
-
-  return captured;
-}
-
-function interpolateConfigValue(
+export function resolveProjectConfigExpressions(
   value: unknown,
-  context: ConfigTemplateContext,
+  siteVariables: SiteVariables,
   fileName: string,
 ): unknown {
-  if (typeof value === 'string') {
-    if (!value.includes('<%')) {
-      return value;
-    }
-
-    const exactInterpolation = value.match(EXACT_INTERPOLATION_RE);
-    if (exactInterpolation) {
-      return evaluateConfigTemplateExpression(
-        exactInterpolation[1],
-        context,
-        fileName,
-      );
-    }
-
-    return renderConfigTemplateString(value, context, fileName);
-  }
-
-  if (Array.isArray(value)) {
-    return value.map(item => interpolateConfigValue(item, context, fileName));
-  }
-
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [
-        key,
-        interpolateConfigValue(item, context, fileName),
-      ]),
-    );
-  }
-
-  return value;
+  return resolveStructuredExpressions(
+    value,
+    { site: siteVariables, vars: siteVariables.vars || {} },
+    fileName,
+  );
 }
 
 function loadResolvedConfigFile<
@@ -128,11 +51,7 @@ function loadResolvedConfigFile<
   const rawText = fs.readFileSync(resolved.filePath, 'utf-8');
   const parsed = parseConfigText(rawText, resolved.fileName);
   const value = interpolate
-    ? interpolateConfigValue(
-        parsed,
-        { vars: siteVariables?.vars || {}, site: siteVariables! },
-        resolved.fileName,
-      )
+    ? resolveProjectConfigExpressions(parsed, siteVariables!, resolved.fileName)
     : parsed;
 
   return { ...resolved, value: value as T };

@@ -1,5 +1,5 @@
 import fm from 'front-matter';
-import { extensionIsMarkdown } from './file-types';
+import { extensionIsPlainTextPage } from './file-types';
 import type { ParsedContent } from '../types';
 
 interface RawParsedFrontMatter {
@@ -7,92 +7,57 @@ interface RawParsedFrontMatter {
   content: string;
 }
 
+interface ParsedFrontMatterDocument extends RawParsedFrontMatter {
+  attributes: Record<string, unknown>;
+}
+
 export function parseFrontMatterAndContent(
   raw: string,
   ext: string,
 ): ParsedContent {
-  const { frontMatter, content } = parseFrontMatter(raw, ext);
+  const { attributes, content } = parseFrontMatterDocument(raw, ext);
 
-  // Add delimiters to satisfy the front-matter library
-  const result = fm(`---\n${frontMatter}\n---\n`);
-
-  return {
-    pageVariables: result.attributes as Record<string, unknown>,
-    content,
-  };
+  return { pageVariables: attributes, content };
 }
 
-function parseFrontMatterPlainText(rawContent: string): RawParsedFrontMatter {
-  const lines = rawContent.split(/\r?\n/);
-  const fmLines: string[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    if (!line.trim()) {
-      break;
-    } // stop at first completely blank line
-
-    fmLines.push(line);
-
-    // Handle YAML multi-line | syntax
-    if (line.match(/:\s*\|$/)) {
-      i++;
-      while (i < lines.length && /^\s+/.test(lines[i])) {
-        fmLines.push(lines[i++]);
-      }
-      continue;
-    }
-
-    i++;
+function parseFrontMatterDocument(
+  rawContent: string,
+  ext: string,
+): ParsedFrontMatterDocument {
+  if (!extensionIsPlainTextPage(ext)) {
+    return { frontMatter: null, content: rawContent, attributes: {} };
   }
 
-  if (fmLines.length === 0) {
-    return { frontMatter: null, content: rawContent };
+  const firstNewline = rawContent.indexOf('\n');
+  const firstLine =
+    firstNewline === -1 ? rawContent : rawContent.slice(0, firstNewline);
+  if (firstLine.trimEnd() !== '---') {
+    throw new Error('Front matter must start with ---');
   }
+
+  const normalized = `---${rawContent.slice(firstLine.length)}`;
+  const closingDelimiter = normalized
+    .split(/\r?\n/)
+    .slice(1)
+    .find(line => /^(?:---|\.\.\.)\s*$/.test(line));
+  if (!closingDelimiter || !/^---\s*$/.test(closingDelimiter)) {
+    throw new Error(
+      'Front matter starts with --- but no closing --- delimiter was found',
+    );
+  }
+
+  const result = fm(normalized);
   return {
-    frontMatter: fmLines.join('\n'),
-    content: lines.slice(i).join('\n'),
+    frontMatter: result.frontmatter || '',
+    content: result.body,
+    attributes: result.attributes as Record<string, unknown>,
   };
-}
-
-function parseFrontMatterStandard(rawContent: string): RawParsedFrontMatter {
-  const lines = rawContent.split(/\r?\n/);
-
-  // Caller has already verified lines[0] === '---'
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trimEnd() === '---') {
-      return {
-        frontMatter: lines.slice(1, i).join('\n'),
-        content: lines.slice(i + 1).join('\n'),
-      };
-    }
-  }
-
-  throw new Error(
-    'Front matter starts with --- but no closing --- delimiter was found',
-  );
 }
 
 export function parseFrontMatter(
   rawContent: string,
   ext: string,
 ): RawParsedFrontMatter {
-  if (extensionIsMarkdown(ext) || ext === '.html') {
-    // Detect standard YAML front matter (first line is exactly ---,
-    // ignoring trailing whitespace and \r)
-    const firstNewline = rawContent.indexOf('\n');
-    const firstLine =
-      firstNewline === -1 ? rawContent : rawContent.slice(0, firstNewline);
-
-    if (firstLine.trimEnd() === '---') {
-      return parseFrontMatterStandard(rawContent);
-    }
-
-    return parseFrontMatterPlainText(rawContent);
-  } else {
-    // unknown type, return raw
-    return { frontMatter: null, content: rawContent };
-  }
+  const { frontMatter, content } = parseFrontMatterDocument(rawContent, ext);
+  return { frontMatter, content };
 }

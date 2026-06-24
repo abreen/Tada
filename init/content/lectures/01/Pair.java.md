@@ -4,15 +4,12 @@ author: alex
 description: An example of a literate Java program.
 ---
 
-<!---
-You may hide code from the generated HTML page but still include it in the
-final .java file by surrounding a code block with Tada's three-hyphen
-HTML comment syntax.
+Literate Java includes every Java code fence in both the generated page and the
+downloadable `.java` file.
 
 ```
 import java.util.*;
 ```
--->
 
 ## Definition
 
@@ -37,12 +34,12 @@ public class Pair<
 {
 ```
 
-!!! note
+<Note>
 
 Java does not support syntax like `S implements Comparable<S>` in a generic type
 parameter; you must use `extends`, even though `Comparable` is not a class.
 
-!!!
+</Note>
 
 
 ### Immutability
@@ -158,12 +155,9 @@ Please note:
 
 To provide some confidence that our `Pair` class works, let's write some tests.
 
-<!---
-Code blocks inside of Tada's special containers, like alerts, collapisbles,
-sections, etc. are included in the final .java file.
--->
+{/* Code blocks inside components are included in the final .java file. */}
 
-<<< details The `test()` helper method
+<Details summary={<>The <code>test()</code> helper method</>}>
 
 ```
     private static void test(boolean condition) {
@@ -179,18 +173,15 @@ sections, etc. are included in the final .java file.
     }
 ```
 
-<<<
+</Details>
 
-<!---
 When Tada renders a literate code block, it trims leading whitespace common to
-all lines in the block. For this reason, and because we don't need to explain
-the main() method in this document, we hide the line of code introducing it
-from the final HTML page.
+all lines in the block. The `main()` declaration remains visible because every
+Java fence is visible in Tada 2.
 
 ```
     public static void main(String[] args) {
 ```
--->
 
 First, let's test that the constructor checks for `null` and throws the correct
 exception:
@@ -286,14 +277,9 @@ Finally, let's test `reversed()`:
         }
 ```
 
-<!---
-As mentioned above, we hide the closing brackets for display purposes. They
-are still required to produce valid Java code so they must be present in code
-blocks.
+The closing brackets are visible and are required to produce valid Java code.
 
 ```
     }
 }
 ```
--->
-

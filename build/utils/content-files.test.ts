@@ -183,13 +183,13 @@ describe('getFilesByExtensions', () => {
 describe('shouldSkipContentFile', () => {
   test('returns true for markdown file with skip: true', () => {
     const filePath = path.join(projectRoot, 'content', 'skipped.md');
-    writeFile(filePath, 'skip: true\n\n# Skipped');
+    writeFile(filePath, '---\nskip: true\n---\n\n# Skipped');
     expect(shouldSkipContentFile(filePath)).toBe(true);
   });
 
   test('returns false for markdown file without skip', () => {
     const filePath = path.join(projectRoot, 'content', 'normal.md');
-    writeFile(filePath, 'title: Normal\n\n# Normal');
+    writeFile(filePath, '---\ntitle: Normal\n---\n\n# Normal');
     expect(shouldSkipContentFile(filePath)).toBe(false);
   });
 
@@ -201,13 +201,13 @@ describe('shouldSkipContentFile', () => {
 
   test('returns false for markdown file with skip: false', () => {
     const filePath = path.join(projectRoot, 'content', 'keep.md');
-    writeFile(filePath, 'skip: false\n\n# Keep');
+    writeFile(filePath, '---\nskip: false\n---\n\n# Keep');
     expect(shouldSkipContentFile(filePath)).toBe(false);
   });
 
   test('returns true for html file with skip: true', () => {
     const filePath = path.join(projectRoot, 'content', 'skipped.html');
-    writeFile(filePath, 'skip: true\n\n<p>Skipped</p>');
+    writeFile(filePath, '---\nskip: true\n---\n\n<p>Skipped</p>');
     expect(shouldSkipContentFile(filePath)).toBe(true);
   });
 });
@@ -215,7 +215,10 @@ describe('shouldSkipContentFile', () => {
 describe('getBuildContentFiles', () => {
   test('excludes partial files (starting with _)', () => {
     const contentDir = path.join(projectRoot, 'content');
-    writeFile(path.join(contentDir, 'page.md'), '# Page');
+    writeFile(
+      path.join(contentDir, 'page.md'),
+      '---\ntitle: Page\n---\n\n# Page',
+    );
     writeFile(path.join(contentDir, '_partial.md'), '# Partial');
 
     const files = getBuildContentFiles(contentDir, []);
@@ -224,8 +227,14 @@ describe('getBuildContentFiles', () => {
 
   test('excludes files with skip: true', () => {
     const contentDir = path.join(projectRoot, 'content');
-    writeFile(path.join(contentDir, 'page.md'), '# Page');
-    writeFile(path.join(contentDir, 'skipped.md'), 'skip: true\n\n# Skip');
+    writeFile(
+      path.join(contentDir, 'page.md'),
+      '---\ntitle: Page\n---\n\n# Page',
+    );
+    writeFile(
+      path.join(contentDir, 'skipped.md'),
+      '---\nskip: true\n---\n\n# Skip',
+    );
 
     const files = getBuildContentFiles(contentDir, []);
     expect(files.map(f => path.basename(f))).toEqual(['page.md']);

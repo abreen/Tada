@@ -4,8 +4,10 @@ parentLabel: Labs
 title: Lab 2
 author: alex
 description: A page demonstrating slides mode.
-slides: true
 ---
+
+<Slides>
+<Slide>
 
 ## Selection sort
 
@@ -15,11 +17,13 @@ Selection sort is a well-known comparison-based sorting algorithm.
 - Repeatedly scans left-to-right, looking for the smallest element
 - Swaps the smallest in the right part into correct position in the left part
 
----
+</Slide>
+<Slide>
 
-<%= renderTrace('selection_sort.py') %>
+<Trace source="selection_sort.py" />
 
----
+</Slide>
+<Slide>
 
 ## Impressions
 
@@ -29,7 +33,8 @@ Selection sort's strength is its simplicity.
 - `index_smallest()` always scans from `start` to the end
 - It requires no additional memory (other than local variables)
 
----
+</Slide>
+<Slide>
 
 ## Performance
 
@@ -37,7 +42,8 @@ Selection sort's strength is its simplicity.
 - There are always $n - 1$ swaps
 - At each value of `i`, `index_smallest()` iterates from `i + 1` to the end
 
----
+</Slide>
+<Slide>
 
 ## Comparisons
 
@@ -55,24 +61,28 @@ $$
 (n-1) + (n-2) + \dots + 1 = \sum_{i=1}^{n-1}i = \frac{n(n-1)}{2}
 $$
 
-??? question What complexity class does $C(n)$ belong to?
+<Question prompt="What complexity class does C(n) belong to?">
 It's a quadratic function. The class is $O(n^2)$.
-???
+</Question>
 
----
+</Slide>
+<Slide>
 
 ## Review
 
-??? question The outer loop of selection sort runs
-- [ ] $n$ times
-- [x] $n - 1$ times
-- [ ] $n^2$ times
-- [ ] $n - 2$ times
-???
+<MultipleChoice prompt="The outer loop of selection sort runs">
+  <Choice>$n$ times</Choice>
+  <Choice correct>$n - 1$ times</Choice>
+  <Choice>$n^2$ times</Choice>
+  <Choice>$n - 2$ times</Choice>
+</MultipleChoice>
 
-??? question What is selection sort's best case?
-- [ ] An already sorted array
-- [ ] A reverse-sorted array
-- [ ] An array filled with the same element
-- [x] Its best, worst, and average cases are all the same
-???
+<MultipleChoice prompt="What is selection sort's best case?">
+  <Choice>An already sorted array</Choice>
+  <Choice>A reverse-sorted array</Choice>
+  <Choice>An array filled with the same element</Choice>
+  <Choice correct>Its best, worst, and average cases are all the same</Choice>
+</MultipleChoice>
+
+</Slide>
+</Slides>

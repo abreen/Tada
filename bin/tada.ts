@@ -374,7 +374,7 @@ async function initCommand(args: string[]): Promise<void> {
     fs.mkdirSync(path.join(projectDir, 'content'), { recursive: true });
     fs.writeFileSync(
       path.join(projectDir, 'content', 'index.md'),
-      'title: Home\n\nWelcome to your new site.\n',
+      '---\ntitle: Home\n---\n\nWelcome to your new site.\n',
     );
     fs.mkdirSync(path.join(projectDir, 'public'), { recursive: true });
     fs.writeFileSync(
