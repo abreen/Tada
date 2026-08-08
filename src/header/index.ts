@@ -40,7 +40,7 @@ export default (window: Window) => {
       return;
     }
     const next = e.relatedTarget as Node | null;
-    if (!next || !details.contains(next)) {
+    if (next && !details.contains(next)) {
       close();
     }
   }

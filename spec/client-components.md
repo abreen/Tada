@@ -20,7 +20,9 @@ them in the bundle. Shared utilities are in `src/util.ts`.
 - **Print handler**: opens all collapsible details before printing
 - **Code scrollbar**: a sticky horizontal scrollbar for code pages, synced
   with the code body so wide code can be scrolled from the bottom of the viewport
-- **Header navigation**: collapsible header with logo, title, and nav links
+- **Header navigation**: collapsible header with logo, title, and nav links;
+  closes on outside clicks, Escape, and identified focus moves outside the menu,
+  while unknown focus destinations remain open so Safari link clicks complete
 - **Page update toast**: floating bottom toast that checks the current page
   for newer validators and offers an in-place refresh
 - **Slides**: page-local presentation mode for Markdown pages with

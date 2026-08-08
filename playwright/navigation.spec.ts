@@ -26,6 +26,22 @@ test.describe('graceful degradation without JS', () => {
 
     await context.close();
   });
+
+  test('header links work with JavaScript disabled', async ({ browser }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+
+    await page.goto('/index.html');
+    await page.locator('header details > summary').click();
+    await page
+      .locator('header details nav a[href="/lectures/index.html"]')
+      .click();
+
+    await expect(page).toHaveURL(/lectures\/index\.html/);
+    await expect(page.locator('h1')).toContainText('Lectures');
+
+    await context.close();
+  });
 });
 
 test.describe('client-side navigation', () => {
@@ -82,13 +98,10 @@ test.describe('client-side navigation', () => {
     await page.locator('header details > summary').click();
     await expect(page.locator('header details')).toHaveAttribute('open', '');
 
-    // Click a nav link inside the opened details using JS to avoid visibility issues
-    await page.evaluate(() => {
-      const link = document.querySelector(
-        'header details nav a[href="/lectures/index.html"]',
-      ) as HTMLAnchorElement;
-      link?.click();
-    });
+    // Use a real pointer click so browser-specific focus behavior runs.
+    await page
+      .locator('header details nav a[href="/lectures/index.html"]')
+      .click();
     await expect(page).toHaveURL(/lectures\/index\.html/);
 
     const isOpen = await page.evaluate(

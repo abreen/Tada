@@ -6,7 +6,7 @@ function create(open = false) {
   const dom = new JSDOM(
     `<body><header><details${open ? ' open' : ''}><summary>Menu</summary><nav>Links</nav></details></header></body>`,
   );
-  return dom.window;
+  return dom.window as unknown as Window & typeof globalThis;
 }
 
 describe('header', () => {
@@ -71,6 +71,35 @@ describe('header', () => {
       new win.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }),
     );
     expect(details.open).toBe(true);
+  });
+
+  test('keeps details open when focusout has no related target', () => {
+    const win = create(true);
+    mount(win);
+
+    const details = win.document.querySelector('details') as HTMLDetailsElement;
+    const summary = win.document.querySelector('summary')!;
+    summary.dispatchEvent(
+      new win.FocusEvent('focusout', { bubbles: true, relatedTarget: null }),
+    );
+
+    expect(details.open).toBe(true);
+  });
+
+  test('closes details when focus moves outside', () => {
+    const win = create(true);
+    mount(win);
+
+    const details = win.document.querySelector('details') as HTMLDetailsElement;
+    const summary = win.document.querySelector('summary')!;
+    summary.dispatchEvent(
+      new win.FocusEvent('focusout', {
+        bubbles: true,
+        relatedTarget: win.document.body,
+      }),
+    );
+
+    expect(details.open).toBe(false);
   });
 
   test('cleanup removes event listeners', () => {
