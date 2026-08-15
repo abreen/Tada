@@ -105,6 +105,20 @@ test.describe('slides presentation mode', () => {
       .toBe(true);
   });
 
+  test('hides page appearance controls while presenting', async ({ page }) => {
+    await page.goto('/slides.html');
+
+    const appearancePickers = page.locator('.appearance-pickers');
+    await expect(appearancePickers).toBeVisible();
+
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+    await expect(appearancePickers).toBeHidden();
+
+    await page.keyboard.press('Escape');
+    await expect(appearancePickers).toBeVisible();
+  });
+
   test('presentation mode supports browser interactions', async ({ page }) => {
     await page.goto('/slides.html');
     await page.addStyleTag({

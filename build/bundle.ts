@@ -18,6 +18,7 @@ import type { PluginBuilder } from 'bun';
 import type { SiteVariables } from './types';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import pkg from '../package.json' with { type: 'json' };
+import { renderMaterialSymbolVariables } from './material-symbols';
 
 interface BunBuildPlugin {
   name: string;
@@ -52,12 +53,6 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const tintHue = siteVariables.tintHue ?? 20;
   const tintAmount = siteVariables.tintAmount ?? 100;
 
-  const iconColor = `hsl(${tintHue}deg ${(8 * tintAmount) / 100}% 8%)`;
-  const iconColorHover = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 45%)`;
-  const iconColorDark = `hsl(${tintHue}deg ${(20 * tintAmount) / 100}% 90%)`;
-  const iconColorHoverDark = `hsl(${tintHue}deg ${(6 * tintAmount) / 100}% 60%)`;
-  const iconColorTranslucentDark = `hsl(${tintHue}deg ${(85 * tintAmount) / 100}% 90%)`;
-
   const linkHue = formatCssNumber(deriveLinkHue(tintHue));
   const linkColor = `hsl(${linkHue}deg 44.4% 49.4%)`;
   const linkColorHover = `hsl(${linkHue}deg 34% 60%)`;
@@ -66,16 +61,12 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const traceLineActiveHue = formatCssNumber(deriveTraceLineActiveHue(tintHue));
   const bgTraceLineActive = `hsl(${traceLineActiveHue}deg 100% 86%)`;
   const bgTraceLineActiveDark = `hsl(${traceLineActiveHue}deg 90% 18%)`;
+  const materialSymbolVariables = renderMaterialSymbolVariables();
 
-  const rendered = _.template(template)({
+  const renderedTemplate = _.template(template)({
     ...theme,
     tintHue,
     tintAmount,
-    iconColor,
-    iconColorHover,
-    iconColorDark,
-    iconColorHoverDark,
-    iconColorTranslucentDark,
     linkColor,
     linkColorHover,
     linkColorDark,
@@ -83,6 +74,10 @@ function renderThemeScss(siteVariables: SiteVariables): string {
     bgTraceLineActive,
     bgTraceLineActiveDark,
   });
+  const rendered = renderedTemplate.replace(
+    '/* TADA_MATERIAL_SYMBOL_VARIABLES */',
+    materialSymbolVariables,
+  );
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-'));
   const configDir = path.join(tmpDir, 'config');

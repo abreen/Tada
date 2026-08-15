@@ -27,6 +27,9 @@ excluded from production build manifests
 A search combobox in the site header queries the Pagefind index. Results show
 excerpts and support keyboard navigation. PDF results are grouped by document,
 with individual page numbers shown as sub-results sorted by page number.
+The complete search control, including its icon, is hidden at viewport widths
+of 400px or less; above that breakpoint it remains right-aligned within the
+header.
 All matching top-level results and nested sub-results are rendered; the result
 count reflects the number of grouped top-level results.
 If the user opens or types into the combobox before Pagefind finishes loading,

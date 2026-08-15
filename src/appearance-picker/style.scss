@@ -1,0 +1,119 @@
+@use '../mixins' as *;
+
+.appearance-pickers {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 2rem auto 1rem;
+}
+
+.preference-picker {
+  --preference-picker-option-width: 2.5rem;
+  --preference-picker-gap: 0.5rem;
+  --preference-picker-padding: 6px;
+
+  @include user-select(none);
+
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, var(--preference-picker-option-width));
+  gap: var(--preference-picker-gap);
+  width: fit-content;
+  padding: var(--preference-picker-padding);
+  background: var(--bg2-color);
+  border-radius: calc(var(--border-radius) + 4px);
+}
+
+.preference-picker::before {
+  position: absolute;
+  top: var(--preference-picker-padding);
+  bottom: var(--preference-picker-padding);
+  left: var(--preference-picker-padding);
+  width: var(--preference-picker-option-width);
+  content: '';
+  background: var(--bg-color);
+  border-radius: var(--border-radius);
+  box-shadow: 0 0 0 var(--control-border-width) var(--fg2-color);
+  transform: translateX(0);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: transform 0.2s ease;
+  }
+}
+
+:root[data-font-preference='serif'] .font-picker::before,
+:root[data-contrast-preference='high'] .contrast-picker::before {
+  transform: translateX(calc(100% + var(--preference-picker-gap)));
+}
+
+.preference-picker:has(
+    .preference-picker-option[aria-pressed='true']:is(:hover, :focus)
+  )::before {
+  background: var(--bg2-color);
+}
+
+.preference-picker:has(
+    .preference-picker-option[aria-pressed='true']:active:not(:disabled)
+  )::before {
+  background: var(--link-active-color);
+}
+
+.preference-picker-option {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--preference-picker-option-width);
+  height: 2rem;
+  padding: 0;
+  font-size: var(--font-size-smaller);
+  color: var(--fg2-color);
+  background: transparent;
+  border: 0;
+  border-radius: var(--border-radius);
+}
+
+.font-picker-option-sans {
+  font-family: var(--sans-font);
+  font-feature-settings: var(--sans-font-feature-settings);
+}
+
+.font-picker-option-serif {
+  // Avoid requesting the bundled serif face just to render the inactive
+  // preview on a default sans page.
+  font-family: var(--serif-preview-font);
+  font-feature-settings: var(--serif-font-feature-settings);
+}
+
+.material-symbol-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.material-symbol-icon-contrast-standard {
+  --material-symbol-icon: var(--icon-contrast-standard);
+}
+
+.material-symbol-icon-contrast-high {
+  --material-symbol-icon: var(--icon-contrast-high);
+}
+
+.preference-picker-option[aria-pressed='true'] {
+  color: var(--fg-color);
+  background: transparent;
+}
+
+.preference-picker-option[aria-pressed='true']:is(:hover, :focus) {
+  background: transparent;
+}
+
+.preference-picker-option[aria-pressed='true']:active:not(:disabled) {
+  background: transparent !important;
+}
+
+@media print {
+  .appearance-pickers {
+    display: none;
+  }
+}

@@ -56,15 +56,20 @@ header details summary::marker {
 }
 
 header summary::after {
+  flex: 0 0 24px;
   order: -1;
+  width: 24px;
   height: 24px;
   margin-right: 8px;
   margin-left: var(--gap);
-  content: var(--icon-chevron);
+  content: '';
+
+  @include contained-mask(var(--icon-header-menu));
 }
 
 header details[open] summary::after {
-  transform: rotate(90deg);
+  -webkit-mask-image: var(--icon-header-close);
+  mask-image: var(--icon-header-close);
 }
 
 header .content {
@@ -131,16 +136,35 @@ header .results-container {
 }
 
 header .search-controls {
+  position: relative;
   display: flex;
   align-items: center;
   height: var(--header-collapsed-height);
 
+  @media (width <= 400px) {
+    display: none;
+  }
+
+  &::before {
+    position: absolute;
+    top: 50%;
+    left: 7px;
+    z-index: 1;
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+    content: '';
+    transform: translateY(-50%);
+
+    @include contained-mask(var(--icon-search));
+  }
+
+  &:has(input:disabled)::before {
+    opacity: 0.4;
+  }
+
   input.search {
     width: 180px;
-
-    @media (width <= 400px) {
-      display: none;
-    }
   }
 }
 

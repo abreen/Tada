@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import path from 'path';
 
 const repoDir = path.resolve(import.meta.dir, '..');
@@ -46,6 +46,17 @@ await runTada([
   '--default-time-zone',
   'America/New_York',
 ]);
+
+const devConfigPath = path.join(siteDir, 'site.dev.yaml');
+const devConfig = readFileSync(devConfigPath, 'utf-8');
+const devConfigWithoutFooter = devConfig.replace(
+  '  footer: true',
+  '  footer: false',
+);
+if (devConfigWithoutFooter === devConfig) {
+  throw new Error('Could not disable the footer in the Playwright test site');
+}
+writeFileSync(devConfigPath, devConfigWithoutFooter);
 
 mkdirSync(path.dirname(slidesPath), { recursive: true });
 mkdirSync(traceDir, { recursive: true });

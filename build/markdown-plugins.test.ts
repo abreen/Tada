@@ -5,7 +5,7 @@ import deflistIdPlugin from './deflist-id-plugin';
 import externalLinksPlugin from './external-links-plugin';
 import headingSubtitlePlugin from './heading-subtitle-plugin';
 import columnsPlugin from './columns-plugin';
-import { createMarkdown, footnoteLabel } from './utils/markdown';
+import { createMarkdown } from './utils/markdown';
 import { stripHtmlComments, injectKatexStylesheet } from './utils/render';
 import { initHighlighter } from './utils/shiki-highlighter';
 import type { SiteVariables } from './types';
@@ -892,26 +892,6 @@ describe('injectKatexStylesheet', () => {
   });
 });
 
-describe('footnoteLabel', () => {
-  test('returns digits for 1-9', () => {
-    expect(footnoteLabel(1)).toBe('1');
-    expect(footnoteLabel(5)).toBe('5');
-    expect(footnoteLabel(9)).toBe('9');
-  });
-
-  test('returns capital letters for 10-35', () => {
-    expect(footnoteLabel(10)).toBe('A');
-    expect(footnoteLabel(11)).toBe('B');
-    expect(footnoteLabel(35)).toBe('Z');
-  });
-
-  test('throws for index <= 0 or > 35', () => {
-    expect(() => footnoteLabel(0)).toThrow();
-    expect(() => footnoteLabel(-1)).toThrow();
-    expect(() => footnoteLabel(36)).toThrow(/at most 35 footnotes/);
-  });
-});
-
 describe('footnote rendering', () => {
   function createProjectMarkdown() {
     return createMarkdown(
@@ -930,30 +910,7 @@ describe('footnote rendering', () => {
     );
   }
 
-  test('uses digit labels for the first nine footnotes', () => {
-    const md = createProjectMarkdown();
-    const refs = Array.from({ length: 9 }, (_, i) => `[^${i + 1}]`).join(' ');
-    const defs = Array.from(
-      { length: 9 },
-      (_, i) => `[^${i + 1}]: note ${i + 1}`,
-    ).join('\n');
-    const html = md.render(`Refs: ${refs}\n\n${defs}\n`);
-
-    expect(html).toContain(
-      'class="footnote-ref" href="#fn1" id="fnref1">1</a>',
-    );
-    expect(html).toContain(
-      'class="footnote-ref" href="#fn9" id="fnref9">9</a>',
-    );
-    expect(html).toContain(
-      '<li id="fn1" class="footnote-item"><span class="footnote-marker" aria-hidden="true">1</span>',
-    );
-    expect(html).toContain(
-      '<li id="fn9" class="footnote-item"><span class="footnote-marker" aria-hidden="true">9</span>',
-    );
-  });
-
-  test('switches to letters from the tenth footnote', () => {
+  test('uses ordinary numeric labels', () => {
     const md = createProjectMarkdown();
     const refs = Array.from({ length: 11 }, (_, i) => `[^${i + 1}]`).join(' ');
     const defs = Array.from(
@@ -963,20 +920,16 @@ describe('footnote rendering', () => {
     const html = md.render(`Refs: ${refs}\n\n${defs}\n`);
 
     expect(html).toContain(
-      'class="footnote-ref" href="#fn10" id="fnref10">A</a>',
+      'class="footnote-ref" href="#fn1" id="fnref1">1</a>',
     );
     expect(html).toContain(
-      'class="footnote-ref" href="#fn11" id="fnref11">B</a>',
+      'class="footnote-ref" href="#fn10" id="fnref10">10</a>',
     );
-    expect(html).toContain(
-      '<li id="fn10" class="footnote-item"><span class="footnote-marker" aria-hidden="true">A</span>',
-    );
-    expect(html).toContain(
-      '<li id="fn11" class="footnote-item"><span class="footnote-marker" aria-hidden="true">B</span>',
-    );
+    expect(html).toContain('<li id="fn1" class="footnote-item">');
+    expect(html).not.toContain('footnote-marker');
   });
 
-  test('wraps the list in <ol> with no default marker styling', () => {
+  test('wraps footnotes in an ordinary ordered list', () => {
     const md = createProjectMarkdown();
     const html = md.render('Para.[^1]\n\n[^1]: note\n');
 
@@ -986,15 +939,16 @@ describe('footnote rendering', () => {
     expect(html).toContain('</ol></div>');
   });
 
-  test('throws when a page has more than 35 footnotes', () => {
+  test('supports more than 35 footnotes', () => {
     const md = createProjectMarkdown();
     const refs = Array.from({ length: 36 }, (_, i) => `[^${i + 1}]`).join(' ');
     const defs = Array.from(
       { length: 36 },
       (_, i) => `[^${i + 1}]: note ${i + 1}`,
     ).join('\n');
-    expect(() => md.render(`${refs}\n\n${defs}\n`)).toThrow(
-      /at most 35 footnotes/,
+    const html = md.render(`${refs}\n\n${defs}\n`);
+    expect(html).toContain(
+      'class="footnote-ref" href="#fn36" id="fnref36">36</a>',
     );
   });
 });

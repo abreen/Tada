@@ -33,18 +33,7 @@ body {
   font-family: var(--font);
   font-size: var(--font-size);
   font-weight: var(--font-weight);
-
-  /*
-   * Enable Inter's features:
-   * liga - standard ligatures
-   * calt - contextual alternates
-   * ss07 - square punctuation
-   * ss08 - square quotes
-   * cv01 - alternate 1
-   * cv08 - uppercase I with serif
-   * cv10 - capital G with spur
-   */
-  font-feature-settings: 'liga', 'calt', 'ss07', 'ss08', 'cv01', 'cv08', 'cv10';
+  font-feature-settings: var(--font-feature-settings);
   line-height: var(--line-height);
   color: var(--fg-color);
   background-color: var(--bg-color);
@@ -94,6 +83,7 @@ pre,
 tt,
 code {
   font-family: var(--mono-font);
+  font-feature-settings: var(--mono-font-feature-settings);
 }
 
 tt,
@@ -182,10 +172,6 @@ input[type='search'] {
   min-width: 0;
   padding-left: 2rem;
   background-color: var(--bg-color);
-  background-image: var(--icon-search);
-  background-repeat: no-repeat;
-  background-position: left 6px center;
-  background-size: 16px 16px;
   border-radius: 18px;
 
   &:disabled {

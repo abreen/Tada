@@ -5,10 +5,31 @@ distributed under its own license.
 
 ## Material Symbols
 
-Optionally displayed in the footer of generated pages, Tada's logo is the
-"celebration" icon from Google's Material Symbols icon set. The SVG path data is
-used without any modifications.
+Tada vendors the `celebration`, `contrast`, `contrast_rtl_off`, `info`,
+`warning`, `south_east`, `search`, `north_east`, and `tag` icons from Google's
+Material Symbols icon set, along with the `menu` and `close` icons. They are
+used in the optional attribution footer, appearance picker, alerts, page links,
+search control, external links, heading anchors, and header navigation. The
+canonical SVG files are included without modification and share the Material
+Symbols Outlined settings FILL 0, weight 400, grade 0, and optical size 24.
 
-- Source: [`material-design-icons` GitHub repository](https://github.com/google/material-design-icons)
+- Source: [`material-design-icons` symbols for web](https://github.com/google/material-design-icons/tree/master/symbols/web)
 - License: [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 - Copyright: Copyright Google LLC
+
+## Source Serif 4
+
+Tada includes the normal and italic Source Serif 4 variable WOFF2 fonts without
+modification.
+
+- Source: [`adobe-fonts/source-serif`](https://github.com/adobe-fonts/source-serif)
+- License: [SIL Open Font License, Version 1.1](https://openfontlicense.org)
+- Copyright: © 2014–2021 Adobe Systems Incorporated, with Reserved Font Name “Source”
+
+## Libertinus Mono
+
+Tada includes the Libertinus Mono regular WOFF2 font without modification.
+
+- Source: [`googlefonts/libertinus`](https://github.com/googlefonts/libertinus)
+- License: [SIL Open Font License, Version 1.1](https://openfontlicense.org)
+- Copyright: Copyright 2025 The Libertinus Mono Project Authors

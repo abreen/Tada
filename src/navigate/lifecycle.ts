@@ -6,6 +6,7 @@ import mountCode from '../code';
 import mountTrace from '../trace';
 import mountPrint from '../print';
 import mountSlides from '../slides';
+import mountAppearancePicker from '../appearance-picker';
 import { scheduleTask } from '../util';
 
 const PER_PAGE_COMPONENTS: Record<
@@ -20,6 +21,7 @@ const PER_PAGE_COMPONENTS: Record<
   trace: mountTrace,
   slides: mountSlides,
   print: mountPrint,
+  appearancePicker: mountAppearancePicker,
 };
 
 let cleanups: (() => void)[] = [];

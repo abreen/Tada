@@ -17,8 +17,9 @@ describe('anchor', () => {
     expect(link).not.toBeNull();
     expect(link.getAttribute('href')).toBe('#intro');
     expect(link.textContent).toBe('Introduction');
-    expect(link.querySelector('svg')).not.toBeNull();
-    expect(link.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    const icon = link.querySelector('.material-symbol-icon-heading-anchor');
+    expect(icon).not.toBeNull();
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
   });
 
   test('sets title on anchor link', () => {
@@ -74,7 +75,9 @@ describe('anchor', () => {
     ) as HTMLButtonElement;
 
     expect(link.getAttribute('href')).toBe('#topic');
-    expect(link.querySelector('svg')).not.toBeNull();
+    expect(
+      link.querySelector('.material-symbol-icon-heading-anchor'),
+    ).not.toBeNull();
     expect(button).not.toBeNull();
     expect(button.classList.contains('icon-button')).toBe(false);
     expect(button.disabled).toBe(false);

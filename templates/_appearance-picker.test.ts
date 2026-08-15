@@ -1,0 +1,37 @@
+import { describe, expect, test } from 'bun:test';
+import fs from 'fs';
+import path from 'path';
+import _ from 'lodash';
+
+const APPEARANCE_PICKER_TEMPLATE = fs.readFileSync(
+  path.join(import.meta.dir, '_appearance-picker.html'),
+  'utf-8',
+);
+
+describe('_appearance-picker.html template', () => {
+  test('renders initially unavailable accessible appearance pickers', () => {
+    const html = _.template(APPEARANCE_PICKER_TEMPLATE)({});
+
+    expect(html).toContain('class="appearance-pickers"');
+    expect(html).toContain('aria-label="Font style"');
+    expect(html).toContain('aria-label="Contrast"');
+    expect(html).toContain('aria-label="Use sans-serif fonts"');
+    expect(html).toContain('aria-label="Use serif fonts"');
+    expect(html).toContain('aria-label="Use standard contrast"');
+    expect(html).toContain('aria-label="Use high contrast"');
+    expect(html).toContain('data-font-preference-value="sans"');
+    expect(html).toContain('data-font-preference-value="serif"');
+    expect(html).toContain('data-contrast-preference-value="standard"');
+    expect(html).toContain('data-contrast-preference-value="high"');
+    expect(html).toContain(
+      'class="material-symbol-icon material-symbol-icon-contrast-standard"',
+    );
+    expect(html).toContain(
+      'class="material-symbol-icon material-symbol-icon-contrast-high"',
+    );
+    expect(html).not.toContain('contrast-preview');
+    expect(html).toContain('data-pagefind-ignore');
+    expect(html).not.toContain(' hidden');
+    expect(html.match(/disabled/g)).toHaveLength(4);
+  });
+});

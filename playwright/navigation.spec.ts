@@ -44,6 +44,74 @@ test.describe('graceful degradation without JS', () => {
   });
 });
 
+test.describe('search control', () => {
+  test('stays right-aligned without leaving a clipped icon at the narrow breakpoint', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 417, height: 800 });
+    await page.goto('/index.html');
+
+    const alignedEdges = await page.evaluate(() => ({
+      details: document.querySelector('header details')!.getBoundingClientRect()
+        .right,
+      search: document
+        .querySelector('input[name="quick-search"]')!
+        .getBoundingClientRect().right,
+    }));
+    expect(alignedEdges.search).toBeLessThan(alignedEdges.details);
+
+    await page.setViewportSize({ width: 400, height: 800 });
+    expect(await page.locator('.search-controls').boundingBox()).toBeNull();
+  });
+
+  test('gives the Material search symbol enough space at its intended scale', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+
+    const geometry = await page
+      .locator('.search-controls')
+      .evaluate(element => {
+        const icon = getComputedStyle(element, '::before');
+        const input = getComputedStyle(element.querySelector('input')!);
+        const iconWidth = Number.parseFloat(icon.width);
+        const iconLeft = Number.parseFloat(icon.left);
+        const inputPaddingLeft = Number.parseFloat(input.paddingLeft);
+        return {
+          iconWidth,
+          iconHeight: Number.parseFloat(icon.height),
+          boxGap: inputPaddingLeft - iconLeft - iconWidth,
+        };
+      });
+
+    expect(geometry.iconWidth).toBeGreaterThanOrEqual(20);
+    expect(geometry.iconHeight).toBeGreaterThanOrEqual(20);
+    expect(geometry.boxGap).toBeGreaterThanOrEqual(0);
+    expect(geometry.boxGap).toBeLessThanOrEqual(4);
+  });
+});
+
+test.describe('header menu control', () => {
+  test('switches from the menu symbol to the close symbol', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    const summary = page.locator('header details > summary');
+
+    const closedMask = await summary.evaluate(
+      element => getComputedStyle(element, '::after').maskImage,
+    );
+    await summary.click();
+    const openMask = await summary.evaluate(
+      element => getComputedStyle(element, '::after').maskImage,
+    );
+
+    expect(closedMask).toContain('data:image/svg+xml');
+    expect(openMask).toContain('data:image/svg+xml');
+    expect(openMask).not.toBe(closedMask);
+  });
+});
+
 test.describe('client-side navigation', () => {
   test('clicking an internal link navigates without full reload', async ({
     page,

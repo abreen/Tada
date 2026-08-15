@@ -16,6 +16,10 @@ them in the bundle. Shared utilities are in `src/util.ts`.
   handles multiple choice selections
 - **Time zone chooser**: a dropdown that reformats all `<time>` elements to
   the selected zone, persisted in local storage (see [Time Zones](time-zones.md))
+- **Appearance pickers**: page-bottom segmented controls that independently
+  switch fonts between sans-serif and serif and neutral colors between standard
+  and high contrast, persisted in local storage (see
+  [Font Picker](font-picker.md) and [Contrast Picker](contrast-picker.md))
 - **Scroll-to-top button**: appears when the user scrolls down the page
 - **Print handler**: opens all collapsible details before printing
 - **Code scrollbar**: a sticky horizontal scrollbar for code pages, synced

@@ -1,0 +1,11 @@
+@use 'mixins' as *;
+
+.material-symbol-icon {
+  @include contained-mask(var(--material-symbol-icon));
+
+  display: block;
+}
+
+.material-symbol-icon-heading-anchor {
+  --material-symbol-icon: var(--icon-heading-anchor);
+}

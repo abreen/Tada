@@ -2,7 +2,14 @@ function getElements(parent: HTMLElement): HTMLHeadingElement[] {
   return Array.from(parent.querySelectorAll('h1, h2, h3, h4, h5, h6'));
 }
 
-function createIcon(window: Window, type: 'hash' | 'present'): SVGSVGElement {
+function createHeadingAnchorIcon(window: Window): HTMLSpanElement {
+  const icon = window.document.createElement('span');
+  icon.className = 'material-symbol-icon material-symbol-icon-heading-anchor';
+  icon.setAttribute('aria-hidden', 'true');
+  return icon;
+}
+
+function createPresentIcon(window: Window): SVGSVGElement {
   const svg = window.document.createElementNS(
     'http://www.w3.org/2000/svg',
     'svg',
@@ -17,13 +24,10 @@ function createIcon(window: Window, type: 'hash' | 'present'): SVGSVGElement {
   svg.setAttribute('stroke-linecap', 'round');
   svg.setAttribute('stroke-linejoin', 'round');
 
-  const paths =
-    type === 'hash'
-      ? ['M10 3 8 21', 'M16 3l-2 18', 'M4 9h17', 'M3 15h17']
-      : [
-          'M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z',
-          'M9 20h6',
-        ];
+  const paths = [
+    'M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z',
+    'M9 20h6',
+  ];
 
   for (const d of paths) {
     const path = window.document.createElementNS(
@@ -82,7 +86,7 @@ export default (window: Window) => {
       while (el.firstChild) {
         link.appendChild(el.firstChild);
       }
-      link.appendChild(createIcon(window, 'hash'));
+      link.appendChild(createHeadingAnchorIcon(window));
       el.appendChild(link);
 
       const handleClick = () => {
@@ -103,7 +107,7 @@ export default (window: Window) => {
     button.className = 'heading-present-button';
     button.setAttribute('aria-label', 'Present from this slide');
     button.title = 'Present from this slide';
-    button.appendChild(createIcon(window, 'present'));
+    button.appendChild(createPresentIcon(window));
     el.appendChild(button);
 
     const slide = el.parentElement;

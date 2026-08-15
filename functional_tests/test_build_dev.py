@@ -35,8 +35,13 @@ class TestDevBuild:
 
     def test_produces_font_files(self, built_dev_site):
         dist = built_dev_site / 'dist'
-        woff2_files = list(dist.rglob('*.woff2'))
-        assert len(woff2_files) > 0
+        expected_fonts = [
+            'source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
+            'source-serif-4/SourceSerif4-Italic-VariableFont_opsz,wght.woff2',
+            'libertinus-mono/LibertinusMono-Regular.woff2',
+        ]
+        for font_path in expected_fonts:
+            assert (dist / font_path).is_file()
 
     def test_produces_no_favicon_files(self, built_dev_site):
         dist = built_dev_site / 'dist'

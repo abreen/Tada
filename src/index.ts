@@ -1,5 +1,6 @@
 import './style.scss';
 
+import './material-symbols.scss';
 import './anchor/style.scss';
 import './code.scss';
 import './code/style.scss';
@@ -12,6 +13,7 @@ import './slides/style.scss';
 import './timezone/style.scss';
 import './toc/style.scss';
 import './trace/style.scss';
+import './appearance-picker/style.scss';
 import './navigate/style.scss';
 import './page-update/style.scss';
 

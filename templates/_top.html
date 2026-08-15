@@ -33,7 +33,19 @@
     <meta property="og:author" content="<%= page.author.name %>" />
     <% } %>
     <title><%= page.title %><%= site.titlePostfix %></title>
-    <script>document.documentElement.classList.add('js')</script>
+    <script>
+      document.documentElement.classList.add('js');
+      try {
+        if (window.localStorage.getItem('fontPreference') === 'serif') {
+          document.documentElement.dataset.fontPreference = 'serif';
+        }
+      } catch {}
+      try {
+        if (window.localStorage.getItem('contrastPreference') === 'high') {
+          document.documentElement.dataset.contrastPreference = 'high';
+        }
+      } catch {}
+    </script>
     <% if (!isWatchMode) { %>
     <script type="speculationrules">
     {

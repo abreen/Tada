@@ -88,7 +88,7 @@ i.warning {
 }
 
 .alert.note .title::before {
-  @include contained-mask(var(--icon-note));
+  @include contained-mask(var(--icon-info));
 }
 
 .alert .title {

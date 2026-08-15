@@ -127,29 +127,13 @@ behavior, see [Slides Mode](slides.md).
 ## Footnotes
 
 Footnotes use standard markdown-it footnote syntax (`[^name]` for the
-reference and `[^name]: text` for the definition). Tada customizes the
-rendering to use single-character labels styled with Inter's `ss06`
-stylistic set, which displays each character inside an outlined square.
-
-The label sequence is:
-
-- footnotes 1 through 9 use the digits `1` through `9`
-- footnotes 10 through 35 use the capital letters `A` through `Z`
-
-This scheme keeps every label to a single character so the squared glyphs
-render correctly. Multi-digit numbers like `10` would otherwise display as
-two separate squares.
-
-The hard maximum is 35 footnotes per page. Building a page with more than
-35 footnotes fails the build with a clear error message.
+reference and `[^name]: text` for the definition). References use ordinary
+superscript numbers, and definitions use the browser's standard ordered-list
+markers so the treatment works with every body font.
 
 The footnote section at the bottom of the page is a `<div class="footnotes">`
 containing a `<p class="title">Footnotes</p>` heading and an `<ol>` list.
-The default ordered-list markers are suppressed with `list-style: none` and
-each `<li>` begins with a `<span class="footnote-marker">` that holds the
-visible label. In-text references use `<a class="footnote-ref">`. Both the
-marker span and the in-text reference apply `font-feature-settings` with
-`ss06` enabled.
+Each definition retains its backlink and target highlight.
 
 
 ## Other extensions

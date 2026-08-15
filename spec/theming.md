@@ -26,3 +26,11 @@ Inside `.alert.warning` and `.alert.note` boxes the link color is overridden
 back to `--fg-color` (and the external link icon falls back to a foreground
 variant), since the alert backgrounds are already saturated and a blue link
 on top would be hard to read.
+
+## Contrast preference
+
+The page-bottom [contrast picker](contrast-picker.md) offers an explicit high
+contrast mode. It replaces the tint-sensitive neutral palette with achromatic
+primary and secondary foregrounds, backgrounds, translucent colors, shadows,
+and embedded neutral icons. Light mode uses black on white, and dark mode uses
+white on black. Theme accents, links, warnings, and notes are not changed.

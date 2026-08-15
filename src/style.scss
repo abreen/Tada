@@ -37,6 +37,32 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 200 900;
+  src: url('source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2')
+    format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: italic;
+  font-weight: 200 900;
+  src: url('source-serif-4/SourceSerif4-Italic-VariableFont_opsz,wght.woff2')
+    format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Libertinus Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: url('libertinus-mono/LibertinusMono-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+
 ::selection {
   color: var(--bg-color);
   background: var(--fg-color);
@@ -93,35 +119,14 @@ a.external:not(:has(.external-link-tail))::after {
   margin: 0;
 }
 
-.footnotes ol {
-  padding-left: 0;
-  list-style: none;
-}
-
 .footnotes li {
-  position: relative;
-  padding-left: 1.8em;
   margin-bottom: 8px;
 }
 
 a.footnote-ref {
   font-size: 0.8em;
-  font-weight: 600;
-  vertical-align: text-bottom;
-}
-
-.footnote-marker {
-  @include user-select(none);
-
-  position: absolute;
-  top: 0;
-  left: 0;
-  font-weight: 500;
-}
-
-a.footnote-ref,
-.footnote-marker {
-  font-feature-settings: 'ss06'; // squared numbers
+  vertical-align: super;
+  border-bottom: none;
 }
 
 .footnote-item {
@@ -131,10 +136,7 @@ a.footnote-ref,
   }
 }
 
-a.footnote-ref {
-  @include user-select(none);
-}
-
+a.footnote-ref,
 .footnotes .footnote-backref {
   display: inline-block;
 
@@ -416,7 +418,7 @@ a.breadcrumb {
     vertical-align: middle;
     content: '';
 
-    @include contained-mask(var(--icon-breadcrumb));
+    @include contained-mask(var(--icon-parent));
   }
 }
 

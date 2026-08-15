@@ -17,6 +17,7 @@
 body.code .toc ol li:has(a) {
   font-family: var(--mono-font);
   font-size: var(--mono-font-size);
+  font-feature-settings: var(--mono-font-feature-settings);
 }
 
 body.code .toc ol a {
@@ -30,6 +31,7 @@ body.code .toc ol a {
   font-family: var(--mono-font);
   font-size: var(--font-size-small);
   font-style: italic;
+  font-feature-settings: var(--mono-font-feature-settings);
   text-align: center;
   content: 'On this page';
 }
@@ -144,7 +146,7 @@ body.code .toc ol a {
 }
 
 .toc ol li.alert-item.note a::before {
-  @include contained-mask(var(--icon-note));
+  @include contained-mask(var(--icon-info));
 }
 
 .toc ol li.label {
