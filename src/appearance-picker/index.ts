@@ -15,11 +15,14 @@ function getStorage(window: Window): Storage | null {
 function getStoredPreference<T extends string>(
   storage: Storage | null,
   key: string,
-  storedValue: T,
+  storedValues: readonly T[],
   defaultValue: T,
 ): T {
   try {
-    return storage?.getItem(key) === storedValue ? storedValue : defaultValue;
+    const storedValue = storage?.getItem(key);
+    return storedValues.includes(storedValue as T)
+      ? (storedValue as T)
+      : defaultValue;
   } catch {
     return defaultValue;
   }
@@ -29,41 +32,69 @@ function saveStoredPreference<T extends string>(
   storage: Storage | null,
   key: string,
   preference: T,
-  storedValue: T,
+  defaultValue: T,
 ): void {
   try {
-    if (preference === storedValue) {
-      storage?.setItem(key, preference);
-    } else {
+    if (preference === defaultValue) {
       storage?.removeItem(key);
+    } else {
+      storage?.setItem(key, preference);
     }
   } catch {
     // Storage can be unavailable in privacy-restricted contexts.
   }
 }
 
-export function getFontPreference(storage: Storage | null): FontPreference {
-  return getStoredPreference(storage, FONT_STORAGE_KEY, 'serif', 'sans');
+export function getFontPreference(
+  storage: Storage | null,
+  defaultValue: FontPreference = 'sans',
+): FontPreference {
+  return getStoredPreference(
+    storage,
+    FONT_STORAGE_KEY,
+    ['sans', 'serif'],
+    defaultValue,
+  );
 }
 
 export function getContrastPreference(
   storage: Storage | null,
+  defaultValue: ContrastPreference = 'standard',
 ): ContrastPreference {
-  return getStoredPreference(storage, CONTRAST_STORAGE_KEY, 'high', 'standard');
+  return getStoredPreference(
+    storage,
+    CONTRAST_STORAGE_KEY,
+    ['standard', 'high'],
+    defaultValue,
+  );
 }
 
 export function saveFontPreference(
   storage: Storage | null,
   preference: FontPreference,
+  defaultValue: FontPreference = 'sans',
 ): void {
-  saveStoredPreference(storage, FONT_STORAGE_KEY, preference, 'serif');
+  saveStoredPreference(storage, FONT_STORAGE_KEY, preference, defaultValue);
 }
 
 export function saveContrastPreference(
   storage: Storage | null,
   preference: ContrastPreference,
+  defaultValue: ContrastPreference = 'standard',
 ): void {
-  saveStoredPreference(storage, CONTRAST_STORAGE_KEY, preference, 'high');
+  saveStoredPreference(storage, CONTRAST_STORAGE_KEY, preference, defaultValue);
+}
+
+function getDefaultFontPreference(document: Document): FontPreference {
+  return document.documentElement.dataset.defaultFontPreference === 'serif'
+    ? 'serif'
+    : 'sans';
+}
+
+function getDefaultContrastPreference(document: Document): ContrastPreference {
+  return document.documentElement.dataset.defaultContrastPreference === 'high'
+    ? 'high'
+    : 'standard';
 }
 
 export function applyFontPreference(
@@ -71,8 +102,10 @@ export function applyFontPreference(
   preference: FontPreference,
 ): void {
   if (preference === 'serif') {
-    document.documentElement.dataset.fontPreference = preference;
-  } else {
+    if (document.documentElement.dataset.fontPreference !== preference) {
+      document.documentElement.dataset.fontPreference = preference;
+    }
+  } else if (document.documentElement.dataset.fontPreference !== undefined) {
     delete document.documentElement.dataset.fontPreference;
   }
 }
@@ -82,8 +115,12 @@ export function applyContrastPreference(
   preference: ContrastPreference,
 ): void {
   if (preference === 'high') {
-    document.documentElement.dataset.contrastPreference = preference;
-  } else {
+    if (document.documentElement.dataset.contrastPreference !== preference) {
+      document.documentElement.dataset.contrastPreference = preference;
+    }
+  } else if (
+    document.documentElement.dataset.contrastPreference !== undefined
+  ) {
     delete document.documentElement.dataset.contrastPreference;
   }
 }
@@ -129,8 +166,13 @@ export default function mountAppearancePicker(window: Window): () => void {
     container.querySelectorAll<HTMLButtonElement>('button'),
   );
   const storage = getStorage(window);
-  let fontPreference = getFontPreference(storage);
-  let contrastPreference = getContrastPreference(storage);
+  const defaultFontPreference = getDefaultFontPreference(document);
+  const defaultContrastPreference = getDefaultContrastPreference(document);
+  let fontPreference = getFontPreference(storage, defaultFontPreference);
+  let contrastPreference = getContrastPreference(
+    storage,
+    defaultContrastPreference,
+  );
 
   applyFontPreference(document, fontPreference);
   applyContrastPreference(document, contrastPreference);
@@ -143,11 +185,15 @@ export default function mountAppearancePicker(window: Window): () => void {
 
     if (fontValue === 'sans' || fontValue === 'serif') {
       fontPreference = fontValue;
-      saveFontPreference(storage, fontPreference);
+      saveFontPreference(storage, fontPreference, defaultFontPreference);
       applyFontPreference(document, fontPreference);
     } else if (contrastValue === 'standard' || contrastValue === 'high') {
       contrastPreference = contrastValue;
-      saveContrastPreference(storage, contrastPreference);
+      saveContrastPreference(
+        storage,
+        contrastPreference,
+        defaultContrastPreference,
+      );
       applyContrastPreference(document, contrastPreference);
     } else {
       return;

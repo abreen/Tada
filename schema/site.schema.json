@@ -48,6 +48,16 @@
       "default": 700
     },
     "defaultTimeZone": { "type": "string" },
+    "defaultFont": {
+      "type": "string",
+      "enum": ["sans", "serif"],
+      "default": "sans"
+    },
+    "defaultContrast": {
+      "type": "string",
+      "enum": ["standard", "high"],
+      "default": "standard"
+    },
     "vars": { "type": "object" },
     "extensionToShikiLanguage": {
       "type": "object",

@@ -187,6 +187,8 @@ describe('createSiteConfig', () => {
       basePath: '/',
       internalDomains: ['example.edu'],
       defaultTimeZone: 'America/New_York',
+      defaultFont: 'sans',
+      defaultContrast: 'standard',
       features: { search: true, favicon: false, footer: true },
       extensionToShikiLanguage: { java: 'java', py: 'python' },
       shikiLanguages: ['java', 'python', 'html'],

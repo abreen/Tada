@@ -85,6 +85,8 @@ const siteVariables = {
   titlePostfix: ' - Course',
   themeColor: 'black',
   defaultTimeZone: 'America/New_York',
+  defaultFont: 'sans',
+  defaultContrast: 'standard',
   features: { search: true, favicon: true, footer: true },
   extensionToShikiLanguage: { ts: 'ts' },
 } as SiteVariables;
@@ -129,6 +131,7 @@ describe('preparePageTemplateHtml', () => {
       templateHtml,
       assetFiles: ['app.js', 'styles.css'],
       distDir: '/virtual/dist',
+      siteVariables,
     });
 
     expect(result).toContain('<link href="/styles.css" rel="stylesheet">');
@@ -144,10 +147,57 @@ describe('preparePageTemplateHtml', () => {
       templateHtml,
       assetFiles: [],
       distDir: '/virtual/dist',
+      siteVariables,
     });
 
     expect(result).toBe(templateHtml);
   });
+
+  test.each([
+    {
+      defaultFont: 'sans' as const,
+      expected: [
+        'inter/InterVariable.woff2',
+        'google-sans-code/GoogleSansCodeVariable.woff2',
+      ],
+      unexpected: [
+        'source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
+        'libertinus-mono/LibertinusMono-Regular.woff2',
+      ],
+    },
+    {
+      defaultFont: 'serif' as const,
+      expected: [
+        'source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
+        'libertinus-mono/LibertinusMono-Regular.woff2',
+      ],
+      unexpected: [
+        'inter/InterVariable.woff2',
+        'google-sans-code/GoogleSansCodeVariable.woff2',
+      ],
+    },
+  ])(
+    'preloads only the $defaultFont default font pair',
+    ({ defaultFont, expected, unexpected }) => {
+      for (const fontPath of [...expected, ...unexpected]) {
+        writeFile(path.join('/virtual/dist', fontPath), 'font');
+      }
+
+      const result = preparePageTemplateHtml({
+        templateHtml: '<html><head></head><body></body></html>',
+        assetFiles: [],
+        distDir: '/virtual/dist',
+        siteVariables: { ...siteVariables, defaultFont },
+      });
+
+      for (const fontPath of expected) {
+        expect(result).toContain(`rel="preload" href="/${fontPath}"`);
+      }
+      for (const fontPath of unexpected) {
+        expect(result).not.toContain(fontPath);
+      }
+    },
+  );
 });
 
 describe('renderCodePageAsset', () => {

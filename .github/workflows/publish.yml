@@ -252,9 +252,11 @@ jobs:
         --prod-base https://abreen.io
         --prod-base-path /Tada
 
-    - name: Add coverage vars to site config
+    - name: Customize production site config
       run: |
         yq --yaml-output --in-place --arg pct '${{ steps.coverage.outputs.percent }}' '
+          .defaultFont = "serif" |
+          .defaultContrast = "high" |
           .vars.testCoveragePercent = ($pct | tonumber) |
           .vars.testCoverageUrl = "/coverage/index.html"
         ' example/site.prod.yaml

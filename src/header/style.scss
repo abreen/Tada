@@ -50,9 +50,17 @@ header nav div > p {
   @include user-select(none);
 }
 
+:root[data-contrast-preference='high'] header:has(details[open]) {
+  background: var(--bg2-color);
+}
+
 @media (hover: hover) {
   header:has(details[open]):hover {
     background: var(--bg-color-translucent);
+  }
+
+  :root[data-contrast-preference='high'] header:hover {
+    background: var(--bg2-color);
   }
 }
 

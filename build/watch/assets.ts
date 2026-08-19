@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { bundle, getBundleNaming } from '../bundle';
-import { copyFonts } from '../generate-fonts';
+import { copyFonts, DEFAULT_FONT_PRELOAD_FILES } from '../generate-fonts';
 import { copyKatexAssets } from '../generate-katex-assets';
 import { generateFavicons } from '../generate-favicon';
 import { generateWebAppManifest } from '../generate-web-app-manifest';
@@ -72,8 +72,8 @@ export function copyExistingBuildAssets(
 ): void {
   const relPaths = [
     ...assetFiles,
-    'inter/InterVariable.woff2',
-    'google-sans-code/GoogleSansCodeVariable.woff2',
+    ...DEFAULT_FONT_PRELOAD_FILES.sans,
+    ...DEFAULT_FONT_PRELOAD_FILES.serif,
   ];
 
   for (const relPath of relPaths) {

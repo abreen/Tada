@@ -75,8 +75,10 @@
 }
 
 .font-picker-option-sans {
-  font-family: var(--sans-font);
-  font-feature-settings: var(--sans-font-feature-settings);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  font-feature-settings: normal;
 }
 
 .font-picker-option-serif {
@@ -84,6 +86,15 @@
   // preview on a default sans page.
   font-family: var(--serif-preview-font);
   font-feature-settings: var(--serif-font-feature-settings);
+}
+
+:root:not([data-font-preference='serif']) .font-picker-option-sans {
+  font-family: var(--sans-font);
+  font-feature-settings: var(--sans-font-feature-settings);
+}
+
+:root[data-font-preference='serif'] .font-picker-option-serif {
+  font-family: var(--serif-font);
 }
 
 .material-symbol-icon {

@@ -6,6 +6,8 @@ Sites are visually customized through a few config values:
   primary accent color. Light and dark mode variants are automatically derived.
 - **tintHue** and **tintAmount**: control a subtle background color tint
   applied across the site (hue in degrees, amount as a percentage).
+- **defaultContrast**: selects standard or high contrast before the page is
+  rendered; visitors can override it with the appearance picker.
 - **symbol**: short text displayed in the site logo area.
 
 Theme values are compiled into CSS variables at build time and applied
@@ -34,3 +36,5 @@ contrast mode. It replaces the tint-sensitive neutral palette with achromatic
 primary and secondary foregrounds, backgrounds, translucent colors, shadows,
 and embedded neutral icons. Light mode uses black on white, and dark mode uses
 white on black. Theme accents, links, warnings, and notes are not changed.
+Sites can make this the build-time default with `defaultContrast: high` without
+changing the palette or picker behavior.

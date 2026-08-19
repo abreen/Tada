@@ -23,6 +23,7 @@ __pycache__/
 /playwright-report/
 /playwright/.cache/
 /playwright/.test-site/
+/playwright/.appearance-defaults-site/
 
 # Logs
 logs

@@ -78,6 +78,8 @@ export function createSiteConfig({
     basePath,
     internalDomains,
     defaultTimeZone,
+    defaultFont: 'sans',
+    defaultContrast: 'standard',
     extensionToShikiLanguage,
     shikiLanguages,
     themeColor,

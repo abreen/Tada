@@ -3,7 +3,7 @@ import threading
 
 import pytest
 import websocket
-from conftest import run_tada
+from conftest import init_site, run_tada, set_site_config
 from watch_helpers import WEBSOCKET_TIMEOUT_SEC, WatchProcess
 
 WATCH_RELOAD_PATH = '/__tada_watch'
@@ -53,6 +53,29 @@ class TestWatchEditContent:
         html_file.write_text('---\ntitle: Test HTML\n---\n\n<p>Edited</p>\n')
         watch.wait_for_rebuild(dist_html, 'modified', before_mtime=before_mtime)
         assert 'Edited' in dist_html.read_text()
+
+    def test_serif_preloads_survive_incremental_rebuild(self, tmp_path):
+        site_dir = init_site(tmp_path, bare=True)
+        set_site_config(site_dir, {'defaultFont': 'serif'})
+        wp = WatchProcess(site_dir)
+        try:
+            wp.wait_for_initial_build()
+            index_md = site_dir / 'content' / 'index.md'
+            index_html = site_dir / 'dist' / 'index.html'
+            font_href = 'href="/source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2"'
+            assert font_href in index_html.read_text()
+
+            before_mtime = index_html.stat().st_mtime
+            index_md.write_text(index_md.read_text() + '\n\nUpdated.\n')
+            wp.wait_for_rebuild(
+                index_html,
+                'modified',
+                before_mtime=before_mtime,
+            )
+
+            assert font_href in index_html.read_text()
+        finally:
+            wp.stop()
 
     def test_atomic_save_on_markdown_triggers_rebuild(self, watch, site_dir):
         index_md = site_dir / 'content' / 'index.md'

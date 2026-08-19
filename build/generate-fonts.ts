@@ -6,6 +6,23 @@ import { makeLogger } from './log';
 const log = makeLogger(import.meta.url);
 const FONTS_DIR = path.join(getPackageDir(), 'fonts');
 
+export const DEFAULT_FONT_PRELOAD_FILES = {
+  sans: [
+    'inter/InterVariable.woff2',
+    'google-sans-code/GoogleSansCodeVariable.woff2',
+  ],
+  serif: [
+    'source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
+    'libertinus-mono/LibertinusMono-Regular.woff2',
+  ],
+} as const;
+
+export function getDefaultFontPreloadFiles(
+  defaultFont: 'sans' | 'serif' | undefined,
+): readonly string[] {
+  return DEFAULT_FONT_PRELOAD_FILES[defaultFont ?? 'sans'];
+}
+
 export function copyFonts(distDir: string): void {
   log.info`Copying fonts`;
 

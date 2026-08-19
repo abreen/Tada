@@ -67,6 +67,46 @@ describe('validateShikiLanguages', () => {
 });
 
 describe('site config schema', () => {
+  test('accepts configurable appearance defaults', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+          defaultFont: 'serif',
+          defaultContrast: 'high',
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
+  test.each([
+    ['defaultFont', 'comic'],
+    ['defaultContrast', 'low'],
+  ])('rejects unsupported %s values', (key, value) => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+          [key]: value,
+        },
+        'site.dev.json',
+      ),
+    ).toThrow(`/${key}: must be equal to one of the allowed values`);
+  });
+
   test('rejects legacy codeLanguages', () => {
     const validator = compile(siteSchema);
 

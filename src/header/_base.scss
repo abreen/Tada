@@ -16,6 +16,10 @@ header {
   view-transition-name: site-header;
 }
 
+:root[data-contrast-preference='high'] header {
+  background: var(--bg-color);
+}
+
 header details summary {
   position: relative;
   display: flex;

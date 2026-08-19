@@ -6,10 +6,18 @@ export default defineConfig({
   retries: 0,
   use: { baseURL: 'http://localhost:8081', headless: true },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
-  webServer: {
-    command: 'bun run playwright/serve-test-site.ts',
-    url: 'http://localhost:8081/index.html',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: 'bun run playwright/serve-test-site.ts',
+      url: 'http://localhost:8081/index.html',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    {
+      command: 'bun run playwright/serve-appearance-defaults-site.ts',
+      url: 'http://localhost:8082/index.html',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+  ],
 });

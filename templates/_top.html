@@ -1,5 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en"
+      data-default-font-preference="<%= site.defaultFont %>"
+      data-default-contrast-preference="<%= site.defaultContrast %>"<% if (site.defaultFont === 'serif') { %>
+      data-font-preference="serif"<% } %><% if (site.defaultContrast === 'high') { %>
+      data-contrast-preference="high"<% } %>>
   <head>
     <% if (site.features.favicon) { %>
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -36,13 +40,33 @@
     <script>
       document.documentElement.classList.add('js');
       try {
-        if (window.localStorage.getItem('fontPreference') === 'serif') {
-          document.documentElement.dataset.fontPreference = 'serif';
+        const preference = window.localStorage.getItem('fontPreference');
+        const configured =
+          document.documentElement.dataset.defaultFontPreference;
+        if (
+          (preference === 'serif' || preference === 'sans') &&
+          preference !== configured
+        ) {
+          if (preference === 'serif') {
+            document.documentElement.dataset.fontPreference = 'serif';
+          } else {
+            delete document.documentElement.dataset.fontPreference;
+          }
         }
       } catch {}
       try {
-        if (window.localStorage.getItem('contrastPreference') === 'high') {
-          document.documentElement.dataset.contrastPreference = 'high';
+        const preference = window.localStorage.getItem('contrastPreference');
+        const configured =
+          document.documentElement.dataset.defaultContrastPreference;
+        if (
+          (preference === 'high' || preference === 'standard') &&
+          preference !== configured
+        ) {
+          if (preference === 'high') {
+            document.documentElement.dataset.contrastPreference = 'high';
+          } else {
+            delete document.documentElement.dataset.contrastPreference;
+          }
         }
       } catch {}
     </script>

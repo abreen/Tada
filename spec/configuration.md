@@ -42,6 +42,9 @@ error because the source of truth would be ambiguous.
 - `nav.yaml`
 - `authors.yaml` (when `--bare` is not specified)
 
+Generated development and production site configs explicitly include
+`defaultFont: sans` and `defaultContrast: standard`.
+
 ## Required fields
 
 - **base**: full URL without trailing slash (e.g., `https://example.edu`)
@@ -59,6 +62,9 @@ error because the source of truth would be ambiguous.
 - **titlePostfix**: appended to page titles in `<title>` (derived from title)
 - **tintHue**: background tint hue, 0 to 360 degrees (default: 20)
 - **tintAmount**: background tint intensity, 0 to 100% (default: 100)
+- **defaultFont**: initial typography, `sans` or `serif` (default: `sans`)
+- **defaultContrast**: initial neutral-palette contrast, `standard` or `high`
+  (default: `standard`)
 - **internalDomains**: list of domains treated as internal for link styling
 - **extensionToShikiLanguage**: optional map from source-file extensions to the
   Shiki language used for generated code pages

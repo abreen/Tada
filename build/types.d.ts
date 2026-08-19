@@ -16,6 +16,8 @@ export interface SiteVariables {
   faviconFontWeight?: number;
   internalDomains?: string[];
   defaultTimeZone: string;
+  defaultFont?: 'sans' | 'serif';
+  defaultContrast?: 'standard' | 'high';
   features: FeatureConfig;
   extensionToShikiLanguage?: Record<
     string,

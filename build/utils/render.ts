@@ -7,6 +7,7 @@ import { makeLogger } from '../log';
 import { B } from '../colors';
 import createTemplateGlobals from '../template-globals';
 import { getExtensionToShikiLanguage } from '../site-variables';
+import { getDefaultFontPreloadFiles } from '../generate-fonts';
 import { config } from '../templates';
 import { render } from '../templates';
 import {
@@ -157,6 +158,7 @@ export function injectAssetTags(
   html: string,
   assetFiles: string[],
   distDir: string,
+  siteVariables: SiteVariables,
 ): string {
   const jsAssets = assetFiles.filter(f => f.endsWith('.js'));
   const cssAssets = assetFiles.filter(f => f.endsWith('.css'));
@@ -182,10 +184,7 @@ export function injectAssetTags(
     )
     .join('');
 
-  const fontPreloadTags = [
-    'inter/InterVariable.woff2',
-    'google-sans-code/GoogleSansCodeVariable.woff2',
-  ]
+  const fontPreloadTags = getDefaultFontPreloadFiles(siteVariables.defaultFont)
     .filter(f => fs.existsSync(path.join(distDir, f)))
     .map(
       f =>
@@ -210,12 +209,14 @@ export function preparePageTemplateHtml({
   templateHtml,
   assetFiles,
   distDir,
+  siteVariables,
 }: {
   templateHtml: string;
   assetFiles: string[];
   distDir: string;
+  siteVariables: SiteVariables;
 }): string {
-  let html = injectAssetTags(templateHtml, assetFiles, distDir);
+  let html = injectAssetTags(templateHtml, assetFiles, distDir, siteVariables);
   if (templateHtml.includes('class="katex"')) {
     html = injectKatexStylesheet(html);
   }
@@ -289,7 +290,12 @@ export function renderPlainTextPageAsset({
   ) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: preparePageTemplateHtml({ templateHtml, assetFiles, distDir }),
+    html: preparePageTemplateHtml({
+      templateHtml,
+      assetFiles,
+      distDir,
+      siteVariables,
+    }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,
@@ -362,7 +368,12 @@ export function renderCodePageAsset({
   const templateHtml = render('code.html', templateParameters) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: preparePageTemplateHtml({ templateHtml, assetFiles, distDir }),
+    html: preparePageTemplateHtml({
+      templateHtml,
+      assetFiles,
+      distDir,
+      siteVariables,
+    }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,
@@ -700,7 +711,12 @@ export function renderLiterateJavaPageAsset({
   const templateHtml = render('literate.html', templateParameters) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: preparePageTemplateHtml({ templateHtml, assetFiles, distDir }),
+    html: preparePageTemplateHtml({
+      templateHtml,
+      assetFiles,
+      distDir,
+      siteVariables,
+    }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,

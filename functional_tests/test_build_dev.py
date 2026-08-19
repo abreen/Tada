@@ -1,5 +1,5 @@
 import pytest
-from conftest import run_tada
+from conftest import run_tada, set_site_config
 
 
 class TestDevBuild:
@@ -59,6 +59,46 @@ class TestDevBuild:
         index = built_dev_site / 'dist' / 'index.html'
         html = index.read_text()
         assert '<title>' in html
+
+    def test_uses_generated_sans_and_standard_appearance_defaults(self, built_dev_site):
+        config = (built_dev_site / 'site.dev.yaml').read_text()
+        html = (built_dev_site / 'dist' / 'index.html').read_text()
+        opening_tag = '<html' + html.split('<html', 1)[1].split('>', 1)[0]
+
+        assert 'defaultFont: sans' in config
+        assert 'defaultContrast: standard' in config
+        assert 'data-default-font-preference="sans"' in opening_tag
+        assert 'data-default-contrast-preference="standard"' in opening_tag
+        assert ' data-font-preference=' not in opening_tag
+        assert ' data-contrast-preference=' not in opening_tag
+
+    def test_builds_configured_appearance_defaults_and_preloads_their_fonts(self, site_dir):
+        set_site_config(
+            site_dir,
+            {'defaultFont': 'serif', 'defaultContrast': 'high'},
+        )
+
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, f'dev build failed: {result.stderr}'
+
+        html = (site_dir / 'dist' / 'index.html').read_text()
+        opening_tag = '<html' + html.split('<html', 1)[1].split('>', 1)[0]
+        assert 'data-default-font-preference="serif"' in opening_tag
+        assert 'data-default-contrast-preference="high"' in opening_tag
+        assert 'data-font-preference="serif"' in opening_tag
+        assert 'data-contrast-preference="high"' in opening_tag
+        assert 'href="/source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2"' in html
+        assert 'href="/libertinus-mono/LibertinusMono-Regular.woff2"' in html
+        assert 'rel="preload" href="/inter/InterVariable.woff2"' not in html
+        assert 'rel="preload" href="/google-sans-code/GoogleSansCodeVariable.woff2"' not in html
+        assert (
+            'data-font-preference-value="serif" aria-label="Use serif fonts" '
+            'aria-pressed="true" disabled'
+        ) in html
+        assert (
+            'data-contrast-preference-value="high" aria-label="Use high contrast" '
+            'aria-pressed="true" disabled'
+        ) in html
 
 
 class TestDevBuildDefaultContent:

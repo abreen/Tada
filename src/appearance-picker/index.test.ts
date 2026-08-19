@@ -9,18 +9,26 @@ import mount, {
   saveFontPreference,
 } from './index';
 
-function createPickers() {
+function createPickers(
+  defaultFont: 'sans' | 'serif' = 'sans',
+  defaultContrast: 'standard' | 'high' = 'standard',
+) {
+  const effectiveFont =
+    defaultFont === 'serif' ? ' data-font-preference="serif"' : '';
+  const effectiveContrast =
+    defaultContrast === 'high' ? ' data-contrast-preference="high"' : '';
   const dom = new JSDOM(
-    `<div class="appearance-pickers">
+    `<html data-default-font-preference="${defaultFont}" data-default-contrast-preference="${defaultContrast}"${effectiveFont}${effectiveContrast}>
+    <body><div class="appearance-pickers">
       <div class="font-picker" role="group" aria-label="Font style">
-        <button type="button" data-font-preference-value="sans" aria-pressed="true" disabled>Sans</button>
-        <button type="button" data-font-preference-value="serif" aria-pressed="false" disabled>Serif</button>
+        <button type="button" data-font-preference-value="sans" aria-pressed="${defaultFont === 'sans'}" disabled>Sans</button>
+        <button type="button" data-font-preference-value="serif" aria-pressed="${defaultFont === 'serif'}" disabled>Serif</button>
       </div>
       <div class="contrast-picker" role="group" aria-label="Contrast">
-        <button type="button" data-contrast-preference-value="standard" aria-pressed="true" disabled>Standard</button>
-        <button type="button" data-contrast-preference-value="high" aria-pressed="false" disabled>High</button>
+        <button type="button" data-contrast-preference-value="standard" aria-pressed="${defaultContrast === 'standard'}" disabled>Standard</button>
+        <button type="button" data-contrast-preference-value="high" aria-pressed="${defaultContrast === 'high'}" disabled>High</button>
       </div>
-    </div>`,
+    </div></body></html>`,
     { url: 'https://example.com/' },
   );
   return dom.window;
@@ -79,6 +87,57 @@ describe('appearance picker', () => {
     ).toBe('true');
   });
 
+  test('uses configured defaults and persists only opposite overrides', () => {
+    const window = createPickers('serif', 'high');
+    mount(window);
+
+    expect(window.document.documentElement.dataset.fontPreference).toBe(
+      'serif',
+    );
+    expect(window.document.documentElement.dataset.contrastPreference).toBe(
+      'high',
+    );
+
+    window.document
+      .querySelector<HTMLButtonElement>('[data-font-preference-value="sans"]')!
+      .click();
+    window.document
+      .querySelector<HTMLButtonElement>(
+        '[data-contrast-preference-value="standard"]',
+      )!
+      .click();
+
+    expect(window.localStorage.getItem('fontPreference')).toBe('sans');
+    expect(window.localStorage.getItem('contrastPreference')).toBe('standard');
+    expect(
+      window.document.documentElement.dataset.fontPreference,
+    ).toBeUndefined();
+    expect(
+      window.document.documentElement.dataset.contrastPreference,
+    ).toBeUndefined();
+
+    window.document
+      .querySelector<HTMLButtonElement>('[data-font-preference-value="serif"]')!
+      .click();
+    window.document
+      .querySelector<HTMLButtonElement>(
+        '[data-contrast-preference-value="high"]',
+      )!
+      .click();
+
+    expect(window.localStorage.getItem('fontPreference')).toBeNull();
+    expect(window.localStorage.getItem('contrastPreference')).toBeNull();
+  });
+
+  test('falls back to configured defaults for invalid stored values', () => {
+    const window = createPickers('serif', 'high');
+    window.localStorage.setItem('fontPreference', 'invalid');
+    window.localStorage.setItem('contrastPreference', 'invalid');
+
+    expect(getFontPreference(window.localStorage, 'serif')).toBe('serif');
+    expect(getContrastPreference(window.localStorage, 'high')).toBe('high');
+  });
+
   test('persists non-defaults and clears each default independently', () => {
     const window = createPickers();
     mount(window);
@@ -129,10 +188,12 @@ describe('appearance picker', () => {
     } as unknown as Storage;
     const document = createPickers().document;
 
-    expect(getFontPreference(storage)).toBe('sans');
-    expect(getContrastPreference(storage)).toBe('standard');
-    expect(() => saveFontPreference(storage, 'serif')).not.toThrow();
-    expect(() => saveContrastPreference(storage, 'high')).not.toThrow();
+    expect(getFontPreference(storage, 'serif')).toBe('serif');
+    expect(getContrastPreference(storage, 'high')).toBe('high');
+    expect(() => saveFontPreference(storage, 'sans', 'serif')).not.toThrow();
+    expect(() =>
+      saveContrastPreference(storage, 'standard', 'high'),
+    ).not.toThrow();
     expect(() => applyFontPreference(document, 'serif')).not.toThrow();
     expect(() => applyContrastPreference(document, 'high')).not.toThrow();
     expect(document.documentElement.dataset.fontPreference).toBe('serif');

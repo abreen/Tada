@@ -219,6 +219,8 @@ titlePostfix: " - CS 0"
 symbol: CS 0
 themeColor: hsl(351 70% 40%)
 tintAmount: 0
+defaultFont: serif
+defaultContrast: high
 features:
   search: true
   favicon: true
@@ -245,6 +247,8 @@ vars:
 | `themeColor` | Theme color for the site (e.g., `"tomato"`, `"#c04040"`, `"hsl(195 70% 40%)"`) |
 | `tintHue` | *Optional*, hue (0-360) for background and foreground tinting (default `20`) |
 | `tintAmount` | *Optional*, percentage (0-100) of tint to apply (default `100`) |
+| `defaultFont` | *Optional*, initial font pairing: `sans` or `serif` (default `sans`) |
+| `defaultContrast` | *Optional*, initial neutral-palette contrast: `standard` or `high` (default `standard`) |
 | `faviconSymbol` | *Optional*, the text to use instead of `symbol` in the favicon |
 | `features.search` | Enable search UI and Pagefind index generation |
 | `features.favicon` | Enable automatically generated favicons |

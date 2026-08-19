@@ -21,5 +21,7 @@ and Markdown fence highlighting remain opt-in.
 
 The generated config files include `site.dev.yaml` (pointing at localhost) and
 `site.prod.yaml` (using the provided production URL). Internal domains are
-automatically extracted from the production base URL. Starter nav and author
-data files are also generated as YAML by default.
+automatically extracted from the production base URL. Both site configs
+explicitly include `defaultFont: sans` and `defaultContrast: standard` so their
+initial appearance is easy to discover and change. Starter nav and author data
+files are also generated as YAML by default.

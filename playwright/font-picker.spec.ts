@@ -83,6 +83,141 @@ test.describe('font picker without JavaScript', () => {
   });
 });
 
+test.describe('configured appearance defaults', () => {
+  test('renders serif and high contrast without JavaScript', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.goto('http://localhost:8082/index.html');
+
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-default-font-preference',
+      'serif',
+    );
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-default-contrast-preference',
+      'high',
+    );
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-font-preference',
+      'serif',
+    );
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+    await expect(
+      page.getByRole('button', { name: 'Use serif fonts' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      page.getByRole('button', { name: 'Use high contrast' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    const buttons = page.locator('.appearance-pickers button');
+    await expect(buttons).toHaveCount(4);
+    for (let index = 0; index < 4; index += 1) {
+      await expect(buttons.nth(index)).toBeDisabled();
+    }
+
+    await context.close();
+  });
+
+  test('requests only the configured default font pairing', async ({
+    page,
+  }) => {
+    const fontRequests: string[] = [];
+    page.on('request', request => {
+      const pathname = decodeURIComponent(new URL(request.url()).pathname);
+      if (pathname.endsWith('.woff2')) {
+        fontRequests.push(pathname);
+      }
+    });
+
+    await page.goto('http://localhost:8082/index.html');
+    await page.waitForLoadState('networkidle');
+
+    expect(fontRequests).toContain(
+      '/source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
+    );
+    expect(fontRequests).toContain(
+      '/libertinus-mono/LibertinusMono-Regular.woff2',
+    );
+    expect(fontRequests).not.toContain('/inter/InterVariable.woff2');
+    expect(fontRequests).not.toContain(
+      '/google-sans-code/GoogleSansCodeVariable.woff2',
+    );
+  });
+
+  test('persists opposite overrides and clears configured defaults', async ({
+    page,
+  }) => {
+    await page.goto('http://localhost:8082/index.html');
+    await page.getByRole('button', { name: 'Use sans-serif fonts' }).click();
+    await page.getByRole('button', { name: 'Use standard contrast' }).click();
+
+    expect(
+      await page.evaluate(() => localStorage.getItem('fontPreference')),
+    ).toBe('sans');
+    expect(
+      await page.evaluate(() => localStorage.getItem('contrastPreference')),
+    ).toBe('standard');
+
+    await page.reload();
+    await expect(page.locator('html')).not.toHaveAttribute(
+      'data-font-preference',
+      'serif',
+    );
+    await expect(page.locator('html')).not.toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+    await expect(
+      page.getByRole('button', { name: 'Use sans-serif fonts' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      page.getByRole('button', { name: 'Use standard contrast' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    await page.getByRole('link', { name: 'Next page' }).click();
+    await expect(page).toHaveURL('http://localhost:8082/next.html');
+    await expect(
+      page.getByRole('button', { name: 'Use sans-serif fonts' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      page.getByRole('button', { name: 'Use standard contrast' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    await page.getByRole('button', { name: 'Use serif fonts' }).click();
+    await page.getByRole('button', { name: 'Use high contrast' }).click();
+    expect(
+      await page.evaluate(() => localStorage.getItem('fontPreference')),
+    ).toBeNull();
+    expect(
+      await page.evaluate(() => localStorage.getItem('contrastPreference')),
+    ).toBeNull();
+  });
+
+  test('applies stored opposite overrides before component mounting', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('fontPreference', 'sans');
+      localStorage.setItem('contrastPreference', 'standard');
+    });
+
+    await page.goto('http://localhost:8082/index.html');
+
+    await expect(page.locator('html')).not.toHaveAttribute(
+      'data-font-preference',
+      'serif',
+    );
+    await expect(page.locator('html')).not.toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+  });
+});
+
 test.describe('appearance pickers', () => {
   test('switches system stacks and exposes the selected option', async ({
     page,

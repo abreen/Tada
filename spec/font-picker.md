@@ -5,29 +5,32 @@ optional Tada attribution footer. The row also includes the
 [contrast picker](contrast-picker.md). The two `Aa` buttons select between
 sans-serif and serif typography for both prose and monospaced text.
 
-Sans-serif is the default. It uses Inter for body text and headings and Google
-Sans Code for monospaced text. Serif mode uses this bundled pairing:
+Sans-serif is the default when `defaultFont` is omitted from the site config.
+Authors can set `defaultFont: serif` to build every page with serif typography
+already active. Sans mode uses Inter for body text and headings and Google Sans
+Code for monospaced text. Serif mode uses this bundled pairing:
 
 - body text and headings: Source Serif 4, then Times New Roman, Times, serif
 - monospaced text: Libertinus Mono, then Courier New, Courier, monospace
 
-The serif button uses the system serif fallback for its preview so mounting the
-picker in the default sans mode does not request Source Serif 4.
+The inactive font button uses its system fallback for its preview, so rendering
+the picker does not request the alternate bundled family.
 
 Serif mode uses the same base `1rem` size and `1.7` line height as sans mode.
 Source Serif 4 uses its automatic optical-size axis.
 
-The serif faces use `font-display: swap` and are not preloaded. On a first-time
-sans visit, the browser does not request them. Selecting serif—or restoring a
-stored serif preference—requests only the normal, italic, and monospaced faces
-needed by the page, with the system fallbacks keeping content visible while
-they load.
+All faces use `font-display: swap`. A build preloads only its configured default
+pair: Inter and Google Sans Code for sans, or Source Serif 4 and Libertinus Mono
+for serif. The alternate pair remains demand-loaded when a visitor switches,
+with system fallbacks keeping content visible while it loads.
 
-The buttons expose their state with `aria-pressed`. Selecting serif sets
-`data-font-preference="serif"` on the root `<html>` element and stores
-`fontPreference=serif` in local storage. Selecting sans-serif removes both the
-attribute and the stored value. An inline script restores serif mode in the
-document head so the stored preference applies before the page is painted.
+The buttons expose their state with `aria-pressed`. The root `<html>` records
+the configured choice in `data-default-font-preference`; effective serif mode
+uses `data-font-preference="serif"`. A visitor selection that differs from the
+configured default is stored as `fontPreference=sans` or
+`fontPreference=serif`. Choosing the configured default removes the key. A
+guarded inline script applies a valid override before paint; without one, it
+leaves the build-rendered state untouched.
 Each rounded group follows the trace-control styling: a padded secondary
 background without an outer border and one neutral, button-shaped knob that
 slides between two options separated by the trace controls' standard half-rem
@@ -45,8 +48,8 @@ The appearance row is rendered at build time so it occupies its final layout
 position as soon as the HTML is parsed. All four buttons are initially disabled
 and the component enables and synchronizes them when it mounts. With JavaScript
 disabled the row remains visible but inert, and the complete page uses the
-default sans-serif typography. The row is excluded from Pagefind indexing and
-printed output.
+configured typography. The row is excluded from Pagefind indexing and printed
+output.
 
 The font stacks and their OpenType feature settings are separate CSS custom
 properties. Inter retains its existing feature settings, while the system serif

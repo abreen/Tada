@@ -27,6 +27,8 @@ class TestInitDefault:
         config = load_structured_file(config_path)
         assert config['base'] == 'http://localhost:8080'
         assert config['basePath'] == '/'
+        assert config['defaultFont'] == 'sans'
+        assert config['defaultContrast'] == 'standard'
         assert 'title' in config
 
     def test_creates_prod_config(self, site_dir):
@@ -35,6 +37,8 @@ class TestInitDefault:
         config = load_structured_file(config_path)
         assert 'base' in config
         assert 'basePath' in config
+        assert config['defaultFont'] == 'sans'
+        assert config['defaultContrast'] == 'standard'
 
     def test_creates_nav_json(self, site_dir):
         nav_path = site_dir / NAV_CONFIG_FILE
