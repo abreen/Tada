@@ -59,6 +59,14 @@ test.describe('timezone chooser', () => {
     // The time text should have changed
     const newText = await timeEl.textContent();
     expect(newText).not.toBe(originalText);
+    expect(await timeEl.evaluate(element => element.innerHTML)).toMatch(
+      /^\d{1,2}:\d{2} <span class="small-caps">PM<\/span> <span class="small-caps">UTC<\/span>$/,
+    );
+    expect(
+      await timeEl.evaluate(
+        element => getComputedStyle(element).textDecorationLine,
+      ),
+    ).toBe('none');
   });
 
   test('stored timezone, synced choosers, reset, and day suffixes work', async ({
@@ -99,6 +107,9 @@ test.describe('timezone chooser', () => {
     await expect(page.locator('time[datetime="01:30"]')).not.toContainText(
       'prev. day',
     );
+    await expect(
+      page.locator('time[datetime="01:30"] .small-caps'),
+    ).toHaveCount(1);
     expect(
       await page.evaluate(() => localStorage.getItem('timezoneSelection')),
     ).toBeNull();
@@ -123,6 +134,33 @@ test.describe('timezone chooser', () => {
     await expect(
       page.locator('time[datetime="23:30"] .next-prev-day'),
     ).toContainText('next day');
+  });
+
+  test('timezone period and abbreviation are compact across a range', async ({
+    page,
+  }) => {
+    await page.goto('/timezones.html');
+
+    const select = page.locator('select.time-zone').first();
+    const rangeStart = page.locator('time[datetime="12:45"]');
+    const rangeEnd = page.locator('time[datetime="13:45"]');
+
+    await select.selectOption('America/Mexico_City');
+
+    await expect(rangeStart).toHaveText('10:45');
+    await expect(rangeStart.locator('.small-caps')).toHaveCount(0);
+    expect(await rangeEnd.evaluate(element => element.innerHTML)).toBe(
+      '11:45 <span class="small-caps">AM</span> <span class="small-caps">CST</span>',
+    );
+
+    await select.selectOption('America/Chicago');
+
+    expect(await rangeStart.evaluate(element => element.innerHTML)).toBe(
+      '11:45 <span class="small-caps">AM</span>',
+    );
+    expect(await rangeEnd.evaluate(element => element.innerHTML)).toBe(
+      '12:45 <span class="small-caps">PM</span> <span class="small-caps">CT</span>',
+    );
   });
 
   test('changing timezone updates time text after SPA navigation', async ({

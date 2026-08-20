@@ -241,6 +241,8 @@ Next-day meeting: <time datetime="23:30">11:30 PM</time>
 Plain same-period meeting: <time datetime="17:40">5:40</time>
 
 Plain period-changing meeting: <time datetime="11:30">11:30</time>
+
+Time range: <time datetime="12:45">12:45</time>--<time datetime="13:45">1:45 PM</time>
 `,
 );
 

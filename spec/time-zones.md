@@ -19,6 +19,11 @@ the necessary glyphs retains ordinary capitals rather than showing scaled-down
 counterfeits. The chooser select is explicitly labeled for assistive
 technology, and the reset button is removed from keyboard and screen-reader
 access whenever the current selection already matches the site's default time
-zone.
+zone. Converted times that display an AM/PM period show the selected time-zone
+abbreviation inline after that period and before any next-day or previous-day
+note. A time range shows the abbreviation only after its final endpoint. Its
+first endpoint keeps the period compact when both converted endpoints share
+one, but displays the period when the converted range crosses noon or midnight.
+Each time's title retains the original time and default-zone abbreviation.
 
 If JavaScript is disabled, times are displayed in the site's default time zone.

@@ -1,9 +1,3 @@
-time[datetime] {
-  &.is-modified {
-    text-decoration: var(--fg2-color) underline dotted;
-  }
-}
-
 span.next-prev-day {
   font-style: italic;
   color: var(--fg2-color);

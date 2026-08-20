@@ -23,6 +23,23 @@ function parseHHMM(hhmm: string) {
   return Number(h) * 60 + Number(m);
 }
 
+function getRangeEnd(el: HTMLTimeElement): HTMLTimeElement | null {
+  const separator = el.nextSibling;
+  const candidate = separator?.nextSibling;
+  if (
+    separator?.nodeType !== 3 ||
+    !/^\s*(?:--|–|—)\s*$/.test(separator.textContent ?? '') ||
+    candidate?.nodeType !== 1
+  ) {
+    return null;
+  }
+
+  const end = candidate as HTMLElement;
+  return end.tagName === 'TIME' && end.hasAttribute('datetime')
+    ? (end as HTMLTimeElement)
+    : null;
+}
+
 // Compute UTC offset (in minutes) for a time zone at given date (DST-aware)
 function getOffsetMinutes(tz: string, date: Date): number {
   const dtf = new Intl.DateTimeFormat('en-US', {
@@ -173,11 +190,33 @@ export default (window: Window) => {
       const originalStyle = periodStyles.get(el) ?? null;
       const originalIsPm = Math.floor(baseMinutes / 60) >= 12;
       const periodChanged = originalIsPm !== h >= 12 || dayShift !== 0;
-      const style =
+      let style =
         originalStyle === null && periodChanged
           ? pagePeriodStyle
           : originalStyle;
-      el.innerHTML = to12HourMarkup(h, m, style) + suffix;
+
+      const rangeEnd = getRangeEnd(el);
+      const rangeEndDatetime = rangeEnd?.getAttribute('datetime');
+      const rangeEndMinutes = rangeEndDatetime
+        ? parseHHMM(rangeEndDatetime)
+        : NaN;
+      if (
+        originalStyle === null &&
+        rangeEnd !== null &&
+        !isNaN(rangeEndMinutes)
+      ) {
+        const [rangeEndHour] = normalizeHM(rangeEndMinutes + deltaMinutes);
+        style =
+          h >= 12 === rangeEndHour >= 12
+            ? null
+            : (periodStyles.get(rangeEnd) ?? pagePeriodStyle);
+      }
+
+      const timeZone =
+        isDefault || style === null || rangeEnd !== null
+          ? ''
+          : ` <span class="small-caps">${target.abbreviation}</span>`;
+      el.innerHTML = to12HourMarkup(h, m, style) + timeZone + suffix;
 
       if (isDefault) {
         el.classList.remove('is-modified');
