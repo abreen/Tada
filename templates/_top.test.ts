@@ -1,12 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import fs from 'fs';
-import path from 'path';
 import _ from 'lodash';
-
-const TOP_TEMPLATE = fs.readFileSync(
-  path.join(import.meta.dir, '_top.html'),
-  'utf-8',
-);
+import TOP_TEMPLATE from './_top.html' with { type: 'text' };
 
 function renderTop(
   defaultFont: 'sans' | 'serif',

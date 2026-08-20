@@ -1,14 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import fs from 'fs';
-import path from 'path';
 import _ from 'lodash';
 import { encodeAuthoredUrl } from '../build/template-globals';
-
-function readTemplateForTest(fileName: string): string {
-  return fs.readFileSync(path.join(import.meta.dir, fileName), 'utf-8');
-}
-
-const HEADING_TEMPLATE = readTemplateForTest('_heading.html');
+import HEADING_TEMPLATE from './_heading.html' with { type: 'text' };
 
 function renderHeading(params: Record<string, unknown>): string {
   return _.template(HEADING_TEMPLATE)({ ...params, encodeAuthoredUrl });

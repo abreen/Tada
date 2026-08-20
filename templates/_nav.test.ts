@@ -1,14 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import fs from 'fs';
-import path from 'path';
 import _ from 'lodash';
 import { classNames, encodeAuthoredUrl } from '../build/template-globals';
-
-function readTemplateForTest(fileName: string): string {
-  return fs.readFileSync(path.join(import.meta.dir, fileName), 'utf-8');
-}
-
-const NAV_TEMPLATE = readTemplateForTest('_nav.html');
+import NAV_TEMPLATE from './_nav.html' with { type: 'text' };
 
 function renderNav(navData: unknown[]): string {
   return _.template(NAV_TEMPLATE)({

@@ -1,14 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import fs from 'fs';
-import path from 'path';
 import _ from 'lodash';
 import { encodeAuthoredUrl } from '../build/template-globals';
-
-function readTemplateForTest(fileName: string): string {
-  return fs.readFileSync(path.join(import.meta.dir, fileName), 'utf-8');
-}
-
-const AUTHOR_TEMPLATE = readTemplateForTest('_author.html');
+import AUTHOR_TEMPLATE from './_author.html' with { type: 'text' };
 
 function renderAuthor(params: Record<string, unknown>): string {
   return _.template(AUTHOR_TEMPLATE)({ ...params, encodeAuthoredUrl });

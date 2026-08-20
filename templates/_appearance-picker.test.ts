@@ -1,12 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import fs from 'fs';
-import path from 'path';
 import _ from 'lodash';
-
-const APPEARANCE_PICKER_TEMPLATE = fs.readFileSync(
-  path.join(import.meta.dir, '_appearance-picker.html'),
-  'utf-8',
-);
+import APPEARANCE_PICKER_TEMPLATE from './_appearance-picker.html' with { type: 'text' };
 
 describe('_appearance-picker.html template', () => {
   test('renders initially unavailable accessible appearance pickers', () => {

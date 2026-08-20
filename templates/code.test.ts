@@ -1,12 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import fs from 'fs';
-import path from 'path';
 import _ from 'lodash';
-
-const CODE_TEMPLATE = fs.readFileSync(
-  path.join(import.meta.dir, 'code.html'),
-  'utf-8',
-);
+import CODE_TEMPLATE from './code.html' with { type: 'text' };
 
 describe('code.html template', () => {
   test('marks the semantic page heading as a compact file title', () => {
