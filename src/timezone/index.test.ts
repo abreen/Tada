@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { detectPeriodStyle, normalizeHM, to12Hour } from './time-format';
+import {
+  detectPeriodStyle,
+  normalizeHM,
+  to12Hour,
+  to12HourMarkup,
+} from './time-format';
 
 describe('detectPeriodStyle', () => {
   test('detects uppercase "PM"', () => {
@@ -78,6 +83,26 @@ describe('to12Hour', () => {
 
   test('omits period when style is null', () => {
     expect(to12Hour(14, 0, null)).toBe('2:00');
+  });
+});
+
+describe('to12HourMarkup', () => {
+  test.each([
+    [['AM', 'PM'], 'PM'],
+    [['A.M.', 'P.M.'], 'P.M.'],
+    [['am', 'pm'], 'pm'],
+    [['a.m.', 'p.m.'], 'p.m.'],
+  ] as const)(
+    'marks up the %s period style for small caps',
+    (style, period) => {
+      expect(to12HourMarkup(17, 40, [...style])).toBe(
+        `5:40 <span class="small-caps">${period}</span>`,
+      );
+    },
+  );
+
+  test('omits period markup for a 24-hour-style time', () => {
+    expect(to12HourMarkup(14, 0, null)).toBe('2:00');
   });
 });
 

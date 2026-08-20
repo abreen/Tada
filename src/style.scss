@@ -391,9 +391,11 @@ h6.has-subtitle {
 }
 
 .small-caps {
-  font-size: 0.9em;
-  font-weight: 600;
+  margin-right: -0.05em;
+  font-variant-caps: all-small-caps;
+  font-synthesis-small-caps: none;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 dl {

@@ -35,6 +35,19 @@ export function to12Hour(
   return `${hour12}:${pad(m)} ${period}`;
 }
 
+export function to12HourMarkup(
+  h: number,
+  m: number,
+  style: PeriodStyle | null = DEFAULT_PERIOD_STYLE,
+) {
+  const hour12 = ((h + 11) % 12) + 1;
+  if (!style) {
+    return `${hour12}:${pad(m)}`;
+  }
+  const period = h >= 12 ? style[1] : style[0];
+  return `${hour12}:${pad(m)} <span class="small-caps">${period}</span>`;
+}
+
 export function normalizeHM(totalMinutes: number) {
   const mins = ((totalMinutes % 1440) + 1440) % 1440;
   const h = Math.floor(mins / 60);

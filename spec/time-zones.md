@@ -12,9 +12,13 @@ To place the time zone chooser on a page:
 
 All `<time>` elements on the page are reformatted to display in the chosen time
 zone. The chooser detects the existing time format (12-hour with various period
-styles, or 24-hour) and preserves it when converting. The chooser select is
-explicitly labeled for assistive technology, and the reset button is removed
-from keyboard and screen-reader access whenever the current selection already
-matches the site's default time zone.
+styles, or 24-hour) and preserves it when converting. AM/PM periods use
+OpenType small-cap glyphs for both uppercase and lowercase letters when the
+active font provides them. Synthetic small caps are disabled, so a font without
+the necessary glyphs retains ordinary capitals rather than showing scaled-down
+counterfeits. The chooser select is explicitly labeled for assistive
+technology, and the reset button is removed from keyboard and screen-reader
+access whenever the current selection already matches the site's default time
+zone.
 
 If JavaScript is disabled, times are displayed in the site's default time zone.

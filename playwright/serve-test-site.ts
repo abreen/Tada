@@ -232,6 +232,8 @@ title: Timezones
 
 Default meeting: <time datetime="17:40">5:40 PM</time>
 
+Lowercase meeting: <time datetime="18:40">6:40 pm</time>
+
 Previous-day meeting: <time datetime="01:30">1:30 AM</time>
 
 Next-day meeting: <time datetime="23:30">11:30 PM</time>

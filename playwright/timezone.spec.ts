@@ -20,6 +20,31 @@ test.describe('timezone chooser without JS', () => {
 });
 
 test.describe('timezone chooser', () => {
+  test('uses real small-cap glyphs without allowing synthesis', async ({
+    page,
+  }) => {
+    await page.goto('/timezones.html');
+
+    const uppercasePeriod = page.locator('time[datetime="17:40"] .small-caps');
+    const lowercasePeriod = page.locator('time[datetime="18:40"] .small-caps');
+
+    await expect(uppercasePeriod).toHaveText('PM');
+    await expect(lowercasePeriod).toHaveText('pm');
+    const style = await uppercasePeriod.evaluate(element => {
+      const computed = getComputedStyle(element);
+      return {
+        fontSynthesisSmallCaps: computed.fontSynthesisSmallCaps,
+        fontVariantCaps: computed.fontVariantCaps,
+        textTransform: computed.textTransform,
+      };
+    });
+    expect(style).toEqual({
+      fontSynthesisSmallCaps: 'none',
+      fontVariantCaps: 'all-small-caps',
+      textTransform: 'uppercase',
+    });
+  });
+
   test('changing timezone updates time text', async ({ page }) => {
     await page.goto('/lectures/index.html');
 

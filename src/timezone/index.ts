@@ -3,6 +3,7 @@ import {
   detectPeriodStyle,
   normalizeHM,
   to12Hour,
+  to12HourMarkup,
   type PeriodStyle,
 } from './time-format';
 
@@ -176,7 +177,7 @@ export default (window: Window) => {
         originalStyle === null && periodChanged
           ? pagePeriodStyle
           : originalStyle;
-      el.innerHTML = to12Hour(h, m, style) + suffix;
+      el.innerHTML = to12HourMarkup(h, m, style) + suffix;
 
       if (isDefault) {
         el.classList.remove('is-modified');
