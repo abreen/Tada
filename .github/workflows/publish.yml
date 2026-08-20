@@ -285,7 +285,7 @@ jobs:
     - name: Customize production site config
       run: |
         yq --yaml-output --in-place --arg pct '${{ steps.coverage.outputs.percent }}' '
-          .defaultFont = "serif" |
+          .defaultFont = "sans" |
           .defaultContrast = "high" |
           .fontOverrides = {
             "serif": {
@@ -297,7 +297,8 @@ jobs:
                 "scale": 1.125,
                 "lineHeight": 1.5,
                 "headingScale": 0.98,
-                "headingWeight": 700
+                "headingWeight": 700,
+                "fontSizeAdjust": 0.706
               }
             },
             "serifMono": {
@@ -308,7 +309,8 @@ jobs:
               "features": ["ss02"],
               "tuning": {
                 "scale": 0.9,
-                "lineHeight": 1.5
+                "lineHeight": 1.5,
+                "fontSizeAdjust": 0.648
               }
             }
           } |

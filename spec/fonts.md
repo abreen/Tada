@@ -38,8 +38,9 @@ asset path. Watch mode preserves its last successful output after such an
 error.
 
 Each override may also carry font-specific `tuning`. The serif family supports
-`scale`, `lineHeight`, `headingScale`, and `headingWeight`; the serif-mono
-family supports `scale` and `lineHeight`. Body scaling changes the serif-mode
+`scale`, `lineHeight`, `headingScale`, `headingWeight`, and `fontSizeAdjust`;
+the serif-mono family supports `scale`, `lineHeight`, and `fontSizeAdjust`.
+Body scaling changes the serif-mode
 base font size, so authored content and inheriting interface text such as
 metadata and navigation scale together.
 Heading sizes are derived from stable sizes for h1 through h6 and remain
@@ -54,12 +55,23 @@ to the surrounding prose. These rules are generated into the stylesheet at
 build time and only apply while serif mode is effective; there is no client-side
 work or additional font request.
 
+`fontSizeAdjust` is the positive cap-height-to-font-size ratio of the custom
+faces. Tada applies it through the two-value `font-size-adjust` syntax to keep
+the custom family and its fallbacks at a more consistent apparent size during
+font swapping. An inaccurate value also rescales the final custom face, so
+authors should derive it from their font files. Proportional and monospaced
+adjustments are independent, including for inline SVG text that selects
+`var(--mono-font)`. KaTeX retains its own font metrics, and omitted adjustments
+retain normal font sizing.
+
 All browser faces are declared in the non-critical stylesheet and use
 `font-display: swap`. Each build preloads the normal body and mono faces for its
 configured default pairing only. Alternate faces are requested on demand after
 a visitor switches. The inactive `Aa` preview uses a system fallback and does
 not trigger the alternate pairing. Times New Roman and Courier New remain the
 first serif-mode fallbacks while a font loads or if it is unavailable.
+Configured size adjustments reduce the visual size change during that fallback
+without changing which faces load.
 
 When serif is the configured default, each custom regular face replaces its
 corresponding bundled font in the preload pair. Styled custom faces are never

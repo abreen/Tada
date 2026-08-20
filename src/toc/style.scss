@@ -17,6 +17,7 @@
 body.code .toc ol li:has(a) {
   font-family: var(--mono-font);
   font-size: var(--mono-font-size);
+  font-size-adjust: var(--mono-font-size-adjust);
   font-feature-settings: var(--mono-font-feature-settings);
 }
 
@@ -30,6 +31,7 @@ body.code .toc ol a {
   display: block;
   font-family: var(--mono-font);
   font-size: var(--font-size-small);
+  font-size-adjust: var(--mono-font-size-adjust);
   font-style: italic;
   font-feature-settings: var(--mono-font-feature-settings);
   text-align: center;

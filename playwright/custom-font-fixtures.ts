@@ -43,10 +43,14 @@ export function installCustomFontFixtures(
     italic: custom-fonts/body-italic.woff2
     bold: custom-fonts/body-bold.woff2
     boldItalic: custom-fonts/body-bold-italic.woff2
+    tuning:
+      fontSizeAdjust: 0.67
   serifMono:
     regular: custom-fonts/mono-regular.woff2
     italic: custom-fonts/mono-italic.woff2
     bold: custom-fonts/mono-bold.woff2
     boldItalic: custom-fonts/mono-bold-italic.woff2
+    tuning:
+      fontSizeAdjust: 0.613
 `;
 }

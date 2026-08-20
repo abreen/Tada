@@ -119,7 +119,8 @@ const HEADING_SIZES = Object.freeze({
 });
 
 function formatCssNumber(value: number): string {
-  return Number(value.toFixed(4)).toString();
+  const rounded = Number(value.toFixed(4));
+  return (rounded === 0 && value !== 0 ? value : rounded).toString();
 }
 
 export function renderCustomFontTuningScss(
@@ -129,6 +130,18 @@ export function renderCustomFontTuningScss(
   const serifTuning = fontOverrides?.serif?.tuning;
   const monoTuning = fontOverrides?.serifMono?.tuning;
   const rootSelector = ":root[data-font-preference='serif']";
+
+  if (serifTuning?.fontSizeAdjust !== undefined) {
+    rules.push(
+      `  ${rootSelector} {\n    --font-size-adjust: cap-height ${formatCssNumber(serifTuning.fontSizeAdjust)};\n  }`,
+    );
+  }
+
+  if (monoTuning?.fontSizeAdjust !== undefined) {
+    rules.push(
+      `  ${rootSelector} {\n    --mono-font-size-adjust: cap-height ${formatCssNumber(monoTuning.fontSizeAdjust)};\n  }`,
+    );
+  }
 
   if (serifTuning?.scale !== undefined) {
     rules.push(

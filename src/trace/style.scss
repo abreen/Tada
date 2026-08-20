@@ -186,6 +186,7 @@
   height: auto;
   font-family: var(--mono-font, monospace);
   font-size: 15px;
+  font-size-adjust: var(--mono-font-size-adjust, none);
   font-feature-settings: var(--mono-font-feature-settings, normal);
 
   .trace-separator {

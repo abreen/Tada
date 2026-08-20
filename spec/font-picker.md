@@ -21,6 +21,11 @@ feature, tuning, loading, and licensing rules. Font-specific tuning is compiled
 into serif-mode CSS and therefore changes neither picker behavior nor first-paint
 preference handling.
 
+Custom serif and serif-mono tuning may include independent `fontSizeAdjust`
+cap-height ratios. While serif mode is effective, these adjustments reduce the
+apparent size change between fallback and custom faces. The inactive previews
+do not inherit the active family's adjustment.
+
 The inactive font button uses its system fallback for its preview, so rendering
 the picker does not request the alternate bundled family.
 

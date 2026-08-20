@@ -8,11 +8,13 @@ export interface SerifFontTuning {
   lineHeight?: number;
   headingScale?: number;
   headingWeight?: 400 | 700;
+  fontSizeAdjust?: number;
 }
 
 export interface SerifMonoFontTuning {
   scale?: number;
   lineHeight?: number;
+  fontSizeAdjust?: number;
 }
 
 export interface FontFamilyOverride<Tuning = unknown> {

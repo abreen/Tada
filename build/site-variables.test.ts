@@ -108,12 +108,13 @@ describe('site config schema', () => {
                 lineHeight: 1.5,
                 headingScale: 0.9,
                 headingWeight: 400,
+                fontSizeAdjust: 0.67,
               },
             },
             serifMono: {
               regular: 'fonts/mono-regular.woff2',
               features: ['ss02'],
-              tuning: { scale: 0.96, lineHeight: 1.45 },
+              tuning: { scale: 0.96, lineHeight: 1.45, fontSizeAdjust: 0.613 },
             },
           },
         },
@@ -141,6 +142,46 @@ describe('site config schema', () => {
     [
       { serif: { regular: 'fonts/body.woff2', tuning: { scale: 0.5 } } },
       'must be >= 0.75',
+    ],
+    [
+      { serif: { regular: 'fonts/body.woff2', tuning: { fontSizeAdjust: 0 } } },
+      'must be > 0',
+    ],
+    [
+      {
+        serifMono: {
+          regular: 'fonts/mono.woff2',
+          tuning: { fontSizeAdjust: -0.1 },
+        },
+      },
+      'must be > 0',
+    ],
+    [
+      {
+        serif: {
+          regular: 'fonts/body.woff2',
+          tuning: { fontSizeAdjust: '0.67' },
+        },
+      },
+      'must be number',
+    ],
+    [
+      {
+        serif: {
+          regular: 'fonts/body.woff2',
+          tuning: { fontSizeAdjust: Number.POSITIVE_INFINITY },
+        },
+      },
+      'must be number',
+    ],
+    [
+      {
+        serifMono: {
+          regular: 'fonts/mono.woff2',
+          tuning: { fontSizeAdjust: Number.NaN },
+        },
+      },
+      'must be number',
     ],
     [
       {

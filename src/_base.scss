@@ -32,6 +32,7 @@ h1 {
 body {
   font-family: var(--font);
   font-size: var(--font-size);
+  font-size-adjust: var(--font-size-adjust);
   font-weight: var(--font-weight);
   font-feature-settings: var(--font-feature-settings);
   line-height: var(--line-height);
@@ -83,7 +84,16 @@ pre,
 tt,
 code {
   font-family: var(--mono-font);
+  font-size-adjust: var(--mono-font-size-adjust);
   font-feature-settings: var(--mono-font-feature-settings);
+}
+
+[font-family='var(--mono-font)'] {
+  font-size-adjust: var(--mono-font-size-adjust);
+}
+
+.katex {
+  font-size-adjust: none;
 }
 
 tt,

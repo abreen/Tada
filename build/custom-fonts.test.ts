@@ -106,11 +106,12 @@ describe('custom font configuration', () => {
           lineHeight: 1.5,
           headingScale: 0.9,
           headingWeight: 400,
+          fontSizeAdjust: 0.67004,
         },
       },
       serifMono: {
         regular: 'fonts/mono.woff2',
-        tuning: { scale: 0.96, lineHeight: 1.45 },
+        tuning: { scale: 0.96, lineHeight: 1.45, fontSizeAdjust: 0.61306 },
       },
     });
 
@@ -140,6 +141,8 @@ describe('custom font configuration', () => {
     expect(scss).toContain('font-weight: 400;');
     expect(scss).toContain('--mono-font-size: 0.96em;');
     expect(scss).toContain('--mono-line-height: 1.45;');
+    expect(scss).toContain('--font-size-adjust: cap-height 0.67;');
+    expect(scss).toContain('--mono-font-size-adjust: cap-height 0.6131;');
     expect(scss).toContain(
       'main.body > :is(footer, .appearance-pickers, .slides-header, .file-header)',
     );
@@ -157,6 +160,28 @@ describe('custom font configuration', () => {
     expect(scss).toContain(
       '.main-content h2:not(.file-title) { font-size: 1.5rem; }',
     );
+  });
+
+  test('omits font size adjustment variables when they are not configured', () => {
+    const scss = renderCustomFontTuningScss({
+      serif: { regular: 'fonts/body.woff2', tuning: { lineHeight: 1.5 } },
+      serifMono: { regular: 'fonts/mono.woff2', tuning: { scale: 0.96 } },
+    });
+
+    expect(scss).not.toContain('--font-size-adjust:');
+    expect(scss).not.toContain('--mono-font-size-adjust:');
+  });
+
+  test('does not round a positive font size adjustment to zero', () => {
+    const scss = renderCustomFontTuningScss({
+      serif: {
+        regular: 'fonts/body.woff2',
+        tuning: { fontSizeAdjust: 0.00001 },
+      },
+    });
+
+    expect(scss).toContain('--font-size-adjust: cap-height 0.00001;');
+    expect(scss).not.toContain('--font-size-adjust: cap-height 0;');
   });
 
   test.each(['font.woff2', 'fonts/font.woff2', 'fonts/Font Name.woff2'])(

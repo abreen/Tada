@@ -93,7 +93,8 @@
             "scale": { "$ref": "#/$defs/fontScale" },
             "lineHeight": { "$ref": "#/$defs/fontLineHeight" },
             "headingScale": { "$ref": "#/$defs/fontScale" },
-            "headingWeight": { "type": "integer", "enum": [400, 700] }
+            "headingWeight": { "type": "integer", "enum": [400, 700] },
+            "fontSizeAdjust": { "$ref": "#/$defs/fontSizeAdjust" }
           },
           "additionalProperties": false
         }
@@ -117,7 +118,8 @@
           "type": "object",
           "properties": {
             "scale": { "$ref": "#/$defs/fontScale" },
-            "lineHeight": { "$ref": "#/$defs/fontLineHeight" }
+            "lineHeight": { "$ref": "#/$defs/fontLineHeight" },
+            "fontSizeAdjust": { "$ref": "#/$defs/fontSizeAdjust" }
           },
           "additionalProperties": false
         }
@@ -126,6 +128,7 @@
     },
     "fontScale": { "type": "number", "minimum": 0.75, "maximum": 1.5 },
     "fontLineHeight": { "type": "number", "minimum": 1, "maximum": 2.5 },
+    "fontSizeAdjust": { "type": "number", "exclusiveMinimum": 0 },
     "publicWoff2Path": {
       "type": "string",
       "minLength": 6,

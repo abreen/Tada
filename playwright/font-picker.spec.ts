@@ -322,6 +322,68 @@ test.describe('appearance pickers', () => {
     await expect(standardContrast).toHaveAttribute('aria-pressed', 'true');
     await expect(highContrast).toHaveAttribute('aria-pressed', 'false');
 
+    await page.evaluate(() => {
+      const lineNumber = document.createElement('span');
+      lineNumber.className = 'line-number';
+      lineNumber.dataset.fontAdjustProbe = 'line-number';
+      document.body.appendChild(lineNumber);
+
+      const traceMemory = document.createElement('div');
+      traceMemory.className = 'trace-memory';
+      traceMemory.dataset.fontAdjustProbe = 'trace-memory';
+      document.body.appendChild(traceMemory);
+
+      const katex = document.createElement('span');
+      katex.className = 'katex';
+      katex.dataset.fontAdjustProbe = 'katex';
+      document.body.appendChild(katex);
+
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const svgMono = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'text',
+      );
+      svgMono.setAttribute('font-family', 'var(--mono-font)');
+      svgMono.dataset.fontAdjustProbe = 'svg-mono';
+      svg.appendChild(svgMono);
+      document.body.appendChild(svg);
+    });
+
+    const getFontSizeAdjustments = () =>
+      page.evaluate(() => ({
+        body: getComputedStyle(document.body).fontSizeAdjust,
+        code: getComputedStyle(document.querySelector('code')!).fontSizeAdjust,
+        lineNumber: getComputedStyle(
+          document.querySelector('[data-font-adjust-probe="line-number"]')!,
+        ).fontSizeAdjust,
+        traceMemory: getComputedStyle(
+          document.querySelector('[data-font-adjust-probe="trace-memory"]')!,
+        ).fontSizeAdjust,
+        katex: getComputedStyle(
+          document.querySelector('[data-font-adjust-probe="katex"]')!,
+        ).fontSizeAdjust,
+        svgMono: getComputedStyle(
+          document.querySelector('[data-font-adjust-probe="svg-mono"]')!,
+        ).fontSizeAdjust,
+        sansPreview: getComputedStyle(
+          document.querySelector('[data-font-preference-value="sans"]')!,
+        ).fontSizeAdjust,
+        serifPreview: getComputedStyle(
+          document.querySelector('[data-font-preference-value="serif"]')!,
+        ).fontSizeAdjust,
+      }));
+
+    expect(await getFontSizeAdjustments()).toEqual({
+      body: 'none',
+      code: 'none',
+      lineNumber: 'none',
+      traceMemory: 'none',
+      katex: 'none',
+      svgMono: 'none',
+      sansPreview: 'none',
+      serifPreview: 'none',
+    });
+
     await serif.click();
     await expect(page.locator('html')).toHaveAttribute(
       'data-font-preference',
@@ -342,9 +404,35 @@ test.describe('appearance pickers', () => {
     expect(fonts.bodySize).toBe('16px');
     expect(fonts.lineHeight).toBe('1.7');
     expect(fonts.code).toContain('Tada Custom Serif Mono');
+    expect(await getFontSizeAdjustments()).toEqual({
+      body: 'cap-height 0.67',
+      code: 'cap-height 0.613',
+      lineNumber: 'cap-height 0.613',
+      traceMemory: 'cap-height 0.613',
+      katex: 'none',
+      svgMono: 'cap-height 0.613',
+      sansPreview: 'none',
+      serifPreview: 'cap-height 0.67',
+    });
     expect(
       await page.evaluate(() => localStorage.getItem('fontPreference')),
     ).toBe('serif');
+
+    await sans.click();
+    await expect(page.locator('html')).not.toHaveAttribute(
+      'data-font-preference',
+      'serif',
+    );
+    expect(await getFontSizeAdjustments()).toEqual({
+      body: 'none',
+      code: 'none',
+      lineNumber: 'none',
+      traceMemory: 'none',
+      katex: 'none',
+      svgMono: 'none',
+      sansPreview: 'none',
+      serifPreview: 'none',
+    });
   });
 
   test('requests custom serif fonts only after serif mode is selected', async ({
@@ -412,6 +500,14 @@ test.describe('appearance pickers', () => {
     await expect(page.locator('html')).toHaveAttribute(
       'data-font-preference',
       'serif',
+    );
+    await expect(page.locator('body')).toHaveCSS(
+      'font-size-adjust',
+      'cap-height 0.67',
+    );
+    await expect(page.locator('code').first()).toHaveCSS(
+      'font-size-adjust',
+      'cap-height 0.613',
     );
   });
 

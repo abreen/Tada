@@ -91,6 +91,7 @@ fontOverrides:
       lineHeight: 1.5
       headingScale: 0.9
       headingWeight: 400
+      fontSizeAdjust: 0.67
   serifMono:
     regular: fonts/mono-regular.woff2
     italic: fonts/mono-italic.woff2
@@ -100,6 +101,7 @@ fontOverrides:
     tuning:
       scale: 0.96
       lineHeight: 1.45
+      fontSizeAdjust: 0.613
 ```
 
 Each family is independent. When a family is present, `regular` is required;
@@ -119,7 +121,12 @@ copied from `public/` using the normal public-asset pipeline and are never added
 to the Tada package or starter site.
 
 The optional `tuning` blocks account for the different optical size, vertical
-metrics, and weight of a substituted family. Serif `scale` changes the
+metrics, and weight of a substituted family. `fontSizeAdjust` is a positive
+number giving the custom faces' cap-height-to-font-size ratio. Tada emits it as
+`font-size-adjust: cap-height <value>` so the custom face and its fallbacks keep
+a more consistent apparent size while fonts load. Authors should derive it from
+their font files; an inaccurate value also rescales the final custom face.
+Serif `scale` changes the
 serif-mode base font size relative to Tada's 1rem sans base, so content and
 inheriting interface text such as metadata and navigation scale together,
 while `lineHeight` controls content leading.
@@ -129,9 +136,10 @@ face. In presentation mode, slide headings use the same scale proportionally
 to the responsive slide size. Compact code-page file titles retain their
 interface sizing. The
 serif-mono `scale` is its size in em relative to the surrounding prose, and its
-`lineHeight` controls code blocks. Scales accept 0.75 through 1.5 and line
-heights accept 1 through 2.5. Omitted values retain Tada's existing styles, and
-an omitted `tuning` block emits no additional CSS.
+`lineHeight` controls code blocks. Both families accept `fontSizeAdjust`.
+Scales accept 0.75 through 1.5, line heights accept 1 through 2.5, and font-size
+adjustments must be greater than zero. Omitted values retain Tada's existing
+styles, and an omitted `tuning` block emits no additional custom tuning CSS.
 
 ## Feature flags
 

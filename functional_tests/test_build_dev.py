@@ -142,7 +142,7 @@ class TestDevBuild:
         set_site_config(
             site_dir,
             {
-                'defaultFont': 'serif',
+                'defaultFont': 'sans',
                 'fontOverrides': {
                     **font_overrides,
                     'serif': {
@@ -152,11 +152,16 @@ class TestDevBuild:
                             'lineHeight': 1.5,
                             'headingScale': 0.9,
                             'headingWeight': 400,
+                            'fontSizeAdjust': 0.67,
                         },
                     },
                     'serifMono': {
                         **font_overrides['serifMono'],
-                        'tuning': {'scale': 0.96, 'lineHeight': 1.45},
+                        'tuning': {
+                            'scale': 0.96,
+                            'lineHeight': 1.45,
+                            'fontSizeAdjust': 0.613,
+                        },
                     },
                 },
             },
@@ -168,8 +173,10 @@ class TestDevBuild:
         dist = site_dir / 'dist'
         html = (dist / 'index.html').read_text()
         css = ''.join(file.read_text() for file in dist.glob('*.css'))
-        assert 'href="/fonts/body-regular.woff2"' in html
-        assert 'href="/fonts/mono-regular.woff2"' in html
+        assert 'href="/inter/InterVariable.woff2"' in html
+        assert 'href="/google-sans-code/GoogleSansCodeVariable.woff2"' in html
+        assert 'href="/fonts/body-regular.woff2"' not in html
+        assert 'href="/fonts/mono-regular.woff2"' not in html
         assert 'body-italic.woff2' not in html
         assert 'body-bold.woff2' not in html
         assert 'SourceSerif4-VariableFont_opsz,wght.woff2' not in html
@@ -184,6 +191,8 @@ class TestDevBuild:
         assert 'font-weight: 400' in css
         assert '--mono-font-size: .96em' in css
         assert '--mono-line-height: 1.45' in css
+        assert '--font-size-adjust: cap-height .67' in css
+        assert '--mono-font-size-adjust: cap-height .613' in css
         assert 'url("fonts/body-regular.woff2") format(woff2)' in css
         assert re.search(r'header summary \.site-title\s*\{[^}]*font-weight: 600;', css)
         assert re.search(r'header \.results ol a \.title\s*\{[^}]*font-weight: 600;', css)
