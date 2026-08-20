@@ -1,9 +1,10 @@
 import json
+import shutil
 import threading
 
 import pytest
 import websocket
-from conftest import init_site, run_tada, set_site_config
+from conftest import PACKAGE_DIR, init_site, run_tada, set_site_config
 from watch_helpers import WEBSOCKET_TIMEOUT_SEC, WatchProcess
 
 WATCH_RELOAD_PATH = '/__tada_watch'
@@ -227,6 +228,53 @@ class TestWatchRemoveContent:
 
 class TestWatchPublicFiles:
     """Editing/adding a file to public/ triggers a build."""
+
+    def test_invalid_custom_font_preserves_output_and_recovers(self, tmp_path):
+        site_dir = init_site(tmp_path, bare=True)
+        fonts_dir = site_dir / 'public' / 'fonts'
+        fonts_dir.mkdir()
+        source_font = (
+            PACKAGE_DIR
+            / 'fonts'
+            / 'source-serif-4'
+            / 'woff2'
+            / 'SourceSerif4-VariableFont_opsz,wght.woff2'
+        )
+        public_font = fonts_dir / 'body.woff2'
+        shutil.copyfile(source_font, public_font)
+        set_site_config(
+            site_dir,
+            {
+                'defaultFont': 'serif',
+                'fontOverrides': {
+                    'serif': {'regular': 'fonts/body.woff2'},
+                },
+            },
+        )
+
+        watch = WatchProcess(site_dir)
+        try:
+            watch.wait_for_initial_build()
+            dist_font = site_dir / 'dist' / 'fonts' / 'body.woff2'
+            original = dist_font.read_bytes()
+
+            public_font.unlink()
+            watch.wait_for_error()
+            assert dist_font.read_bytes() == original
+
+            shutil.copyfile(source_font, public_font)
+            watch.wait_for_successful_rebuild()
+            assert dist_font.read_bytes() == original
+
+            public_font.write_bytes(b'wOF2not-a-font')
+            watch.wait_for_error()
+            assert dist_font.read_bytes() == original
+
+            shutil.copyfile(source_font, public_font)
+            watch.wait_for_successful_rebuild()
+            assert dist_font.read_bytes() == original
+        finally:
+            watch.stop()
 
     def test_editing_public_file(self, watch, site_dir):
         public_file = site_dir / 'public' / 'test.txt'

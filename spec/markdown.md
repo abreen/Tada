@@ -50,6 +50,10 @@ The answer is here.
 ???
 ```
 
+When motion is enabled, each top-level answer block transitions as one visual
+unit. Nested markup such as KaTeX inherits that reveal and does not animate
+independently.
+
 If a `question` block's body is entirely a checked-list option set, it renders
 as a multiple choice block instead. Options use the existing `Q.` prompt style
 with no `A.` label:

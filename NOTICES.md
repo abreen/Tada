@@ -6,14 +6,16 @@ distributed under its own license.
 ## Material Symbols
 
 Tada vendors the `celebration`, `contrast`, `contrast_rtl_off`, `info`,
-`warning`, `south_east`, `search`, `north_east`, and `tag` icons from Google's
-Material Symbols icon set, along with the `menu` and `close` icons. They are
-used in the optional attribution footer, appearance picker, alerts, page links,
-search control, external links, heading anchors, and header navigation. The
+`warning`, `south_east`, `search`, and `open_in_new` icons from Google's
+Material Symbols icon set, along with the `smart_display`, `menu`, and `close`
+icons. They are used in the optional attribution footer, appearance picker,
+alerts, page links, search control, external links, slide presentation controls,
+and header navigation. The
 canonical SVG files are included without modification and share the Material
-Symbols Outlined settings FILL 0, weight 400, grade 0, and optical size 24.
+Symbols Outlined settings FILL 0, weight 500, and grade 0. Each uses Google's
+20px, 24px, or 40px optical-size variant at that same rendered size.
 
-- Source: [`material-design-icons` symbols for web](https://github.com/google/material-design-icons/tree/master/symbols/web)
+- Source: [Google Fonts Icons](https://fonts.google.com/icons)
 - License: [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 - Copyright: Copyright Google LLC
 

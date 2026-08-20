@@ -17,9 +17,7 @@ describe('anchor', () => {
     expect(link).not.toBeNull();
     expect(link.getAttribute('href')).toBe('#intro');
     expect(link.textContent).toBe('Introduction');
-    const icon = link.querySelector('.material-symbol-icon-heading-anchor');
-    expect(icon).not.toBeNull();
-    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(link.querySelector('.material-symbol-icon')).toBeNull();
   });
 
   test('sets title on anchor link', () => {
@@ -75,16 +73,17 @@ describe('anchor', () => {
     ) as HTMLButtonElement;
 
     expect(link.getAttribute('href')).toBe('#topic');
-    expect(
-      link.querySelector('.material-symbol-icon-heading-anchor'),
-    ).not.toBeNull();
+    expect(link.querySelector('.material-symbol-icon')).toBeNull();
     expect(button).not.toBeNull();
     expect(button.classList.contains('icon-button')).toBe(false);
     expect(button.disabled).toBe(false);
     expect(button.type).toBe('button');
     expect(button.getAttribute('aria-label')).toBe('Present from this slide');
     expect(button.getAttribute('title')).toBe('Present from this slide');
-    expect(button.querySelector('svg')).not.toBeNull();
+    expect(
+      button.querySelector('.material-symbol-icon-heading-present'),
+    ).not.toBeNull();
+    expect(button.querySelector('svg')).toBeNull();
   });
 
   test('adds only present button to eligible slide title without id', () => {

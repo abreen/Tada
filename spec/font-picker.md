@@ -13,6 +13,14 @@ Code for monospaced text. Serif mode uses this bundled pairing:
 - body text and headings: Source Serif 4, then Times New Roman, Times, serif
 - monospaced text: Libertinus Mono, then Courier New, Courier, monospace
 
+Authors may replace either serif family independently through
+`fontOverrides.serif` and `fontOverrides.serifMono`. Custom faces appear before
+the bundled family in the stack, without changing the picker, storage, or root
+attribute contracts. See [Fonts](fonts.md#custom-serif-overrides) for the face,
+feature, tuning, loading, and licensing rules. Font-specific tuning is compiled
+into serif-mode CSS and therefore changes neither picker behavior nor first-paint
+preference handling.
+
 The inactive font button uses its system fallback for its preview, so rendering
 the picker does not request the alternate bundled family.
 
@@ -21,7 +29,8 @@ Source Serif 4 uses its automatic optical-size axis.
 
 All faces use `font-display: swap`. A build preloads only its configured default
 pair: Inter and Google Sans Code for sans, or Source Serif 4 and Libertinus Mono
-for serif. The alternate pair remains demand-loaded when a visitor switches,
+for serif. A custom regular face replaces the corresponding bundled serif
+preload. The alternate pair remains demand-loaded when a visitor switches,
 with system fallbacks keeping content visible while it loads.
 
 The buttons expose their state with `aria-pressed`. The root `<html>` records

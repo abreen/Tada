@@ -32,7 +32,7 @@ export async function buildFull({
   try {
     const siteVariables = getDevSiteVariables();
     const scan = scanProject(siteVariables);
-    const configDiagnostics = validateConfig(scan);
+    const configDiagnostics = validateConfig(scan, siteVariables);
     if (configDiagnostics.length > 0) {
       return buildFailedWithDiagnostics(outputDir, configDiagnostics);
     }

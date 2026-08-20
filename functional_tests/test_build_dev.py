@@ -1,5 +1,42 @@
+import re
+import shutil
+
 import pytest
-from conftest import run_tada, set_site_config
+from conftest import PACKAGE_DIR, run_tada, set_site_config
+
+SOURCE_SERIF_REGULAR = (
+    PACKAGE_DIR / 'fonts' / 'source-serif-4' / 'woff2' / 'SourceSerif4-VariableFont_opsz,wght.woff2'
+)
+SOURCE_SERIF_ITALIC = (
+    PACKAGE_DIR
+    / 'fonts'
+    / 'source-serif-4'
+    / 'woff2'
+    / 'SourceSerif4-Italic-VariableFont_opsz,wght.woff2'
+)
+
+
+def install_custom_font_fixtures(site_dir):
+    fonts_dir = site_dir / 'public' / 'fonts'
+    fonts_dir.mkdir()
+    faces = {
+        'regular': SOURCE_SERIF_REGULAR,
+        'italic': SOURCE_SERIF_ITALIC,
+        'bold': SOURCE_SERIF_REGULAR,
+        'boldItalic': SOURCE_SERIF_ITALIC,
+    }
+    overrides = {}
+    for family in ('body', 'mono'):
+        family_config = {}
+        for face, source in faces.items():
+            filename = f'{family}-{face}.woff2'
+            shutil.copyfile(source, fonts_dir / filename)
+            family_config[face] = f'fonts/{filename}'
+        overrides[family] = family_config
+    return {
+        'serif': overrides['body'],
+        'serifMono': {**overrides['mono'], 'features': ['ss02']},
+    }
 
 
 class TestDevBuild:
@@ -99,6 +136,137 @@ class TestDevBuild:
             'data-contrast-preference-value="high" aria-label="Use high contrast" '
             'aria-pressed="true" disabled'
         ) in html
+
+    def test_builds_custom_serif_faces_from_public(self, site_dir):
+        font_overrides = install_custom_font_fixtures(site_dir)
+        set_site_config(
+            site_dir,
+            {
+                'defaultFont': 'serif',
+                'fontOverrides': {
+                    **font_overrides,
+                    'serif': {
+                        **font_overrides['serif'],
+                        'tuning': {
+                            'scale': 1.125,
+                            'lineHeight': 1.5,
+                            'headingScale': 0.9,
+                            'headingWeight': 400,
+                        },
+                    },
+                    'serifMono': {
+                        **font_overrides['serifMono'],
+                        'tuning': {'scale': 0.96, 'lineHeight': 1.45},
+                    },
+                },
+            },
+        )
+
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, f'dev build failed: {result.stderr}'
+
+        dist = site_dir / 'dist'
+        html = (dist / 'index.html').read_text()
+        css = ''.join(file.read_text() for file in dist.glob('*.css'))
+        assert 'href="/fonts/body-regular.woff2"' in html
+        assert 'href="/fonts/mono-regular.woff2"' in html
+        assert 'body-italic.woff2' not in html
+        assert 'body-bold.woff2' not in html
+        assert 'SourceSerif4-VariableFont_opsz,wght.woff2' not in html
+        assert 'LibertinusMono-Regular.woff2' not in html
+        assert css.count('font-family: Tada Custom Serif;') == 4
+        assert css.count('font-family: Tada Custom Serif Mono;') == 4
+        assert '--serif-mono-font-feature-settings: "ss02"' in css
+        assert 'font-size: 1.125rem' in css
+        assert 'line-height: 1.5' in css
+        assert '.main-content h1:not(.file-title) {\n  font-size: 2.25rem;' in css
+        assert '.main-content h2:not(.file-title) {\n  font-size: 1.35rem;' in css
+        assert 'font-weight: 400' in css
+        assert '--mono-font-size: .96em' in css
+        assert '--mono-line-height: 1.45' in css
+        assert 'url("fonts/body-regular.woff2") format(woff2)' in css
+        assert re.search(r'header summary \.site-title\s*\{[^}]*font-weight: 600;', css)
+        assert re.search(r'header \.results ol a \.title\s*\{[^}]*font-weight: 600;', css)
+        assert re.search(
+            r'header \.results ol li \.excerpt\s*\{[^}]*height: 4\.2em;'
+            r'[^}]*line-height: 1\.4;',
+            css,
+        )
+        external_link_tail_rule = re.search(r'\.external-link-tail::?after\s*\{([^}]*)\}', css)
+        assert external_link_tail_rule
+        external_link_styles = external_link_tail_rule.group(1)
+        assert 'width: var(--icon-external-link-size);' in external_link_styles
+        assert 'height: var(--icon-external-link-size);' in external_link_styles
+        assert 'vertical-align: text-top;' in external_link_styles
+        assert '--icon-external-link-size: 20px;' in css
+        assert '.question-a-body > *, .question-a-body > * * {' not in css
+        for family in ('body', 'mono'):
+            for face in ('regular', 'italic', 'bold', 'boldItalic'):
+                assert (dist / 'fonts' / f'{family}-{face}.woff2').exists()
+
+    def test_rejects_missing_custom_font(self, site_dir):
+        set_site_config(
+            site_dir,
+            {
+                'fontOverrides': {
+                    'serif': {'regular': 'fonts/missing.woff2'},
+                }
+            },
+        )
+
+        result = run_tada('dev', cwd=str(site_dir))
+
+        assert result.returncode != 0
+        assert (
+            'fontOverrides.serif.regular "fonts/missing.woff2" does not exist in public/'
+        ) in result.stderr
+
+    def test_rejects_malformed_custom_fonts(self, site_dir):
+        fonts_dir = site_dir / 'public' / 'fonts'
+        fonts_dir.mkdir()
+        (fonts_dir / 'malformed.woff2').write_bytes(b'wOF2not-a-font')
+        set_site_config(
+            site_dir,
+            {
+                'fontOverrides': {
+                    'serif': {'regular': 'fonts/malformed.woff2'},
+                }
+            },
+        )
+
+        result = run_tada('dev', cwd=str(site_dir))
+
+        assert result.returncode != 0
+        assert (
+            'fontOverrides.serif.regular "fonts/malformed.woff2" is not a valid WOFF2 font'
+        ) in result.stderr
+
+    def test_rejects_unsupported_custom_font_features(self, site_dir):
+        fonts_dir = site_dir / 'public' / 'fonts'
+        fonts_dir.mkdir()
+        shutil.copyfile(
+            PACKAGE_DIR / 'fonts' / 'google-sans-code' / 'woff2' / 'GoogleSansCodeVariable.woff2',
+            fonts_dir / 'no-ss02.woff2',
+        )
+        set_site_config(
+            site_dir,
+            {
+                'fontOverrides': {
+                    'serifMono': {
+                        'regular': 'fonts/no-ss02.woff2',
+                        'features': ['ss02'],
+                    },
+                }
+            },
+        )
+
+        result = run_tada('dev', cwd=str(site_dir))
+
+        assert result.returncode != 0
+        assert (
+            'fontOverrides.serifMono.features "ss02" is not supported by '
+            'fontOverrides.serifMono.regular'
+        ) in result.stderr
 
 
 class TestDevBuildDefaultContent:

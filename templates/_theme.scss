@@ -1,3 +1,13 @@
+@mixin custom-font-faces {
+  /* Site-configured font faces are inserted below. */
+  /* TADA_CUSTOM_FONT_FACES */
+}
+
+@mixin custom-font-tuning {
+  /* Site-configured font tuning is inserted below. */
+  /* TADA_CUSTOM_FONT_TUNING */
+}
+
 :root {
   --theme-color: <%= themeColorLight %>;
   --theme-color-text: <%= themeColorTextLight %>;
@@ -41,14 +51,14 @@
     'Helvetica', 'Arial', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
     'Segoe UI Symbol';
   --sans-mono-font: 'Google Sans Code', 'Consolas', 'Courier', monospace;
-  --serif-font: 'Source Serif 4', 'Times New Roman', 'Times', serif;
+  --serif-font: <%= serifFontStack %>;
   --serif-preview-font: 'Times New Roman', 'Times', serif;
-  --serif-mono-font: 'Libertinus Mono', 'Courier New', 'Courier', monospace;
+  --serif-mono-font: <%= serifMonoFontStack %>;
   --sans-font-feature-settings:
     'liga', 'calt', 'ss07', 'ss08', 'cv01', 'cv08', 'cv10';
   --sans-mono-font-feature-settings: normal;
-  --serif-font-feature-settings: normal;
-  --serif-mono-font-feature-settings: normal;
+  --serif-font-feature-settings: <%= serifFontFeatureSettings %>;
+  --serif-mono-font-feature-settings: <%= serifMonoFontFeatureSettings %>;
   --font: var(--sans-font);
   --heading-font: var(--font);
   --heading-line-height: 1.3;

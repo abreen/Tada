@@ -7,28 +7,12 @@ a.heading-anchor {
   @include subdued-link;
 }
 
-.heading-anchor .material-symbol-icon,
-.heading-present-button svg {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  vertical-align: middle;
-}
-
-.heading-anchor .material-symbol-icon {
-  margin-left: 4px;
-  vertical-align: middle;
-  opacity: 0;
-}
-
 .heading-present-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1em;
-  height: 1em;
+  display: inline-block;
+  width: var(--icon-heading-present-size);
+  height: var(--icon-heading-present-size);
   padding: 0;
-  margin-left: 4px;
+  margin-left: 8px;
   font: inherit;
   line-height: 1;
   vertical-align: middle;
@@ -39,7 +23,6 @@ a.heading-anchor {
   opacity: 0;
 }
 
-a.heading-anchor:focus-visible .material-symbol-icon,
 .heading-present-button:focus {
   opacity: 1;
 }
@@ -65,12 +48,6 @@ body.is-presenting .heading-present-button {
     background: transparent;
   }
 
-  h1:hover a.heading-anchor .material-symbol-icon,
-  h2:hover a.heading-anchor .material-symbol-icon,
-  h3:hover a.heading-anchor .material-symbol-icon,
-  h4:hover a.heading-anchor .material-symbol-icon,
-  h5:hover a.heading-anchor .material-symbol-icon,
-  h6:hover a.heading-anchor .material-symbol-icon,
   h1:hover .heading-present-button,
   h2:hover .heading-present-button,
   h3:hover .heading-present-button,
@@ -88,7 +65,6 @@ body.is-presenting .heading-present-button {
 }
 
 @media print {
-  .heading-anchor .material-symbol-icon,
   .heading-present-button {
     display: none;
   }

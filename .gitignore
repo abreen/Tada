@@ -24,6 +24,7 @@ __pycache__/
 /playwright/.cache/
 /playwright/.test-site/
 /playwright/.appearance-defaults-site/
+/.pages-assets/
 
 # Logs
 logs

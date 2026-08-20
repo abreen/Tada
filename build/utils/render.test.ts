@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
 import { createFsModuleMock } from '../test-helpers';
+import { DEFAULT_FONT_PRELOAD_FILES } from '../generate-fonts';
 import type { SiteVariables } from '../types';
 import { initHighlighter } from './shiki-highlighter';
 
@@ -198,6 +199,73 @@ describe('preparePageTemplateHtml', () => {
       }
     },
   );
+
+  test('preloads custom regular serif faces without preloading styled faces', () => {
+    writeFile(
+      path.join(
+        '/virtual/dist',
+        'libertinus-mono/LibertinusMono-Regular.woff2',
+      ),
+      'font',
+    );
+
+    const result = preparePageTemplateHtml({
+      templateHtml: '<html><head></head><body></body></html>',
+      assetFiles: [],
+      distDir: '/virtual/dist',
+      siteVariables: {
+        ...siteVariables,
+        defaultFont: 'serif',
+        fontOverrides: {
+          serif: {
+            regular: 'fonts/Body Regular.woff2',
+            italic: 'fonts/body-italic.woff2',
+            bold: 'fonts/body-bold.woff2',
+            boldItalic: 'fonts/body-bold-italic.woff2',
+          },
+        },
+      },
+    });
+
+    expect(result).toContain(
+      'rel="preload" href="/fonts/Body%20Regular.woff2"',
+    );
+    expect(result).toContain(
+      'rel="preload" href="/libertinus-mono/LibertinusMono-Regular.woff2"',
+    );
+    expect(result).not.toContain('body-italic.woff2');
+    expect(result).not.toContain('body-bold.woff2');
+    expect(result).not.toContain(
+      'source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
+    );
+  });
+
+  test('does not preload custom serif faces for a sans default', () => {
+    for (const fontPath of DEFAULT_FONT_PRELOAD_FILES.sans) {
+      writeFile(path.join('/virtual/dist', fontPath), 'font');
+    }
+
+    const result = preparePageTemplateHtml({
+      templateHtml: '<html><head></head><body></body></html>',
+      assetFiles: [],
+      distDir: '/virtual/dist',
+      siteVariables: {
+        ...siteVariables,
+        defaultFont: 'sans',
+        fontOverrides: {
+          serif: { regular: 'fonts/body.woff2' },
+          serifMono: { regular: 'fonts/mono.woff2' },
+        },
+      },
+    });
+
+    expect(result).toContain('href="/inter/InterVariable.woff2"');
+    expect(result).toContain(
+      'href="/google-sans-code/GoogleSansCodeVariable.woff2"',
+    );
+    expect(result).not.toContain('fonts/body.woff2');
+    expect(result).not.toContain('fonts/mono.woff2');
+  });
 });
 
 describe('renderCodePageAsset', () => {

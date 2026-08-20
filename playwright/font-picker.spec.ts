@@ -89,7 +89,7 @@ test.describe('configured appearance defaults', () => {
   }) => {
     const context = await browser.newContext({ javaScriptEnabled: false });
     const page = await context.newPage();
-    await page.goto('http://localhost:8082/index.html');
+    await page.goto('http://localhost:8082/custom/index.html');
 
     await expect(page.locator('html')).toHaveAttribute(
       'data-default-font-preference',
@@ -122,7 +122,7 @@ test.describe('configured appearance defaults', () => {
     await context.close();
   });
 
-  test('requests only the configured default font pairing', async ({
+  test('requests only the configured custom default font pairing', async ({
     page,
   }) => {
     const fontRequests: string[] = [];
@@ -133,15 +133,29 @@ test.describe('configured appearance defaults', () => {
       }
     });
 
-    await page.goto('http://localhost:8082/index.html');
+    await page.goto('http://localhost:8082/custom/index.html');
     await page.waitForLoadState('networkidle');
 
-    expect(fontRequests).toContain(
-      '/source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
-    );
-    expect(fontRequests).toContain(
-      '/libertinus-mono/LibertinusMono-Regular.woff2',
-    );
+    for (const family of ['body', 'mono']) {
+      for (const face of ['regular', 'italic', 'bold', 'bold-italic']) {
+        expect(fontRequests).toContain(
+          `/custom/custom-fonts/${family}-${face}.woff2`,
+        );
+      }
+    }
+    await expect(
+      page.locator(
+        'link[rel="preload"][as="font"][href="/custom/custom-fonts/body-regular.woff2"]',
+      ),
+    ).toHaveCount(1);
+    await expect(
+      page.locator(
+        'link[rel="preload"][as="font"][href="/custom/custom-fonts/mono-regular.woff2"]',
+      ),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('link[rel="preload"][as="font"][href*="italic"]'),
+    ).toHaveCount(0);
     expect(fontRequests).not.toContain('/inter/InterVariable.woff2');
     expect(fontRequests).not.toContain(
       '/google-sans-code/GoogleSansCodeVariable.woff2',
@@ -151,7 +165,7 @@ test.describe('configured appearance defaults', () => {
   test('persists opposite overrides and clears configured defaults', async ({
     page,
   }) => {
-    await page.goto('http://localhost:8082/index.html');
+    await page.goto('http://localhost:8082/custom/index.html');
     await page.getByRole('button', { name: 'Use sans-serif fonts' }).click();
     await page.getByRole('button', { name: 'Use standard contrast' }).click();
 
@@ -179,7 +193,7 @@ test.describe('configured appearance defaults', () => {
     ).toHaveAttribute('aria-pressed', 'true');
 
     await page.getByRole('link', { name: 'Next page' }).click();
-    await expect(page).toHaveURL('http://localhost:8082/next.html');
+    await expect(page).toHaveURL('http://localhost:8082/custom/next.html');
     await expect(
       page.getByRole('button', { name: 'Use sans-serif fonts' }),
     ).toHaveAttribute('aria-pressed', 'true');
@@ -205,7 +219,7 @@ test.describe('configured appearance defaults', () => {
       localStorage.setItem('contrastPreference', 'standard');
     });
 
-    await page.goto('http://localhost:8082/index.html');
+    await page.goto('http://localhost:8082/custom/index.html');
 
     await expect(page.locator('html')).not.toHaveAttribute(
       'data-font-preference',
@@ -219,7 +233,7 @@ test.describe('configured appearance defaults', () => {
 });
 
 test.describe('appearance pickers', () => {
-  test('switches system stacks and exposes the selected option', async ({
+  test('switches configured stacks and exposes the selected option', async ({
     page,
   }) => {
     await page.goto('/index.html');
@@ -255,25 +269,22 @@ test.describe('appearance pickers', () => {
         .trim(),
       code: getComputedStyle(document.querySelector('code')!).fontFamily,
     }));
-    expect(fonts.body).toContain('Source Serif 4');
+    expect(fonts.body).toContain('Tada Custom Serif');
     expect(fonts.bodySize).toBe('16px');
     expect(fonts.lineHeight).toBe('1.7');
-    expect(fonts.code).toContain('Libertinus Mono');
+    expect(fonts.code).toContain('Tada Custom Serif Mono');
     expect(
       await page.evaluate(() => localStorage.getItem('fontPreference')),
     ).toBe('serif');
   });
 
-  test('requests bundled serif fonts only after serif mode is selected', async ({
+  test('requests custom serif fonts only after serif mode is selected', async ({
     page,
   }) => {
     const fontRequests: string[] = [];
     page.on('request', request => {
       const pathname = decodeURIComponent(new URL(request.url()).pathname);
-      if (
-        pathname.includes('/source-serif-4/') ||
-        pathname.includes('/libertinus-mono/')
-      ) {
+      if (pathname.includes('/custom-fonts/')) {
         fontRequests.push(pathname);
       }
     });
@@ -283,9 +294,7 @@ test.describe('appearance pickers', () => {
 
     expect(fontRequests).toEqual([]);
     await expect(
-      page.locator(
-        'link[rel="preload"][as="font"][href*="source-serif-4"], link[rel="preload"][as="font"][href*="libertinus-mono"]',
-      ),
+      page.locator('link[rel="preload"][as="font"][href*="custom-fonts"]'),
     ).toHaveCount(0);
 
     await page.evaluate(() => {
@@ -296,21 +305,15 @@ test.describe('appearance pickers', () => {
     await page.getByRole('button', { name: 'Use serif fonts' }).click();
     await page.evaluate(async () => {
       await Promise.all([
-        document.fonts.load('400 16px "Source Serif 4"', 'Serif'),
-        document.fonts.load('italic 400 16px "Source Serif 4"', 'Italic'),
-        document.fonts.load('400 16px "Libertinus Mono"', 'Code'),
+        document.fonts.load('400 16px "Tada Custom Serif"', 'Serif'),
+        document.fonts.load('italic 400 16px "Tada Custom Serif"', 'Italic'),
+        document.fonts.load('400 16px "Tada Custom Serif Mono"', 'Code'),
       ]);
     });
 
-    expect(fontRequests).toContain(
-      '/source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
-    );
-    expect(fontRequests).toContain(
-      '/source-serif-4/SourceSerif4-Italic-VariableFont_opsz,wght.woff2',
-    );
-    expect(fontRequests).toContain(
-      '/libertinus-mono/LibertinusMono-Regular.woff2',
-    );
+    expect(fontRequests).toContain('/custom-fonts/body-regular.woff2');
+    expect(fontRequests).toContain('/custom-fonts/body-italic.woff2');
+    expect(fontRequests).toContain('/custom-fonts/mono-regular.woff2');
   });
 
   test('keeps content visible while selected serif fonts are loading', async ({
@@ -325,10 +328,7 @@ test.describe('appearance pickers', () => {
       const pathname = decodeURIComponent(
         new URL(route.request().url()).pathname,
       );
-      if (
-        pathname.includes('/source-serif-4/') ||
-        pathname.includes('/libertinus-mono/')
-      ) {
+      if (pathname.includes('/custom-fonts/')) {
         resolveFontRequest?.();
         await new Promise(resolve => setTimeout(resolve, 500));
       }

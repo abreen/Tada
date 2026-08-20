@@ -18,6 +18,8 @@
 
 .alert .title {
   padding: 10px 6px;
+  padding-top: 18px;
+  padding-left: 58px;
 }
 
 .alert .content {
@@ -67,32 +69,35 @@
 
 .alert .title::before {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  width: 32px;
-  height: 32px;
+  top: 12px;
+  left: 10px;
+  width: var(--alert-icon-size);
+  height: var(--alert-icon-size);
   content: '';
+
+  @include contained-mask(var(--alert-icon));
 }
 
-.alert.warning .title::before {
-  @include contained-mask(var(--icon-warning));
+.alert.warning {
+  --alert-icon: var(--icon-warning);
+  --alert-icon-size: var(--icon-warning-size);
 }
 
 i.warning {
-  @include contained-mask(var(--icon-warning));
+  @include contained-mask(var(--icon-warning-compact));
 
   display: inline-block;
-  width: 1em;
-  height: 1em;
+  width: var(--icon-warning-compact-size);
+  height: var(--icon-warning-compact-size);
   vertical-align: sub;
 }
 
-.alert.note .title::before {
-  @include contained-mask(var(--icon-info));
+.alert.note {
+  --alert-icon: var(--icon-info);
+  --alert-icon-size: var(--icon-info-size);
 }
 
 .alert .title {
-  padding-left: 48px;
   margin: 0;
   font-weight: 700;
 

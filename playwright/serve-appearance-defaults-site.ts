@@ -1,5 +1,13 @@
-import { readFileSync, rmSync, writeFileSync } from 'fs';
+import {
+  cpSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'fs';
 import path from 'path';
+import { installCustomFontFixtures } from './custom-font-fixtures';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
@@ -47,12 +55,25 @@ await runTada(
 
 const configPath = path.join(siteDir, 'site.dev.yaml');
 const config = readFileSync(configPath, 'utf-8')
+  .replace('basePath: /', 'basePath: /custom')
   .replace('defaultFont: sans', 'defaultFont: serif')
   .replace('defaultContrast: standard', 'defaultContrast: high');
-writeFileSync(configPath, config);
+writeFileSync(
+  configPath,
+  `${config}${installCustomFontFixtures(repoDir, siteDir)}`,
+);
 writeFileSync(
   path.join(siteDir, 'content', 'index.md'),
-  '---\ntitle: Home\n---\n\n[Next page](/next.html)\n\n`code`\n',
+  `---
+title: Home
+---
+
+[Next page](/next.html)
+
+Body regular, *italic*, **bold**, and ***bold italic***.
+
+\`code\`, *\`italic code\`*, **\`bold code\`**, and ***\`bold italic code\`***.
+`,
 );
 writeFileSync(
   path.join(siteDir, 'content', 'next.md'),
@@ -60,4 +81,14 @@ writeFileSync(
 );
 
 await runTada(['dev']);
+const distDir = path.join(siteDir, 'dist');
+const mountedDistDir = path.join(distDir, 'custom');
+mkdirSync(mountedDistDir);
+for (const entry of readdirSync(distDir)) {
+  if (entry !== 'custom') {
+    cpSync(path.join(distDir, entry), path.join(mountedDistDir, entry), {
+      recursive: true,
+    });
+  }
+}
 await runTada(['serve', '--port', '8082']);

@@ -3,6 +3,32 @@ import type { TadaProjectScan } from './source-model';
 
 export type PlainTextLanguage = 'text' | 'txt' | 'plain';
 
+export interface SerifFontTuning {
+  scale?: number;
+  lineHeight?: number;
+  headingScale?: number;
+  headingWeight?: 400 | 700;
+}
+
+export interface SerifMonoFontTuning {
+  scale?: number;
+  lineHeight?: number;
+}
+
+export interface FontFamilyOverride<Tuning = unknown> {
+  regular: string;
+  italic?: string;
+  bold?: string;
+  boldItalic?: string;
+  features?: string[];
+  tuning?: Tuning;
+}
+
+export interface FontOverrides {
+  serif?: FontFamilyOverride<SerifFontTuning>;
+  serifMono?: FontFamilyOverride<SerifMonoFontTuning>;
+}
+
 /** Site configuration loaded from site.dev.yaml/yml/json or site.prod.yaml/yml/json */
 export interface SiteVariables {
   base: string;
@@ -18,6 +44,7 @@ export interface SiteVariables {
   defaultTimeZone: string;
   defaultFont?: 'sans' | 'serif';
   defaultContrast?: 'standard' | 'high';
+  fontOverrides?: FontOverrides;
   features: FeatureConfig;
   extensionToShikiLanguage?: Record<
     string,

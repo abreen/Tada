@@ -1,11 +1,24 @@
 @use 'mixins' as *;
 
 .material-symbol-icon {
-  @include contained-mask(var(--material-symbol-icon));
-
   display: block;
+  width: var(--material-symbol-icon-size);
+  height: var(--material-symbol-icon-size);
+
+  @include contained-mask(var(--material-symbol-icon));
 }
 
-.material-symbol-icon-heading-anchor {
-  --material-symbol-icon: var(--icon-heading-anchor);
+.material-symbol-icon-heading-present {
+  --material-symbol-icon: var(--icon-heading-present);
+  --material-symbol-icon-size: var(--icon-heading-present-size);
+}
+
+.material-symbol-icon-contrast-standard {
+  --material-symbol-icon: var(--icon-contrast-standard);
+  --material-symbol-icon-size: var(--icon-contrast-standard-size);
+}
+
+.material-symbol-icon-contrast-high {
+  --material-symbol-icon: var(--icon-contrast-high);
+  --material-symbol-icon-size: var(--icon-contrast-high-size);
 }

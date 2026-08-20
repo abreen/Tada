@@ -221,6 +221,20 @@ themeColor: hsl(351 70% 40%)
 tintAmount: 0
 defaultFont: serif
 defaultContrast: high
+fontOverrides:
+  serif:
+    regular: fonts/body-regular.woff2
+    tuning:
+      scale: 1.125
+      lineHeight: 1.5
+      headingScale: 0.9
+      headingWeight: 400
+  serifMono:
+    regular: fonts/mono-regular.woff2
+    features: [ss02]
+    tuning:
+      scale: 0.94
+      lineHeight: 1.5
 features:
   search: true
   favicon: true
@@ -249,6 +263,7 @@ vars:
 | `tintAmount` | *Optional*, percentage (0-100) of tint to apply (default `100`) |
 | `defaultFont` | *Optional*, initial font pairing: `sans` or `serif` (default `sans`) |
 | `defaultContrast` | *Optional*, initial neutral-palette contrast: `standard` or `high` (default `standard`) |
+| `fontOverrides` | *Optional*, custom serif and serif-monospace WOFF2 faces from `public/`; each configured family requires `regular` and may include styled faces, OpenType `features`, and font-specific `tuning` |
 | `faviconSymbol` | *Optional*, the text to use instead of `symbol` in the favicon |
 | `features.search` | Enable search UI and Pagefind index generation |
 | `features.favicon` | Enable automatically generated favicons |

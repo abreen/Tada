@@ -62,8 +62,7 @@
   margin-bottom: 0;
 }
 
-.question-a-body > *,
-.question-a-body > * * {
+.question-a-body > * {
   @media (prefers-reduced-motion: no-preference) {
     transition:
       color 0.25s,

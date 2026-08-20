@@ -15,7 +15,7 @@ export default defineConfig({
     },
     {
       command: 'bun run playwright/serve-appearance-defaults-site.ts',
-      url: 'http://localhost:8082/index.html',
+      url: 'http://localhost:8082/custom/index.html',
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },

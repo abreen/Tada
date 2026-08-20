@@ -58,12 +58,79 @@
       "enum": ["standard", "high"],
       "default": "standard"
     },
+    "fontOverrides": {
+      "type": "object",
+      "properties": {
+        "serif": { "$ref": "#/$defs/serifFontOverride" },
+        "serifMono": { "$ref": "#/$defs/serifMonoFontOverride" }
+      },
+      "additionalProperties": false
+    },
     "vars": { "type": "object" },
     "extensionToShikiLanguage": {
       "type": "object",
       "additionalProperties": { "type": "string" }
     },
     "shikiLanguages": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "serifFontOverride": {
+      "type": "object",
+      "required": ["regular"],
+      "properties": {
+        "regular": { "$ref": "#/$defs/publicWoff2Path" },
+        "italic": { "$ref": "#/$defs/publicWoff2Path" },
+        "bold": { "$ref": "#/$defs/publicWoff2Path" },
+        "boldItalic": { "$ref": "#/$defs/publicWoff2Path" },
+        "features": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9]{4}$" },
+          "uniqueItems": true
+        },
+        "tuning": {
+          "type": "object",
+          "properties": {
+            "scale": { "$ref": "#/$defs/fontScale" },
+            "lineHeight": { "$ref": "#/$defs/fontLineHeight" },
+            "headingScale": { "$ref": "#/$defs/fontScale" },
+            "headingWeight": { "type": "integer", "enum": [400, 700] }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "serifMonoFontOverride": {
+      "type": "object",
+      "required": ["regular"],
+      "properties": {
+        "regular": { "$ref": "#/$defs/publicWoff2Path" },
+        "italic": { "$ref": "#/$defs/publicWoff2Path" },
+        "bold": { "$ref": "#/$defs/publicWoff2Path" },
+        "boldItalic": { "$ref": "#/$defs/publicWoff2Path" },
+        "features": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9]{4}$" },
+          "uniqueItems": true
+        },
+        "tuning": {
+          "type": "object",
+          "properties": {
+            "scale": { "$ref": "#/$defs/fontScale" },
+            "lineHeight": { "$ref": "#/$defs/fontLineHeight" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "fontScale": { "type": "number", "minimum": 0.75, "maximum": 1.5 },
+    "fontLineHeight": { "type": "number", "minimum": 1, "maximum": 2.5 },
+    "publicWoff2Path": {
+      "type": "string",
+      "minLength": 6,
+      "pattern": "\\.woff2$"
+    }
   },
   "additionalProperties": false
 }

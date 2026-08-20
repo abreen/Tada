@@ -223,8 +223,8 @@ footer {
 
     &::after {
       display: inline-block;
-      width: 1.5em;
-      height: 1.5em;
+      width: var(--icon-tada-size);
+      height: var(--icon-tada-size);
       margin-left: 0.2em;
       vertical-align: middle;
       content: '';

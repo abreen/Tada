@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { getPackageDir } from './utils/paths';
 import { makeLogger } from './log';
+import type { SiteVariables } from './types';
 
 const log = makeLogger(import.meta.url);
 const FONTS_DIR = path.join(getPackageDir(), 'fonts');
@@ -17,10 +18,35 @@ export const DEFAULT_FONT_PRELOAD_FILES = {
   ],
 } as const;
 
+export interface DefaultFontPreloadFile {
+  filePath: string;
+  source: 'package' | 'public';
+}
+
 export function getDefaultFontPreloadFiles(
-  defaultFont: 'sans' | 'serif' | undefined,
-): readonly string[] {
-  return DEFAULT_FONT_PRELOAD_FILES[defaultFont ?? 'sans'];
+  siteVariables: Pick<SiteVariables, 'defaultFont' | 'fontOverrides'>,
+): readonly DefaultFontPreloadFile[] {
+  if ((siteVariables.defaultFont ?? 'sans') === 'sans') {
+    return DEFAULT_FONT_PRELOAD_FILES.sans.map(filePath => ({
+      filePath,
+      source: 'package',
+    }));
+  }
+
+  return [
+    siteVariables.fontOverrides?.serif?.regular
+      ? {
+          filePath: siteVariables.fontOverrides.serif.regular,
+          source: 'public',
+        }
+      : { filePath: DEFAULT_FONT_PRELOAD_FILES.serif[0], source: 'package' },
+    siteVariables.fontOverrides?.serifMono?.regular
+      ? {
+          filePath: siteVariables.fontOverrides.serifMono.regular,
+          source: 'public',
+        }
+      : { filePath: DEFAULT_FONT_PRELOAD_FILES.serif[1], source: 'package' },
+  ];
 }
 
 export function copyFonts(distDir: string): void {

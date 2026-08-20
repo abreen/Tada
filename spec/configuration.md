@@ -65,12 +65,73 @@ Generated development and production site configs explicitly include
 - **defaultFont**: initial typography, `sans` or `serif` (default: `sans`)
 - **defaultContrast**: initial neutral-palette contrast, `standard` or `high`
   (default: `standard`)
+- **fontOverrides**: optional licensed WOFF2 faces for the serif body and
+  serif-monospace pair; see [Custom serif fonts](#custom-serif-fonts)
 - **internalDomains**: list of domains treated as internal for link styling
 - **extensionToShikiLanguage**: optional map from source-file extensions to the
   Shiki language used for generated code pages
 - **shikiLanguages**: optional list of bundled Shiki languages allowed in
   Markdown fences; plain-text fences (`text`, `txt`, `plain`) work without it
 - **vars**: arbitrary key-value pairs accessible in templates as `vars.*`
+
+## Custom serif fonts
+
+Site authors can replace either bundled serif family with WOFF2 files they own
+under the site's `public/` directory:
+
+```yaml
+fontOverrides:
+  serif:
+    regular: fonts/body-regular.woff2
+    italic: fonts/body-italic.woff2
+    bold: fonts/body-bold.woff2
+    boldItalic: fonts/body-bold-italic.woff2
+    tuning:
+      scale: 1.125
+      lineHeight: 1.5
+      headingScale: 0.9
+      headingWeight: 400
+  serifMono:
+    regular: fonts/mono-regular.woff2
+    italic: fonts/mono-italic.woff2
+    bold: fonts/mono-bold.woff2
+    boldItalic: fonts/mono-bold-italic.woff2
+    features: [ss02]
+    tuning:
+      scale: 0.96
+      lineHeight: 1.45
+```
+
+Each family is independent. When a family is present, `regular` is required;
+the browser synthesizes any omitted italic or bold styles. Face paths use
+POSIX separators and are relative to `public/`. Absolute paths, traversal,
+query strings, fragments, and extensions other than `.woff2` are rejected.
+
+`features` is an optional list of unique four-character OpenType tags. Tada
+applies the list to that family and verifies that every configured face
+supports every requested feature. It also verifies that each file exists, has
+a WOFF2 signature, and can be parsed as a font. These validations run during
+normal builds and watch updates; an invalid watch update leaves the last
+successful output intact.
+
+Custom fonts remain assets owned and licensed by the site author. They are
+copied from `public/` using the normal public-asset pipeline and are never added
+to the Tada package or starter site.
+
+The optional `tuning` blocks account for the different optical size, vertical
+metrics, and weight of a substituted family. Serif `scale` changes the
+serif-mode base font size relative to Tada's 1rem sans base, so content and
+inheriting interface text such as metadata and navigation scale together,
+while `lineHeight` controls content leading.
+`headingScale` sizes authored headings and normal page titles independently of
+`scale`, and `headingWeight` selects the configured regular (400) or bold (700)
+face. In presentation mode, slide headings use the same scale proportionally
+to the responsive slide size. Compact code-page file titles retain their
+interface sizing. The
+serif-mono `scale` is its size in em relative to the surrounding prose, and its
+`lineHeight` controls code blocks. Scales accept 0.75 through 1.5 and line
+heights accept 1 through 2.5. Omitted values retain Tada's existing styles, and
+an omitted `tuning` block emits no additional CSS.
 
 ## Feature flags
 

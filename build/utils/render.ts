@@ -8,6 +8,7 @@ import { B } from '../colors';
 import createTemplateGlobals from '../template-globals';
 import { getExtensionToShikiLanguage } from '../site-variables';
 import { getDefaultFontPreloadFiles } from '../generate-fonts';
+import { encodePublicAssetPath } from '../custom-fonts';
 import { config } from '../templates';
 import { render } from '../templates';
 import {
@@ -184,12 +185,19 @@ export function injectAssetTags(
     )
     .join('');
 
-  const fontPreloadTags = getDefaultFontPreloadFiles(siteVariables.defaultFont)
-    .filter(f => fs.existsSync(path.join(distDir, f)))
-    .map(
-      f =>
-        `<link rel="preload" href="${normalizeOutputPath('/' + f)}" as="font" type="font/woff2" crossorigin>`,
+  const fontPreloadTags = getDefaultFontPreloadFiles(siteVariables)
+    .filter(
+      preload =>
+        preload.source === 'public' ||
+        fs.existsSync(path.join(distDir, preload.filePath)),
     )
+    .map(preload => {
+      const urlPath =
+        preload.source === 'public'
+          ? encodePublicAssetPath(preload.filePath)
+          : preload.filePath;
+      return `<link rel="preload" href="${normalizeOutputPath('/' + urlPath)}" as="font" type="font/woff2" crossorigin>`;
+    })
     .join('');
 
   return html

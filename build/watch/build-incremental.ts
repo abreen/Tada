@@ -34,7 +34,7 @@ export async function buildIncremental({
   const outputDir = makeTempBuildDir(distDir);
   try {
     const siteVariables = snapshot.siteVariables;
-    const configDiagnostics = validateConfig(plan.scan);
+    const configDiagnostics = validateConfig(plan.scan, siteVariables);
     if (configDiagnostics.length > 0) {
       return buildFailedWithDiagnostics(outputDir, configDiagnostics);
     }

@@ -97,19 +97,6 @@
   font-family: var(--serif-font);
 }
 
-.material-symbol-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.material-symbol-icon-contrast-standard {
-  --material-symbol-icon: var(--icon-contrast-standard);
-}
-
-.material-symbol-icon-contrast-high {
-  --material-symbol-icon: var(--icon-contrast-high);
-}
-
 .preference-picker-option[aria-pressed='true'] {
   color: var(--fg-color);
   background: transparent;

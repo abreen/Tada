@@ -45,7 +45,7 @@ export async function runPipeline(
   let published = false;
 
   try {
-    const configDiagnostics = validateConfig(scan);
+    const configDiagnostics = validateConfig(scan, siteVariables);
     if (configDiagnostics.length > 0) {
       throw new Error(configDiagnostics[0].message);
     }

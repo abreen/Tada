@@ -127,7 +127,9 @@ header {
     }
 
     ol a .title {
-      font-weight: 500;
+      // Values above 500 resolve to the supplied bold face when a custom
+      // family provides only fixed 400 and 700 weights.
+      font-weight: 600;
       line-height: var(--heading-line-height);
     }
 
@@ -138,10 +140,10 @@ header {
 
     ol li .excerpt {
       grid-row-start: 3;
-      height: 7.5ex;
+      height: 4.2em;
       overflow: hidden;
       font-size: var(--font-size-small);
-      line-height: 2.5ex;
+      line-height: 1.4;
       color: var(--fg2-color);
 
       mark {

@@ -131,22 +131,26 @@ body.code .toc ol a {
   position: relative;
 }
 
+.toc ol li.alert-item.warning {
+  --toc-alert-icon: var(--icon-warning-compact);
+  --toc-alert-icon-size: var(--icon-warning-compact-size);
+}
+
+.toc ol li.alert-item.note {
+  --toc-alert-icon: var(--icon-info-compact);
+  --toc-alert-icon-size: var(--icon-info-compact-size);
+}
+
 .toc ol li.alert-item.warning a::before,
 .toc ol li.alert-item.note a::before {
   display: inline-block;
-  width: 20px;
-  height: 20px;
+  width: var(--toc-alert-icon-size);
+  height: var(--toc-alert-icon-size);
   margin-right: 4px;
-  vertical-align: bottom;
+  vertical-align: sub;
   content: '';
-}
 
-.toc ol li.alert-item.warning a::before {
-  @include contained-mask(var(--icon-warning));
-}
-
-.toc ol li.alert-item.note a::before {
-  @include contained-mask(var(--icon-info));
+  @include contained-mask(var(--toc-alert-icon));
 }
 
 .toc ol li.label {

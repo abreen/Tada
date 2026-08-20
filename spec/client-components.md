@@ -6,8 +6,8 @@ Each component lives in `src/<name>/` with an `index.ts` (exporting async
 `mount()`) and `style.scss`. Import Sass styles in `src/index.ts` to include
 them in the bundle. Shared utilities are in `src/util.ts`.
 
-- **Anchor links**: clickable SVG anchor icons on headings that scroll the
-  heading into view; slide title headings also get a presentation icon button
+- **Anchor links**: clickable headings that scroll themselves into view; slide
+  title headings also get a presentation icon button
 - **Table of contents**: a floating sidebar highlighting the current section
   based on scroll position
 - **Search**: a combobox in the header querying the Pagefind index (see

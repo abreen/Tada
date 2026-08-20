@@ -3,6 +3,8 @@
 @use 'base';
 @use 'layout';
 @use 'alerts';
+@include theme.custom-font-faces;
+@include theme.custom-font-tuning;
 
 @font-face {
   font-family: Inter;
@@ -93,9 +95,9 @@ a.disabled {
 .external-link-tail::after,
 a.external:not(:has(.external-link-tail))::after {
   display: inline-block;
-  width: 1em;
-  height: 1em;
-  vertical-align: middle;
+  width: var(--icon-external-link-size);
+  height: var(--icon-external-link-size);
+  vertical-align: text-top;
   content: '';
 
   @include contained-mask(var(--icon-external-link));
@@ -272,6 +274,10 @@ ol {
   list-style-type: decimal;
 }
 
+:root[data-font-preference='serif'] ol > li::marker {
+  font-variant-numeric: oldstyle-nums;
+}
+
 ol ol {
   list-style-type: lower-alpha;
 }
@@ -413,8 +419,8 @@ a.breadcrumb {
 
   &::after {
     display: inline-block;
-    width: 1em;
-    height: 1em;
+    width: var(--icon-parent-size);
+    height: var(--icon-parent-size);
     vertical-align: middle;
     content: '';
 

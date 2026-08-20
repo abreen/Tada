@@ -2,43 +2,11 @@ function getElements(parent: HTMLElement): HTMLHeadingElement[] {
   return Array.from(parent.querySelectorAll('h1, h2, h3, h4, h5, h6'));
 }
 
-function createHeadingAnchorIcon(window: Window): HTMLSpanElement {
+function createPresentIcon(window: Window): HTMLSpanElement {
   const icon = window.document.createElement('span');
-  icon.className = 'material-symbol-icon material-symbol-icon-heading-anchor';
+  icon.className = 'material-symbol-icon material-symbol-icon-heading-present';
   icon.setAttribute('aria-hidden', 'true');
   return icon;
-}
-
-function createPresentIcon(window: Window): SVGSVGElement {
-  const svg = window.document.createElementNS(
-    'http://www.w3.org/2000/svg',
-    'svg',
-  );
-  svg.setAttribute('aria-hidden', 'true');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('width', '16');
-  svg.setAttribute('height', '16');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '1.5');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
-
-  const paths = [
-    'M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z',
-    'M9 20h6',
-  ];
-
-  for (const d of paths) {
-    const path = window.document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'path',
-    );
-    path.setAttribute('d', d);
-    svg.appendChild(path);
-  }
-
-  return svg;
 }
 
 function getSlideIndex(slide: HTMLElement): number {
@@ -86,7 +54,6 @@ export default (window: Window) => {
       while (el.firstChild) {
         link.appendChild(el.firstChild);
       }
-      link.appendChild(createHeadingAnchorIcon(window));
       el.appendChild(link);
 
       const handleClick = () => {

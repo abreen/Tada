@@ -60,10 +60,10 @@ header details summary::marker {
 }
 
 header summary::after {
-  flex: 0 0 24px;
+  flex: 0 0 var(--icon-header-menu-size);
   order: -1;
-  width: 24px;
-  height: 24px;
+  width: var(--icon-header-menu-size);
+  height: var(--icon-header-menu-size);
   margin-right: 8px;
   margin-left: var(--gap);
   content: '';
@@ -97,7 +97,10 @@ header summary .site-title {
   margin: 0 8px 0 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 500;
+
+  // Values above 500 resolve to the supplied bold face when a custom family
+  // provides only fixed 400 and 700 weights.
+  font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -154,8 +157,8 @@ header .search-controls {
     top: 50%;
     left: 7px;
     z-index: 1;
-    width: 22px;
-    height: 22px;
+    width: var(--icon-search-size);
+    height: var(--icon-search-size);
     pointer-events: none;
     content: '';
     transform: translateY(-50%);
@@ -169,6 +172,7 @@ header .search-controls {
 
   input.search {
     width: 180px;
+    padding-left: calc(2rem - 1px);
   }
 }
 

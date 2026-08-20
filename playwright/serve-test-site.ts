@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import path from 'path';
+import { installCustomFontFixtures } from './custom-font-fixtures';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
@@ -56,7 +57,10 @@ const devConfigWithoutFooter = devConfig.replace(
 if (devConfigWithoutFooter === devConfig) {
   throw new Error('Could not disable the footer in the Playwright test site');
 }
-writeFileSync(devConfigPath, devConfigWithoutFooter);
+writeFileSync(
+  devConfigPath,
+  `${devConfigWithoutFooter}${installCustomFontFixtures(repoDir, siteDir)}`,
+);
 
 mkdirSync(path.dirname(slidesPath), { recursive: true });
 mkdirSync(traceDir, { recursive: true });

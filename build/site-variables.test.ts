@@ -86,6 +86,95 @@ describe('site config schema', () => {
     ).not.toThrow();
   });
 
+  test('accepts structured serif font overrides', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+          fontOverrides: {
+            serif: {
+              regular: 'fonts/body-regular.woff2',
+              italic: 'fonts/body-italic.woff2',
+              bold: 'fonts/body-bold.woff2',
+              boldItalic: 'fonts/body-bold-italic.woff2',
+              tuning: {
+                scale: 1.125,
+                lineHeight: 1.5,
+                headingScale: 0.9,
+                headingWeight: 400,
+              },
+            },
+            serifMono: {
+              regular: 'fonts/mono-regular.woff2',
+              features: ['ss02'],
+              tuning: { scale: 0.96, lineHeight: 1.45 },
+            },
+          },
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
+  test.each([
+    [{ serif: { italic: 'fonts/body-italic.woff2' } }, 'required property'],
+    [
+      { serif: { regular: 'fonts/body.otf' } },
+      'must match pattern "\\.woff2$"',
+    ],
+    [
+      { serifMono: { regular: 'fonts/mono.woff2', features: ['ss2'] } },
+      'must match pattern "^[A-Za-z0-9]{4}$"',
+    ],
+    [
+      {
+        serifMono: { regular: 'fonts/mono.woff2', features: ['ss02', 'ss02'] },
+      },
+      'must NOT have duplicate items',
+    ],
+    [
+      { serif: { regular: 'fonts/body.woff2', tuning: { scale: 0.5 } } },
+      'must be >= 0.75',
+    ],
+    [
+      {
+        serif: { regular: 'fonts/body.woff2', tuning: { headingWeight: 450 } },
+      },
+      'must be equal to one of the allowed values',
+    ],
+    [
+      {
+        serifMono: {
+          regular: 'fonts/mono.woff2',
+          tuning: { headingScale: 0.9 },
+        },
+      },
+      'unknown property "headingScale"',
+    ],
+  ])('rejects invalid font overrides', (fontOverrides, message) => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+          fontOverrides,
+        },
+        'site.dev.json',
+      ),
+    ).toThrow(message);
+  });
+
   test.each([
     ['defaultFont', 'comic'],
     ['defaultContrast', 'low'],

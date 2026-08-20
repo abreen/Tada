@@ -19,6 +19,13 @@ import type { SiteVariables } from './types';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import pkg from '../package.json' with { type: 'json' };
 import { renderMaterialSymbolVariables } from './material-symbols';
+import {
+  getSerifFontStack,
+  getSerifMonoFontStack,
+  renderCustomFontFaceScss,
+  renderCustomFontTuningScss,
+  renderFontFeatureSettings,
+} from './custom-fonts';
 
 interface BunBuildPlugin {
   name: string;
@@ -62,6 +69,10 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const bgTraceLineActive = `hsl(${traceLineActiveHue}deg 100% 86%)`;
   const bgTraceLineActiveDark = `hsl(${traceLineActiveHue}deg 90% 18%)`;
   const materialSymbolVariables = renderMaterialSymbolVariables();
+  const customFontFaces = renderCustomFontFaceScss(siteVariables.fontOverrides);
+  const customFontTuning = renderCustomFontTuningScss(
+    siteVariables.fontOverrides,
+  );
 
   const renderedTemplate = _.template(template)({
     ...theme,
@@ -73,11 +84,19 @@ function renderThemeScss(siteVariables: SiteVariables): string {
     linkColorHoverDark,
     bgTraceLineActive,
     bgTraceLineActiveDark,
+    serifFontStack: getSerifFontStack(siteVariables.fontOverrides),
+    serifMonoFontStack: getSerifMonoFontStack(siteVariables.fontOverrides),
+    serifFontFeatureSettings: renderFontFeatureSettings(
+      siteVariables.fontOverrides?.serif,
+    ),
+    serifMonoFontFeatureSettings: renderFontFeatureSettings(
+      siteVariables.fontOverrides?.serifMono,
+    ),
   });
-  const rendered = renderedTemplate.replace(
-    '/* TADA_MATERIAL_SYMBOL_VARIABLES */',
-    materialSymbolVariables,
-  );
+  const rendered = renderedTemplate
+    .replace('/* TADA_CUSTOM_FONT_FACES */', customFontFaces)
+    .replace('/* TADA_CUSTOM_FONT_TUNING */', customFontTuning)
+    .replace('/* TADA_MATERIAL_SYMBOL_VARIABLES */', materialSymbolVariables);
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-'));
   const configDir = path.join(tmpDir, 'config');
