@@ -31,6 +31,9 @@
   ],
   "scripts": {
     "prepare": "bunx husky",
+    "publish-patch": "bun pm version patch --message='%s' && git push origin main --follow-tags",
+    "publish-minor": "bun pm version minor --message='%s' && git push origin main --follow-tags",
+    "publish-major": "bun pm version major --message='%s' && git push origin main --follow-tags",
     "check-deps": "bun run scripts/check-deps.ts",
     "init-example": "bun run bin/tada.ts init example --no-interactive",
     "iew": "bun run scripts/init-example-watch.ts",
