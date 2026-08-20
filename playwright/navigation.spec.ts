@@ -1,6 +1,9 @@
 import { test, expect, type Page } from './test-fixtures';
 
 type WindowWithNavMarker = Window & { __navMarker?: string };
+type WindowWithViewTransitionCount = Window & {
+  __viewTransitionCount?: number;
+};
 
 async function setNavMarker(page: Page) {
   await page.evaluate(() => {
@@ -10,6 +13,30 @@ async function setNavMarker(page: Page) {
 
 async function getNavMarker(page: Page) {
   return page.evaluate(() => (window as WindowWithNavMarker).__navMarker);
+}
+
+async function trackViewTransitions(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    if (typeof document.startViewTransition !== 'function') {
+      return false;
+    }
+
+    const original = document.startViewTransition;
+    (window as WindowWithViewTransitionCount).__viewTransitionCount = 0;
+    document.startViewTransition = callback => {
+      const trackedWindow = window as WindowWithViewTransitionCount;
+      trackedWindow.__viewTransitionCount =
+        (trackedWindow.__viewTransitionCount ?? 0) + 1;
+      return original.call(document, callback);
+    };
+    return true;
+  });
+}
+
+async function getViewTransitionCount(page: Page): Promise<number> {
+  return page.evaluate(
+    () => (window as WindowWithViewTransitionCount).__viewTransitionCount ?? 0,
+  );
 }
 
 test.describe('graceful degradation without JS', () => {
@@ -113,6 +140,33 @@ test.describe('header menu control', () => {
 });
 
 test.describe('client-side navigation', () => {
+  test('uses View Transitions when motion is allowed', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.goto('/index.html');
+    expect(await trackViewTransitions(page)).toBe(true);
+
+    await page.locator('main.body a[href="/markdown.html"]').click();
+    await expect(page).toHaveURL(/markdown\.html/);
+
+    expect(await getViewTransitionCount(page)).toBe(1);
+  });
+
+  test('skips View Transitions when reduced motion is preferred', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/index.html');
+    await setNavMarker(page);
+    expect(await trackViewTransitions(page)).toBe(true);
+
+    await page.locator('main.body a[href="/markdown.html"]').click();
+    await expect(page).toHaveURL(/markdown\.html/);
+    await expect(page.locator('h1')).toContainText('Markdown Examples');
+
+    expect(await getNavMarker(page)).toBe('alive');
+    expect(await getViewTransitionCount(page)).toBe(0);
+  });
+
   test('clicking an internal link navigates without full reload', async ({
     page,
   }) => {

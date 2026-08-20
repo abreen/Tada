@@ -20,12 +20,14 @@ details are open. Standard contrast retains the translucent header background.
 
 The buttons expose their state with `aria-pressed`. The root `<html>` records
 the configured choice in `data-default-contrast-preference`; effective high
-contrast uses `data-contrast-preference="high"`. A visitor selection that
-differs from the configured default is stored as
-`contrastPreference=standard` or `contrastPreference=high`. Choosing the
-configured default removes the key. A guarded inline script applies a valid
-override before paint; without one, it leaves the build-rendered state
-untouched. The preference is explicit and does not follow `prefers-contrast`.
+contrast uses `data-contrast-preference="high"`. When the configured default is
+standard and there is no valid visitor selection, `prefers-contrast: more`
+becomes the effective default. This system-derived choice is not stored. A
+visitor selection that differs from the effective default is stored as
+`contrastPreference=standard` or `contrastPreference=high`; choosing the
+effective default removes the key. This lets an explicit standard selection
+override a system preference for more contrast. A guarded inline script
+applies the stored or system-derived preference before paint.
 
 The standard button uses the Material Symbols Outlined `contrast_rtl_off`
 glyph and the high button uses `contrast`. Both are vendored SVG masks rendered

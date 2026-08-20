@@ -54,21 +54,33 @@
           }
         }
       } catch {}
+      let contrastPreference;
       try {
-        const preference = window.localStorage.getItem('contrastPreference');
-        const configured =
-          document.documentElement.dataset.defaultContrastPreference;
-        if (
-          (preference === 'high' || preference === 'standard') &&
-          preference !== configured
-        ) {
-          if (preference === 'high') {
-            document.documentElement.dataset.contrastPreference = 'high';
-          } else {
-            delete document.documentElement.dataset.contrastPreference;
-          }
-        }
+        contrastPreference = window.localStorage.getItem('contrastPreference');
       } catch {}
+      const configuredContrast =
+        document.documentElement.dataset.defaultContrastPreference;
+      if (
+        contrastPreference !== 'high' &&
+        contrastPreference !== 'standard'
+      ) {
+        contrastPreference = configuredContrast;
+        if (
+          configuredContrast !== 'high' &&
+          typeof window.matchMedia === 'function'
+        ) {
+          try {
+            if (window.matchMedia('(prefers-contrast: more)').matches) {
+              contrastPreference = 'high';
+            }
+          } catch {}
+        }
+      }
+      if (contrastPreference === 'high') {
+        document.documentElement.dataset.contrastPreference = 'high';
+      } else {
+        delete document.documentElement.dataset.contrastPreference;
+      }
     </script>
     <% if (!isWatchMode) { %>
     <script type="speculationrules">

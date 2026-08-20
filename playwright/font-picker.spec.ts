@@ -233,6 +233,75 @@ test.describe('configured appearance defaults', () => {
 });
 
 test.describe('appearance pickers', () => {
+  test('applies the system contrast preference before mounting', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ contrast: 'more' });
+    await page.route('**/index.bundle.*.js', route => route.abort());
+    await page.goto('/index.html');
+
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+    await expect(
+      page.locator('.appearance-pickers button').first(),
+    ).toBeDisabled();
+    expect(
+      await page.evaluate(() => localStorage.getItem('contrastPreference')),
+    ).toBeNull();
+  });
+
+  test('uses the system contrast preference until the visitor chooses', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ contrast: 'more' });
+    await page.goto('/index.html');
+
+    const standard = page.getByRole('button', {
+      name: 'Use standard contrast',
+    });
+    const high = page.getByRole('button', { name: 'Use high contrast' });
+
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+    await expect(high).toHaveAttribute('aria-pressed', 'true');
+    await expect(standard).toHaveAttribute('aria-pressed', 'false');
+    expect(
+      await page.evaluate(() => localStorage.getItem('contrastPreference')),
+    ).toBeNull();
+
+    await standard.click();
+    await expect(page.locator('html')).not.toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+    expect(
+      await page.evaluate(() => localStorage.getItem('contrastPreference')),
+    ).toBe('standard');
+
+    await page.reload();
+    await expect(standard).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('html')).not.toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+
+    await high.click();
+    expect(
+      await page.evaluate(() => localStorage.getItem('contrastPreference')),
+    ).toBeNull();
+
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+    await expect(high).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('switches configured stacks and exposes the selected option', async ({
     page,
   }) => {

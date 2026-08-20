@@ -91,10 +91,23 @@ function getDefaultFontPreference(document: Document): FontPreference {
     : 'sans';
 }
 
-function getDefaultContrastPreference(document: Document): ContrastPreference {
-  return document.documentElement.dataset.defaultContrastPreference === 'high'
-    ? 'high'
-    : 'standard';
+function getDefaultContrastPreference(window: Window): ContrastPreference {
+  const configured =
+    window.document.documentElement.dataset.defaultContrastPreference === 'high'
+      ? 'high'
+      : 'standard';
+
+  if (configured === 'high' || typeof window.matchMedia !== 'function') {
+    return configured;
+  }
+
+  try {
+    return window.matchMedia('(prefers-contrast: more)').matches
+      ? 'high'
+      : configured;
+  } catch {
+    return configured;
+  }
 }
 
 export function applyFontPreference(
@@ -167,7 +180,7 @@ export default function mountAppearancePicker(window: Window): () => void {
   );
   const storage = getStorage(window);
   const defaultFontPreference = getDefaultFontPreference(document);
-  const defaultContrastPreference = getDefaultContrastPreference(document);
+  const defaultContrastPreference = getDefaultContrastPreference(window);
   let fontPreference = getFontPreference(storage, defaultFontPreference);
   let contrastPreference = getContrastPreference(
     storage,

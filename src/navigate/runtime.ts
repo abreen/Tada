@@ -138,6 +138,18 @@ function isActiveNavigation(controller: AbortController): boolean {
   return currentAbortController === controller && !controller.signal.aborted;
 }
 
+function prefersReducedMotion(window: Window): boolean {
+  if (typeof window.matchMedia !== 'function') {
+    return false;
+  }
+
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
 export function initNavigation(window: Window): void {
   currentAbortController = null;
   historyIndex = 0;
@@ -305,6 +317,7 @@ export async function navigateToUrl(
 
   if (
     useViewTransition &&
+    !prefersReducedMotion(window) &&
     typeof transitionDoc.startViewTransition === 'function'
   ) {
     const titleEl = document.querySelector('.title-and-info');

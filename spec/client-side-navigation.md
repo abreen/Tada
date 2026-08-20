@@ -19,7 +19,9 @@ The navigator fetches the target page, parses it, and replaces the
 `.container` element with the new one. It then updates the document
 title, meta tags, and body class, and re-mounts per-page components
 (TOC, anchors, code enhancements, etc.). The swap is wrapped in a
-View Transition for a crossfade where supported.
+View Transition where supported unless the visitor has requested reduced
+motion with `prefers-reduced-motion: reduce`. Reduced-motion navigations use
+the same immediate content swap without calling the View Transition API.
 
 Persistent components (header, search, back-to-top, navigate) mount
 once at startup. The page update toast also stays mounted and resets its
