@@ -11,6 +11,10 @@ Serif 4 with Libertinus Mono in serif mode, which can instead be made the site
 default with `defaultFont: serif`. All four families use bundled WOFF2 files and
 make no font-network requests to third parties.
 
+Tada fixes browser text-size adjustment at 100% so responsive font sizes remain
+consistent on mobile browsers. In particular, iOS Safari does not independently
+autosize nested prose blocks such as list levels. User zoom remains available.
+
 Source Serif 4 includes normal and italic variable faces with weight 200–900
 and optical size 8–60. Browser optical sizing remains automatic. Libertinus
 Mono includes the supplied regular 400 face; browsers may synthesize other

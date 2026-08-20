@@ -57,6 +57,38 @@ async function getNeutralPalette(page: Page) {
   });
 }
 
+test.describe('font sizing', () => {
+  test('keeps mobile browsers from autosizing nested prose', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto('/markdown.html');
+
+    const textSizeAdjust = await page.locator('html').evaluate(element => {
+      const style = getComputedStyle(element);
+      return {
+        standard: style.getPropertyValue('text-size-adjust'),
+        webkit: style.getPropertyValue('-webkit-text-size-adjust'),
+      };
+    });
+    const nestedListItemSizes = await page.evaluate(() => {
+      const groceryList = Array.from(
+        document.querySelectorAll('main.body > ul.styled-list'),
+      ).find(element => element.textContent?.includes('Milk'));
+      return Array.from(
+        groceryList?.querySelectorAll('.styled-list-item') ?? [],
+        element => Number.parseFloat(getComputedStyle(element).fontSize),
+      );
+    });
+
+    expect(textSizeAdjust).toEqual({ standard: '100%', webkit: '100%' });
+    expect(nestedListItemSizes).toHaveLength(5);
+    expect(
+      Math.max(...nestedListItemSizes) - Math.min(...nestedListItemSizes),
+    ).toBeLessThan(0.01);
+  });
+});
+
 test.describe('font picker without JavaScript', () => {
   test('stays visible and disabled with the defaults', async ({ browser }) => {
     const context = await browser.newContext({ javaScriptEnabled: false });
