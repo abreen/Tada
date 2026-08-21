@@ -5,7 +5,7 @@
 
 @mixin link-underline {
   text-decoration-line: underline;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: from-font;
   text-decoration-color: currentcolor;
   text-underline-offset: 0.11rem;
 }

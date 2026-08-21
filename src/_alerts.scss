@@ -35,11 +35,6 @@
     background: inherit;
   }
 
-  time[datetime].is-modified {
-    // Reset the underline color
-    text-decoration: underline dotted;
-  }
-
   a {
     @include link-underline;
 

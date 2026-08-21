@@ -24,6 +24,9 @@ scales with `tintAmount` over a base floor, so links remain recognizably
 blue even when `tintAmount` is 0. The same color is used for the external
 link SVG icon.
 
+Visible link underlines use each font's underline thickness metadata via
+`text-decoration-thickness: from-font`.
+
 Inside `.alert.warning` and `.alert.note` boxes the link color is overridden
 back to `--fg-color` (and the external link icon falls back to a foreground
 variant), since the alert backgrounds are already saturated and a blue link

@@ -157,7 +157,7 @@ body.literate main table {
       .text {
         color: var(--fg2-color);
         text-decoration: underline;
-        text-decoration-thickness: 1px;
+        text-decoration-thickness: from-font;
         text-underline-offset: 3px;
       }
 
