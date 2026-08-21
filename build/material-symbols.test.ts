@@ -15,8 +15,8 @@ describe('Material Symbols', () => {
     expect(MATERIAL_SYMBOL_CONFIG).toEqual({
       family: 'Material Symbols Outlined',
       fill: 0,
-      weight: 500,
-      grade: 0,
+      weight: 200,
+      grade: 200,
       opticalSizes: [20, 24, 40],
       viewBox: '0 -960 960 960',
       source: 'https://fonts.google.com/icons',

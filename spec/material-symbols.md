@@ -7,7 +7,7 @@ variable, allowing the glyph to inherit `currentcolor` from its component.
 
 `build/material-symbols.ts` is the single source of truth for the shared
 Material Symbols Outlined configuration and the semantic icon registry. All
-registered glyphs use FILL 0, weight 500, and grade 0. Each semantic entry also
+registered glyphs use FILL 0, weight 200, and grade 200. Each semantic entry also
 declares an optical size of 20, 24, or 40, matching both its canonical SVG
 variant and its rendered CSS dimensions.
 
@@ -34,7 +34,7 @@ be tested without filesystem access.
 To add a Material Symbol:
 
 1. Choose a rendered size supported by the registry, then download the outlined,
-   FILL 0, weight 500, grade 0 SVG with that same optical size from Google Fonts
+   FILL 0, weight 200, grade 200 SVG with that same optical size from Google Fonts
    Icons.
 2. Add the unmodified file to `assets/material-symbols/` using its canonical
    `<symbol>_<size>px.svg` filename.

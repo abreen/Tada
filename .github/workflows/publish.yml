@@ -286,7 +286,7 @@ jobs:
       run: |
         yq --yaml-output --in-place --arg pct '${{ steps.coverage.outputs.percent }}' '
           .defaultFont = "sans" |
-          .defaultContrast = "high" |
+          .defaultContrast = "standard" |
           .fontOverrides = {
             "serif": {
               "regular": "fonts/equity_ot_b_regular.woff2",
