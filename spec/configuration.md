@@ -60,6 +60,8 @@ Generated development and production site configs explicitly include
 - **faviconColor**: overrides theme color for the favicon
 - **faviconFontWeight**: font weight for the favicon symbol (1 to 1000)
 - **titlePostfix**: appended to page titles in `<title>` (derived from title)
+- **banner**: Markdown rendered in a bordered box above every page; see
+  [Site banner](banner.md)
 - **tintHue**: background tint hue, 0 to 360 degrees (default: 20)
 - **tintAmount**: background tint intensity, 0 to 100% (default: 100)
 - **defaultFont**: initial typography, `sans` or `serif` (default: `sans`)

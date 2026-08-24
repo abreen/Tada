@@ -137,3 +137,8 @@
       </details>
     </header>
     <div class="container">
+      <% if (site.banner) { %>
+      <aside class="site-banner alert" data-pagefind-ignore>
+        <div class="content"><%= bannerHtml %></div>
+      </aside>
+      <% } %>

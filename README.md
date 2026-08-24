@@ -216,6 +216,11 @@ Example site configuration YAML file:
 ```yaml
 title: Intro to Computer Science
 titlePostfix: " - CS 0"
+banner: |
+  The semester is now closed. Final grades will become available on
+  [Gradescope](https://example.org/course/12345) on December 30.
+
+  This site is an archive. This is how the site appeared on December 27, 2020.
 symbol: CS 0
 themeColor: hsl(351 70% 40%)
 tintAmount: 0
@@ -257,6 +262,7 @@ vars:
 |-------|-------------|
 | `title` | Title for the whole site (also used to derive `titlePostfix`) |
 | `titlePostfix` | *Optional*, the string to append to each page's `title` |
+| `banner` | *Optional*, Markdown rendered in a bordered box above every page |
 | `symbol` | Text (1-5 chars) displayed in header (also used as the favicon symbol) |
 | `themeColor` | Theme color for the site (e.g., `"tomato"`, `"#c04040"`, `"hsl(195 70% 40%)"`) |
 | `tintHue` | *Optional*, hue (0-360) for background and foreground tinting (default `20`) |

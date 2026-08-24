@@ -90,6 +90,7 @@ interface TemplateParametersInput {
   content: string | null;
   subPath: string;
   isWatchMode: boolean;
+  bannerHtml?: string;
 }
 
 function resolveAuthor(
@@ -141,6 +142,7 @@ function createTemplateParameters({
   content,
   subPath,
   isWatchMode,
+  bannerHtml,
 }: TemplateParametersInput): Record<string, unknown> {
   const applyBasePath = createApplyBasePath(siteVariables);
   return {
@@ -149,10 +151,19 @@ function createTemplateParameters({
     site: siteVariables,
     page: pageVariables,
     content,
+    bannerHtml,
     isWatchMode,
     speculationRulesHrefMatches: `${applyBasePath('/')}*`,
     tadaVersion,
   };
+}
+
+function renderSiteBanner(siteVariables: SiteVariables): string {
+  if (!siteVariables.banner) {
+    return '';
+  }
+
+  return createMarkdown(siteVariables).render(siteVariables.banner);
 }
 
 export function injectAssetTags(
@@ -290,6 +301,7 @@ export function renderPlainTextPageAsset({
     content,
     subPath,
     isWatchMode: watchMode,
+    bannerHtml: renderSiteBanner(siteVariables),
   });
 
   const templateHtml = render(
@@ -371,6 +383,7 @@ export function renderCodePageAsset({
     content,
     subPath,
     isWatchMode: isWatchMode(assetFiles),
+    bannerHtml: renderSiteBanner(siteVariables),
   });
 
   const templateHtml = render('code.html', templateParameters) as string;
@@ -714,6 +727,7 @@ export function renderLiterateJavaPageAsset({
     content: contentHtml,
     subPath,
     isWatchMode: isWatchMode(assetFiles),
+    bannerHtml: renderSiteBanner(siteVariables),
   });
 
   const templateHtml = render('literate.html', templateParameters) as string;

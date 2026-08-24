@@ -67,6 +67,42 @@ describe('validateShikiLanguages', () => {
 });
 
 describe('site config schema', () => {
+  test('accepts a Markdown banner string', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+          banner: '**Scheduled maintenance** tonight.',
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
+  test('rejects a non-string banner', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+          banner: ['Scheduled maintenance'],
+        },
+        'site.dev.json',
+      ),
+    ).toThrow('/banner: must be string');
+  });
+
   test('accepts configurable appearance defaults', () => {
     const validator = compile(siteSchema);
 

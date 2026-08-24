@@ -24,6 +24,7 @@
       "items": { "type": "string", "pattern": "^[-.:a-zA-Z0-9]+$" }
     },
     "title": { "type": "string" },
+    "banner": { "type": "string" },
     "symbol": { "type": "string", "pattern": "^[A-Z0-9\\- ]{1,5}$" },
     "titlePostfix": { "type": "string" },
     "themeColor": { "type": "string" },

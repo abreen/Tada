@@ -37,6 +37,7 @@ export interface SiteVariables {
   basePath: string;
   title: string;
   titlePostfix: string;
+  banner?: string;
   symbol?: string;
   faviconSymbol?: string;
   themeColor: string;

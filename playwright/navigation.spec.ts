@@ -151,6 +151,43 @@ test.describe('client-side navigation', () => {
     expect(await getViewTransitionCount(page)).toBe(1);
   });
 
+  test('keeps the site banner stationary during View Transitions', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    await page.locator('.container').evaluate(container => {
+      const banner = document.createElement('aside');
+      banner.className = 'site-banner';
+      container.prepend(banner);
+    });
+
+    const transitionStyles = await page.locator('.site-banner').evaluate(el => {
+      const root = el.ownerDocument.documentElement;
+      const pseudoStyle = (pseudo: string) => getComputedStyle(root, pseudo);
+      const group = pseudoStyle('::view-transition-group(site-banner)');
+      const oldImage = pseudoStyle('::view-transition-old(site-banner)');
+      const newImage = pseudoStyle('::view-transition-new(site-banner)');
+
+      return {
+        name: getComputedStyle(el).viewTransitionName,
+        groupAnimation: group.animationName,
+        oldAnimation: oldImage.animationName,
+        newAnimation: newImage.animationName,
+        oldBlend: oldImage.mixBlendMode,
+        newBlend: newImage.mixBlendMode,
+      };
+    });
+
+    expect(transitionStyles).toEqual({
+      name: 'site-banner',
+      groupAnimation: 'none',
+      oldAnimation: 'none',
+      newAnimation: 'none',
+      oldBlend: 'normal',
+      newBlend: 'normal',
+    });
+  });
+
   test('skips View Transitions when reduced motion is preferred', async ({
     page,
   }) => {

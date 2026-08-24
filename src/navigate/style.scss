@@ -42,6 +42,23 @@ $duration: 150ms;
   animation-duration: $duration;
 }
 
+// The site-wide banner does not change between pages. Keep it out of the root
+// slide and pin its named transition layer in place without a crossfade.
+.site-banner {
+  view-transition-name: site-banner;
+}
+
+::view-transition-group(site-banner),
+::view-transition-old(site-banner),
+::view-transition-new(site-banner) {
+  animation: none;
+}
+
+::view-transition-old(site-banner),
+::view-transition-new(site-banner) {
+  mix-blend-mode: normal;
+}
+
 // Forward navigation: old content slides left, new content slides in from right
 .nav-forward::view-transition-old(root) {
   animation: slide-out-left $duration ease-in;

@@ -5,15 +5,19 @@ import TOP_TEMPLATE from './_top.html' with { type: 'text' };
 function renderTop(
   defaultFont: 'sans' | 'serif',
   defaultContrast: 'standard' | 'high',
+  banner?: string,
+  bannerHtml?: string,
 ) {
   return _.template(TOP_TEMPLATE)({
     site: {
       defaultFont,
       defaultContrast,
+      banner,
       features: { favicon: false, search: false },
       title: 'Test site',
       titlePostfix: ' - Test site',
     },
+    bannerHtml,
     page: { title: 'Page', template: 'default' },
     tadaVersion: '0.0.0',
     isWatchMode: true,
@@ -41,5 +45,27 @@ describe('_top.html template', () => {
     expect(openingTag).toContain('data-default-contrast-preference="high"');
     expect(openingTag).toContain('data-font-preference="serif"');
     expect(openingTag).toContain('data-contrast-preference="high"');
+  });
+
+  test('renders a non-empty banner without a title', () => {
+    const html = renderTop(
+      'sans',
+      'standard',
+      '**Scheduled maintenance**',
+      '<p><strong>Scheduled maintenance</strong></p>\n',
+    );
+
+    expect(html).toContain(
+      '<aside class="site-banner alert" data-pagefind-ignore>',
+    );
+    expect(html).toContain('<p><strong>Scheduled maintenance</strong></p>');
+    expect(html).not.toContain('<p class="title">');
+    expect(html).not.toContain('&lt;strong&gt;');
+  });
+
+  test.each([undefined, ''])('omits an empty banner (%p)', banner => {
+    const html = renderTop('sans', 'standard', banner, '');
+
+    expect(html).not.toContain('<aside class="site-banner');
   });
 });

@@ -102,3 +102,10 @@ i.warning {
 .alert > p:last-child {
   margin-bottom: 0;
 }
+
+.site-banner {
+  color: var(--fg2-color);
+  background: none;
+  border: 1px solid var(--fg2-color);
+  border-radius: var(--border-radius);
+}

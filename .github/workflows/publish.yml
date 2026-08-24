@@ -314,6 +314,7 @@ jobs:
               }
             }
           } |
+          .banner = "This is a **test** of the *site-wide* banner." |
           .vars.testCoveragePercent = ($pct | tonumber) |
           .vars.testCoverageUrl = "/coverage/index.html"
         ' example/site.prod.yaml

@@ -87,6 +87,38 @@ class TestConfigFileVariants:
         assert 'Alex' in (site / 'dist' / 'index.html').read_text()
 
 
+class TestSiteBanner:
+    def test_dev_build_conditionally_renders_markdown_banner(self, tmp_path):
+        site = init_site(tmp_path, bare=True)
+
+        result = run_tada('dev', cwd=str(site))
+
+        assert result.returncode == 0, f'dev build failed: {result.stderr}'
+        index_html = site / 'dist' / 'index.html'
+        assert '<aside class="site-banner' not in index_html.read_text()
+
+        set_site_config(
+            site,
+            {
+                'banner': (
+                    '**Scheduled maintenance** tonight.\n\n'
+                    '- Read the [status page](/index.html).\n'
+                    '- Save your work.'
+                )
+            },
+        )
+
+        result = run_tada('dev', cwd=str(site))
+
+        assert result.returncode == 0, f'dev build failed: {result.stderr}'
+        html = index_html.read_text()
+        assert '<aside class="site-banner alert" data-pagefind-ignore="">' in html
+        assert '<p class="title">Note</p>' not in html
+        assert '<strong>Scheduled maintenance</strong>' in html
+        assert '<ul class="styled-list">' in html
+        assert 'href="/index.html"' in html
+
+
 class TestConfigFileErrors:
     def test_comment_only_site_dev_yaml_fails_validation(self, tmp_path):
         site = init_site(tmp_path, bare=True)
