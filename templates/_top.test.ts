@@ -30,11 +30,12 @@ function renderTop(
 describe('_top.html template', () => {
   test('keeps search disabled until its client component mounts', () => {
     const html = renderTop('sans', 'standard', undefined, undefined, true);
+    const searchInput = html.match(
+      /<input\b[^>]*\bname="quick-search"[^>]*>/,
+    )?.[0];
 
-    expect(html).toContain('name="quick-search"');
-    expect(html).toContain(
-      'aria-controls="quick-search-results"\n                 disabled',
-    );
+    expect(searchInput).toBeDefined();
+    expect(searchInput).toMatch(/\sdisabled(?:\s|\/>)/);
     expect(html).not.toContain('previousElementSibling.disabled=false');
   });
 
