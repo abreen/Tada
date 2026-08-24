@@ -235,6 +235,19 @@ async function flush() {
 }
 
 describe('search UI', () => {
+  test('enables the search input after mounting', () => {
+    mockGlobals({ importModule: () => new Promise(() => {}) });
+    const win = createSearchWindow();
+    const input = win.document.querySelector(
+      'input.quick-search',
+    ) as HTMLInputElement;
+    input.disabled = true;
+
+    mount(win);
+
+    expect(input.disabled).toBe(false);
+  });
+
   test('keeps loading while Pagefind imports and renders every result', async () => {
     const pagefindLoad = deferred<unknown>();
     let availableIndex: 'initial' | 'reloaded' = 'initial';

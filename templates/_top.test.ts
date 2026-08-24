@@ -7,13 +7,14 @@ function renderTop(
   defaultContrast: 'standard' | 'high',
   banner?: string,
   bannerHtml?: string,
+  search = false,
 ) {
   return _.template(TOP_TEMPLATE)({
     site: {
       defaultFont,
       defaultContrast,
       banner,
-      features: { favicon: false, search: false },
+      features: { favicon: false, search },
       title: 'Test site',
       titlePostfix: ' - Test site',
     },
@@ -27,6 +28,16 @@ function renderTop(
 }
 
 describe('_top.html template', () => {
+  test('keeps search disabled until its client component mounts', () => {
+    const html = renderTop('sans', 'standard', undefined, undefined, true);
+
+    expect(html).toContain('name="quick-search"');
+    expect(html).toContain(
+      'aria-controls="quick-search-results"\n                 disabled',
+    );
+    expect(html).not.toContain('previousElementSibling.disabled=false');
+  });
+
   test('renders sans and standard defaults without effective state attributes', () => {
     const html = renderTop('sans', 'standard');
     const openingTag = html.match(/<html[^>]*>/)?.[0];

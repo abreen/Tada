@@ -598,6 +598,7 @@ export default (window: Window) => {
   window.addEventListener('pointermove', handleWindowPointerMove);
   window.addEventListener('keydown', handleWindowKeyDown);
   window.addEventListener(PAGE_UPDATE_REFRESH_EVENT, handlePageUpdateRefresh);
+  input.disabled = false;
 
   return () => {
     window.removeEventListener(

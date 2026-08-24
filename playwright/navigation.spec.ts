@@ -459,6 +459,8 @@ test.describe('client-side navigation', () => {
     const otherInput = page.getByLabel('Other input');
     const returnFocus = page.getByRole('button', { name: 'Return focus' });
 
+    await expect(searchInput).toBeEnabled();
+
     await otherInput.focus();
     await page.keyboard.press('/');
     await expect(otherInput).toHaveValue('/');

@@ -27,6 +27,9 @@ excluded from production build manifests
 A search combobox in the site header queries the Pagefind index. Results show
 excerpts and support keyboard navigation. PDF results are grouped by document,
 with individual page numbers shown as sub-results sorted by page number.
+The combobox is rendered disabled and is enabled only after its client
+component has attached the search and keyboard-shortcut listeners. Without
+JavaScript it remains disabled.
 The complete search control, including its icon, is hidden at viewport widths
 of 400px or less; above that breakpoint it remains right-aligned within the
 header.
