@@ -243,6 +243,7 @@ fontOverrides:
 features:
   search: true
   favicon: true
+  pickers: true
 base: https://example.edu
 basePath: /cs0
 internalDomains:
@@ -274,6 +275,7 @@ vars:
 | `features.search` | Enable search UI and Pagefind index generation |
 | `features.favicon` | Enable automatically generated favicons |
 | `features.footer` | Show the Tada footer at the bottom of every page |
+| `features.pickers` | Show the font and contrast pickers at the bottom of every page (default `true`) |
 | `base` | Full base URL of the deployed site, used for metadata and URL generation |
 | `basePath` | URL prefix for deployment under a subpath (e.g., `"/cs101"`), use `"/"` at root |
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |
