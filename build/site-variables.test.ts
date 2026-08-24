@@ -67,6 +67,24 @@ describe('validateShikiLanguages', () => {
 });
 
 describe('site config schema', () => {
+  test('accepts a nested base path', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          basePath: '/old/26summer',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+        },
+        'site.prod.yaml',
+      ),
+    ).not.toThrow();
+  });
+
   test('accepts a Markdown banner string', () => {
     const validator = compile(siteSchema);
 

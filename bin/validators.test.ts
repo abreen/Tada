@@ -144,6 +144,10 @@ describe('validateBasePath', () => {
     expect(validateBasePath('/cs101')).toBeNull();
   });
 
+  test('accepts nested path segments', () => {
+    expect(validateBasePath('/old/26summer')).toBeNull();
+  });
+
   test('rejects path without leading slash', () => {
     expect(validateBasePath('foo')).not.toBeNull();
   });
@@ -156,8 +160,8 @@ describe('validateBasePath', () => {
     expect(validateBasePath('/foo bar')).not.toBeNull();
   });
 
-  test('rejects nested paths', () => {
-    expect(validateBasePath('/foo/bar')).not.toBeNull();
+  test('rejects empty path segments', () => {
+    expect(validateBasePath('/foo//bar')).not.toBeNull();
   });
 });
 

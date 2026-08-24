@@ -7,8 +7,9 @@ pass over each generated page.
 ## Base path rewriting
 
 The `basePath` config field (default: `/`) sets a URL prefix for the site. This
-is useful when a site is hosted at a subpath of a domain (e.g., `/course/`
-instead of the root).
+is useful when a site is hosted at a subpath of a domain (e.g., `/course` or
+`/old/26summer` instead of the root). Each slash-separated segment may contain
+letters, digits, and hyphens; non-root base paths must not end with a slash.
 
 ### Absolute links
 

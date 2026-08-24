@@ -49,8 +49,8 @@ export function validateUrl(value: string): string | null {
 }
 
 export function validateBasePath(value: string): string | null {
-  if (!/^\/[-a-zA-Z0-9]*$/.test(value)) {
-    return 'Must start with / and contain only letters, digits, and hyphens';
+  if (!/^\/(?:[-a-zA-Z0-9]+(?:\/[-a-zA-Z0-9]+)*)?$/.test(value)) {
+    return 'Must start with / and contain path segments made of letters, digits, and hyphens';
   }
   return null;
 }
