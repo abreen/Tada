@@ -14,7 +14,7 @@ const DEFAULT: Partial<SiteVariables> = {
   basePath: '/',
   defaultFont: 'sans',
   defaultContrast: 'standard',
-  features: { search: true, favicon: true, footer: true },
+  features: { search: true, favicon: true, footer: true, pickers: true },
 };
 
 const isValid = compileJsonSchema(siteSchema);

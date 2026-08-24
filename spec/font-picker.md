@@ -1,7 +1,9 @@
 # Font Picker
 
-Every page includes a font picker in the appearance control row after the
-optional Tada attribution footer. The row also includes the
+By default, every page includes a font picker in the appearance control row
+after the optional Tada attribution footer. Set `features.pickers: false` to
+omit the entire appearance control row from generated HTML without disabling
+configured defaults or stored visitor preferences. The row also includes the
 [contrast picker](contrast-picker.md). The two `Aa` buttons select between
 sans-serif and serif typography for both prose and monospaced text.
 
@@ -54,9 +56,9 @@ only after the preference is selected. When the selected option is hovered,
 focused, or active, its treatment is painted on the knob itself so the button
 background cannot clip the knob while it slides into place.
 
-The font and contrast pickers are one page-local component. They are re-mounted
-and synchronized after client-side navigation replaces the page container.
-They remain present when the attribution footer is disabled.
+The font and contrast pickers are one page-local component. When enabled, they
+are re-mounted and synchronized after client-side navigation replaces the page
+container. They remain present when the attribution footer is disabled.
 
 The appearance row is rendered at build time so it occupies its final layout
 position as soon as the HTML is parsed. All four buttons are initially disabled

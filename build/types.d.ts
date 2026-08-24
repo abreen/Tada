@@ -63,6 +63,7 @@ export type FeatureConfig = {
   search: boolean;
   favicon: boolean;
   footer: boolean;
+  pickers: boolean;
 };
 
 /** A rendered content asset ready to write to dist/ */

@@ -1,9 +1,12 @@
 # Contrast Picker
 
-Every page includes a contrast picker beside the font picker in the appearance
-control row after the optional Tada attribution footer. Standard contrast is
-the default when `defaultContrast` is omitted from site config. Authors can set
-`defaultContrast: high` to build every page with high contrast already active.
+By default, every page includes a contrast picker beside the font picker in the
+appearance control row after the optional Tada attribution footer. Set
+`features.pickers: false` to omit the entire row from generated HTML without
+disabling configured defaults or stored visitor preferences. Standard contrast
+is the default when `defaultContrast` is omitted from site config. Authors can
+set `defaultContrast: high` to build every page with high contrast already
+active.
 High contrast uses an achromatic neutral palette while leaving theme accents,
 links, warnings, and notes unchanged.
 

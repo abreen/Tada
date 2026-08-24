@@ -12,7 +12,7 @@ const siteVariables = {
   internalDomains: [],
   extensionToShikiLanguage: { java: 'java', py: 'python' },
   shikiLanguages: ['java', 'python'],
-  features: { search: true, favicon: true, footer: true },
+  features: { search: true, favicon: true, footer: true, pickers: true },
   vars: { fullCourseName: 'CS 0, Intro to CS' },
 } as SiteVariables;
 

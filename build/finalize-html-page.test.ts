@@ -13,7 +13,7 @@ const siteVariables = {
   titlePostfix: ' - Test',
   themeColor: 'steelblue',
   defaultTimeZone: 'America/New_York',
-  features: { search: true, favicon: true, footer: true },
+  features: { search: true, favicon: true, footer: true, pickers: true },
 } as SiteVariables;
 
 function createCollector(): RenderDependencyCollector & {

@@ -157,7 +157,7 @@ describe('renderCodeWithComments', () => {
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
       defaultTimeZone: 'America/New_York',
-      features: { search: true, favicon: true, footer: true },
+      features: { search: true, favicon: true, footer: true, pickers: true },
     } as SiteVariables);
 
     expect(html).toContain('<span class="code-row">');
@@ -177,7 +177,7 @@ describe('renderCodeWithComments', () => {
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
       defaultTimeZone: 'America/New_York',
-      features: { search: true, favicon: true, footer: true },
+      features: { search: true, favicon: true, footer: true, pickers: true },
     } as SiteVariables);
 
     expect(html).toContain(
@@ -201,7 +201,7 @@ describe('renderCodeWithComments', () => {
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
         defaultTimeZone: 'America/New_York',
-        features: { search: true, favicon: true, footer: true },
+        features: { search: true, favicon: true, footer: true, pickers: true },
       } as SiteVariables,
       'lectures/01',
     );
@@ -226,7 +226,7 @@ describe('renderCodeWithComments', () => {
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
         defaultTimeZone: 'America/New_York',
-        features: { search: true, favicon: true, footer: true },
+        features: { search: true, favicon: true, footer: true, pickers: true },
       } as SiteVariables,
       'lectures/01',
     );
@@ -250,7 +250,7 @@ describe('renderCodeWithComments', () => {
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
         defaultTimeZone: 'America/New_York',
-        features: { search: true, favicon: true, footer: true },
+        features: { search: true, favicon: true, footer: true, pickers: true },
       } as SiteVariables,
       'lectures/01',
     );
@@ -270,7 +270,7 @@ describe('renderCodeWithComments', () => {
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
       defaultTimeZone: 'America/New_York',
-      features: { search: true, favicon: true, footer: true },
+      features: { search: true, favicon: true, footer: true, pickers: true },
     } as SiteVariables);
 
     expect(html).toContain('class="katex"');
@@ -290,7 +290,7 @@ describe('renderCodeWithComments', () => {
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
         defaultTimeZone: 'America/New_York',
-        features: { search: true, favicon: true, footer: true },
+        features: { search: true, favicon: true, footer: true, pickers: true },
       } as SiteVariables),
     ).toThrow();
   });
@@ -305,7 +305,7 @@ describe('renderCodeWithComments', () => {
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
       defaultTimeZone: 'America/New_York',
-      features: { search: true, favicon: true, footer: true },
+      features: { search: true, favicon: true, footer: true, pickers: true },
       vars: { fullCourseName: 'CS 0' },
     } as SiteVariables);
 
@@ -326,7 +326,7 @@ describe('rewriteProseLinks', () => {
     titlePostfix: ' - Test',
     themeColor: 'steelblue',
     defaultTimeZone: 'America/New_York',
-    features: { search: true, favicon: true, footer: true },
+    features: { search: true, favicon: true, footer: true, pickers: true },
   } as SiteVariables;
 
   test('rewrites relative link with base + basePath', () => {

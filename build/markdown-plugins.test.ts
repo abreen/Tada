@@ -221,7 +221,7 @@ describe('custom markdown containers', () => {
         internalDomains: [],
         extensionToShikiLanguage: {},
         shikiLanguages: ['ts'],
-        features: { search: true, favicon: false, footer: true },
+        features: { search: true, favicon: false, footer: true, pickers: true },
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
@@ -461,7 +461,7 @@ describe('markdown slide segmentation', () => {
         internalDomains: [],
         extensionToShikiLanguage: {},
         shikiLanguages: ['ts'],
-        features: { search: true, favicon: false, footer: true },
+        features: { search: true, favicon: false, footer: true, pickers: true },
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
@@ -641,7 +641,7 @@ describe('markdown slide segmentation', () => {
 
 describe('markdown fence languages', () => {
   function createProjectMarkdown({
-    features = { search: true, favicon: false, footer: true },
+    features = { search: true, favicon: false, footer: true, pickers: true },
     shikiLanguages,
   }: Partial<SiteVariables> = {}) {
     return createMarkdown(
@@ -700,7 +700,7 @@ describe('markdown fence languages', () => {
 
   test('highlights fences even when no code-page mappings are configured', () => {
     const md = createProjectMarkdown({
-      features: { search: true, favicon: false, footer: true },
+      features: { search: true, favicon: false, footer: true, pickers: true },
       shikiLanguages: ['ts'],
     });
 
@@ -719,7 +719,7 @@ describe('hidden_fence rule', () => {
         basePath: '/',
         internalDomains: [],
         extensionToShikiLanguage: {},
-        features: { search: true, favicon: false, footer: true },
+        features: { search: true, favicon: false, footer: true, pickers: true },
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
@@ -800,7 +800,7 @@ describe('katex plugin', () => {
         basePath: '/',
         internalDomains: [],
         extensionToShikiLanguage: {},
-        features: { search: true, favicon: false, footer: true },
+        features: { search: true, favicon: false, footer: true, pickers: true },
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
@@ -900,7 +900,7 @@ describe('footnote rendering', () => {
         basePath: '/',
         internalDomains: [],
         extensionToShikiLanguage: {},
-        features: { search: true, favicon: false, footer: true },
+        features: { search: true, favicon: false, footer: true, pickers: true },
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',

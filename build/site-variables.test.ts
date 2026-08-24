@@ -122,6 +122,42 @@ describe('site config schema', () => {
     ).not.toThrow();
   });
 
+  test.each([true, false])('accepts features.pickers=%s', pickers => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+          features: { pickers },
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
+  test('rejects a non-boolean features.pickers value', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+          features: { pickers: 'yes' },
+        },
+        'site.dev.json',
+      ),
+    ).toThrow('/features/pickers: must be boolean');
+  });
+
   test('accepts structured serif font overrides', () => {
     const validator = compile(siteSchema);
 

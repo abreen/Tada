@@ -150,3 +150,5 @@ The `features` object toggles optional capabilities:
 - **search**: enable Pagefind search indexing (default: true)
 - **favicon**: generate favicon assets and web manifest (default: true)
 - **footer**: show the Tada footer at the bottom of every page (default: true)
+- **pickers**: show the font and contrast pickers at the bottom of every page
+  (default: true)

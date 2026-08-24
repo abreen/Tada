@@ -21,7 +21,7 @@ const siteVariables = {
   titlePostfix: ' - Site',
   themeColor: 'black',
   defaultTimeZone: 'America/New_York',
-  features: { search: true, favicon: true, footer: true },
+  features: { search: true, favicon: true, footer: true, pickers: true },
   extensionToShikiLanguage: { ts: 'ts', java: 'java' },
 } as SiteVariables;
 

@@ -4,11 +4,17 @@
   "properties": {
     "features": {
       "type": "object",
-      "default": { "search": true, "favicon": true, "footer": true },
+      "default": {
+        "search": true,
+        "favicon": true,
+        "footer": true,
+        "pickers": true
+      },
       "properties": {
         "search": { "type": "boolean", "default": true },
         "favicon": { "type": "boolean", "default": true },
-        "footer": { "type": "boolean", "default": true }
+        "footer": { "type": "boolean", "default": true },
+        "pickers": { "type": "boolean", "default": true }
       },
       "additionalProperties": false
     },

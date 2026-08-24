@@ -172,7 +172,7 @@ describe('createSiteConfig', () => {
     base: 'https://example.edu',
     basePath: '/',
     internalDomains: ['example.edu'],
-    features: { search: true, favicon: false, footer: true },
+    features: { search: true, favicon: false, footer: true, pickers: true },
     extensionToShikiLanguage: { java: 'java', py: 'python' },
     shikiLanguages: ['java', 'python', 'html'],
   };
@@ -189,7 +189,7 @@ describe('createSiteConfig', () => {
       defaultTimeZone: 'America/New_York',
       defaultFont: 'sans',
       defaultContrast: 'standard',
-      features: { search: true, favicon: false, footer: true },
+      features: { search: true, favicon: false, footer: true, pickers: true },
       extensionToShikiLanguage: { java: 'java', py: 'python' },
       shikiLanguages: ['java', 'python', 'html'],
       vars: {},

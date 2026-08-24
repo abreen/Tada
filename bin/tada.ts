@@ -340,7 +340,7 @@ async function initCommand(args: string[]): Promise<void> {
     base: 'http://localhost:8080',
     basePath: '/',
     internalDomains: ['localhost'],
-    features: { search: true, favicon: false, footer: true },
+    features: { search: true, favicon: false, footer: true, pickers: true },
     extensionToShikiLanguage: bare ? {} : { java: 'java', py: 'python' },
     shikiLanguages: bare ? [] : ['java', 'python', 'html'],
   });
@@ -355,7 +355,7 @@ async function initCommand(args: string[]): Promise<void> {
     base: prodBase,
     basePath: prodBasePath,
     internalDomains: [prodDomain],
-    features: { search: true, favicon: true, footer: true },
+    features: { search: true, favicon: true, footer: true, pickers: true },
     extensionToShikiLanguage: bare ? {} : { java: 'java', py: 'python' },
     shikiLanguages: bare ? [] : ['java', 'python', 'html'],
   });

@@ -88,7 +88,7 @@ const siteVariables = {
   defaultTimeZone: 'America/New_York',
   defaultFont: 'sans',
   defaultContrast: 'standard',
-  features: { search: true, favicon: true, footer: true },
+  features: { search: true, favicon: true, footer: true, pickers: true },
   extensionToShikiLanguage: { ts: 'ts' },
 } as SiteVariables;
 

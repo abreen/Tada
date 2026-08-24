@@ -5,7 +5,11 @@ import APPEARANCE_PICKER_TEMPLATE from './_appearance-picker.html' with { type: 
 describe('_appearance-picker.html template', () => {
   test('renders initially unavailable accessible appearance pickers', () => {
     const html = _.template(APPEARANCE_PICKER_TEMPLATE)({
-      site: { defaultFont: 'sans', defaultContrast: 'standard' },
+      site: {
+        defaultFont: 'sans',
+        defaultContrast: 'standard',
+        features: { pickers: true },
+      },
     });
 
     expect(html).toContain('class="appearance-pickers"');
@@ -33,7 +37,11 @@ describe('_appearance-picker.html template', () => {
 
   test('renders configured defaults as the initially pressed options', () => {
     const html = _.template(APPEARANCE_PICKER_TEMPLATE)({
-      site: { defaultFont: 'serif', defaultContrast: 'high' },
+      site: {
+        defaultFont: 'serif',
+        defaultContrast: 'high',
+        features: { pickers: true },
+      },
     });
 
     expect(html).toContain(
@@ -48,5 +56,18 @@ describe('_appearance-picker.html template', () => {
     expect(html).toContain(
       'data-contrast-preference-value="high" aria-label="Use high contrast" aria-pressed="true"',
     );
+  });
+
+  test('renders nothing when appearance pickers are disabled', () => {
+    const html = _.template(APPEARANCE_PICKER_TEMPLATE)({
+      site: {
+        defaultFont: 'sans',
+        defaultContrast: 'standard',
+        features: { pickers: false },
+      },
+    });
+
+    expect(html.trim()).toBe('');
+    expect(html).not.toContain('class="appearance-pickers"');
   });
 });
