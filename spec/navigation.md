@@ -17,3 +17,11 @@ build. Internal paths in the nav config must be root-relative (start with `/`)
 because they are rendered site-wide from templates, not relative to any
 individual page. Disabled links render as non-clickable UI without an `href`, so
 they do not participate in link validation or reachability.
+
+The collapsed header always keeps the menu control and site logo visible. The
+site title uses the remaining width and truncates with an ellipsis only as
+needed. Space on the trailing edge is reserved only for controls that are
+currently present and visible: the search field above its narrow breakpoint,
+and the back-to-top button after scrolling. This lets the back-to-top button
+progressively shorten, and only when it consumes the remaining room replace,
+the title.

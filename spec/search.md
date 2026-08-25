@@ -32,7 +32,8 @@ component has attached the search and keyboard-shortcut listeners. Without
 JavaScript it remains disabled.
 The complete search control, including its icon, is hidden at viewport widths
 of 400px or less; above that breakpoint it remains right-aligned within the
-header.
+header. When it is hidden or search is disabled, the site title reclaims the
+unused header space.
 All matching top-level results and nested sub-results are rendered; the result
 count reflects the number of grouped top-level results.
 If the user opens or types into the combobox before Pagefind finishes loading,

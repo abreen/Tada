@@ -5,6 +5,9 @@
 }
 
 header {
+  --header-search-reservation: 0px;
+  --header-to-top-reservation: 0px;
+
   position: fixed;
   top: 0;
   z-index: 1000;
@@ -14,10 +17,26 @@ header {
   background: var(--bg-color-translucent);
   backdrop-filter: var(--backdrop-filter);
   view-transition-name: site-header;
+
+  &:has(.search-controls) {
+    --header-search-reservation: 200px;
+
+    @media (width <= 400px) {
+      --header-search-reservation: 0px;
+    }
+  }
+
+  &:has(.to-top-container .is-visible) {
+    --header-to-top-reservation: 120px;
+  }
 }
 
 :root[data-contrast-preference='high'] header {
   background: var(--bg-color);
+}
+
+header > details {
+  min-width: 0;
 }
 
 header details summary {
@@ -25,8 +44,9 @@ header details summary {
   display: flex;
   align-items: center;
   height: var(--header-collapsed-height);
-  padding: 0 200px 0 0;
-  container-type: inline-size;
+  padding: 0
+    calc(var(--header-search-reservation) + var(--header-to-top-reservation)) 0
+    0;
   cursor: pointer;
   list-style-type: none;
 
@@ -45,10 +65,6 @@ header details summary {
   &:focus-visible {
     outline-offset: -2px;
   }
-}
-
-header:has(.to-top-container .is-visible) details summary {
-  padding-right: 320px;
 }
 
 header details summary::-webkit-details-marker {
@@ -103,12 +119,6 @@ header summary .site-title {
   font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
-}
-
-@container (max-width: 200px) {
-  header summary .site-title {
-    display: none;
-  }
 }
 
 header > .header-controls {

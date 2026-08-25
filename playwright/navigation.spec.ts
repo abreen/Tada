@@ -39,6 +39,12 @@ async function getViewTransitionCount(page: Page): Promise<number> {
   );
 }
 
+async function emulateSearchDisabled(page: Page) {
+  // The shared Playwright fixture enables search. With features.search false,
+  // the template omits this element entirely.
+  await page.locator('.search-controls').evaluate(element => element.remove());
+}
+
 test.describe('graceful degradation without JS', () => {
   test('links work with JavaScript disabled', async ({ browser }) => {
     const context = await browser.newContext({ javaScriptEnabled: false });
@@ -115,6 +121,55 @@ test.describe('search control', () => {
     expect(geometry.iconHeight).toBeGreaterThanOrEqual(20);
     expect(geometry.boxGap).toBeGreaterThanOrEqual(0);
     expect(geometry.boxGap).toBeLessThanOrEqual(4);
+  });
+});
+
+test.describe('responsive header layout', () => {
+  test('keeps the menu, logo, and title visible without search', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 348, height: 800 });
+    await page.goto('/index.html');
+    await emulateSearchDisabled(page);
+
+    const summary = page.locator('header details > summary');
+    await expect(summary).toBeVisible();
+    await expect(summary.locator('.logo')).toBeVisible();
+    await expect(summary.locator('.site-title')).toBeVisible();
+
+    const menu = await summary.evaluate(element => {
+      const style = getComputedStyle(element, '::after');
+      return {
+        height: Number.parseFloat(style.height),
+        maskImage: style.maskImage,
+        width: Number.parseFloat(style.width),
+      };
+    });
+    expect(menu.width).toBeGreaterThan(0);
+    expect(menu.height).toBeGreaterThan(0);
+    expect(menu.maskImage).not.toBe('none');
+  });
+
+  test('lets back-to-top share narrow header space with the title', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 348, height: 800 });
+    await page.goto('/lectures/01/Rectangle.java.html');
+    await emulateSearchDisabled(page);
+    await page.evaluate(() => window.scrollTo({ top: 700 }));
+
+    const title = page.locator('header .site-title');
+    const backToTop = page.locator('header a', { hasText: 'Back to top' });
+    await expect(backToTop).toBeVisible();
+    await expect(title).toBeVisible();
+
+    const [titleBox, backToTopBox] = await Promise.all([
+      title.boundingBox(),
+      backToTop.boundingBox(),
+    ]);
+    expect(titleBox).not.toBeNull();
+    expect(backToTopBox).not.toBeNull();
+    expect(titleBox!.x + titleBox!.width).toBeLessThanOrEqual(backToTopBox!.x);
   });
 });
 
