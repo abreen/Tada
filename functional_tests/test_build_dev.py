@@ -57,6 +57,14 @@ class TestDevBuild:
         names = [f.name for f in css_files]
         assert any(name.startswith('index.bundle.tada-') for name in names)
 
+    def test_prints_question_answers_without_reveal_hint(self, built_dev_site):
+        dist = built_dev_site / 'dist'
+        css = ''.join(file.read_text() for file in dist.glob('*.css'))
+
+        assert ('.js .question-a-body:not([data-revealed]) > * {\n    color: inherit;') in css
+        assert ('.js .question-a-body:not([data-revealed]) > * * {\n    color: inherit;') in css
+        assert re.search(r'\.js \.question-a-body::?after\s*\{\s*display: none;', css)
+
     def test_produces_js_bundle(self, built_dev_site):
         dist = built_dev_site / 'dist'
         assert list(dist.glob('index.bundle.tada-*.js'))

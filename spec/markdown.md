@@ -52,7 +52,8 @@ The answer is here.
 
 When motion is enabled, each top-level answer block transitions as one visual
 unit. Nested markup such as KaTeX inherits that reveal and does not animate
-independently.
+independently. Printed Q&A blocks always show their answers and omit the reveal
+hint.
 
 If a `question` block's body is entirely a checked-list option set, it renders
 as a multiple choice block instead. Options use the existing `Q.` prompt style

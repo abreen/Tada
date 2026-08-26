@@ -220,7 +220,7 @@
 }
 
 @media print {
-  .question-a-body {
+  .js .question-a-body {
     cursor: default;
 
     @include user-select(text);
