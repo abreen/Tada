@@ -10,6 +10,7 @@
     "scripts/*.ts",
     "playwright.coverage.config.ts",
     "playwright/*.spec.ts",
+    "playwright/serve-appearance-defaults-site.ts",
     "playwright/serve-test-site.ts",
     "build/**/*.test.ts",
     "src/**/*.test.ts",

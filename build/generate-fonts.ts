@@ -18,7 +18,7 @@ export const DEFAULT_FONT_PRELOAD_FILES = {
   ],
 } as const;
 
-export interface DefaultFontPreloadFile {
+interface DefaultFontPreloadFile {
   filePath: string;
   source: 'package' | 'public';
 }

@@ -18,8 +18,8 @@ export const CUSTOM_FONT_FAMILY_DEFINITIONS = Object.freeze({
   }),
 });
 
-export type CustomFontFamilyKey = keyof typeof CUSTOM_FONT_FAMILY_DEFINITIONS;
-export type CustomFontFaceKey = keyof typeof CUSTOM_FONT_FACE_DEFINITIONS;
+type CustomFontFamilyKey = keyof typeof CUSTOM_FONT_FAMILY_DEFINITIONS;
+type CustomFontFaceKey = keyof typeof CUSTOM_FONT_FACE_DEFINITIONS;
 
 const FACE_KEYS = Object.freeze(
   Object.keys(CUSTOM_FONT_FACE_DEFINITIONS) as CustomFontFaceKey[],
@@ -32,7 +32,7 @@ interface ParsedFont {
   availableFeatures: readonly string[];
 }
 
-export interface CustomFontValidationOptions {
+interface CustomFontValidationOptions {
   fontOverrides: FontOverrides | undefined;
   publicDir: string;
   publicFiles: ReadonlySet<string>;

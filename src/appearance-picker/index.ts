@@ -1,5 +1,5 @@
-export type FontPreference = 'sans' | 'serif';
-export type ContrastPreference = 'standard' | 'high';
+type FontPreference = 'sans' | 'serif';
+type ContrastPreference = 'standard' | 'high';
 
 const FONT_STORAGE_KEY = 'fontPreference';
 const CONTRAST_STORAGE_KEY = 'contrastPreference';
