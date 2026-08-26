@@ -198,7 +198,11 @@ test.describe('configured appearance defaults', () => {
     page,
   }) => {
     await page.goto('http://localhost:8082/custom/index.html');
-    await page.getByRole('button', { name: 'Use sans-serif fonts' }).click();
+    const sansButton = page.getByRole('button', {
+      name: 'Use sans-serif fonts',
+    });
+    await sansButton.click();
+    await expect(sansButton).toHaveAttribute('aria-pressed', 'true');
     await page.getByRole('button', { name: 'Use standard contrast' }).click();
 
     expect(

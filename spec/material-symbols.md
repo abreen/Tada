@@ -16,8 +16,8 @@ high contrast to the 20px `contrast_rtl_off` and `contrast`; full and compact
 informational alerts to the 40px and 20px `info` variants; full and compact
 warnings to the 40px and 20px `warning` variants; parent links to 20px
 `south_east`; search to 20px `search`; external links to 20px `open_in_new`;
-slide-heading presentation controls to 24px `smart_display`; and the closed/open
-header navigation states to the 24px `menu` and `close` variants.
+slide-heading presentation controls to 24px `smart_display`. The animated header
+menu is a bespoke inline SVG rather than a Material Symbol.
 
 Reusable inline symbols use the `.material-symbol-icon` mask class and set its
 `--material-symbol-icon` and `--material-symbol-icon-size` variables through a

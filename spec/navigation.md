@@ -25,3 +25,13 @@ currently present and visible: the search field above its narrow breakpoint,
 and the back-to-top button after scrolling. This lets the back-to-top button
 progressively shorten, and only when it consumes the remaining room replace,
 the title.
+
+Opening and closing the header morphs one inline SVG between the menu and close
+states: its top and bottom strokes move and rotate into the two diagonals while
+its middle stroke fades. Browsers that support both the `::details-content`
+pseudo-element and discrete transitions expand and collapse the navigation
+content while it fades and moves a short distance. Other browsers retain the
+native immediate disclosure behavior. The effects follow the native `open`
+state. Without JavaScript, the menu remains fully functional and opens
+immediately. All state changes are also immediate when the visitor requests
+reduced motion.

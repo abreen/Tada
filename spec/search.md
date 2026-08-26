@@ -39,5 +39,13 @@ count reflects the number of grouped top-level results.
 If the user opens or types into the combobox before Pagefind finishes loading,
 the results panel shows a loading state and reruns the current query once the
 index is ready.
+
+When motion is enabled, the results panel fades, moves a short distance, and
+subtly scales as it appears and disappears. Its `aria-hidden`, `inert`, and
+pointer-interaction states still change immediately; visitors who request
+reduced motion get the same immediate visual state change. When a search result
+starts page navigation, the panel closes immediately so its exit motion does
+not overlap the page View Transition.
+
 After a page-update refresh completes, the client discards any loaded Pagefind
 instance and reloads it so later searches use the refreshed index.

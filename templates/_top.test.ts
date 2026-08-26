@@ -30,6 +30,26 @@ function renderTop(
 }
 
 describe('_top.html template', () => {
+  test('renders one menu icon with three persistent SVG strokes', () => {
+    const html = renderTop('sans', 'standard');
+    const icon = html.match(/<svg\b[^>]*class="menu-icon"[^>]*>/)?.[0];
+
+    expect(icon).toBeDefined();
+    expect(icon).toContain('viewBox="0 0 24 24"');
+    expect(icon).toContain('aria-hidden="true"');
+    expect(icon).toContain('focusable="false"');
+    expect(html.match(/class="menu-icon-line/g)).toHaveLength(3);
+    expect(html).toContain(
+      'class="menu-icon-line menu-icon-line-top" d="M3 6h18"',
+    );
+    expect(html).toContain(
+      'class="menu-icon-line menu-icon-line-middle" d="M3 12h18"',
+    );
+    expect(html).toContain(
+      'class="menu-icon-line menu-icon-line-bottom" d="M3 18h18"',
+    );
+  });
+
   test('keeps search disabled until its client component mounts', () => {
     const html = renderTop('sans', 'standard', undefined, undefined, true);
     const searchInput = html.match(

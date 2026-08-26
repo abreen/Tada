@@ -4,6 +4,9 @@ type WindowWithNavMarker = Window & { __navMarker?: string };
 type WindowWithViewTransitionCount = Window & {
   __viewTransitionCount?: number;
 };
+type WindowWithSearchTransitionState = Window & {
+  __searchWasAnimatingAtNavigation?: boolean;
+};
 
 async function setNavMarker(page: Page) {
   await page.evaluate(() => {
@@ -137,17 +140,13 @@ test.describe('responsive header layout', () => {
     await expect(summary.locator('.logo')).toBeVisible();
     await expect(summary.locator('.site-title')).toBeVisible();
 
-    const menu = await summary.evaluate(element => {
-      const style = getComputedStyle(element, '::after');
-      return {
-        height: Number.parseFloat(style.height),
-        maskImage: style.maskImage,
-        width: Number.parseFloat(style.width),
-      };
-    });
-    expect(menu.width).toBeGreaterThan(0);
-    expect(menu.height).toBeGreaterThan(0);
-    expect(menu.maskImage).not.toBe('none');
+    const menu = summary.locator('.menu-icon');
+    await expect(menu).toBeVisible();
+    expect(await menu.locator('.menu-icon-line').count()).toBe(3);
+    const menuBox = await menu.boundingBox();
+    expect(menuBox).not.toBeNull();
+    expect(menuBox!.width).toBeGreaterThan(0);
+    expect(menuBox!.height).toBeGreaterThan(0);
   });
 
   test('lets back-to-top share narrow header space with the title', async ({
@@ -174,23 +173,188 @@ test.describe('responsive header layout', () => {
 });
 
 test.describe('header menu control', () => {
-  test('switches from the menu symbol to the close symbol', async ({
-    page,
-  }) => {
+  test('expands and collapses the navigation content', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.goto('/index.html');
+    const details = page.locator('header details');
+
+    const getContentStyles = () =>
+      details.evaluate(element => {
+        const detailsStyle = getComputedStyle(element);
+        const contentStyle = getComputedStyle(element, '::details-content');
+        return {
+          blockSize: Number.parseFloat(contentStyle.blockSize),
+          opacity: contentStyle.opacity,
+          transform: contentStyle.transform,
+          detailsTransition: detailsStyle.transitionProperty,
+          contentTransition: contentStyle.transitionProperty,
+        };
+      });
+
+    const closed = await getContentStyles();
+    await details.locator('summary').click();
+    await expect
+      .poll(async () => {
+        const styles = await getContentStyles();
+        return [styles.blockSize > 0, styles.opacity];
+      })
+      .toEqual([true, '1']);
+    const open = await getContentStyles();
+    await details.locator('summary').click();
+    await expect
+      .poll(async () => {
+        const styles = await getContentStyles();
+        return [styles.blockSize, styles.opacity];
+      })
+      .toEqual([0, '0']);
+    const closedAgain = await getContentStyles();
+
+    expect(closed.blockSize).toBe(0);
+    expect(closed.opacity).toBe('0');
+    expect(open.opacity).toBe('1');
+    expect(open.transform).not.toBe(closed.transform);
+    expect(closedAgain.opacity).toBe('0');
+    expect(closed.detailsTransition).toContain('grid-template-rows');
+    expect(closed.contentTransition).toContain('content-visibility');
+    expect(closed.contentTransition).toContain('opacity');
+    expect(closed.contentTransition).toContain('transform');
+  });
+
+  test('morphs the hamburger strokes into a close symbol', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.goto('/index.html');
     const summary = page.locator('header details > summary');
+    const icon = summary.locator('.menu-icon');
 
-    const closedMask = await summary.evaluate(
-      element => getComputedStyle(element, '::after').maskImage,
-    );
+    const getIconStyles = () =>
+      icon.evaluate(element => {
+        const top = getComputedStyle(
+          element.querySelector('.menu-icon-line-top')!,
+        );
+        const middle = getComputedStyle(
+          element.querySelector('.menu-icon-line-middle')!,
+        );
+        const bottom = getComputedStyle(
+          element.querySelector('.menu-icon-line-bottom')!,
+        );
+        return {
+          topTransform: top.transform,
+          middleOpacity: middle.opacity,
+          middleTransform: middle.transform,
+          bottomTransform: bottom.transform,
+          topTransition: top.transitionProperty,
+          middleTransition: middle.transitionProperty,
+          bottomTransition: bottom.transitionProperty,
+        };
+      });
+
+    const closed = await getIconStyles();
     await summary.click();
-    const openMask = await summary.evaluate(
-      element => getComputedStyle(element, '::after').maskImage,
-    );
+    await expect
+      .poll(async () => {
+        const styles = await getIconStyles();
+        return [
+          styles.topTransform !== closed.topTransform,
+          styles.middleOpacity,
+          styles.bottomTransform !== closed.bottomTransform,
+        ];
+      })
+      .toEqual([true, '0', true]);
+    const open = await getIconStyles();
 
-    expect(closedMask).toContain('data:image/svg+xml');
-    expect(openMask).toContain('data:image/svg+xml');
-    expect(openMask).not.toBe(closedMask);
+    expect(await icon.locator('.menu-icon-line').count()).toBe(3);
+    expect(closed.middleOpacity).toBe('1');
+    expect(closed.topTransform).not.toBe(open.topTransform);
+    expect(closed.middleTransform).not.toBe(open.middleTransform);
+    expect(closed.bottomTransform).not.toBe(open.bottomTransform);
+    expect(closed.topTransition).toContain('transform');
+    expect(closed.middleTransition).toContain('opacity');
+    expect(closed.middleTransition).toContain('transform');
+    expect(closed.bottomTransition).toContain('transform');
+  });
+
+  test('does not animate the header when reduced motion is requested', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/index.html');
+
+    const durations = await page.locator('header details').evaluate(details => {
+      const icon = details.querySelector('.menu-icon')!;
+      return [
+        getComputedStyle(icon.querySelector('.menu-icon-line-top')!)
+          .transitionDuration,
+        getComputedStyle(icon.querySelector('.menu-icon-line-middle')!)
+          .transitionDuration,
+        getComputedStyle(icon.querySelector('.menu-icon-line-bottom')!)
+          .transitionDuration,
+        getComputedStyle(details).transitionDuration,
+        getComputedStyle(details, '::details-content').transitionDuration,
+      ];
+    });
+
+    expect(durations).toEqual(['0s', '0s', '0s', '0s', '0s']);
+  });
+});
+
+test.describe('search results motion', () => {
+  test('reveals and dismisses the results panel', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.goto('/index.html');
+    const input = page.locator('input[name="quick-search"]');
+    const container = page.locator('.results-container');
+    const results = container.locator('.results');
+
+    await expect(input).toBeEnabled();
+    const closed = await results.evaluate(element => {
+      const style = getComputedStyle(element);
+      return {
+        opacity: style.opacity,
+        transform: style.transform,
+        transition: style.transitionProperty,
+      };
+    });
+
+    await input.focus();
+    await expect(container).toHaveClass(/is-showing/);
+    await expect
+      .poll(() =>
+        results.evaluate(element => {
+          const style = getComputedStyle(element);
+          return [style.opacity, style.transform];
+        }),
+      )
+      .toEqual(['1', 'none']);
+
+    await page.keyboard.press('Escape');
+    await expect(container).toHaveAttribute('aria-hidden', 'true');
+    await expect(container).toHaveAttribute('inert', '');
+    await expect
+      .poll(() =>
+        results.evaluate(element => {
+          const style = getComputedStyle(element);
+          return [style.opacity, style.transform];
+        }),
+      )
+      .toEqual([closed.opacity, closed.transform]);
+
+    expect(closed.opacity).toBe('0');
+    expect(closed.transform).not.toBe('none');
+    expect(closed.transition).toContain('opacity');
+    expect(closed.transition).toContain('transform');
+  });
+
+  test('does not animate the panel when reduced motion is requested', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/index.html');
+
+    const duration = await page
+      .locator('.results-container .results')
+      .evaluate(element => getComputedStyle(element).transitionDuration);
+
+    expect(duration).toBe('0s');
   });
 });
 
@@ -387,6 +551,46 @@ test.describe('client-side navigation', () => {
     const results = page.locator('.results-container .results a');
     await expect(results.first()).toBeVisible({ timeout: 5000 });
 
+    const targetHref = await results.first().getAttribute('href');
+    expect(targetHref).not.toBeNull();
+    await page.evaluate(async href => {
+      const destination = new URL(href!, window.location.href);
+      const response = await window.fetch(destination);
+      const html = await response.text();
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const requestUrl = new URL(
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url,
+          window.location.href,
+        );
+        if (requestUrl.href === destination.href) {
+          return new Response(html, {
+            headers: { 'content-type': 'text/html' },
+            status: 200,
+          });
+        }
+        return originalFetch(input, init);
+      };
+
+      if (typeof document.startViewTransition === 'function') {
+        const originalTransition = document.startViewTransition.bind(document);
+        document.startViewTransition = callback => {
+          const panel = document.querySelector('.results-container .results');
+          (
+            window as WindowWithSearchTransitionState
+          ).__searchWasAnimatingAtNavigation =
+            panel
+              ?.getAnimations()
+              .some(animation => animation instanceof CSSTransition) ?? false;
+          return originalTransition(callback);
+        };
+      }
+    }, targetHref);
+
     // Click the first search result
     await results.first().click();
 
@@ -410,6 +614,13 @@ test.describe('client-side navigation', () => {
     // Should be SPA navigation (no full reload)
     const marker = await getNavMarker(page);
     expect(marker).toBe('alive');
+    expect(
+      await page.evaluate(
+        () =>
+          (window as WindowWithSearchTransitionState)
+            .__searchWasAnimatingAtNavigation,
+      ),
+    ).toBe(false);
   });
 
   test('search results disappear after clicking result for current page', async ({

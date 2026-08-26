@@ -7,12 +7,11 @@ distributed under its own license.
 
 Tada vendors the `celebration`, `contrast`, `contrast_rtl_off`, `info`,
 `warning`, `south_east`, `search`, and `open_in_new` icons from Google's
-Material Symbols icon set, along with the `smart_display`, `menu`, and `close`
-icons. They are used in the optional attribution footer, appearance picker,
-alerts, page links, search control, external links, slide presentation controls,
-and header navigation. The
+Material Symbols icon set, along with the `smart_display` icon. They are used in
+the optional attribution footer, appearance picker, alerts, page links, search
+control, external links, and slide presentation controls. The
 canonical SVG files are included without modification and share the Material
-Symbols Outlined settings FILL 0, weight 500, and grade 0. Each uses Google's
+Symbols Outlined settings FILL 0, weight 200, and grade 200. Each uses Google's
 20px, 24px, or 40px optical-size variant at that same rendered size.
 
 - Source: [Google Fonts Icons](https://fonts.google.com/icons)

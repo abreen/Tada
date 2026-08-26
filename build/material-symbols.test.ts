@@ -73,16 +73,6 @@ describe('Material Symbols', () => {
         symbol: 'smart_display',
         opticalSize: 24,
       },
-      headerMenu: {
-        cssVariable: '--icon-header-menu',
-        symbol: 'menu',
-        opticalSize: 24,
-      },
-      headerClose: {
-        cssVariable: '--icon-header-close',
-        symbol: 'close',
-        opticalSize: 24,
-      },
     });
   });
 
@@ -109,8 +99,6 @@ describe('Material Symbols', () => {
       path.join('/tada', 'assets/material-symbols/search_20px.svg'),
       path.join('/tada', 'assets/material-symbols/open_in_new_20px.svg'),
       path.join('/tada', 'assets/material-symbols/smart_display_24px.svg'),
-      path.join('/tada', 'assets/material-symbols/menu_24px.svg'),
-      path.join('/tada', 'assets/material-symbols/close_24px.svg'),
     ]);
     expect(variables).toContain('--icon-tada: url("data:image/svg+xml,');
     expect(variables).toContain(
@@ -134,10 +122,6 @@ describe('Material Symbols', () => {
     );
     expect(variables).toContain(
       '--icon-heading-present: url("data:image/svg+xml,',
-    );
-    expect(variables).toContain('--icon-header-menu: url("data:image/svg+xml,');
-    expect(variables).toContain(
-      '--icon-header-close: url("data:image/svg+xml,',
     );
     expect(variables).toContain('%3Csvg%20xmlns%3D%22http%3A');
     expect(variables).not.toContain('<svg');

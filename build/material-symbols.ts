@@ -68,16 +68,6 @@ export const MATERIAL_SYMBOLS = Object.freeze({
     symbol: 'smart_display',
     opticalSize: 24,
   }),
-  headerMenu: Object.freeze({
-    cssVariable: '--icon-header-menu',
-    symbol: 'menu',
-    opticalSize: 24,
-  }),
-  headerClose: Object.freeze({
-    cssVariable: '--icon-header-close',
-    symbol: 'close',
-    opticalSize: 24,
-  }),
 } as const);
 
 type MaterialSymbol = (typeof MATERIAL_SYMBOLS)[keyof typeof MATERIAL_SYMBOLS];
