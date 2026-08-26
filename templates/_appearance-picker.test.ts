@@ -13,29 +13,26 @@ describe('_appearance-picker.html template', () => {
     });
 
     expect(html).toContain('class="appearance-pickers"');
-    expect(html).toContain('aria-label="Font style"');
-    expect(html).toContain('aria-label="Contrast"');
-    expect(html).toContain('aria-label="Use sans-serif fonts"');
     expect(html).toContain('aria-label="Use serif fonts"');
-    expect(html).toContain('aria-label="Use standard contrast"');
     expect(html).toContain('aria-label="Use high contrast"');
+    expect(html).toContain('title="Use serif fonts"');
+    expect(html).toContain('title="Use high contrast"');
+    expect(html.match(/role="switch"/g)).toHaveLength(2);
+    expect(html).not.toContain('role="group"');
+    expect(html).not.toContain('aria-pressed');
     expect(html).toContain('data-font-preference-value="sans"');
     expect(html).toContain('data-font-preference-value="serif"');
     expect(html).toContain('data-contrast-preference-value="standard"');
     expect(html).toContain('data-contrast-preference-value="high"');
-    expect(html).toContain(
-      'class="material-symbol-icon material-symbol-icon-contrast-standard"',
-    );
-    expect(html).toContain(
-      'class="material-symbol-icon material-symbol-icon-contrast-high"',
-    );
+    expect(html).toContain('material-symbol-icon-contrast-standard');
+    expect(html).toContain('material-symbol-icon-contrast-high');
     expect(html).not.toContain('contrast-preview');
     expect(html).toContain('data-pagefind-ignore');
     expect(html).not.toContain(' hidden');
-    expect(html.match(/disabled/g)).toHaveLength(4);
+    expect(html.match(/disabled/g)).toHaveLength(2);
   });
 
-  test('renders configured defaults as the initially pressed options', () => {
+  test('renders configured defaults as the initial switch states', () => {
     const html = _.template(APPEARANCE_PICKER_TEMPLATE)({
       site: {
         defaultFont: 'serif',
@@ -45,17 +42,13 @@ describe('_appearance-picker.html template', () => {
     });
 
     expect(html).toContain(
-      'data-font-preference-value="sans" aria-label="Use sans-serif fonts" aria-pressed="false"',
+      'data-font-preference-switch aria-label="Use serif fonts" aria-checked="true"',
     );
+    expect(html).toContain('title="Use sans-serif fonts"');
     expect(html).toContain(
-      'data-font-preference-value="serif" aria-label="Use serif fonts" aria-pressed="true"',
+      'data-contrast-preference-switch aria-label="Use high contrast" aria-checked="true"',
     );
-    expect(html).toContain(
-      'data-contrast-preference-value="standard" aria-label="Use standard contrast" aria-pressed="false"',
-    );
-    expect(html).toContain(
-      'data-contrast-preference-value="high" aria-label="Use high contrast" aria-pressed="true"',
-    );
+    expect(html).toContain('title="Use standard contrast"');
   });
 
   test('renders nothing when appearance pickers are disabled', () => {

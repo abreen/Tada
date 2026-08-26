@@ -21,25 +21,30 @@ In high contrast, the fixed site header uses the solid primary background at
 rest and the solid secondary background while hovered or while its navigation
 details are open. Standard contrast retains the translucent header background.
 
-The buttons expose their state with `aria-pressed`. The root `<html>` records
-the configured choice in `data-default-contrast-preference`; effective high
-contrast uses `data-contrast-preference="high"`. When the configured default is
-standard and there is no valid visitor selection, `prefers-contrast: more`
-becomes the effective default. This system-derived choice is not stored. A
-visitor selection that differs from the effective default is stored as
+The control is a button with `role="switch"`, the stable accessible name “Use
+high contrast,” and an `aria-checked` state. It is one keyboard tab stop; Space
+and Enter toggle it, and keyboard focus outlines the complete switch track. Its
+supplementary tooltip describes the next action as “Use high contrast” or “Use
+standard contrast” without changing the accessible name.
+The root `<html>` records the configured choice in
+`data-default-contrast-preference`; effective high contrast uses
+`data-contrast-preference="high"`. When the configured default is standard and
+there is no valid visitor selection, `prefers-contrast: more` becomes the
+effective default. This system-derived choice is not stored. A visitor
+selection that differs from the effective default is stored as
 `contrastPreference=standard` or `contrastPreference=high`; choosing the
 effective default removes the key. This lets an explicit standard selection
 override a system preference for more contrast. A guarded inline script
 applies the stored or system-derived preference before paint.
 
-The standard button uses the Material Symbols Outlined `contrast_rtl_off`
-glyph and the high button uses `contrast`. Both are vendored SVG masks rendered
-in the button's current text color. Their shared icon configuration and build
-pipeline are described in [Material Symbols](material-symbols.md).
+The standard endpoint uses the Material Symbols Outlined `contrast_rtl_off`
+glyph and the high endpoint uses `contrast`. Both are vendored SVG masks
+rendered in the switch's current text color. Their shared icon configuration
+and build pipeline are described in [Material Symbols](material-symbols.md).
 
-The contrast and font pickers mount and synchronize together after initial
+The contrast and font switches mount and synchronize together after initial
 load and client-side navigation. Their preferences remain independent. The row
-is rendered at build time in its final layout position with all four buttons
+is rendered at build time in its final layout position with both switches
 disabled; mounting enables and synchronizes them. With JavaScript disabled it
 remains visible but inert and the complete page uses the configured contrast.
 The row is excluded from Pagefind indexing and printing.

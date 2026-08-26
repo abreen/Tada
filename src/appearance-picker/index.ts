@@ -25,9 +25,7 @@ function getFontPreferenceLoader(
   window: Window,
 ): FontPreferenceLoader | undefined {
   return (
-    window as Window & {
-      __tadaFontPreferenceLoader?: FontPreferenceLoader;
-    }
+    window as Window & { __tadaFontPreferenceLoader?: FontPreferenceLoader }
   ).__tadaFontPreferenceLoader;
 }
 
@@ -171,21 +169,19 @@ export function applyContrastPreference(
   }
 }
 
-function syncControls(
+function syncSwitch(
   document: Document,
   selector: string,
-  preference: string,
+  checked: boolean,
+  title: string,
 ): void {
-  document.querySelectorAll<HTMLButtonElement>(selector).forEach(button => {
-    button.disabled = false;
-    button.setAttribute(
-      'aria-pressed',
-      String(
-        button.dataset.fontPreferenceValue === preference ||
-          button.dataset.contrastPreferenceValue === preference,
-      ),
-    );
-  });
+  const control = document.querySelector<HTMLButtonElement>(selector);
+  if (!control) {
+    return;
+  }
+  control.disabled = false;
+  control.setAttribute('aria-checked', String(checked));
+  control.title = title;
 }
 
 function syncAppearance(
@@ -193,11 +189,19 @@ function syncAppearance(
   fontPreference: FontPreference,
   contrastPreference: ContrastPreference,
 ): void {
-  syncControls(document, '[data-font-preference-value]', fontPreference);
-  syncControls(
+  syncSwitch(
     document,
-    '[data-contrast-preference-value]',
-    contrastPreference,
+    '[data-font-preference-switch]',
+    fontPreference === 'serif',
+    fontPreference === 'serif' ? 'Use sans-serif fonts' : 'Use serif fonts',
+  );
+  syncSwitch(
+    document,
+    '[data-contrast-preference-switch]',
+    contrastPreference === 'high',
+    contrastPreference === 'high'
+      ? 'Use standard contrast'
+      : 'Use high contrast',
   );
 }
 
@@ -238,7 +242,9 @@ export default function mountAppearancePicker(window: Window): () => void {
 
   const observedRequests = new Set<number>();
   const observeFontRequest = (request: FontPreferenceRequest) => {
-    if (observedRequests.has(request.generation)) return;
+    if (observedRequests.has(request.generation)) {
+      return;
+    }
     observedRequests.add(request.generation);
     request.promise.then(
       () => {
@@ -266,26 +272,26 @@ export default function mountAppearancePicker(window: Window): () => void {
 
   const handleClick = (event: Event) => {
     const button = event.currentTarget as HTMLButtonElement;
-    const fontValue = button.dataset.fontPreferenceValue;
-    const contrastValue = button.dataset.contrastPreferenceValue;
 
-    if (fontValue === 'sans' || fontValue === 'serif') {
+    if (button.dataset.fontPreferenceSwitch !== undefined) {
       fontPreference = getAppliedFontPreference(document);
-      if (fontValue === fontPreference) {
+      if (fontLoader?.pending) {
         fontLoader?.cancel();
         saveFontPreference(storage, fontPreference, defaultFontPreference);
-      } else {
-        const request = fontLoader?.request(fontValue) ?? null;
-        if (request) {
-          observeFontRequest(request);
-          return;
-        }
-        fontPreference = fontValue;
-        saveFontPreference(storage, fontPreference, defaultFontPreference);
-        applyFontPreference(document, fontPreference);
+        syncAppearance(document, fontPreference, contrastPreference);
+        return;
       }
-    } else if (contrastValue === 'standard' || contrastValue === 'high') {
-      contrastPreference = contrastValue;
+      const nextFontPreference = fontPreference === 'serif' ? 'sans' : 'serif';
+      const request = fontLoader?.request(nextFontPreference) ?? null;
+      if (request) {
+        observeFontRequest(request);
+        return;
+      }
+      fontPreference = nextFontPreference;
+      saveFontPreference(storage, fontPreference, defaultFontPreference);
+      applyFontPreference(document, fontPreference);
+    } else if (button.dataset.contrastPreferenceSwitch !== undefined) {
+      contrastPreference = contrastPreference === 'high' ? 'standard' : 'high';
       saveContrastPreference(
         storage,
         contrastPreference,

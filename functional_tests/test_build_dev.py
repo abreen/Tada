@@ -136,14 +136,20 @@ class TestDevBuild:
         assert 'href="/libertinus-mono/LibertinusMono-Regular.woff2"' in html
         assert 'rel="preload" href="/inter/InterVariable.woff2"' not in html
         assert 'rel="preload" href="/google-sans-code/GoogleSansCodeVariable.woff2"' not in html
-        assert (
-            'data-font-preference-value="serif" aria-label="Use serif fonts" '
-            'aria-pressed="true" disabled'
-        ) in html
-        assert (
-            'data-contrast-preference-value="high" aria-label="Use high contrast" '
-            'aria-pressed="true" disabled'
-        ) in html
+        assert re.search(
+            r'<button(?=[^>]*role="switch")'
+            r'(?=[^>]*data-font-preference-switch)'
+            r'(?=[^>]*aria-label="Use serif fonts")'
+            r'(?=[^>]*aria-checked="true")(?=[^>]*disabled)[^>]*>',
+            html,
+        )
+        assert re.search(
+            r'<button(?=[^>]*role="switch")'
+            r'(?=[^>]*data-contrast-preference-switch)'
+            r'(?=[^>]*aria-label="Use high contrast")'
+            r'(?=[^>]*aria-checked="true")(?=[^>]*disabled)[^>]*>',
+            html,
+        )
 
     def test_builds_custom_serif_faces_from_public(self, site_dir):
         font_overrides = install_custom_font_fixtures(site_dir)

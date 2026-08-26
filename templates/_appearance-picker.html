@@ -1,20 +1,16 @@
 <% if (site.features.pickers) { %>
 <div class="appearance-pickers" data-pagefind-ignore>
-  <div class="preference-picker font-picker" role="group" aria-label="Font style">
-    <button type="button" class="preference-picker-option font-picker-option-sans" data-font-preference-value="sans" aria-label="Use sans-serif fonts" aria-pressed="<%= site.defaultFont === 'sans' %>" disabled>
-      <span aria-hidden="true">Aa</span>
-    </button>
-    <button type="button" class="preference-picker-option font-picker-option-serif" data-font-preference-value="serif" aria-label="Use serif fonts" aria-pressed="<%= site.defaultFont === 'serif' %>" disabled>
-      <span aria-hidden="true">Aa</span>
-    </button>
-  </div>
-  <div class="preference-picker contrast-picker" role="group" aria-label="Contrast">
-    <button type="button" class="preference-picker-option contrast-picker-option-standard" data-contrast-preference-value="standard" aria-label="Use standard contrast" aria-pressed="<%= site.defaultContrast === 'standard' %>" disabled>
-      <span class="material-symbol-icon material-symbol-icon-contrast-standard" aria-hidden="true"></span>
-    </button>
-    <button type="button" class="preference-picker-option contrast-picker-option-high" data-contrast-preference-value="high" aria-label="Use high contrast" aria-pressed="<%= site.defaultContrast === 'high' %>" disabled>
-      <span class="material-symbol-icon material-symbol-icon-contrast-high" aria-hidden="true"></span>
-    </button>
-  </div>
+  <button type="button" class="preference-picker font-picker" role="switch" data-font-preference-switch aria-label="Use serif fonts" aria-checked="<%= site.defaultFont === 'serif' %>" title="<%= site.defaultFont === 'serif' ? 'Use sans-serif fonts' : 'Use serif fonts' %>" disabled>
+    <span class="preference-picker-option font-picker-option-sans" data-font-preference-value="sans" aria-hidden="true">Aa</span>
+    <span class="preference-picker-option font-picker-option-serif" data-font-preference-value="serif" aria-hidden="true">Aa</span>
+  </button>
+  <button type="button" class="preference-picker contrast-picker" role="switch" data-contrast-preference-switch aria-label="Use high contrast" aria-checked="<%= site.defaultContrast === 'high' %>" title="<%= site.defaultContrast === 'high' ? 'Use standard contrast' : 'Use high contrast' %>" disabled>
+    <span class="preference-picker-option contrast-picker-option-standard" data-contrast-preference-value="standard" aria-hidden="true">
+      <span class="material-symbol-icon material-symbol-icon-contrast-standard"></span>
+    </span>
+    <span class="preference-picker-option contrast-picker-option-high" data-contrast-preference-value="high" aria-hidden="true">
+      <span class="material-symbol-icon material-symbol-icon-contrast-high"></span>
+    </span>
+  </button>
 </div>
 <% } %>

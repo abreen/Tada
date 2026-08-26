@@ -19,7 +19,9 @@ async function holdFontRequests(page: Page, expectedFaces: readonly string[]) {
   });
 
   await page.route('**/*.woff2', async route => {
-    const pathname = decodeURIComponent(new URL(route.request().url()).pathname);
+    const pathname = decodeURIComponent(
+      new URL(route.request().url()).pathname,
+    );
     allFontRequests.push(pathname);
     const face = expectedFaces.find(expected => pathname.endsWith(expected));
     if (face) {
@@ -80,9 +82,8 @@ async function expectChecksAtMutation(page: Page) {
     .poll(() =>
       page.evaluate(
         () =>
-          (
-            window as Window & { __fontChecksAtMutation?: boolean[] }
-          ).__fontChecksAtMutation,
+          (window as Window & { __fontChecksAtMutation?: boolean[] })
+            .__fontChecksAtMutation,
       ),
     )
     .toEqual([true, true, true]);
@@ -95,22 +96,20 @@ test('switches to custom serif only after its common faces are ready', async ({
   await page.goto('/index.html');
 
   const initialGeometry = await getBodyGeometry(page);
-  const sans = page.getByRole('button', { name: 'Use sans-serif fonts' });
-  const serif = page.getByRole('button', { name: 'Use serif fonts' });
+  const fontSwitch = page.getByRole('switch', { name: 'Use serif fonts' });
   await recordChecksAtPreferenceMutation(page, [
     '400 16px "Tada Custom Serif"',
     '700 16px "Tada Custom Serif"',
     '400 16px "Tada Custom Serif Mono"',
   ]);
-  await serif.click();
+  await fontSwitch.click();
 
   await expectRequestedFaces(heldFonts.requestedFaces, SERIF_COMMON_FACES);
   await expect(page.locator('html')).not.toHaveAttribute(
     'data-font-preference',
     'serif',
   );
-  await expect(sans).toHaveAttribute('aria-pressed', 'true');
-  await expect(serif).toHaveAttribute('aria-pressed', 'false');
+  await expect(fontSwitch).toHaveAttribute('aria-checked', 'false');
   expect(await getBodyGeometry(page)).toEqual(initialGeometry);
   expect(
     await page.evaluate(() => localStorage.getItem('fontPreference')),
@@ -121,7 +120,7 @@ test('switches to custom serif only after its common faces are ready', async ({
     'data-font-preference',
     'serif',
   );
-  await expect(serif).toHaveAttribute('aria-pressed', 'true');
+  await expect(fontSwitch).toHaveAttribute('aria-checked', 'true');
   expect(
     await page.evaluate(() => localStorage.getItem('fontPreference')),
   ).toBe('serif');
@@ -139,22 +138,20 @@ test('switches from custom serif to bundled sans atomically', async ({
   const heldFonts = await holdFontRequests(page, SANS_COMMON_FACES);
   await page.goto('http://localhost:8082/custom/index.html');
   const initialGeometry = await getBodyGeometry(page);
-  const sans = page.getByRole('button', { name: 'Use sans-serif fonts' });
-  const serif = page.getByRole('button', { name: 'Use serif fonts' });
+  const fontSwitch = page.getByRole('switch', { name: 'Use serif fonts' });
   await recordChecksAtPreferenceMutation(page, [
     '400 16px "Inter"',
     '700 16px "Inter"',
     '400 16px "Google Sans Code"',
   ]);
 
-  await sans.click();
+  await fontSwitch.click();
   await expectRequestedFaces(heldFonts.requestedFaces, SANS_COMMON_FACES);
   await expect(page.locator('html')).toHaveAttribute(
     'data-font-preference',
     'serif',
   );
-  await expect(serif).toHaveAttribute('aria-pressed', 'true');
-  await expect(sans).toHaveAttribute('aria-pressed', 'false');
+  await expect(fontSwitch).toHaveAttribute('aria-checked', 'true');
   expect(await getBodyGeometry(page)).toEqual(initialGeometry);
   expect(
     await page.evaluate(() => localStorage.getItem('fontPreference')),
@@ -165,7 +162,7 @@ test('switches from custom serif to bundled sans atomically', async ({
     'data-font-preference',
     'serif',
   );
-  await expect(sans).toHaveAttribute('aria-pressed', 'true');
+  await expect(fontSwitch).toHaveAttribute('aria-checked', 'false');
   expect(
     await page.evaluate(() => localStorage.getItem('fontPreference')),
   ).toBe('sans');
@@ -187,8 +184,8 @@ test('keeps the configured font during a stored-preference hard load', async ({
     'serif',
   );
   await expect(
-    page.getByRole('button', { name: 'Use sans-serif fonts' }),
-  ).toHaveAttribute('aria-pressed', 'true');
+    page.getByRole('switch', { name: 'Use serif fonts' }),
+  ).toHaveAttribute('aria-checked', 'false');
 
   heldFonts.release();
   await expect(page.locator('html')).toHaveAttribute(
@@ -214,8 +211,8 @@ test('keeps a stored bundled-sans override pending on a serif-default load', asy
     'serif',
   );
   await expect(
-    page.getByRole('button', { name: 'Use serif fonts' }),
-  ).toHaveAttribute('aria-pressed', 'true');
+    page.getByRole('switch', { name: 'Use serif fonts' }),
+  ).toHaveAttribute('aria-checked', 'true');
 
   heldFonts.release();
   await expect(page.locator('html')).not.toHaveAttribute(
@@ -224,27 +221,25 @@ test('keeps a stored bundled-sans override pending on a serif-default load', asy
   );
 });
 
-test('reuses repeated requests and cancels by selecting the applied face', async ({
+test('cancels a pending request on second switch activation', async ({
   page,
 }) => {
   const heldFonts = await holdFontRequests(page, SERIF_COMMON_FACES);
   await page.goto('/index.html');
-  const sans = page.getByRole('button', { name: 'Use sans-serif fonts' });
-  const serif = page.getByRole('button', { name: 'Use serif fonts' });
+  const fontSwitch = page.getByRole('switch', { name: 'Use serif fonts' });
 
-  await serif.click();
-  await serif.click();
+  await fontSwitch.click();
   await expectRequestedFaces(heldFonts.requestedFaces, SERIF_COMMON_FACES);
   expect(heldFonts.requestedFaces).toHaveLength(SERIF_COMMON_FACES.length);
 
-  await sans.click();
+  await fontSwitch.click();
   heldFonts.release();
   await page.waitForLoadState('networkidle');
   await expect(page.locator('html')).not.toHaveAttribute(
     'data-font-preference',
     'serif',
   );
-  await expect(sans).toHaveAttribute('aria-pressed', 'true');
+  await expect(fontSwitch).toHaveAttribute('aria-checked', 'false');
   expect(
     await page.evaluate(() => localStorage.getItem('fontPreference')),
   ).toBeNull();
@@ -265,9 +260,8 @@ for (const failure of ['rejection', 'empty match'] as const) {
     }, failure);
     await page.goto('/index.html');
 
-    const sans = page.getByRole('button', { name: 'Use sans-serif fonts' });
-    const serif = page.getByRole('button', { name: 'Use serif fonts' });
-    await serif.click();
+    const fontSwitch = page.getByRole('switch', { name: 'Use serif fonts' });
+    await fontSwitch.click();
     await expect
       .poll(() =>
         page.evaluate(
@@ -286,8 +280,7 @@ for (const failure of ['rejection', 'empty match'] as const) {
       'data-font-preference',
       'serif',
     );
-    await expect(sans).toHaveAttribute('aria-pressed', 'true');
-    await expect(serif).toHaveAttribute('aria-pressed', 'false');
+    await expect(fontSwitch).toHaveAttribute('aria-checked', 'false');
     expect(
       await page.evaluate(() => localStorage.getItem('fontPreference')),
     ).toBeNull();
@@ -299,14 +292,13 @@ test('retains a failed stored override for a later retry', async ({ page }) => {
     localStorage.setItem('fontPreference', 'serif');
     const fonts = document.fonts;
     const originalLoad = fonts.load.bind(fonts);
-    (
-      window as Window & { __restoreFontLoad?: () => void }
-    ).__restoreFontLoad = () => {
-      Object.defineProperty(fonts, 'load', {
-        configurable: true,
-        value: originalLoad,
-      });
-    };
+    (window as Window & { __restoreFontLoad?: () => void }).__restoreFontLoad =
+      () => {
+        Object.defineProperty(fonts, 'load', {
+          configurable: true,
+          value: originalLoad,
+        });
+      };
     Object.defineProperty(fonts, 'load', {
       configurable: true,
       value: () => Promise.reject(new Error('font request failed')),
@@ -319,9 +311,7 @@ test('retains a failed stored override for a later retry', async ({ page }) => {
         () =>
           (
             window as Window & {
-              __tadaFontPreferenceLoader?: {
-                failedPreference: string | null;
-              };
+              __tadaFontPreferenceLoader?: { failedPreference: string | null };
             }
           ).__tadaFontPreferenceLoader?.failedPreference,
       ),
@@ -340,7 +330,7 @@ test('retains a failed stored override for a later retry', async ({ page }) => {
       window as Window & { __restoreFontLoad?: () => void }
     ).__restoreFontLoad?.();
   });
-  await page.getByRole('button', { name: 'Use serif fonts' }).click();
+  await page.getByRole('switch', { name: 'Use serif fonts' }).click();
   await expect(page.locator('html')).toHaveAttribute(
     'data-font-preference',
     'serif',
@@ -357,7 +347,7 @@ test('falls back to immediate switching without the Font Loading API', async ({
     });
   });
   await page.goto('/index.html');
-  await page.getByRole('button', { name: 'Use serif fonts' }).click();
+  await page.getByRole('switch', { name: 'Use serif fonts' }).click();
 
   await expect(page.locator('html')).toHaveAttribute(
     'data-font-preference',
@@ -373,14 +363,14 @@ test('commits a pending request into controls mounted by client navigation', asy
 }) => {
   const heldFonts = await holdFontRequests(page, SERIF_COMMON_FACES);
   await page.goto('/index.html');
-  await page.getByRole('button', { name: 'Use serif fonts' }).click();
+  await page.getByRole('switch', { name: 'Use serif fonts' }).click();
   await expectRequestedFaces(heldFonts.requestedFaces, SERIF_COMMON_FACES);
 
   await page.locator('main.body a[href="/markdown.html"]').click();
   await expect(page).toHaveURL(/markdown\.html/);
   await expect(
-    page.getByRole('button', { name: 'Use sans-serif fonts' }),
-  ).toHaveAttribute('aria-pressed', 'true');
+    page.getByRole('switch', { name: 'Use serif fonts' }),
+  ).toHaveAttribute('aria-checked', 'false');
 
   heldFonts.release();
   await expect(page.locator('html')).toHaveAttribute(
@@ -388,8 +378,8 @@ test('commits a pending request into controls mounted by client navigation', asy
     'serif',
   );
   await expect(
-    page.getByRole('button', { name: 'Use serif fonts' }),
-  ).toHaveAttribute('aria-pressed', 'true');
+    page.getByRole('switch', { name: 'Use serif fonts' }),
+  ).toHaveAttribute('aria-checked', 'true');
   expect(
     await page.evaluate(() => localStorage.getItem('fontPreference')),
   ).toBe('serif');

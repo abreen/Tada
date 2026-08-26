@@ -21,6 +21,7 @@
   width: fit-content;
   padding: var(--preference-picker-padding);
   background: var(--bg2-color);
+  border: 0;
   border-radius: calc(var(--border-radius) + 4px);
 }
 
@@ -46,15 +47,15 @@
   transform: translateX(calc(100% + var(--preference-picker-gap)));
 }
 
-.preference-picker:has(
-    .preference-picker-option[aria-pressed='true']:is(:hover, :focus)
-  )::before {
+.preference-picker:is(:hover, :focus)::before {
   background: var(--bg2-color);
 }
 
-.preference-picker:has(
-    .preference-picker-option[aria-pressed='true']:active:not(:disabled)
-  )::before {
+.preference-picker:active:not(:disabled) {
+  background: var(--bg2-color) !important;
+}
+
+.preference-picker:active:not(:disabled)::before {
   background: var(--link-active-color);
 }
 
@@ -65,9 +66,8 @@
   align-items: center;
   justify-content: center;
   width: var(--preference-picker-option-width);
-  height: 2rem;
+  height: 1.8rem;
   padding: 0;
-  font-size: var(--font-size-smaller);
   color: var(--fg2-color);
   background: transparent;
   border: 0;
@@ -100,17 +100,22 @@
   font-size-adjust: var(--font-size-adjust);
 }
 
-.preference-picker-option[aria-pressed='true'] {
+:root:not([data-font-preference='serif']) .font-picker-option-sans,
+:root[data-font-preference='serif'] .font-picker-option-serif,
+:root:not([data-contrast-preference='high']) .contrast-picker-option-standard,
+:root[data-contrast-preference='high'] .contrast-picker-option-high {
   color: var(--fg-color);
-  background: transparent;
 }
 
-.preference-picker-option[aria-pressed='true']:is(:hover, :focus) {
-  background: transparent;
-}
-
-.preference-picker-option[aria-pressed='true']:active:not(:disabled) {
-  background: transparent !important;
+.preference-picker:active:not(:disabled) {
+  :root:not([data-font-preference='serif']) & .font-picker-option-sans,
+  :root[data-font-preference='serif'] & .font-picker-option-serif,
+  :root:not([data-contrast-preference='high'])
+    &
+    .contrast-picker-option-standard,
+  :root[data-contrast-preference='high'] & .contrast-picker-option-high {
+    color: var(--bg-color);
+  }
 }
 
 @media print {

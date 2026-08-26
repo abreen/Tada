@@ -95,12 +95,10 @@ test.describe('font picker without JavaScript', () => {
     const page = await context.newPage();
     await page.goto('/index.html');
 
-    await expect(page.getByRole('group', { name: 'Font style' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Contrast' })).toBeVisible();
-    const appearanceButtons = page.locator('.appearance-pickers button');
-    await expect(appearanceButtons).toHaveCount(4);
-    for (let index = 0; index < 4; index += 1) {
-      await expect(appearanceButtons.nth(index)).toBeDisabled();
+    const appearanceSwitches = page.getByRole('switch');
+    await expect(appearanceSwitches).toHaveCount(2);
+    for (let index = 0; index < 2; index += 1) {
+      await expect(appearanceSwitches.nth(index)).toBeDisabled();
     }
     await expect(page.locator('html')).not.toHaveAttribute(
       'data-font-preference',
@@ -140,15 +138,15 @@ test.describe('configured appearance defaults', () => {
       'high',
     );
     await expect(
-      page.getByRole('button', { name: 'Use serif fonts' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use serif fonts' }),
+    ).toHaveAttribute('aria-checked', 'true');
     await expect(
-      page.getByRole('button', { name: 'Use high contrast' }),
-    ).toHaveAttribute('aria-pressed', 'true');
-    const buttons = page.locator('.appearance-pickers button');
-    await expect(buttons).toHaveCount(4);
-    for (let index = 0; index < 4; index += 1) {
-      await expect(buttons.nth(index)).toBeDisabled();
+      page.getByRole('switch', { name: 'Use high contrast' }),
+    ).toHaveAttribute('aria-checked', 'true');
+    const switches = page.getByRole('switch');
+    await expect(switches).toHaveCount(2);
+    for (let index = 0; index < 2; index += 1) {
+      await expect(switches.nth(index)).toBeDisabled();
     }
 
     await context.close();
@@ -198,12 +196,13 @@ test.describe('configured appearance defaults', () => {
     page,
   }) => {
     await page.goto('http://localhost:8082/custom/index.html');
-    const sansButton = page.getByRole('button', {
-      name: 'Use sans-serif fonts',
+    const fontSwitch = page.getByRole('switch', { name: 'Use serif fonts' });
+    const contrastSwitch = page.getByRole('switch', {
+      name: 'Use high contrast',
     });
-    await sansButton.click();
-    await expect(sansButton).toHaveAttribute('aria-pressed', 'true');
-    await page.getByRole('button', { name: 'Use standard contrast' }).click();
+    await fontSwitch.click();
+    await expect(fontSwitch).toHaveAttribute('aria-checked', 'false');
+    await contrastSwitch.click();
 
     expect(
       await page.evaluate(() => localStorage.getItem('fontPreference')),
@@ -222,23 +221,23 @@ test.describe('configured appearance defaults', () => {
       'high',
     );
     await expect(
-      page.getByRole('button', { name: 'Use sans-serif fonts' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use serif fonts' }),
+    ).toHaveAttribute('aria-checked', 'false');
     await expect(
-      page.getByRole('button', { name: 'Use standard contrast' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use high contrast' }),
+    ).toHaveAttribute('aria-checked', 'false');
 
     await page.getByRole('link', { name: 'Next page' }).click();
     await expect(page).toHaveURL('http://localhost:8082/custom/next.html');
     await expect(
-      page.getByRole('button', { name: 'Use sans-serif fonts' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use serif fonts' }),
+    ).toHaveAttribute('aria-checked', 'false');
     await expect(
-      page.getByRole('button', { name: 'Use standard contrast' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use high contrast' }),
+    ).toHaveAttribute('aria-checked', 'false');
 
-    await page.getByRole('button', { name: 'Use serif fonts' }).click();
-    await page.getByRole('button', { name: 'Use high contrast' }).click();
+    await page.getByRole('switch', { name: 'Use serif fonts' }).click();
+    await page.getByRole('switch', { name: 'Use high contrast' }).click();
     expect(
       await page.evaluate(() => localStorage.getItem('fontPreference')),
     ).toBeNull();
@@ -294,22 +293,20 @@ test.describe('appearance pickers', () => {
     await page.emulateMedia({ contrast: 'more' });
     await page.goto('/index.html');
 
-    const standard = page.getByRole('button', {
-      name: 'Use standard contrast',
+    const contrastSwitch = page.getByRole('switch', {
+      name: 'Use high contrast',
     });
-    const high = page.getByRole('button', { name: 'Use high contrast' });
 
     await expect(page.locator('html')).toHaveAttribute(
       'data-contrast-preference',
       'high',
     );
-    await expect(high).toHaveAttribute('aria-pressed', 'true');
-    await expect(standard).toHaveAttribute('aria-pressed', 'false');
+    await expect(contrastSwitch).toHaveAttribute('aria-checked', 'true');
     expect(
       await page.evaluate(() => localStorage.getItem('contrastPreference')),
     ).toBeNull();
 
-    await standard.click();
+    await contrastSwitch.click();
     await expect(page.locator('html')).not.toHaveAttribute(
       'data-contrast-preference',
       'high',
@@ -319,13 +316,13 @@ test.describe('appearance pickers', () => {
     ).toBe('standard');
 
     await page.reload();
-    await expect(standard).toHaveAttribute('aria-pressed', 'true');
+    await expect(contrastSwitch).toHaveAttribute('aria-checked', 'false');
     await expect(page.locator('html')).not.toHaveAttribute(
       'data-contrast-preference',
       'high',
     );
 
-    await high.click();
+    await contrastSwitch.click();
     expect(
       await page.evaluate(() => localStorage.getItem('contrastPreference')),
     ).toBeNull();
@@ -335,28 +332,22 @@ test.describe('appearance pickers', () => {
       'data-contrast-preference',
       'high',
     );
-    await expect(high).toHaveAttribute('aria-pressed', 'true');
+    await expect(contrastSwitch).toHaveAttribute('aria-checked', 'true');
   });
 
-  test('switches configured stacks and exposes the selected option', async ({
+  test('switches configured stacks and exposes the checked state', async ({
     page,
   }) => {
     await page.goto('/index.html');
 
-    const group = page.getByRole('group', { name: 'Font style' });
-    const sans = page.getByRole('button', { name: 'Use sans-serif fonts' });
-    const serif = page.getByRole('button', { name: 'Use serif fonts' });
-    const standardContrast = page.getByRole('button', {
-      name: 'Use standard contrast',
-    });
-    const highContrast = page.getByRole('button', {
+    const fontSwitch = page.getByRole('switch', { name: 'Use serif fonts' });
+    const contrastSwitch = page.getByRole('switch', {
       name: 'Use high contrast',
     });
-    await expect(group).toBeVisible();
-    await expect(sans).toHaveAttribute('aria-pressed', 'true');
-    await expect(serif).toHaveAttribute('aria-pressed', 'false');
-    await expect(standardContrast).toHaveAttribute('aria-pressed', 'true');
-    await expect(highContrast).toHaveAttribute('aria-pressed', 'false');
+    await expect(fontSwitch).toHaveAttribute('aria-checked', 'false');
+    await expect(contrastSwitch).toHaveAttribute('aria-checked', 'false');
+    await expect(fontSwitch).toHaveAttribute('title', 'Use serif fonts');
+    await expect(contrastSwitch).toHaveAttribute('title', 'Use high contrast');
 
     await page.evaluate(() => {
       const lineNumber = document.createElement('span');
@@ -420,13 +411,13 @@ test.describe('appearance pickers', () => {
       serifPreview: 'none',
     });
 
-    await serif.click();
+    await fontSwitch.click();
     await expect(page.locator('html')).toHaveAttribute(
       'data-font-preference',
       'serif',
     );
-    await expect(serif).toHaveAttribute('aria-pressed', 'true');
-    await expect(sans).toHaveAttribute('aria-pressed', 'false');
+    await expect(fontSwitch).toHaveAttribute('aria-checked', 'true');
+    await expect(fontSwitch).toHaveAttribute('title', 'Use sans-serif fonts');
 
     const fonts = await page.evaluate(() => ({
       body: getComputedStyle(document.body).fontFamily,
@@ -454,7 +445,7 @@ test.describe('appearance pickers', () => {
       await page.evaluate(() => localStorage.getItem('fontPreference')),
     ).toBe('serif');
 
-    await sans.click();
+    await fontSwitch.click();
     await expect(page.locator('html')).not.toHaveAttribute(
       'data-font-preference',
       'serif',
@@ -495,7 +486,7 @@ test.describe('appearance pickers', () => {
       italicProbe.textContent = 'Serif italic probe';
       document.querySelector('main')!.appendChild(italicProbe);
     });
-    await page.getByRole('button', { name: 'Use serif fonts' }).click();
+    await page.getByRole('switch', { name: 'Use serif fonts' }).click();
     await page.evaluate(async () => {
       await Promise.all([
         document.fonts.load('400 16px "Tada Custom Serif"', 'Serif'),
@@ -513,14 +504,20 @@ test.describe('appearance pickers', () => {
     page,
   }) => {
     await page.goto('/index.html');
-    const high = page.getByRole('button', { name: 'Use high contrast' });
-    await high.click();
+    const contrastSwitch = page.getByRole('switch', {
+      name: 'Use high contrast',
+    });
+    await contrastSwitch.click();
 
     await expect(page.locator('html')).toHaveAttribute(
       'data-contrast-preference',
       'high',
     );
-    await expect(high).toHaveAttribute('aria-pressed', 'true');
+    await expect(contrastSwitch).toHaveAttribute('aria-checked', 'true');
+    await expect(contrastSwitch).toHaveAttribute(
+      'title',
+      'Use standard contrast',
+    );
     expect(
       await page.evaluate(() => localStorage.getItem('contrastPreference')),
     ).toBe('high');
@@ -547,8 +544,8 @@ test.describe('appearance pickers', () => {
     page,
   }) => {
     await page.goto('/index.html');
-    await page.getByRole('button', { name: 'Use serif fonts' }).click();
-    await page.getByRole('button', { name: 'Use high contrast' }).click();
+    await page.getByRole('switch', { name: 'Use serif fonts' }).click();
+    await page.getByRole('switch', { name: 'Use high contrast' }).click();
     await expect(page.locator('html')).toHaveAttribute(
       'data-font-preference',
       'serif',
@@ -556,22 +553,22 @@ test.describe('appearance pickers', () => {
 
     await page.reload();
     await expect(
-      page.getByRole('button', { name: 'Use serif fonts' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use serif fonts' }),
+    ).toHaveAttribute('aria-checked', 'true');
     await expect(
-      page.getByRole('button', { name: 'Use high contrast' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use high contrast' }),
+    ).toHaveAttribute('aria-checked', 'true');
 
     await page.locator('main.body a[href="/markdown.html"]').click();
     await expect(page).toHaveURL(/markdown\.html/);
     await expect(
-      page.getByRole('button', { name: 'Use serif fonts' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use serif fonts' }),
+    ).toHaveAttribute('aria-checked', 'true');
     await expect(
-      page.getByRole('button', { name: 'Use high contrast' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use high contrast' }),
+    ).toHaveAttribute('aria-checked', 'true');
 
-    await page.getByRole('button', { name: 'Use standard contrast' }).click();
+    await page.getByRole('switch', { name: 'Use high contrast' }).click();
     await expect(page.locator('html')).not.toHaveAttribute(
       'data-contrast-preference',
       'high',
@@ -580,10 +577,10 @@ test.describe('appearance pickers', () => {
       await page.evaluate(() => localStorage.getItem('contrastPreference')),
     ).toBeNull();
     await expect(
-      page.getByRole('button', { name: 'Use serif fonts' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      page.getByRole('switch', { name: 'Use serif fonts' }),
+    ).toHaveAttribute('aria-checked', 'true');
 
-    await page.getByRole('button', { name: 'Use sans-serif fonts' }).click();
+    await page.getByRole('switch', { name: 'Use serif fonts' }).click();
     await expect(page.locator('html')).not.toHaveAttribute(
       'data-font-preference',
       'serif',
@@ -593,70 +590,50 @@ test.describe('appearance pickers', () => {
     ).toBeNull();
   });
 
-  test('uses standard control treatments without moving either knob', async ({
+  test('uses two keyboard switches and moves knobs only after activation', async ({
     page,
   }) => {
     await page.goto('/index.html');
 
-    for (const { group, alternate, reset } of [
-      {
-        group: page.getByRole('group', { name: 'Font style' }),
-        alternate: page.getByRole('button', { name: 'Use serif fonts' }),
-        reset: page.getByRole('button', { name: 'Use sans-serif fonts' }),
-      },
-      {
-        group: page.getByRole('group', { name: 'Contrast' }),
-        alternate: page.getByRole('button', { name: 'Use high contrast' }),
-        reset: page.getByRole('button', { name: 'Use standard contrast' }),
-      },
-    ]) {
-      const options = group.getByRole('button');
-      const firstBox = await options.nth(0).boundingBox();
-      const secondBox = await options.nth(1).boundingBox();
-      expect(firstBox).not.toBeNull();
-      expect(secondBox).not.toBeNull();
-      expect(secondBox!.x - (firstBox!.x + firstBox!.width)).toBeGreaterThan(0);
+    const fontSwitch = page.getByRole('switch', { name: 'Use serif fonts' });
+    const contrastSwitch = page.getByRole('switch', {
+      name: 'Use high contrast',
+    });
+    await expect(page.getByRole('switch')).toHaveCount(2);
+    await expect(fontSwitch.locator('button, a, input, select')).toHaveCount(0);
+    await expect(
+      contrastSwitch.locator('button, a, input, select'),
+    ).toHaveCount(0);
 
-      for (const colorScheme of ['light', 'dark'] as const) {
-        await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-        const knobBefore = await getKnobTransform(group);
-        const colorBefore = await alternate.evaluate(
-          element => getComputedStyle(element).color,
-        );
+    await expect(fontSwitch).toBeEnabled();
+    await expect(contrastSwitch).toBeEnabled();
+    await fontSwitch.focus();
+    await expect(fontSwitch).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(contrastSwitch).toBeFocused();
 
-        await alternate.hover();
-        expect(await getKnobTransform(group)).toBe(knobBefore);
-        expect(
-          await alternate.evaluate(element => getComputedStyle(element).color),
-        ).toBe(colorBefore);
+    for (const control of [fontSwitch, contrastSwitch]) {
+      const knobBefore = await getKnobTransform(control);
+      await control.hover();
+      expect(await getKnobTransform(control)).toBe(knobBefore);
 
-        const box = await alternate.boundingBox();
-        expect(box).not.toBeNull();
-        await page.mouse.move(
-          box!.x + box!.width / 2,
-          box!.y + box!.height / 2,
-        );
-        await page.mouse.down();
-        expect(await getKnobTransform(group)).toBe(knobBefore);
-        expect(
-          await alternate.evaluate(
-            element => getComputedStyle(element).transform,
-          ),
-        ).toBe('none');
-        await page.mouse.up();
-        await expect(alternate).toHaveAttribute('aria-pressed', 'true');
-        expect(
-          await alternate.evaluate(
-            element => getComputedStyle(element).backgroundColor,
-          ),
-        ).toBe('rgba(0, 0, 0, 0)');
-
-        await page.waitForTimeout(200);
-        expect(await getKnobTransform(group)).not.toBe(knobBefore);
-        await reset.click();
-        await page.waitForTimeout(200);
-      }
+      const box = await control.boundingBox();
+      expect(box).not.toBeNull();
+      await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+      await page.mouse.down();
+      expect(await getKnobTransform(control)).toBe(knobBefore);
+      await page.mouse.up();
+      await expect(control).toHaveAttribute('aria-checked', 'true');
+      await page.waitForTimeout(200);
+      expect(await getKnobTransform(control)).not.toBe(knobBefore);
+      await control.press('Enter');
+      await expect(control).toHaveAttribute('aria-checked', 'false');
     }
+
+    await fontSwitch.press('Space');
+    await expect(fontSwitch).toHaveAttribute('aria-checked', 'true');
+    await fontSwitch.press('Space');
+    await expect(fontSwitch).toHaveAttribute('aria-checked', 'false');
   });
 
   test('appears without the attribution footer on all page templates', async ({
@@ -670,9 +647,11 @@ test.describe('appearance pickers', () => {
       await page.goto(path);
       await expect(page.locator('footer')).toHaveCount(0);
       await expect(
-        page.getByRole('group', { name: 'Font style' }),
+        page.getByRole('switch', { name: 'Use serif fonts' }),
       ).toBeVisible();
-      await expect(page.getByRole('group', { name: 'Contrast' })).toBeVisible();
+      await expect(
+        page.getByRole('switch', { name: 'Use high contrast' }),
+      ).toBeVisible();
     }
   });
 

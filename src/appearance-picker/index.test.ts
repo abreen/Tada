@@ -20,14 +20,8 @@ function createPickers(
   const dom = new JSDOM(
     `<html data-default-font-preference="${defaultFont}" data-default-contrast-preference="${defaultContrast}"${effectiveFont}${effectiveContrast}>
     <body><div class="appearance-pickers">
-      <div class="font-picker" role="group" aria-label="Font style">
-        <button type="button" data-font-preference-value="sans" aria-pressed="${defaultFont === 'sans'}" disabled>Sans</button>
-        <button type="button" data-font-preference-value="serif" aria-pressed="${defaultFont === 'serif'}" disabled>Serif</button>
-      </div>
-      <div class="contrast-picker" role="group" aria-label="Contrast">
-        <button type="button" data-contrast-preference-value="standard" aria-pressed="${defaultContrast === 'standard'}" disabled>Standard</button>
-        <button type="button" data-contrast-preference-value="high" aria-pressed="${defaultContrast === 'high'}" disabled>High</button>
-      </div>
+      <button type="button" class="font-picker" role="switch" data-font-preference-switch aria-label="Use serif fonts" aria-checked="${defaultFont === 'serif'}" disabled>Font</button>
+      <button type="button" class="contrast-picker" role="switch" data-contrast-preference-switch aria-label="Use high contrast" aria-checked="${defaultContrast === 'high'}" disabled>Contrast</button>
     </div></body></html>`,
     { url: 'https://example.com/' },
   );
@@ -52,14 +46,24 @@ describe('appearance picker', () => {
     ).toBe(true);
     expect(
       window.document
-        .querySelector('[data-font-preference-value="sans"]')!
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
+        .querySelector('[data-font-preference-switch]')!
+        .getAttribute('aria-checked'),
+    ).toBe('false');
     expect(
       window.document
-        .querySelector('[data-contrast-preference-value="standard"]')!
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
+        .querySelector('[data-contrast-preference-switch]')!
+        .getAttribute('aria-checked'),
+    ).toBe('false');
+    expect(
+      window.document
+        .querySelector('[data-font-preference-switch]')!
+        .getAttribute('title'),
+    ).toBe('Use serif fonts');
+    expect(
+      window.document
+        .querySelector('[data-contrast-preference-switch]')!
+        .getAttribute('title'),
+    ).toBe('Use high contrast');
   });
 
   test('restores stored font and contrast preferences', () => {
@@ -77,14 +81,34 @@ describe('appearance picker', () => {
     );
     expect(
       window.document
-        .querySelector('[data-font-preference-value="serif"]')!
-        .getAttribute('aria-pressed'),
+        .querySelector('[data-font-preference-switch]')!
+        .getAttribute('aria-checked'),
     ).toBe('true');
     expect(
       window.document
-        .querySelector('[data-contrast-preference-value="high"]')!
-        .getAttribute('aria-pressed'),
+        .querySelector('[data-contrast-preference-switch]')!
+        .getAttribute('aria-checked'),
     ).toBe('true');
+    expect(
+      window.document
+        .querySelector('[data-font-preference-switch]')!
+        .getAttribute('title'),
+    ).toBe('Use sans-serif fonts');
+    expect(
+      window.document
+        .querySelector('[data-contrast-preference-switch]')!
+        .getAttribute('title'),
+    ).toBe('Use standard contrast');
+    expect(
+      window.document
+        .querySelector('[data-font-preference-switch]')!
+        .getAttribute('aria-label'),
+    ).toBe('Use serif fonts');
+    expect(
+      window.document
+        .querySelector('[data-contrast-preference-switch]')!
+        .getAttribute('aria-label'),
+    ).toBe('Use high contrast');
   });
 
   test('uses configured defaults and persists only opposite overrides', () => {
@@ -99,12 +123,10 @@ describe('appearance picker', () => {
     );
 
     window.document
-      .querySelector<HTMLButtonElement>('[data-font-preference-value="sans"]')!
+      .querySelector<HTMLButtonElement>('[data-font-preference-switch]')!
       .click();
     window.document
-      .querySelector<HTMLButtonElement>(
-        '[data-contrast-preference-value="standard"]',
-      )!
+      .querySelector<HTMLButtonElement>('[data-contrast-preference-switch]')!
       .click();
 
     expect(window.localStorage.getItem('fontPreference')).toBe('sans');
@@ -117,12 +139,10 @@ describe('appearance picker', () => {
     ).toBeUndefined();
 
     window.document
-      .querySelector<HTMLButtonElement>('[data-font-preference-value="serif"]')!
+      .querySelector<HTMLButtonElement>('[data-font-preference-switch]')!
       .click();
     window.document
-      .querySelector<HTMLButtonElement>(
-        '[data-contrast-preference-value="high"]',
-      )!
+      .querySelector<HTMLButtonElement>('[data-contrast-preference-switch]')!
       .click();
 
     expect(window.localStorage.getItem('fontPreference')).toBeNull();
@@ -143,19 +163,17 @@ describe('appearance picker', () => {
     mount(window);
 
     window.document
-      .querySelector<HTMLButtonElement>('[data-font-preference-value="serif"]')!
+      .querySelector<HTMLButtonElement>('[data-font-preference-switch]')!
       .click();
     window.document
-      .querySelector<HTMLButtonElement>(
-        '[data-contrast-preference-value="high"]',
-      )!
+      .querySelector<HTMLButtonElement>('[data-contrast-preference-switch]')!
       .click();
 
     expect(window.localStorage.getItem('fontPreference')).toBe('serif');
     expect(window.localStorage.getItem('contrastPreference')).toBe('high');
 
     window.document
-      .querySelector<HTMLButtonElement>('[data-font-preference-value="sans"]')!
+      .querySelector<HTMLButtonElement>('[data-font-preference-switch]')!
       .click();
     expect(window.localStorage.getItem('fontPreference')).toBeNull();
     expect(window.localStorage.getItem('contrastPreference')).toBe('high');
@@ -164,9 +182,7 @@ describe('appearance picker', () => {
     );
 
     window.document
-      .querySelector<HTMLButtonElement>(
-        '[data-contrast-preference-value="standard"]',
-      )!
+      .querySelector<HTMLButtonElement>('[data-contrast-preference-switch]')!
       .click();
     expect(window.localStorage.getItem('contrastPreference')).toBeNull();
     expect(
@@ -206,15 +222,61 @@ describe('appearance picker', () => {
     cleanup();
 
     window.document
-      .querySelector<HTMLButtonElement>('[data-font-preference-value="serif"]')!
+      .querySelector<HTMLButtonElement>('[data-font-preference-switch]')!
       .click();
     window.document
-      .querySelector<HTMLButtonElement>(
-        '[data-contrast-preference-value="high"]',
-      )!
+      .querySelector<HTMLButtonElement>('[data-contrast-preference-switch]')!
       .click();
 
     expect(window.localStorage.getItem('fontPreference')).toBeNull();
     expect(window.localStorage.getItem('contrastPreference')).toBeNull();
+  });
+
+  test('a second font switch activation cancels the pending change', () => {
+    const window = createPickers();
+    let pending: {
+      generation: number;
+      preference: 'sans' | 'serif';
+      promise: Promise<void>;
+    } | null = null;
+    let cancelCount = 0;
+    const requestedPreferences: Array<'sans' | 'serif'> = [];
+    const fontLoader = {
+      supported: true,
+      get pending() {
+        return pending;
+      },
+      failedPreference: null,
+      request(preference: 'sans' | 'serif') {
+        requestedPreferences.push(preference);
+        pending = { generation: 1, preference, promise: new Promise(() => {}) };
+        return pending;
+      },
+      isCurrent: () => true,
+      complete: () => {},
+      fail: () => {},
+      cancel() {
+        cancelCount += 1;
+        pending = null;
+      },
+    };
+    (
+      window as typeof window & {
+        __tadaFontPreferenceLoader: typeof fontLoader;
+      }
+    ).__tadaFontPreferenceLoader = fontLoader;
+    mount(window);
+    const fontSwitch = window.document.querySelector<HTMLButtonElement>(
+      '[data-font-preference-switch]',
+    )!;
+
+    fontSwitch.click();
+    expect(requestedPreferences).toEqual(['serif']);
+    expect(fontSwitch.getAttribute('aria-checked')).toBe('false');
+
+    fontSwitch.click();
+    expect(cancelCount).toBe(1);
+    expect(pending).toBeNull();
+    expect(fontSwitch.getAttribute('aria-checked')).toBe('false');
   });
 });

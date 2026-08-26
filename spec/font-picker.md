@@ -4,7 +4,8 @@ By default, every page includes a font picker in the appearance control row
 after the optional Tada attribution footer. Set `features.pickers: false` to
 omit the entire appearance control row from generated HTML without disabling
 configured defaults or stored visitor preferences. The row also includes the
-[contrast picker](contrast-picker.md). The two `Aa` buttons select between
+[contrast picker](contrast-picker.md). The font control is a single binary
+switch whose two `Aa` endpoints represent
 sans-serif and serif typography for both prose and monospaced text.
 
 Sans-serif is the default when `defaultFont` is omitted from the site config.
@@ -44,34 +45,37 @@ atomic common-face barrier before changing the effective preference. The
 barrier calls `document.fonts.load()` for proportional 400 normal,
 proportional 700 normal, and monospaced 400 normal in the target pair, and every
 call must return at least one matching face. The currently applied typography,
-root attribute, pressed state, and stored value remain unchanged until all
+root attribute, switch state, and stored value remain unchanged until all
 three calls resolve. Italic and bold-italic faces are deliberately excluded and
 remain demand-loaded when content uses them.
 
-A repeated click on the pending target reuses its request. Selecting the
-currently applied option cancels the pending intent, and a superseded request
-cannot apply later. There is no timeout or pending indicator. A rejected load
-or an empty match leaves the current preference applied; a click does not alter
-storage, while a stored override remains available for a later retry. When the
-Font Loading API is unavailable, selection retains the immediate behavior.
+Activating the switch again while the alternate faces are pending cancels the
+pending intent, and the superseded request cannot apply later. There is no
+timeout or pending indicator. A rejected load or an empty match leaves the
+current preference applied; a click does not alter storage, while a stored
+override remains available for a later retry. When the Font Loading API is
+unavailable, selection retains the immediate behavior.
 
-The buttons expose their state with `aria-pressed`. The root `<html>` records
-the configured choice in `data-default-font-preference`; effective serif mode
-uses `data-font-preference="serif"`. A visitor selection that differs from the
+The control is a button with `role="switch"`, the stable accessible name “Use
+serif fonts,” and an `aria-checked` state. It is one keyboard tab stop; Space
+and Enter toggle it. Its supplementary tooltip describes the next action as
+“Use serif fonts” or “Use sans-serif fonts” without changing the accessible
+name. The root `<html>` records the configured choice in
+`data-default-font-preference`; effective serif mode uses
+`data-font-preference="serif"`. A visitor selection that differs from the
 configured default is stored as `fontPreference=sans` or
 `fontPreference=serif`. Choosing the configured default removes the key. On a
 hard load with an opposite stored preference, a guarded head script leaves the
 configured typography applied while it loads the stored pair's common faces,
 then applies the override atomically. Without a valid override, it leaves the
 build-rendered state untouched.
-Each rounded group follows the trace-control styling: a padded secondary
-background without an outer border and one neutral, button-shaped knob that
-slides between two options separated by the trace controls' standard half-rem
-gap. The options inherit the same hover, focus, and active treatments as the
-trace-widget buttons. Those transient states do not move the knob; it moves
-only after the preference is selected. When the selected option is hovered,
-focused, or active, its treatment is painted on the knob itself so the button
-background cannot clip the knob while it slides into place.
+
+The rounded switch follows the trace-control styling: a padded secondary
+background without an outer border and one neutral knob that slides between
+the endpoints separated by the trace controls' standard half-rem gap. Hover,
+focus, and active treatments do not move the knob; it moves only after the
+preference is applied. Keyboard focus outlines the complete switch track with
+the standard gap rather than outlining an individual endpoint.
 
 The font and contrast pickers are one page-local component. When enabled, they
 are re-mounted and synchronized after client-side navigation replaces the page
@@ -80,7 +84,7 @@ new controls when it resolves. They remain present when the attribution footer
 is disabled.
 
 The appearance row is rendered at build time so it occupies its final layout
-position as soon as the HTML is parsed. All four buttons are initially disabled
+position as soon as the HTML is parsed. Both switches are initially disabled
 and the component enables and synchronizes them when it mounts. With JavaScript
 disabled the row remains visible but inert, and the complete page uses the
 configured typography. The row is excluded from Pagefind indexing and printed
