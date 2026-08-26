@@ -8,12 +8,14 @@ function renderTop(
   banner?: string,
   bannerHtml?: string,
   search = false,
+  fontOverrides?: { serif?: object; serifMono?: object },
 ) {
   return _.template(TOP_TEMPLATE)({
     site: {
       defaultFont,
       defaultContrast,
       banner,
+      fontOverrides,
       features: { favicon: false, search },
       title: 'Test site',
       titlePostfix: ' - Test site',
@@ -57,6 +59,34 @@ describe('_top.html template', () => {
     expect(openingTag).toContain('data-default-contrast-preference="high"');
     expect(openingTag).toContain('data-font-preference="serif"');
     expect(openingTag).toContain('data-contrast-preference="high"');
+  });
+
+  test('selects the primary common faces for the font-loading barrier', () => {
+    const bundledHtml = renderTop('sans', 'standard');
+    const customHtml = renderTop(
+      'sans',
+      'standard',
+      undefined,
+      undefined,
+      false,
+      { serif: {}, serifMono: {} },
+    );
+
+    expect(bundledHtml).toContain("sans: ['Inter', 'Google Sans Code']");
+    expect(bundledHtml).toContain("'Source Serif 4'");
+    expect(bundledHtml).toContain("'Libertinus Mono'");
+    expect(customHtml).toContain("'Tada Custom Serif'");
+    expect(customHtml).toContain("'Tada Custom Serif Mono'");
+    expect(customHtml).toContain(
+      `document.fonts.load('normal 400 1em "' + bodyFamily + '"')`,
+    );
+    expect(customHtml).toContain(
+      `document.fonts.load('normal 700 1em "' + bodyFamily + '"')`,
+    );
+    expect(customHtml).toContain(
+      `document.fonts.load('normal 400 1em "' + monoFamily + '"')`,
+    );
+    expect(customHtml).not.toContain('document.fonts.ready');
   });
 
   test('renders a non-empty banner without a title', () => {

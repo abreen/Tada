@@ -37,16 +37,33 @@ Source Serif 4 uses its automatic optical-size axis.
 All faces use `font-display: swap`. A build preloads only its configured default
 pair: Inter and Google Sans Code for sans, or Source Serif 4 and Libertinus Mono
 for serif. A custom regular face replaces the corresponding bundled serif
-preload. The alternate pair remains demand-loaded when a visitor switches,
-with system fallbacks keeping content visible while it loads.
+preload. The alternate pair remains demand-loaded.
+
+With the CSS Font Loading API available, selecting the alternate pair starts an
+atomic common-face barrier before changing the effective preference. The
+barrier calls `document.fonts.load()` for proportional 400 normal,
+proportional 700 normal, and monospaced 400 normal in the target pair, and every
+call must return at least one matching face. The currently applied typography,
+root attribute, pressed state, and stored value remain unchanged until all
+three calls resolve. Italic and bold-italic faces are deliberately excluded and
+remain demand-loaded when content uses them.
+
+A repeated click on the pending target reuses its request. Selecting the
+currently applied option cancels the pending intent, and a superseded request
+cannot apply later. There is no timeout or pending indicator. A rejected load
+or an empty match leaves the current preference applied; a click does not alter
+storage, while a stored override remains available for a later retry. When the
+Font Loading API is unavailable, selection retains the immediate behavior.
 
 The buttons expose their state with `aria-pressed`. The root `<html>` records
 the configured choice in `data-default-font-preference`; effective serif mode
 uses `data-font-preference="serif"`. A visitor selection that differs from the
 configured default is stored as `fontPreference=sans` or
-`fontPreference=serif`. Choosing the configured default removes the key. A
-guarded inline script applies a valid override before paint; without one, it
-leaves the build-rendered state untouched.
+`fontPreference=serif`. Choosing the configured default removes the key. On a
+hard load with an opposite stored preference, a guarded head script leaves the
+configured typography applied while it loads the stored pair's common faces,
+then applies the override atomically. Without a valid override, it leaves the
+build-rendered state untouched.
 Each rounded group follows the trace-control styling: a padded secondary
 background without an outer border and one neutral, button-shaped knob that
 slides between two options separated by the trace controls' standard half-rem
@@ -58,7 +75,9 @@ background cannot clip the knob while it slides into place.
 
 The font and contrast pickers are one page-local component. When enabled, they
 are re-mounted and synchronized after client-side navigation replaces the page
-container. They remain present when the attribution footer is disabled.
+container. A pending font intent survives that navigation and synchronizes the
+new controls when it resolves. They remain present when the attribution footer
+is disabled.
 
 The appearance row is rendered at build time so it occupies its final layout
 position as soon as the HTML is parsed. All four buttons are initially disabled

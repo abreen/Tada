@@ -38,7 +38,70 @@
     <% } %>
     <title><%= page.title %><%= site.titlePostfix %></title>
     <script>
+      (() => {
       document.documentElement.classList.add('js');
+      const fontPreferenceFamilies = {
+        sans: ['Inter', 'Google Sans Code'],
+        serif: [
+          '<%= site.fontOverrides?.serif ? 'Tada Custom Serif' : 'Source Serif 4' %>',
+          '<%= site.fontOverrides?.serifMono ? 'Tada Custom Serif Mono' : 'Libertinus Mono' %>',
+        ],
+      };
+      const fontPreferenceLoader = {
+        generation: 0,
+        pending: null,
+        failedPreference: null,
+        supported:
+          document.fonts && typeof document.fonts.load === 'function',
+        request(preference) {
+          if (!this.supported) return null;
+          if (this.pending?.preference === preference) return this.pending;
+
+          const generation = ++this.generation;
+          const [bodyFamily, monoFamily] = fontPreferenceFamilies[preference];
+          const promise = Promise.all([
+            document.fonts.load('normal 400 1em "' + bodyFamily + '"'),
+            document.fonts.load('normal 700 1em "' + bodyFamily + '"'),
+            document.fonts.load('normal 400 1em "' + monoFamily + '"'),
+          ]).then(matches => {
+            if (matches.some(faces => faces.length === 0)) {
+              throw new Error('A required font face did not load');
+            }
+          });
+          const request = { generation, preference, promise };
+          this.pending = request;
+          this.failedPreference = null;
+          return request;
+        },
+        isCurrent(request) {
+          return (
+            this.pending === request &&
+            this.generation === request.generation
+          );
+        },
+        complete(request) {
+          if (this.isCurrent(request)) this.pending = null;
+        },
+        fail(request) {
+          if (!this.isCurrent(request)) return;
+          this.pending = null;
+          this.failedPreference = request.preference;
+        },
+        cancel() {
+          ++this.generation;
+          this.pending = null;
+          this.failedPreference = null;
+        },
+      };
+      window.__tadaFontPreferenceLoader = fontPreferenceLoader;
+
+      const applyFontPreference = preference => {
+        if (preference === 'serif') {
+          document.documentElement.dataset.fontPreference = 'serif';
+        } else {
+          delete document.documentElement.dataset.fontPreference;
+        }
+      };
       try {
         const preference = window.localStorage.getItem('fontPreference');
         const configured =
@@ -47,10 +110,27 @@
           (preference === 'serif' || preference === 'sans') &&
           preference !== configured
         ) {
-          if (preference === 'serif') {
-            document.documentElement.dataset.fontPreference = 'serif';
+          const request = fontPreferenceLoader.request(preference);
+          if (!request) {
+            applyFontPreference(preference);
           } else {
-            delete document.documentElement.dataset.fontPreference;
+            request.promise.then(
+              () => {
+                let storedPreference;
+                try {
+                  storedPreference =
+                    window.localStorage.getItem('fontPreference');
+                } catch {}
+                if (
+                  fontPreferenceLoader.isCurrent(request) &&
+                  storedPreference === preference
+                ) {
+                  applyFontPreference(preference);
+                  fontPreferenceLoader.complete(request);
+                }
+              },
+              () => fontPreferenceLoader.fail(request),
+            );
           }
         }
       } catch {}
@@ -81,6 +161,7 @@
       } else {
         delete document.documentElement.dataset.contrastPreference;
       }
+      })();
     </script>
     <% if (!isWatchMode) { %>
     <script type="speculationrules">

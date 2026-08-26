@@ -505,44 +505,6 @@ test.describe('appearance pickers', () => {
     expect(fontRequests).toContain('/custom-fonts/mono-regular.woff2');
   });
 
-  test('keeps content visible while selected serif fonts are loading', async ({
-    page,
-  }) => {
-    let resolveFontRequest: (() => void) | undefined;
-    const fontRequestStarted = new Promise<void>(resolve => {
-      resolveFontRequest = resolve;
-    });
-
-    await page.route('**/*.woff2', async route => {
-      const pathname = decodeURIComponent(
-        new URL(route.request().url()).pathname,
-      );
-      if (pathname.includes('/custom-fonts/')) {
-        resolveFontRequest?.();
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      await route.continue();
-    });
-
-    await page.goto('/index.html');
-    await page.getByRole('button', { name: 'Use serif fonts' }).click();
-    await fontRequestStarted;
-
-    await expect(page.locator('main.body')).toBeVisible();
-    await expect(page.locator('html')).toHaveAttribute(
-      'data-font-preference',
-      'serif',
-    );
-    await expect(page.locator('body')).toHaveCSS(
-      'font-size-adjust',
-      'cap-height 0.67',
-    );
-    await expect(page.locator('code').first()).toHaveCSS(
-      'font-size-adjust',
-      'cap-height 0.613',
-    );
-  });
-
   test('uses an achromatic enhanced-contrast palette in light and dark modes', async ({
     page,
   }) => {
@@ -583,6 +545,10 @@ test.describe('appearance pickers', () => {
     await page.goto('/index.html');
     await page.getByRole('button', { name: 'Use serif fonts' }).click();
     await page.getByRole('button', { name: 'Use high contrast' }).click();
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-font-preference',
+      'serif',
+    );
 
     await page.reload();
     await expect(
@@ -674,6 +640,7 @@ test.describe('appearance pickers', () => {
           ),
         ).toBe('none');
         await page.mouse.up();
+        await expect(alternate).toHaveAttribute('aria-pressed', 'true');
         expect(
           await alternate.evaluate(
             element => getComputedStyle(element).backgroundColor,

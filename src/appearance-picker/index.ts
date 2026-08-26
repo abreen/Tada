@@ -4,6 +4,33 @@ export type ContrastPreference = 'standard' | 'high';
 const FONT_STORAGE_KEY = 'fontPreference';
 const CONTRAST_STORAGE_KEY = 'contrastPreference';
 
+interface FontPreferenceRequest {
+  generation: number;
+  preference: FontPreference;
+  promise: Promise<void>;
+}
+
+interface FontPreferenceLoader {
+  supported: boolean;
+  pending: FontPreferenceRequest | null;
+  failedPreference: FontPreference | null;
+  request(preference: FontPreference): FontPreferenceRequest | null;
+  isCurrent(request: FontPreferenceRequest): boolean;
+  complete(request: FontPreferenceRequest): void;
+  fail(request: FontPreferenceRequest): void;
+  cancel(): void;
+}
+
+function getFontPreferenceLoader(
+  window: Window,
+): FontPreferenceLoader | undefined {
+  return (
+    window as Window & {
+      __tadaFontPreferenceLoader?: FontPreferenceLoader;
+    }
+  ).__tadaFontPreferenceLoader;
+}
+
 function getStorage(window: Window): Storage | null {
   try {
     return window.localStorage;
@@ -87,6 +114,12 @@ export function saveContrastPreference(
 
 function getDefaultFontPreference(document: Document): FontPreference {
   return document.documentElement.dataset.defaultFontPreference === 'serif'
+    ? 'serif'
+    : 'sans';
+}
+
+function getAppliedFontPreference(document: Document): FontPreference {
+  return document.documentElement.dataset.fontPreference === 'serif'
     ? 'serif'
     : 'sans';
 }
@@ -179,17 +212,57 @@ export default function mountAppearancePicker(window: Window): () => void {
     container.querySelectorAll<HTMLButtonElement>('button'),
   );
   const storage = getStorage(window);
+  const fontLoader = getFontPreferenceLoader(window);
   const defaultFontPreference = getDefaultFontPreference(document);
   const defaultContrastPreference = getDefaultContrastPreference(window);
-  let fontPreference = getFontPreference(storage, defaultFontPreference);
+  const requestedFontPreference = getFontPreference(
+    storage,
+    defaultFontPreference,
+  );
+  let fontPreference = getAppliedFontPreference(document);
   let contrastPreference = getContrastPreference(
     storage,
     defaultContrastPreference,
   );
 
-  applyFontPreference(document, fontPreference);
+  const requestedFontIsWaiting =
+    (fontLoader?.pending?.preference === requestedFontPreference ||
+      fontLoader?.failedPreference === requestedFontPreference) ??
+    false;
+  if (!requestedFontIsWaiting) {
+    fontPreference = requestedFontPreference;
+    applyFontPreference(document, fontPreference);
+  }
   applyContrastPreference(document, contrastPreference);
   syncAppearance(document, fontPreference, contrastPreference);
+
+  const observedRequests = new Set<number>();
+  const observeFontRequest = (request: FontPreferenceRequest) => {
+    if (observedRequests.has(request.generation)) return;
+    observedRequests.add(request.generation);
+    request.promise.then(
+      () => {
+        if (fontLoader?.isCurrent(request)) {
+          fontPreference = request.preference;
+          saveFontPreference(storage, fontPreference, defaultFontPreference);
+          applyFontPreference(document, fontPreference);
+          fontLoader.complete(request);
+        } else {
+          fontPreference = getAppliedFontPreference(document);
+        }
+        syncAppearance(document, fontPreference, contrastPreference);
+      },
+      () => {
+        fontLoader?.fail(request);
+        fontPreference = getAppliedFontPreference(document);
+        syncAppearance(document, fontPreference, contrastPreference);
+      },
+    );
+  };
+
+  if (fontLoader?.pending) {
+    observeFontRequest(fontLoader.pending);
+  }
 
   const handleClick = (event: Event) => {
     const button = event.currentTarget as HTMLButtonElement;
@@ -197,9 +270,20 @@ export default function mountAppearancePicker(window: Window): () => void {
     const contrastValue = button.dataset.contrastPreferenceValue;
 
     if (fontValue === 'sans' || fontValue === 'serif') {
-      fontPreference = fontValue;
-      saveFontPreference(storage, fontPreference, defaultFontPreference);
-      applyFontPreference(document, fontPreference);
+      fontPreference = getAppliedFontPreference(document);
+      if (fontValue === fontPreference) {
+        fontLoader?.cancel();
+        saveFontPreference(storage, fontPreference, defaultFontPreference);
+      } else {
+        const request = fontLoader?.request(fontValue) ?? null;
+        if (request) {
+          observeFontRequest(request);
+          return;
+        }
+        fontPreference = fontValue;
+        saveFontPreference(storage, fontPreference, defaultFontPreference);
+        applyFontPreference(document, fontPreference);
+      }
     } else if (contrastValue === 'standard' || contrastValue === 'high') {
       contrastPreference = contrastValue;
       saveContrastPreference(

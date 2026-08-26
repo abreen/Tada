@@ -70,19 +70,30 @@ retain normal font sizing.
 
 All browser faces are declared in the non-critical stylesheet and use
 `font-display: swap`. Each build preloads the normal body and mono faces for its
-configured default pairing only. Alternate faces are requested on demand after
-a visitor switches. The inactive `Aa` preview uses a system fallback and does
-not trigger the alternate pairing. Times New Roman and Courier New remain the
-first serif-mode fallbacks while a font loads or if it is unavailable.
-Configured size adjustments reduce the visual size change during that fallback
-without changing which faces load.
+configured default pairing only. Before applying an alternate pairing, Tada
+uses `document.fonts.load()` as a barrier for its primary proportional 400
+normal, proportional 700 normal, and monospaced 400 normal faces. Each load
+must return a matching face. Only after all three resolve does Tada change the
+root preference, pressed state, and stored click preference together. The same
+barrier applies in both directions and when restoring an opposite stored
+preference on a hard load.
+
+Italic and bold-italic faces are intentionally outside this common-face
+barrier, so they remain demand-loaded when styled content uses them. The
+inactive `Aa` preview uses a system fallback and does not trigger the alternate
+pairing. A pending barrier has no timeout or visible loading state.
+Cancellation, rejection, or an empty match leaves the applied face in place;
+without the Font Loading API, switching is immediate. Times New Roman and
+Courier New remain the serif-mode fallbacks if an active face is unavailable,
+and configured size adjustments continue to reduce visual differences for
+later italic swaps or definitive font failures.
 
 When serif is the configured default, each custom regular face replaces its
 corresponding bundled font in the preload pair. Styled custom faces are never
 preloaded. A sans-default visit neither preloads nor requests custom serif
-fonts; switching to serif demand-loads the faces that the page uses. Public
-asset URLs remain relative to the generated stylesheet, so the same output
-works at root and non-root base paths.
+fonts; switching to serif requests the custom regular, bold, and mono-regular
+faces for the barrier. Public asset URLs remain relative to the generated
+stylesheet, so the same output works at root and non-root base paths.
 
 Custom font files and their licenses belong to the site author. Tada only
 validates and publishes files explicitly placed in that site's `public/`
