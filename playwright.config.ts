@@ -5,7 +5,14 @@ export default defineConfig({
   timeout: 10_000,
   retries: 0,
   use: { baseURL: 'http://localhost:8081', headless: true },
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium' } },
+    {
+      name: 'webkit-external-link-wrapping',
+      testMatch: '**/external-link-wrapping.spec.ts',
+      use: { browserName: 'webkit' },
+    },
+  ],
   webServer: [
     {
       command: 'bun run playwright/serve-test-site.ts',

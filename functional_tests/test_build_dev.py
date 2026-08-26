@@ -201,12 +201,21 @@ class TestDevBuild:
             r'[^}]*line-height: 1\.4;',
             css,
         )
-        external_link_tail_rule = re.search(r'\.external-link-tail::?after\s*\{([^}]*)\}', css)
-        assert external_link_tail_rule
-        external_link_styles = external_link_tail_rule.group(1)
-        assert 'width: var(--icon-external-link-size);' in external_link_styles
-        assert 'height: var(--icon-external-link-size);' in external_link_styles
-        assert 'vertical-align: text-top;' in external_link_styles
+        external_link_tail_styles = ''.join(
+            re.findall(r'\.external-link-tail::?after\s*\{([^}]*)\}', css)
+        )
+        assert 'display: inline;' in external_link_tail_styles
+        assert 'padding-block-end: var(--icon-external-link-size);' in external_link_tail_styles
+        assert 'padding-block:' not in external_link_tail_styles
+        assert 'padding-inline-start: var(--icon-external-link-size);' in external_link_tail_styles
+        assert 'vertical-align: text-top;' in external_link_tail_styles
+        external_link_fallback_pattern = (
+            r'a\.external:not\(:has\(\.external-link-tail\)\)'
+            r'::?after\s*\{([^}]*)\}'
+        )
+        external_link_fallback_styles = ''.join(re.findall(external_link_fallback_pattern, css))
+        assert 'width: var(--icon-external-link-size);' in external_link_fallback_styles
+        assert 'height: var(--icon-external-link-size);' in external_link_fallback_styles
         assert '--icon-external-link-size: 20px;' in css
         assert '.question-a-body > *, .question-a-body > * * {' not in css
         for family in ('body', 'mono'):

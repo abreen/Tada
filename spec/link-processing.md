@@ -40,7 +40,9 @@ not rewritten. Anchors with a `download` attribute keep the raw file target.
 Links to domains not listed in `internalDomains` are automatically marked as
 external during Markdown rendering. External links open in a new tab with
 `rel="noopener noreferrer"`. Raw HTML content is not decorated with this
-feature.
+feature. The final word and external-link icon stay together when wrapping,
+and the icon also stays with any immediately following non-whitespace content,
+such as sentence punctuation.
 
 
 ## Internal link validation

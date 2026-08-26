@@ -94,13 +94,27 @@ a.disabled {
 
 .external-link-tail::after,
 a.external:not(:has(.external-link-tail))::after {
+  vertical-align: text-top;
+
+  @include contained-mask(var(--icon-external-link));
+}
+
+.external-link-tail::after {
+  display: inline;
+
+  // With zero font metrics, block-end padding paints down from text-top.
+  padding-block-end: var(--icon-external-link-size);
+  padding-inline-start: var(--icon-external-link-size);
+  font-size: 0;
+  line-height: 0;
+  content: '\2060' / '';
+}
+
+a.external:not(:has(.external-link-tail))::after {
   display: inline-block;
   width: var(--icon-external-link-size);
   height: var(--icon-external-link-size);
-  vertical-align: text-top;
   content: '';
-
-  @include contained-mask(var(--icon-external-link));
 }
 
 .footnotes {

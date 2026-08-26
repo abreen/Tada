@@ -13,6 +13,11 @@ const siteDir = path.join(repoDir, 'playwright', '.test-site');
 const slidesPath = path.join(siteDir, 'content', 'slides.md');
 const resetSlidesPath = path.join(siteDir, 'content', 'slides-reset.md');
 const timezonesPath = path.join(siteDir, 'content', 'timezones.md');
+const externalLinkWrappingPath = path.join(
+  siteDir,
+  'content',
+  'external-link-wrapping.md',
+);
 const traceDir = path.join(siteDir, 'public', 'trace');
 const resetTraceDir = path.join(siteDir, 'public', 'trace-reset');
 const coverageEnabled = process.argv.slice(2).includes('--coverage');
@@ -243,6 +248,16 @@ Plain same-period meeting: <time datetime="17:40">5:40</time>
 Plain period-changing meeting: <time datetime="11:30">11:30</time>
 
 Time range: <time datetime="12:45">12:45</time>--<time datetime="13:45">1:45 PM</time>
+`,
+);
+
+writeFileSync(
+  externalLinkWrappingPath,
+  `---
+title: External Link Wrapping
+---
+
+August 5, 3:15-5:15 pm, [Science Center](https://example.com), hall A.
 `,
 );
 
