@@ -215,14 +215,6 @@ jobs:
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-    - name: Check out licensed demo fonts
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      with:
-        repository: abreen/fonts
-        ssh-key: ${{ secrets.FONTS_SSH_KEY }}
-        path: .pages-assets/fonts
-        persist-credentials: false
-
     - name: Install dependencies
       run: sudo apt install -y mupdf-tools openjdk-25-jdk-headless yq
 
@@ -260,60 +252,11 @@ jobs:
         --prod-base https://abreen.io
         --prod-base-path /Tada
 
-    - name: Copy licensed demo fonts
-      run: |
-        source_dir=.pages-assets/fonts
-        target_dir=example/public/fonts
-        mkdir -p "$target_dir"
-        for font in \
-          equity_ot_b_regular.woff2 \
-          equity_ot_b_italic.woff2 \
-          equity_ot_b_bold.woff2 \
-          equity_ot_b_bold_italic.woff2 \
-          triplicate_ot_a_regular.woff2 \
-          triplicate_ot_a_italic.woff2 \
-          triplicate_ot_a_bold.woff2 \
-          triplicate_ot_a_bold_italic.woff2
-        do
-          if [ ! -f "$source_dir/$font" ]; then
-            echo "::error::Missing licensed demo font: $font"
-            exit 1
-          fi
-          cp "$source_dir/$font" "$target_dir/$font"
-        done
-
     - name: Customize production site config
       run: |
         yq --yaml-output --in-place --arg pct '${{ steps.coverage.outputs.percent }}' '
           .defaultFont = "sans" |
           .defaultContrast = "standard" |
-          .fontOverrides = {
-            "serif": {
-              "regular": "fonts/equity_ot_b_regular.woff2",
-              "italic": "fonts/equity_ot_b_italic.woff2",
-              "bold": "fonts/equity_ot_b_bold.woff2",
-              "boldItalic": "fonts/equity_ot_b_bold_italic.woff2",
-              "tuning": {
-                "scale": 1.125,
-                "lineHeight": 1.5,
-                "headingScale": 0.98,
-                "headingWeight": 700,
-                "fontSizeAdjust": 0.706
-              }
-            },
-            "serifMono": {
-              "regular": "fonts/triplicate_ot_a_regular.woff2",
-              "italic": "fonts/triplicate_ot_a_italic.woff2",
-              "bold": "fonts/triplicate_ot_a_bold.woff2",
-              "boldItalic": "fonts/triplicate_ot_a_bold_italic.woff2",
-              "features": ["ss02"],
-              "tuning": {
-                "scale": 0.9,
-                "lineHeight": 1.5,
-                "fontSizeAdjust": 0.648
-              }
-            }
-          } |
           .banner = "This is a **test** of the *site-wide* banner." |
           .vars.testCoveragePercent = ($pct | tonumber) |
           .vars.testCoverageUrl = "/coverage/index.html"
