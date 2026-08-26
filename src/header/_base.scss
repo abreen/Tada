@@ -16,6 +16,7 @@ header {
   grid-template-columns: 1fr;
   width: 100%;
   background: var(--bg-color-translucent);
+  border-bottom: 1px solid var(--bg2-color);
   backdrop-filter: var(--backdrop-filter);
   view-transition-name: site-header;
 
@@ -34,6 +35,25 @@ header {
 
 :root[data-contrast-preference='high'] header {
   background: var(--bg-color);
+}
+
+body > .container::before {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  content: '';
+  background: var(--bg-color-translucent);
+  opacity: 0;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity 150ms ease-out;
+  }
+}
+
+body:has(header details[open]) > .container::before {
+  pointer-events: auto;
+  opacity: 1;
 }
 
 header > details {

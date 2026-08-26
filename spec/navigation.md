@@ -35,3 +35,11 @@ native immediate disclosure behavior. The effects follow the native `open`
 state. Without JavaScript, the menu remains fully functional and opens
 immediately. All state changes are also immediate when the visitor requests
 reduced motion.
+
+While the navigation is open, a fixed translucent wash covers the page content
+below the header. It uses the active theme's translucent primary background,
+so it adapts to light, dark, and high-contrast palettes. The wash blocks pointer
+interaction with the page. With JavaScript enabled, clicking it dismisses the
+navigation without activating the content beneath it. Without JavaScript, the
+native summary remains available to close the navigation. The wash fades with
+the navigation unless the visitor requests reduced motion.

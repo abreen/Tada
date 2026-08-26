@@ -48,6 +48,18 @@ async function emulateSearchDisabled(page: Page) {
   await page.locator('.search-controls').evaluate(element => element.remove());
 }
 
+async function getHeaderScrimStyles(page: Page) {
+  return page.locator('body > .container').evaluate(container => {
+    const style = getComputedStyle(container, '::before');
+    return {
+      opacity: style.opacity,
+      pointerEvents: style.pointerEvents,
+      transitionDuration: style.transitionDuration,
+      transitionProperty: style.transitionProperty,
+    };
+  });
+}
+
 test.describe('graceful degradation without JS', () => {
   test('links work with JavaScript disabled', async ({ browser }) => {
     const context = await browser.newContext({ javaScriptEnabled: false });
@@ -75,6 +87,43 @@ test.describe('graceful degradation without JS', () => {
 
     await expect(page).toHaveURL(/lectures\/index\.html/);
     await expect(page.locator('h1')).toContainText('Lectures');
+
+    await context.close();
+  });
+
+  test('header scrim blocks page links with JavaScript disabled', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+
+    await page.goto('/index.html');
+    const details = page.locator('header details');
+    const summary = details.locator('summary');
+    const pageLink = page.locator('main.body a[href="/markdown.html"]');
+    await pageLink.evaluate(element =>
+      element.scrollIntoView({ block: 'center' }),
+    );
+    const pageLinkBox = await pageLink.boundingBox();
+    expect(pageLinkBox).not.toBeNull();
+
+    await summary.click();
+    await expect(details).toHaveAttribute('open', '');
+    await expect
+      .poll(async () => (await getHeaderScrimStyles(page)).opacity)
+      .toBe('1');
+
+    const originalUrl = page.url();
+    await page.mouse.click(
+      pageLinkBox!.x + pageLinkBox!.width / 2,
+      pageLinkBox!.y + pageLinkBox!.height / 2,
+    );
+
+    await expect(details).toHaveAttribute('open', '');
+    await expect(page).toHaveURL(originalUrl);
+
+    await summary.click();
+    await expect(details).not.toHaveAttribute('open', '');
 
     await context.close();
   });
@@ -182,12 +231,19 @@ test.describe('header menu control', () => {
       details.evaluate(element => {
         const detailsStyle = getComputedStyle(element);
         const contentStyle = getComputedStyle(element, '::details-content');
+        const scrimStyle = getComputedStyle(
+          document.querySelector('body > .container')!,
+          '::before',
+        );
         return {
           blockSize: Number.parseFloat(contentStyle.blockSize),
           opacity: contentStyle.opacity,
           transform: contentStyle.transform,
           detailsTransition: detailsStyle.transitionProperty,
           contentTransition: contentStyle.transitionProperty,
+          scrimOpacity: scrimStyle.opacity,
+          scrimPointerEvents: scrimStyle.pointerEvents,
+          scrimTransition: scrimStyle.transitionProperty,
         };
       });
 
@@ -196,28 +252,73 @@ test.describe('header menu control', () => {
     await expect
       .poll(async () => {
         const styles = await getContentStyles();
-        return [styles.blockSize > 0, styles.opacity];
+        return [
+          styles.blockSize > 0,
+          styles.opacity,
+          styles.scrimOpacity,
+          styles.scrimPointerEvents,
+        ];
       })
-      .toEqual([true, '1']);
+      .toEqual([true, '1', '1', 'auto']);
     const open = await getContentStyles();
     await details.locator('summary').click();
     await expect
       .poll(async () => {
         const styles = await getContentStyles();
-        return [styles.blockSize, styles.opacity];
+        return [
+          styles.blockSize,
+          styles.opacity,
+          styles.scrimOpacity,
+          styles.scrimPointerEvents,
+        ];
       })
-      .toEqual([0, '0']);
+      .toEqual([0, '0', '0', 'none']);
     const closedAgain = await getContentStyles();
 
     expect(closed.blockSize).toBe(0);
     expect(closed.opacity).toBe('0');
+    expect(closed.scrimOpacity).toBe('0');
+    expect(closed.scrimPointerEvents).toBe('none');
     expect(open.opacity).toBe('1');
+    expect(open.scrimOpacity).toBe('1');
+    expect(open.scrimPointerEvents).toBe('auto');
     expect(open.transform).not.toBe(closed.transform);
     expect(closedAgain.opacity).toBe('0');
+    expect(closedAgain.scrimOpacity).toBe('0');
+    expect(closedAgain.scrimPointerEvents).toBe('none');
     expect(closed.detailsTransition).toContain('grid-template-rows');
     expect(closed.contentTransition).toContain('content-visibility');
     expect(closed.contentTransition).toContain('opacity');
     expect(closed.contentTransition).toContain('transform');
+    expect(closed.scrimTransition).toContain('opacity');
+  });
+
+  test('scrim dismisses the menu without activating page links', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    const details = page.locator('header details');
+    const pageLink = page.locator('main.body a[href="/markdown.html"]');
+    await pageLink.evaluate(element =>
+      element.scrollIntoView({ block: 'center' }),
+    );
+    const pageLinkBox = await pageLink.boundingBox();
+    expect(pageLinkBox).not.toBeNull();
+
+    await details.locator('summary').click();
+    await expect(details).toHaveAttribute('open', '');
+    await expect
+      .poll(async () => (await getHeaderScrimStyles(page)).opacity)
+      .toBe('1');
+
+    const originalUrl = page.url();
+    await page.mouse.click(
+      pageLinkBox!.x + pageLinkBox!.width / 2,
+      pageLinkBox!.y + pageLinkBox!.height / 2,
+    );
+
+    await expect(details).not.toHaveAttribute('open', '');
+    await expect(page).toHaveURL(originalUrl);
   });
 
   test('morphs the hamburger strokes into a close symbol', async ({ page }) => {
@@ -290,10 +391,14 @@ test.describe('header menu control', () => {
           .transitionDuration,
         getComputedStyle(details).transitionDuration,
         getComputedStyle(details, '::details-content').transitionDuration,
+        getComputedStyle(
+          document.querySelector('body > .container')!,
+          '::before',
+        ).transitionDuration,
       ];
     });
 
-    expect(durations).toEqual(['0s', '0s', '0s', '0s', '0s']);
+    expect(durations).toEqual(['0s', '0s', '0s', '0s', '0s', '0s']);
   });
 });
 
