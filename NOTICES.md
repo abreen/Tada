@@ -27,10 +27,11 @@ modification.
 - License: [SIL Open Font License, Version 1.1](https://openfontlicense.org)
 - Copyright: © 2014–2021 Adobe Systems Incorporated, with Reserved Font Name “Source”
 
-## Libertinus Mono
+## Courier Prime
 
-Tada includes the Libertinus Mono regular WOFF2 font without modification.
+Tada includes WOFF2 conversions of the Courier Prime regular, italic, bold,
+and bold-italic fonts.
 
-- Source: [`googlefonts/libertinus`](https://github.com/googlefonts/libertinus)
+- Source: [Courier Prime in Google Fonts](https://github.com/google/fonts/tree/main/ofl/courierprime)
 - License: [SIL Open Font License, Version 1.1](https://openfontlicense.org)
-- Copyright: Copyright 2025 The Libertinus Mono Project Authors
+- Copyright: Copyright 2015 The Courier Prime Project Authors

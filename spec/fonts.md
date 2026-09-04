@@ -7,7 +7,7 @@ Tada ships with bundled font files in two formats:
 
 Inter is the default body and heading font. Google Sans Code is the default
 monospaced font. The page-bottom [font picker](font-picker.md) pairs Source
-Serif 4 with Libertinus Mono in serif mode, which can instead be made the site
+Serif 4 with Courier Prime in serif mode, which can instead be made the site
 default with `defaultFont: serif`. All four families use bundled WOFF2 files and
 make no font-network requests to third parties.
 
@@ -16,9 +16,11 @@ consistent on mobile browsers. In particular, iOS Safari does not independently
 autosize nested prose blocks such as list levels. User zoom remains available.
 
 Source Serif 4 includes normal and italic variable faces with weight 200–900
-and optical size 8–60. Browser optical sizing remains automatic. Libertinus
-Mono includes the supplied regular 400 face; browsers may synthesize other
-styles when code requests them. Ordered-list markers use old-style numerals
+and optical size 8–60. Browser optical sizing remains automatic. Courier Prime
+includes regular, italic, bold, and bold-italic faces at weights 400 and 700.
+Its faces use a metric size adjustment that compensates for Tada's shared
+monospaced-text scale, keeping serif-mode character widths and apparent size
+consistent. Ordered-list markers use old-style numerals
 while serif mode is effective; list content and sans mode retain their normal
 numeric style. Serif faces without old-style numerals fall back to their normal
 figures.
@@ -30,7 +32,7 @@ replace either serif family independently with licensed WOFF2 files from the
 site's `public/` directory. Each override requires a regular face and may add
 italic, bold, and bold-italic faces. Tada declares these as fixed 400/700,
 normal/italic faces under internal family aliases. When a styled face is
-omitted, the browser may synthesize it. Source Serif 4 or Libertinus Mono stays
+omitted, the browser may synthesize it. Source Serif 4 or Courier Prime stays
 next in the corresponding fallback stack, followed by the system fallbacks.
 
 A family can also specify unique four-character OpenType feature tags. The

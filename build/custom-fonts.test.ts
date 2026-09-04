@@ -71,7 +71,7 @@ describe('custom font configuration', () => {
       "'Tada Custom Serif', 'Source Serif 4', 'Times New Roman', 'Times', serif",
     );
     expect(getSerifMonoFontStack(overrides)).toBe(
-      "'Tada Custom Serif Mono', 'Libertinus Mono', 'Courier New', 'Courier', monospace",
+      "'Tada Custom Serif Mono', 'Courier Prime', 'Courier New', 'Courier', monospace",
     );
     expect(renderFontFeatureSettings(overrides.serif)).toBe('normal');
     expect(renderFontFeatureSettings(overrides.serifMono)).toBe(
@@ -91,7 +91,7 @@ describe('custom font configuration', () => {
       "'Source Serif 4', 'Times New Roman', 'Times', serif",
     );
     expect(getSerifMonoFontStack(undefined)).toBe(
-      "'Libertinus Mono', 'Courier New', 'Courier', monospace",
+      "'Courier Prime', 'Courier New', 'Courier', monospace",
     );
     expect(renderFontFeatureSettings(undefined)).toBe('normal');
     expect(renderCustomFontTuningScss(undefined)).toBe('');

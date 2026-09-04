@@ -58,11 +58,39 @@
 }
 
 @font-face {
-  font-family: 'Libertinus Mono';
+  font-family: 'Courier Prime';
   font-style: normal;
   font-weight: 400;
-  src: url('libertinus-mono/LibertinusMono-Regular.woff2') format('woff2');
+  src: url('courier-prime/CourierPrime-Regular.woff2') format('woff2');
   font-display: swap;
+  size-adjust: 106.383%;
+}
+
+@font-face {
+  font-family: 'Courier Prime';
+  font-style: italic;
+  font-weight: 400;
+  src: url('courier-prime/CourierPrime-Italic.woff2') format('woff2');
+  font-display: swap;
+  size-adjust: 106.383%;
+}
+
+@font-face {
+  font-family: 'Courier Prime';
+  font-style: normal;
+  font-weight: 700;
+  src: url('courier-prime/CourierPrime-Bold.woff2') format('woff2');
+  font-display: swap;
+  size-adjust: 106.383%;
+}
+
+@font-face {
+  font-family: 'Courier Prime';
+  font-style: italic;
+  font-weight: 700;
+  src: url('courier-prime/CourierPrime-BoldItalic.woff2') format('woff2');
+  font-display: swap;
+  size-adjust: 106.383%;
 }
 
 ::selection {

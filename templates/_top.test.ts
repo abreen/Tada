@@ -94,7 +94,7 @@ describe('_top.html template', () => {
 
     expect(bundledHtml).toContain("sans: ['Inter', 'Google Sans Code']");
     expect(bundledHtml).toContain("'Source Serif 4'");
-    expect(bundledHtml).toContain("'Libertinus Mono'");
+    expect(bundledHtml).toContain("'Courier Prime'");
     expect(customHtml).toContain("'Tada Custom Serif'");
     expect(customHtml).toContain("'Tada Custom Serif Mono'");
     expect(customHtml).toContain(

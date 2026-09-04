@@ -14,7 +14,7 @@ already active. Sans mode uses Inter for body text and headings and Google Sans
 Code for monospaced text. Serif mode uses this bundled pairing:
 
 - body text and headings: Source Serif 4, then Times New Roman, Times, serif
-- monospaced text: Libertinus Mono, then Courier New, Courier, monospace
+- monospaced text: Courier Prime, then Courier New, Courier, monospace
 
 Authors may replace either serif family independently through
 `fontOverrides.serif` and `fontOverrides.serifMono`. Custom faces appear before
@@ -36,7 +36,7 @@ Serif mode uses the same base `1rem` size and `1.7` line height as sans mode.
 Source Serif 4 uses its automatic optical-size axis.
 
 All faces use `font-display: swap`. A build preloads only its configured default
-pair: Inter and Google Sans Code for sans, or Source Serif 4 and Libertinus Mono
+pair: Inter and Google Sans Code for sans, or Source Serif 4 and Courier Prime
 for serif. A custom regular face replaces the corresponding bundled serif
 preload. The alternate pair remains demand-loaded.
 

@@ -80,13 +80,19 @@ class TestDevBuild:
 
     def test_produces_font_files(self, built_dev_site):
         dist = built_dev_site / 'dist'
+        css = ''.join(file.read_text() for file in dist.glob('*.css'))
         expected_fonts = [
             'source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
             'source-serif-4/SourceSerif4-Italic-VariableFont_opsz,wght.woff2',
-            'libertinus-mono/LibertinusMono-Regular.woff2',
+            'courier-prime/CourierPrime-Regular.woff2',
+            'courier-prime/CourierPrime-Italic.woff2',
+            'courier-prime/CourierPrime-Bold.woff2',
+            'courier-prime/CourierPrime-BoldItalic.woff2',
         ]
         for font_path in expected_fonts:
             assert (dist / font_path).is_file()
+        assert css.count('font-family: Courier Prime;') == 4
+        assert css.count('size-adjust: 106.383%;') == 4
 
     def test_produces_no_favicon_files(self, built_dev_site):
         dist = built_dev_site / 'dist'
@@ -133,7 +139,10 @@ class TestDevBuild:
         assert 'data-font-preference="serif"' in opening_tag
         assert 'data-contrast-preference="high"' in opening_tag
         assert 'href="/source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2"' in html
-        assert 'href="/libertinus-mono/LibertinusMono-Regular.woff2"' in html
+        assert 'href="/courier-prime/CourierPrime-Regular.woff2"' in html
+        assert 'CourierPrime-Italic.woff2' not in html
+        assert 'CourierPrime-Bold.woff2' not in html
+        assert 'CourierPrime-BoldItalic.woff2' not in html
         assert 'rel="preload" href="/inter/InterVariable.woff2"' not in html
         assert 'rel="preload" href="/google-sans-code/GoogleSansCodeVariable.woff2"' not in html
         assert re.search(
@@ -194,7 +203,7 @@ class TestDevBuild:
         assert 'body-italic.woff2' not in html
         assert 'body-bold.woff2' not in html
         assert 'SourceSerif4-VariableFont_opsz,wght.woff2' not in html
-        assert 'LibertinusMono-Regular.woff2' not in html
+        assert 'CourierPrime-Regular.woff2' not in html
         assert css.count('font-family: Tada Custom Serif;') == 4
         assert css.count('font-family: Tada Custom Serif Mono;') == 4
         assert '--serif-mono-font-feature-settings: "ss02"' in css

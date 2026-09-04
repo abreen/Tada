@@ -433,11 +433,11 @@ test.describe('appearance pickers', () => {
     expect(fonts.code).toContain('Tada Custom Serif Mono');
     expect(await getFontSizeAdjustments()).toEqual({
       body: 'cap-height 0.67',
-      code: 'cap-height 0.613',
-      lineNumber: 'cap-height 0.613',
-      traceMemory: 'cap-height 0.613',
+      code: 'cap-height 0.5796',
+      lineNumber: 'cap-height 0.5796',
+      traceMemory: 'cap-height 0.5796',
       katex: 'none',
-      svgMono: 'cap-height 0.613',
+      svgMono: 'cap-height 0.5796',
       sansPreview: 'none',
       serifPreview: 'cap-height 0.67',
     });

@@ -22,10 +22,24 @@ export function installCustomFontFixtures(
     repoDir,
     'fonts/source-serif-4/woff2/SourceSerif4-Italic-VariableFont_opsz,wght.woff2',
   );
-  const sourceMono = path.join(
-    repoDir,
-    'fonts/libertinus-mono/woff2/LibertinusMono-Regular.woff2',
-  );
+  const sourceMono = {
+    regular: path.join(
+      repoDir,
+      'fonts/courier-prime/woff2/CourierPrime-Regular.woff2',
+    ),
+    italic: path.join(
+      repoDir,
+      'fonts/courier-prime/woff2/CourierPrime-Italic.woff2',
+    ),
+    bold: path.join(
+      repoDir,
+      'fonts/courier-prime/woff2/CourierPrime-Bold.woff2',
+    ),
+    boldItalic: path.join(
+      repoDir,
+      'fonts/courier-prime/woff2/CourierPrime-BoldItalic.woff2',
+    ),
+  };
 
   for (const [face, suffix] of Object.entries(FACE_FILES)) {
     copyFileSync(
@@ -34,7 +48,10 @@ export function installCustomFontFixtures(
         : sourceSerifRegular,
       path.join(outputDir, `body-${suffix}.woff2`),
     );
-    copyFileSync(sourceMono, path.join(outputDir, `mono-${suffix}.woff2`));
+    copyFileSync(
+      sourceMono[face],
+      path.join(outputDir, `mono-${suffix}.woff2`),
+    );
   }
 
   return `fontOverrides:
@@ -51,6 +68,6 @@ export function installCustomFontFixtures(
     bold: custom-fonts/mono-bold.woff2
     boldItalic: custom-fonts/mono-bold-italic.woff2
     tuning:
-      fontSizeAdjust: 0.613
+      fontSizeAdjust: 0.5796
 `;
 }

@@ -163,14 +163,14 @@ describe('preparePageTemplateHtml', () => {
       ],
       unexpected: [
         'source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
-        'libertinus-mono/LibertinusMono-Regular.woff2',
+        'courier-prime/CourierPrime-Regular.woff2',
       ],
     },
     {
       defaultFont: 'serif' as const,
       expected: [
         'source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
-        'libertinus-mono/LibertinusMono-Regular.woff2',
+        'courier-prime/CourierPrime-Regular.woff2',
       ],
       unexpected: [
         'inter/InterVariable.woff2',
@@ -202,10 +202,7 @@ describe('preparePageTemplateHtml', () => {
 
   test('preloads custom regular serif faces without preloading styled faces', () => {
     writeFile(
-      path.join(
-        '/virtual/dist',
-        'libertinus-mono/LibertinusMono-Regular.woff2',
-      ),
+      path.join('/virtual/dist', 'courier-prime/CourierPrime-Regular.woff2'),
       'font',
     );
 
@@ -231,7 +228,7 @@ describe('preparePageTemplateHtml', () => {
       'rel="preload" href="/fonts/Body%20Regular.woff2"',
     );
     expect(result).toContain(
-      'rel="preload" href="/libertinus-mono/LibertinusMono-Regular.woff2"',
+      'rel="preload" href="/courier-prime/CourierPrime-Regular.woff2"',
     );
     expect(result).not.toContain('body-italic.woff2');
     expect(result).not.toContain('body-bold.woff2');

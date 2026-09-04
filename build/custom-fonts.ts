@@ -218,7 +218,7 @@ export function getSerifMonoFontStack(
   const custom = fontOverrides?.serifMono
     ? `'${CUSTOM_FONT_FAMILY_DEFINITIONS.serifMono.cssFamily}', `
     : '';
-  return `${custom}'Libertinus Mono', 'Courier New', 'Courier', monospace`;
+  return `${custom}'Courier Prime', 'Courier New', 'Courier', monospace`;
 }
 
 function defaultParseFont(contents: Buffer): ParsedFont {

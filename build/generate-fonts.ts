@@ -14,7 +14,7 @@ export const DEFAULT_FONT_PRELOAD_FILES = {
   ],
   serif: [
     'source-serif-4/SourceSerif4-VariableFont_opsz,wght.woff2',
-    'libertinus-mono/LibertinusMono-Regular.woff2',
+    'courier-prime/CourierPrime-Regular.woff2',
   ],
 } as const;
 
