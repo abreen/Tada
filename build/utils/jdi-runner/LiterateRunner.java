@@ -244,7 +244,15 @@ public class LiterateRunner {
                 case '\n' -> sb.append("\\n");
                 case '\r' -> sb.append("\\r");
                 case '\t' -> sb.append("\\t");
-                default -> sb.append(c);
+                default -> {
+                    if (c < 0x20) {
+                        sb.append("\\u00");
+                        sb.append(Character.forDigit(c >> 4, 16));
+                        sb.append(Character.forDigit(c & 0xf, 16));
+                    } else {
+                        sb.append(c);
+                    }
+                }
             }
         }
         sb.append('"');

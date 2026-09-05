@@ -1,5 +1,8 @@
+import json
+import subprocess
+
 import pytest
-from conftest import init_site, run_tada, set_site_config
+from conftest import PACKAGE_DIR, init_site, run_tada, set_site_config
 
 
 def _write_basic_literate_java_site(site):
@@ -116,3 +119,40 @@ class TestLiterateJavaBrokenLink:
         assert result.returncode != 0
         output = result.stdout + result.stderr
         assert 'broken internal link' in output
+
+
+@pytest.mark.parametrize(
+    'output',
+    [
+        ''.join(chr(code) for code in range(32)),
+        'ordinary output: "quoted" and \\backslash\nnext line\rreturn\ttab',
+    ],
+    ids=['all-control-characters', 'ordinary-output'],
+)
+def test_literate_java_stdout_round_trip(tmp_path, output):
+    """Execute real Java and preserve stdout through the runner JSON protocol."""
+    # Numeric char literals also exercise NUL and controls that cannot occur in
+    # Java source literals (Unicode escapes are processed before tokenization).
+    chars = ', '.join(str(ord(char)) for char in output)
+    source = (
+        'public class Output {\n'
+        '  public static void main(String[] args) {\n'
+        f'    System.out.print(new String(new char[] {{{chars}}}));\n'
+        '  }\n'
+        '}\n'
+    )
+    module = PACKAGE_DIR / 'build' / 'utils' / 'literate-java.ts'
+    script = tmp_path / 'execute.ts'
+    script.write_text(
+        f'import {{compileJavaSource, executeLiterateJava}} from {json.dumps(str(module))};\n'
+        'import fs from "node:fs";\n'
+        f'const dir = compileJavaSource({json.dumps(source)}, "Output");\n'
+        'try {\n'
+        '  const result = executeLiterateJava("Output", dir, '
+        '[{javaStartLine: 3, javaEndLine: 3}] as any);\n'
+        '  console.log(JSON.stringify(result));\n'
+        '} finally { fs.rmSync(dir, {recursive: true, force: true}); }\n'
+    )
+    result = subprocess.run(['bun', str(script)], capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert json.loads(result.stdout) == [{'blockIndex': 0, 'output': output}]

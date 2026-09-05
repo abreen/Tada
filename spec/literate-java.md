@@ -7,7 +7,8 @@ are included in the built site.
 
 If a Java compiler is available, the `.java` files are compiled, and if they
 have a `main()` method, they are executed. The output of each code block is
-captured and displayed alongside it in the rendered page.
+captured and displayed alongside it in the rendered page. The capture protocol
+preserves quotes, backslashes, and all control characters in standard output.
 
 Code blocks can be marked as hidden so they contribute to the compiled source
 but do not appear in the rendered output. This is useful for boilerplate like
