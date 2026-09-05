@@ -80,13 +80,16 @@ class TestDiffWithChanges:
         asset.parent.mkdir(parents=True)
         contents = ['{"revision": 1}\n', '{"revision": 2}\n']
         for version, content in enumerate(contents, start=1):
-            asset.write_text(content)
+            # Exercise Windows line endings on every platform.
+            asset.write_text(content, newline='\r\n')
             run_tada('prod', cwd=str(site_dir), check=True)
             output = site_dir / 'dist-prod' / f'v{version}'
             assert (output / relative_path).read_text() == content
+            assert (output / relative_path).read_bytes() == asset.read_bytes()
             manifest = json.loads((output / 'tada.manifest.json').read_text())
             assert 'tada.manifest.json' not in manifest['files']
-            assert manifest['files'][relative_path] == hashlib.sha256(content.encode()).hexdigest()
+            expected_hash = hashlib.sha256(asset.read_bytes()).hexdigest()
+            assert manifest['files'][relative_path] == expected_hash
 
         result = run_tada('diff', cwd=str(site_dir))
         assert result.returncode == 0
