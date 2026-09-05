@@ -517,10 +517,11 @@ export function createMarkdown(
           '</span></p>' +
           '<div class="question-a">' +
           '<p class="question-a-label">A.</p>' +
-          '<div class="question-a-body" data-pagefind-ignore>\n'
+          '<div class="question-a-body" data-pagefind-ignore>\n' +
+          '<div class="question-a-content">\n'
         );
       } else {
-        return '</div></div></div>\n';
+        return '</div></div></div></div>\n';
       }
     },
   });

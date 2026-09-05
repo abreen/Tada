@@ -298,7 +298,9 @@ describe('custom markdown containers', () => {
     expect(html).toContain(
       '<div class="question-a-body" data-pagefind-ignore>',
     );
-    expect(html).toContain('<p>An organized collection.</p>');
+    expect(html).toContain(
+      '<div class="question-a-content">\n<p>An organized collection.</p>\n</div></div></div></div>',
+    );
   });
 
   test('renders checked-list questions as multiple choice blocks', () => {

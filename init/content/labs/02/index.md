@@ -49,11 +49,11 @@ The innermost statement compares `nums[i]` and `nums[curr]`.
 - when `i` is $n - 3$, the comparison is executed two times
 - when `i` is $n - 2$, the comparison is executed one time
 
-Therefore the total number of comparisons $C(n)$ is
-
+??? question What is the exact number of comparisons $C(n)$?
 $$
 (n-1) + (n-2) + \dots + 1 = \sum_{i=1}^{n-1}i = \frac{n(n-1)}{2}
 $$
+???
 
 ??? question What complexity class does $C(n)$ belong to?
 It's a quadratic function. The class is $O(n^2)$.

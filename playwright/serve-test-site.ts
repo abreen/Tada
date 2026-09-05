@@ -67,6 +67,20 @@ writeFileSync(
   `${devConfigWithoutFooter}${installCustomFontFixtures(repoDir, siteDir)}`,
 );
 
+writeFileSync(
+  path.join(siteDir, 'content', 'questions.md'),
+  String.raw`---
+title: Questions
+---
+
+??? question What is a fraction?
+A <dfn>fraction</dfn> such as $\frac{1}{\sqrt{x}}$ describes a ratio.
+
+A second paragraph with **emphasis** and [a link](./slides.html).
+???
+`,
+);
+
 mkdirSync(path.dirname(slidesPath), { recursive: true });
 mkdirSync(traceDir, { recursive: true });
 mkdirSync(resetTraceDir, { recursive: true });

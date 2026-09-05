@@ -37,6 +37,7 @@
 }
 
 .js .question-a-body {
+  display: grid;
   cursor: pointer;
 
   @include user-select(none);
@@ -54,37 +55,42 @@
   }
 }
 
-.question-a-body > *:first-child {
+.question-a-content {
+  display: flow-root;
+  min-width: 0;
+}
+
+.question-a-content > *:first-child {
   margin-top: 0;
 }
 
-.question-a-body > *:last-child {
+.question-a-content > *:last-child {
   margin-bottom: 0;
 }
 
-.question-a-body > * {
+// Composite the entire answer, including positioned math and explicit colors.
+.js .question-a-body > .question-a-content,
+.js .question-a-body::before {
+  grid-area: 1 / 1;
+
   @media (prefers-reduced-motion: no-preference) {
-    transition:
-      color 0.25s,
-      background-color 0.25s,
-      border-color 0.25s,
-      box-shadow 0.25s;
+    transition: opacity 0.25s;
   }
 }
 
-.js .question-a-body:not([data-revealed]) > * {
-  color: transparent;
+.js .question-a-body::before {
   pointer-events: none;
+  content: '';
   background-color: var(--bg2-color);
-  border-color: transparent;
-  box-shadow: none;
 }
 
-.js .question-a-body:not([data-revealed]) > * * {
-  color: transparent;
-  background-color: var(--bg2-color);
-  border-color: transparent;
-  box-shadow: none;
+.js .question-a-body[data-revealed]::before {
+  opacity: 0;
+}
+
+.js .question-a-body:not([data-revealed]) > .question-a-content {
+  pointer-events: none;
+  opacity: 0;
 }
 
 .js .question-a-body::after {
@@ -225,17 +231,16 @@
 
     @include user-select(text);
 
-    &:not([data-revealed]) > * {
-      color: inherit;
+    > .question-a-content {
+      transition: none;
+    }
+
+    &:not([data-revealed]) > .question-a-content {
       pointer-events: auto;
-      background-color: transparent;
+      opacity: 1;
     }
 
-    &:not([data-revealed]) > * * {
-      color: inherit;
-      background-color: transparent;
-    }
-
+    &::before,
     &::after {
       display: none;
     }

@@ -61,9 +61,16 @@ class TestDevBuild:
         dist = built_dev_site / 'dist'
         css = ''.join(file.read_text() for file in dist.glob('*.css'))
 
-        assert ('.js .question-a-body:not([data-revealed]) > * {\n    color: inherit;') in css
-        assert ('.js .question-a-body:not([data-revealed]) > * * {\n    color: inherit;') in css
-        assert re.search(r'\.js \.question-a-body::?after\s*\{\s*display: none;', css)
+        assert re.search(
+            r'\.js \.question-a-body:not\(\[data-revealed\]\) > \.question-a-content\s*'
+            r'\{\s*pointer-events: auto;\s*opacity: 1;',
+            css,
+        )
+        assert re.search(
+            r'\.js \.question-a-body::?before,\s*\.js \.question-a-body::?after\s*'
+            r'\{\s*display: none;',
+            css,
+        )
 
     def test_produces_js_bundle(self, built_dev_site):
         dist = built_dev_site / 'dist'

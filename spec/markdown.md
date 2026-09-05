@@ -50,10 +50,14 @@ The answer is here.
 ???
 ```
 
-When motion is enabled, each top-level answer block transitions as one visual
-unit. Nested markup such as KaTeX inherits that reveal and does not animate
-independently. Printed Q&A blocks always show their answers and omit the reveal
-hint.
+With JavaScript enabled, an unrevealed answer occupies its normal space behind
+one rectangular placeholder. A build-time content wrapper lets CSS fade the
+entire answer in as one visual unit over 0.25 seconds, while the placeholder and
+reveal hint fade out. Nested markup such as definitions and KaTeX keeps its
+normal styling and shares the same opacity transition; hidden math cannot paint
+outside the placeholder. Reduced motion disables the fade. Without JavaScript,
+answers are visible. Printed Q&A blocks always show their answers and omit both
+the placeholder and reveal hint.
 
 If a `question` block's body is entirely a checked-list option set, it renders
 as a multiple choice block instead. Options use the existing `Q.` prompt style
