@@ -42,8 +42,8 @@ if (useQuietFlags) {
 }
 
 async function runUnit(extra: string[] = [], coverage = false) {
-  const coverageFlags = coverage ? ['--coverage'] : [];
-  await $`bun test ${bunTestFlags} ${coverageFlags} ${extra}`.throws(true);
+  const configFlags = coverage ? ['--config=./bunfig.coverage.toml'] : [];
+  await $`bun test ${configFlags} ${bunTestFlags} ${extra}`.throws(true);
 }
 
 async function runPlaywright(extra: string[] = [], coverage = false) {

@@ -1,0 +1,3 @@
+[test]
+pathIgnorePatterns = ["playwright/**"]
+preload = ["./scripts/coverage-unit-preload.ts", "./unit-test-preload.ts"]

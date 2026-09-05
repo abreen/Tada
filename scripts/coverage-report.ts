@@ -1,139 +1,58 @@
 #!/usr/bin/env bun
 import fs from 'fs';
 import path from 'path';
-import libCoverage from 'istanbul-lib-coverage';
+import {
+  coverageSourceRoots,
+  isCoverageSource,
+  mergeSourceCoverage,
+} from './coverage-data';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
-import { parse as parseLcov } from '@saintedlama/lcov-parse';
 import { instrumentCoverageSource } from './coverage-source';
 
 const coverageDir = path.resolve(import.meta.dir, '..', 'coverage');
 const packageDir = path.resolve(import.meta.dir, '..');
 const functionalDir = path.join(coverageDir, 'functional');
 const playwrightDir = path.join(coverageDir, 'playwright');
-const unitLcovPath = path.join(coverageDir, 'unit', 'lcov.info');
+const unitDir = path.join(coverageDir, 'unit');
 const outputDir = path.join(coverageDir, 'report');
-const excludedCoveragePaths = new Set([
-  path.join(packageDir, 'test-helpers.ts'),
-  path.join(packageDir, 'unit-test-preload.ts'),
-]);
-
-function isCoverageExcluded(filePath: string): boolean {
-  return excludedCoveragePaths.has(path.resolve(filePath));
-}
-
-const map = libCoverage.createCoverageMap({});
-
-// Merge Bun and browser Istanbul JSON coverage.
-for (const suiteDir of [functionalDir, playwrightDir]) {
+const streams = [];
+for (const suiteDir of [unitDir, functionalDir, playwrightDir]) {
   if (!fs.existsSync(suiteDir)) {
     continue;
   }
-
   for (const file of fs.readdirSync(suiteDir)) {
-    if (!file.endsWith('.json')) {
-      continue;
+    if (file.endsWith('.json')) {
+      streams.push(
+        JSON.parse(fs.readFileSync(path.join(suiteDir, file), 'utf8')),
+      );
     }
-    const data = JSON.parse(fs.readFileSync(path.join(suiteDir, file), 'utf8'));
-    for (const filePath of Object.keys(data)) {
-      if (isCoverageExcluded(filePath)) {
-        delete data[filePath];
-      }
-    }
-    map.merge(data);
   }
 }
-
-// Merge unit test coverage (Bun lcov output)
-if (fs.existsSync(unitLcovPath)) {
-  const lcov = fs.readFileSync(unitLcovPath, 'utf8');
-  const records = await parseLcov(lcov);
-
-  for (const record of records) {
-    const absPath = path.resolve(coverageDir, '..', record.file);
-    if (isCoverageExcluded(absPath)) {
-      continue;
-    }
-    const fc = libCoverage.createFileCoverage(absPath);
-    for (const { line, hit } of record.lines.details) {
-      const idx = Object.keys(fc.data.statementMap).length;
-      fc.data.statementMap[idx] = {
-        start: { line, column: 0 },
-        end: { line, column: 0 },
-      };
-      fc.data.s[idx] = hit;
-    }
-    for (const { line, name, hit } of record.functions.details) {
-      const idx = Object.keys(fc.data.fnMap).length;
-      fc.data.fnMap[idx] = {
-        name: name ?? `fn_${line}`,
-        decl: {
-          start: { line: line ?? 0, column: 0 },
-          end: { line: line ?? 0, column: 0 },
-        },
-        loc: {
-          start: { line: line ?? 0, column: 0 },
-          end: { line: line ?? 0, column: 0 },
-        },
-      };
-      fc.data.f[idx] = hit ?? 0;
-    }
-    for (const detail of record.branches?.details ?? []) {
-      const key = `${detail.line}:${detail.block}:${detail.branch}`;
-      if (!fc.data.branchMap[key]) {
-        fc.data.branchMap[key] = {
-          type: 'branch',
-          loc: {
-            start: { line: detail.line, column: 0 },
-            end: { line: detail.line, column: 0 },
-          },
-          locations: [
-            {
-              start: { line: detail.line, column: 0 },
-              end: { line: detail.line, column: 0 },
-            },
-          ],
-        };
-        fc.data.b[key] = [];
-      }
-      fc.data.b[key].push(detail.taken);
-    }
-    map.addFileCoverage(fc);
-  }
-}
-
-// Add zero-coverage entries for source files not touched by any test
-for (const dir of ['build', 'src']) {
-  const base = path.join(packageDir, dir);
-  const entries = fs.readdirSync(base, {
+// Discover every production file before merging hits so touched and untouched
+// files share the exact same executable-line denominator.
+const sources = [];
+for (const dir of coverageSourceRoots) {
+  const entries = fs.readdirSync(path.join(packageDir, dir), {
     recursive: true,
     withFileTypes: true,
   });
   for (const entry of entries) {
-    if (
-      !entry.isFile() ||
-      !entry.name.endsWith('.ts') ||
-      entry.name.endsWith('.d.ts') ||
-      entry.name.includes('.test.')
-    ) {
-      continue;
-    }
     const absPath = path.join(entry.parentPath, entry.name);
-    if (map.data[absPath]) {
+    if (!entry.isFile() || !isCoverageSource(absPath, packageDir)) {
       continue;
     }
-    const source = fs.readFileSync(absPath, 'utf8');
-    const { coverage: emptyCoverage } = instrumentCoverageSource(
-      source,
-      absPath,
+    sources.push(
+      instrumentCoverageSource(fs.readFileSync(absPath, 'utf8'), absPath)
+        .coverage,
     );
-    map.addFileCoverage(emptyCoverage);
   }
 }
+const map = mergeSourceCoverage(packageDir, sources, streams);
 
 // Generate reports from merged coverage
 fs.mkdirSync(outputDir, { recursive: true });
 const context = libReport.createContext({ dir: outputDir, coverageMap: map });
 reports.create('lcovonly', { file: 'lcov.info' }).execute(context);
 reports.create('html', {}).execute(context);
-reports.create('text', {}).execute(context);
+reports.create('text', { skipEmpty: true }).execute(context);

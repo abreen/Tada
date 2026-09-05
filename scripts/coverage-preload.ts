@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { instrumentCoverageSource } from './coverage-source';
+import { coverageSourceRoots, isCoverageSource } from './coverage-data';
 import { plugin, type PluginBuilder } from 'bun';
 
 interface BunBuildPlugin {
@@ -16,20 +17,21 @@ interface CoverageGlobal {
   __tadaCoverage?: CoverageHooks;
 }
 
+const writeFileSync = fs.writeFileSync.bind(fs);
+const mkdirSync = fs.mkdirSync.bind(fs);
+
 const packageDir = path.resolve(import.meta.dir, '..');
-const buildDir = path.join(packageDir, 'build') + path.sep;
-const srcDir = path.join(packageDir, 'src') + path.sep;
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 const sourceFilter = new RegExp(
-  `^(${escapeRegex(buildDir)}|${escapeRegex(srcDir)}).*\\.ts$`,
+  `^(${coverageSourceRoots.map(root => escapeRegex(path.join(packageDir, root) + path.sep)).join('|')}).*\\.ts$`,
 );
 
 function shouldInstrument(filePath: string): boolean {
-  return sourceFilter.test(filePath) && !filePath.includes('.test.');
+  return isCoverageSource(filePath, packageDir);
 }
 
 async function loadSource(filePath: string) {
@@ -56,9 +58,11 @@ function createCoveragePlugin(name: string): BunBuildPlugin {
   };
 }
 
-export function installCoveragePreload(suite: 'functional' | 'playwright') {
+export function installCoveragePreload(
+  suite: 'unit' | 'functional' | 'playwright',
+) {
   const coverageDir = path.join(packageDir, 'coverage', suite);
-  fs.mkdirSync(coverageDir, { recursive: true });
+  mkdirSync(coverageDir, { recursive: true });
 
   plugin(createCoveragePlugin(`istanbul-${suite}-runtime-coverage`));
 
@@ -69,9 +73,13 @@ export function installCoveragePreload(suite: 'functional' | 'playwright') {
   };
 
   let written = false;
+  const outFile = path.join(
+    coverageDir,
+    `coverage-${process.pid}-${Date.now()}.json`,
+  );
 
   function writeCoverage(): void {
-    if (written) {
+    if (written && suite !== 'unit') {
       return;
     }
 
@@ -81,14 +89,11 @@ export function installCoveragePreload(suite: 'functional' | 'playwright') {
     }
 
     written = true;
-    const outFile = path.join(
-      coverageDir,
-      `coverage-${process.pid}-${Date.now()}.json`,
-    );
-    fs.writeFileSync(outFile, JSON.stringify(coverage));
+    writeFileSync(outFile, JSON.stringify(coverage));
   }
 
   process.on('beforeExit', writeCoverage);
+  process.on('exit', writeCoverage);
 
   function writeAndExit(): void {
     writeCoverage();
@@ -97,4 +102,5 @@ export function installCoveragePreload(suite: 'functional' | 'playwright') {
 
   process.on('SIGINT', writeAndExit);
   process.on('SIGTERM', writeAndExit);
+  return writeCoverage;
 }
