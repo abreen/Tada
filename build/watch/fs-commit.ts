@@ -4,7 +4,6 @@ import { globals, type Globals } from '../globals';
 import type {
   ApplyMutationsCommitPlan,
   CommitPlan,
-  FileMutation,
   ReplaceRootCommitPlan,
 } from './types';
 
@@ -77,45 +76,113 @@ function pruneEmptyDirs(rootDir: string, filePath: string): void {
   }
 }
 
-function applyFileMutation(
-  rootDir: string,
-  mutation: FileMutation,
-  stagedRoot: string,
-  globals: CommitPlanGlobals,
-): void {
-  const targetPath = path.join(rootDir, mutation.path);
-  const stagedPath = path.join(stagedRoot, mutation.path);
-
-  if (mutation.kind === 'write') {
-    ensureParentDir(targetPath);
-    renameWithRetry(stagedPath, targetPath, globals);
-    return;
-  }
-
-  fs.rmSync(targetPath, { force: true });
-  pruneEmptyDirs(rootDir, targetPath);
+interface MutationJournalEntry {
+  targetPath: string;
+  backupPath?: string;
 }
 
 function applyMutations(
   plan: ApplyMutationsCommitPlan,
   globals: CommitPlanGlobals,
 ): void {
-  const stagedRoot = fs.mkdtempSync(path.join(plan.rootDir, '.watch-stage-'));
+  const transactionRoot = fs.mkdtempSync(
+    path.join(plan.rootDir, '.watch-stage-'),
+  );
+  const journal: MutationJournalEntry[] = [];
+  const createdDirs: string[] = [];
   try {
-    for (const mutation of plan.mutations) {
+    // Index staging paths so file/directory transitions cannot collide in staging.
+    for (const [index, mutation] of plan.mutations.entries()) {
       if (mutation.kind === 'write') {
-        const stagedPath = path.join(stagedRoot, mutation.path);
-        ensureParentDir(stagedPath);
-        fs.writeFileSync(stagedPath, mutation.content);
+        fs.writeFileSync(
+          path.join(transactionRoot, `write-${index}`),
+          mutation.content,
+        );
       }
     }
 
-    for (const mutation of plan.mutations) {
-      applyFileMutation(plan.rootDir, mutation, stagedRoot, globals);
+    for (const [index, mutation] of plan.mutations.entries()) {
+      const targetPath = path.resolve(plan.rootDir, mutation.path);
+      const existing = fs.lstatSync(targetPath, { throwIfNoEntry: false });
+      if (existing?.isDirectory()) {
+        throw new Error(
+          `Cannot publish file mutation over directory: ${targetPath}`,
+        );
+      }
+      const backupPath = existing
+        ? path.join(transactionRoot, `backup-${index}`)
+        : undefined;
+      if (backupPath) {
+        renameWithRetry(targetPath, backupPath, globals);
+      }
+      journal.push({ targetPath, backupPath });
+      if (mutation.kind === 'write') {
+        const firstCreated = fs.mkdirSync(path.dirname(targetPath), {
+          recursive: true,
+        });
+        if (firstCreated) {
+          let dir = path.dirname(targetPath);
+          while (true) {
+            createdDirs.push(dir);
+            if (dir === firstCreated) {
+              break;
+            }
+            dir = path.dirname(dir);
+          }
+        }
+        renameWithRetry(
+          path.join(transactionRoot, `write-${index}`),
+          targetPath,
+          globals,
+        );
+      }
     }
-  } finally {
-    removeDirIfExists(stagedRoot);
+    for (const mutation of plan.mutations) {
+      if (mutation.kind === 'delete') {
+        pruneEmptyDirs(plan.rootDir, path.resolve(plan.rootDir, mutation.path));
+      }
+    }
+  } catch (publicationError) {
+    const rollbackErrors: unknown[] = [];
+    const removeCreatedDirs = () => {
+      for (const dir of [...new Set(createdDirs)].sort(
+        (a, b) => b.length - a.length,
+      )) {
+        try {
+          fs.rmdirSync(dir);
+        } catch (error) {
+          const code = (error as NodeJS.ErrnoException).code;
+          if (code !== 'ENOENT' && code !== 'ENOTEMPTY' && code !== 'ENOTDIR') {
+            rollbackErrors.push(error);
+          }
+        }
+      }
+    };
+    for (const entry of journal.toReversed()) {
+      try {
+        removeCreatedDirs();
+        fs.rmSync(entry.targetPath, { force: true });
+        if (entry.backupPath) {
+          ensureParentDir(entry.targetPath);
+          renameWithRetry(entry.backupPath, entry.targetPath, globals);
+        }
+      } catch (error) {
+        rollbackErrors.push(error);
+      }
+    }
+    removeCreatedDirs();
+    if (rollbackErrors.length > 0) {
+      // Keep any unrestored originals available for manual recovery.
+      throw new AggregateError(
+        [publicationError, ...rollbackErrors],
+        `Failed to publish and restore output; recovery files remain in ${transactionRoot}`,
+        { cause: publicationError },
+      );
+    }
+    removeDirIfExists(transactionRoot);
+    throw publicationError;
   }
+  removeDirIfExists(transactionRoot);
 }
 
 function replaceRoot(

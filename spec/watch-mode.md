@@ -142,6 +142,7 @@ This applies to:
 - missing required config sources
 - page source errors
 - output-path conflicts
+- failures while publishing output files
 
 After a failed rebuild:
 
@@ -149,6 +150,15 @@ After a failed rebuild:
 - the previous successful `dist/` stays available
 - the failed source changes are retried with the next source change
 - fixing the underlying problem triggers another rebuild
+
+Incremental publication stages new files and journals replaced or deleted files.
+If publication fails, it restores those originals and removes newly created
+files and directories. A publication failure discards the compiler snapshot;
+the next source change retries the accumulated failed changes with a full build.
+No success notification or browser reload is sent for the failed publication,
+including a failure during startup. If the filesystem also prevents rollback,
+the error identifies the retained recovery directory containing any unrestored
+originals.
 
 ## Browser Reload Behavior
 

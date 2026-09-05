@@ -52,6 +52,7 @@ function toDiagnostics(error: unknown): { message: string }[] {
 
 export async function runWatchEngine(
   options: WatchEngineOptions,
+  dependencies = { watch: chokidar.watch, applyCommitPlan },
 ): Promise<void> {
   const debounceMs = options.debounceMs ?? 300;
   let snapshot: TadaSnapshot | undefined;
@@ -71,7 +72,24 @@ export async function runWatchEngine(
   async function runBuild(batch?: ChangeBatch): Promise<CompilerBuildResult> {
     await emit({ kind: 'build-started', batch });
     try {
-      return await options.compiler.build(snapshot, batch);
+      const outcome = await options.compiler.build(snapshot, batch);
+      if (outcome.ok) {
+        try {
+          dependencies.applyCommitPlan(outcome.commit);
+        } catch (error) {
+          // The compiler may have mutated cached state before publication failed.
+          // Rebuild from sources on the next change instead of reusing that state.
+          snapshot = undefined;
+          return {
+            ok: false,
+            diagnostics: toDiagnostics(error).map(diagnostic => ({
+              message: `Failed to publish build output: ${diagnostic.message}`,
+            })),
+          };
+        }
+        snapshot = outcome.snapshot;
+      }
+      return outcome;
     } catch (error) {
       return { ok: false, diagnostics: toDiagnostics(error) };
     }
@@ -110,8 +128,6 @@ export async function runWatchEngine(
           return;
         }
 
-        applyCommitPlan(outcome.commit);
-        snapshot = outcome.snapshot;
         uncommitted = new Map();
         finalSuccess = { batch, result: outcome };
 
@@ -157,8 +173,6 @@ export async function runWatchEngine(
       diagnostics: startupOutcome.diagnostics,
     });
   } else {
-    applyCommitPlan(startupOutcome.commit);
-    snapshot = startupOutcome.snapshot;
     await emit({ kind: 'build-succeeded', meta: startupOutcome.meta });
   }
 
@@ -166,7 +180,7 @@ export async function runWatchEngine(
     .getWatchTargets()
     .map(target => ({
       target,
-      watcher: chokidar.watch(target.path, {
+      watcher: dependencies.watch(target.path, {
         ignoreInitial: true,
         atomic: true,
         awaitWriteFinish: { stabilityThreshold: 100 },
