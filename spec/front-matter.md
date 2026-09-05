@@ -19,7 +19,8 @@ Page content starts here.
 ```
 
 The opening `---` must be the first line of the file. The closing `---` must
-appear on its own line. Everything between the delimiters is parsed as YAML.
+appear on its own line. Both delimiters accept trailing whitespace, but no
+leading whitespace. Everything between the delimiters is parsed as YAML.
 Everything after the closing delimiter is the page content.
 
 If a file starts with `---` but no closing delimiter is found, the build
@@ -40,7 +41,8 @@ Page content starts here.
 ```
 
 A file is treated as legacy format if its first line is anything other than
-exactly `---`. Both formats produce identical results; choose one per file.
+`---` after removing trailing whitespace. Both formats produce identical
+results; choose one per file.
 
 ## Fields
 

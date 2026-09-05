@@ -35,7 +35,12 @@ Watch mode uses these source kinds:
 
 ## Startup
 
-When watch mode starts, it tries to build the site immediately.
+Before starting watch mode, the CLI requires exactly one development site
+configuration file: `site.dev.yaml`, `site.dev.yml`, or `site.dev.json`. If it
+is missing or multiple variants exist, the command exits before watching;
+correct the files and restart `tada watch`.
+
+Once this precondition is met, watch mode tries to build the site immediately.
 
 - If the initial build succeeds, watch mode starts serving the site and begins
   watching for changes.

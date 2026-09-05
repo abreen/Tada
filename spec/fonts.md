@@ -39,9 +39,11 @@ A family can also specify unique four-character OpenType feature tags. The
 features apply whenever that family is active. Before building, Tada parses
 each configured face and requires every requested feature to be available in
 every face. Invalid paths, missing or malformed files, and incompatible
-features stop the build with a diagnostic naming the configuration key and
-asset path. Watch mode preserves its last successful output after such an
-error.
+features stop the build with a diagnostic naming the configuration key.
+Missing, unreadable, or malformed file diagnostics also include the asset
+path. Incompatible-feature diagnostics name the requested feature and the
+configuration key of the face that lacks it. Watch mode preserves its last
+successful output after such an error.
 
 Each override may also carry font-specific `tuning`. The serif family supports
 `scale`, `lineHeight`, `headingScale`, `headingWeight`, and `fontSizeAdjust`;

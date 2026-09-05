@@ -19,10 +19,11 @@ to ensure readability against the chosen theme color.
 Links use a dedicated `--link-color` CSS variable that is derived from the
 tint settings. The hue is anchored at GitHub-style blue (HSL 212) and pulled
 5% of the way along the shortest hue arc toward `tintHue`, so the link color
-reads as a clean blue that subtly leans into the site's tint. Saturation
-scales with `tintAmount` over a base floor, so links remain recognizably
-blue even when `tintAmount` is 0. The same color is used for the external
-link SVG icon.
+reads as a clean blue that subtly leans into the site's tint. Saturation is
+fixed independently of `tintAmount`: 44.4% in light mode and 50% in dark mode,
+with hover values of 34% and 40%, respectively. Changing `tintAmount` affects
+the neutral palette, not link saturation. The same color is used for the
+external link SVG icon.
 
 Visible link underlines use each font's underline thickness metadata via
 `text-decoration-thickness: from-font`.

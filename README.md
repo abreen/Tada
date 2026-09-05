@@ -135,6 +135,9 @@ files in the `dist/` directory.
 ### `tada watch`
 
 Start a development web server, watch for changes and rebuild automatically.
+Exactly one `site.dev.yaml`, `site.dev.yml`, or `site.dev.json` must exist
+before starting; otherwise, correct the configuration files and restart the
+command. Once watching, build errors can be fixed without restarting.
 
 ### `tada clean`
 
@@ -267,7 +270,7 @@ vars:
 | `symbol` | Text (1-5 chars) displayed in header (also used as the favicon symbol) |
 | `themeColor` | Theme color for the site (e.g., `"tomato"`, `"#c04040"`, `"hsl(195 70% 40%)"`) |
 | `tintHue` | *Optional*, hue (0-360) for background and foreground tinting (default `20`) |
-| `tintAmount` | *Optional*, percentage (0-100) of tint to apply (default `100`) |
+| `tintAmount` | *Optional*, percentage (0-100) of tint to apply to the neutral palette (default `100`); link saturation stays fixed |
 | `defaultFont` | *Optional*, initial font pairing: `sans` or `serif` (default `sans`) |
 | `defaultContrast` | *Optional*, initial neutral-palette contrast: `standard` or `high` (default `standard`) |
 | `fontOverrides` | *Optional*, custom serif and serif-monospace WOFF2 faces from `public/`; each configured family requires `regular` and may include styled faces, OpenType `features`, and font-specific `tuning` |

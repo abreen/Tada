@@ -1,14 +1,21 @@
 # CSS Strategy
 
-The build produces two CSS bundles to optimize rendering performance:
+The build produces two CSS bundles:
 
 - **Critical CSS**: inlined as a `<style>` tag in every page's `<head>`.
-  Contains core element styles, page layout, and header positioning so the page
-  renders without waiting for an external stylesheet.
+  Contains core element styles, page layout, and header positioning.
 
-- **Full CSS**: loaded asynchronously after the page renders. Contains the
-  complete stylesheet, intentionally re-including the critical rules so it is
-  self-contained and cacheable across page navigations.
+- **Full CSS**: loaded through a normal, render-blocking
+  `<link rel="stylesheet">` in the head. Contains the complete stylesheet,
+  intentionally re-including the critical rules so it is self-contained and
+  cacheable across page navigations.
+
+Inlining the critical rules does not let the page paint before the full
+stylesheet finishes loading. The full stylesheet also precedes the inline
+appearance-preference script, so its font-face declarations are available to
+the font-loading barrier before a stored font preference is applied. This
+loading order keeps complete styling available without JavaScript, at the cost
+of waiting for the full stylesheet on an uncached load.
 
 Shared style rules are defined once in common Sass files and imported by both
 bundles, avoiding duplication in the source.

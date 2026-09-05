@@ -42,7 +42,7 @@ entry is highlighted.
 
 Links to code files elsewhere on the site are automatically rewritten to point
 to the generated HTML page instead of the raw source file
-(see [Markdown Link Processing](markdown-link-processing.md)).
+(see [Link Processing](link-processing.md)).
 
 ## Template substitution
 
