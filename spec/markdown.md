@@ -151,4 +151,7 @@ Each definition retains its backlink and target highlight.
 ## Other extensions
 
 - **Definition lists**: terms followed by `: definition`, with auto-generated IDs
+  derived from readable text, including inline code. For example, a term written
+  as `` `Map` `` gets the ID `map`. Repeated slugs receive numeric suffixes
+  (`map-2`, `map-3`), including when plain and inline-code terms have the same text.
 - **Smart typography**: curly quotes

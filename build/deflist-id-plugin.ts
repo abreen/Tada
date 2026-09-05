@@ -24,11 +24,11 @@ export default function deflistIdPlugin(md: MarkdownIt): void {
           break;
         }
 
-        if (t.type === 'text') {
+        if (t.type === 'text' || t.type === 'code_inline') {
           termText += t.content;
         } else if (t.type === 'inline' && t.children) {
           for (const child of t.children) {
-            if (child.type === 'text') {
+            if (child.type === 'text' || child.type === 'code_inline') {
               termText += child.content;
             }
           }

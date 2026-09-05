@@ -195,6 +195,35 @@ describe('heading-subtitle-plugin', () => {
 });
 
 describe('deflist-id-plugin', () => {
+  test('includes inline code in readable term ids and deduplicates equivalent terms', () => {
+    const md = new MarkdownIt().use(deflist).use(deflistIdPlugin);
+    const source = [
+      '`Map`',
+      ': Code only',
+      '',
+      'Map',
+      ': Plain duplicate',
+      '',
+      'Use `Map`',
+      ': Mixed term',
+      '',
+      'Use Map',
+      ': Mixed duplicate',
+      '',
+      '`Map`',
+      ': Repeated code',
+    ].join('\n');
+
+    const html = md.render(source);
+
+    expect(html).toContain('<a id="map"></a><code>Map</code>');
+    expect(html).toContain('<a id="map-2"></a>Map');
+    expect(html).toContain('<a id="use-map"></a>Use <code>Map</code>');
+    expect(html).toContain('<a id="use-map-2"></a>Use Map');
+    expect(html).toContain('<a id="map-3"></a><code>Map</code>');
+    expect(md.render(source)).toBe(html);
+  });
+
   test('injects unique ids for terms and falls back when a term slug is empty', () => {
     const md = new MarkdownIt();
     md.use(deflist);
