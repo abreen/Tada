@@ -33,6 +33,12 @@ For Java files, a table of contents is automatically generated from the source
 structure, listing methods, constructors, and fields with their line numbers.
 Inner class members are excluded.
 
+With JavaScript enabled, the current entry follows the linked source line,
+regardless of how entries are grouped in the table. A line range uses its first
+line. The closest entry at or before that line is highlighted; a target before
+all entries highlights the first displayed entry. Without a line fragment, no
+entry is highlighted.
+
 Links to code files elsewhere on the site are automatically rewritten to point
 to the generated HTML page instead of the raw source file
 (see [Markdown Link Processing](markdown-link-processing.md)).

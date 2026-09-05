@@ -281,5 +281,16 @@ August 5, 3:15-5:15 pm, [Science Center](https://example.com), hall A.
 `,
 );
 
+writeFileSync(
+  path.join(siteDir, 'content', 'Interleaved.java'),
+  `class Interleaved {
+  int firstField;
+  void firstMethod() {}
+  int secondField;
+  void secondMethod() {}
+}
+`,
+);
+
 await runTada(['dev'], siteDir);
 await runTada(['serve', '--port', '8081'], siteDir);

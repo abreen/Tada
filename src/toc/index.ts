@@ -123,11 +123,12 @@ export default (window: Window) => {
       }
 
       let best = 0;
+      let bestLine = -1;
+      // TOC display groups (such as fields and methods) are not source order.
       for (let i = 0; i < codeLines.length; i++) {
-        if (codeLines[i] <= line) {
+        if (codeLines[i] <= line && codeLines[i] >= bestLine) {
           best = i;
-        } else {
-          break;
+          bestLine = codeLines[i];
         }
       }
 
