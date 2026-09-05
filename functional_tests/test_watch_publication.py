@@ -70,3 +70,37 @@ assert.equal(fs.readdirSync(dist).some(name => name.startsWith('.watch-')), fals
         ['bun', str(script), str(tmp_path), failure], capture_output=True, text=True, timeout=15
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_publication_handles_equivalent_mkdir_return_path(tmp_path):
+    script = tmp_path / 'mkdir-return.ts'
+    module = json.dumps(str(PACKAGE_DIR / 'build/watch/fs-commit.ts'))
+    script.write_text(
+        """
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { applyCommitPlan } from MODULE;
+const dist = path.join(process.argv[2], 'dist');
+fs.mkdirSync(dist);
+fs.mkdirSync(path.join(dist, 'blocked'));
+const mkdir = fs.mkdirSync;
+fs.mkdirSync = (...args) => {
+  const created = mkdir(...args);
+  // A trailing separator names the same directory without matching dirname().
+  return created ? created + path.sep : created;
+};
+const write = {kind: 'write', path: 'new/nested/file.txt', content: 'published'};
+assert.throws(() => applyCommitPlan({kind: 'apply-mutations', rootDir: dist, mutations: [
+  write, {kind: 'write', path: 'blocked', content: 'fail'},
+]}), /Cannot publish file mutation over directory/);
+assert.deepEqual(fs.readdirSync(dist), ['blocked']);
+applyCommitPlan({kind: 'apply-mutations', rootDir: dist, mutations: [write]});
+assert.equal(fs.readFileSync(path.join(dist, write.path), 'utf8'), 'published');
+assert.equal(fs.readdirSync(dist).some(name => name.startsWith('.watch-')), false);
+""".replace('MODULE', module)
+    )
+    result = subprocess.run(
+        ['bun', str(script), str(tmp_path)], capture_output=True, text=True, timeout=15
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

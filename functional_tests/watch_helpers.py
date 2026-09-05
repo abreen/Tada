@@ -76,6 +76,18 @@ class WatchProcess:
     def _clean(self, text: str) -> str:
         return ANSI_RE.sub('', text)
 
+    def _timeout(self, message: str) -> TimeoutError:
+        status = self.proc.poll()
+        process_state = 'running' if status is None else f'exited ({status})'
+        details = [message, f'Watch process: {process_state}']
+        for label, path in [('stdout', self.stdout_log_path), ('stderr', self.stderr_log_path)]:
+            try:
+                output = path.read_text(encoding='utf-8', errors='replace')
+            except FileNotFoundError:
+                output = ''
+            details.append(f'{label} (last 6000 characters):\n{self._clean(output[-6000:])}')
+        return TimeoutError('\n'.join(details))
+
     def _has_error_since(self, start: int) -> bool:
         return ' error ' in self._clean(self._stdout_since(start)).lower()
 
@@ -108,7 +120,7 @@ class WatchProcess:
             if self.proc.poll() is not None:
                 raise RuntimeError(f'Watch process exited early with code {self.proc.returncode}')
             time.sleep(POLL_SEC)
-        raise TimeoutError('Initial watch build did not complete in time')
+        raise self._timeout('Initial watch build did not complete in time')
 
     def wait_for_error(self, after: int | None = None):
         """Block until the watch process logs a new build error."""
@@ -121,7 +133,7 @@ class WatchProcess:
             if self.proc.poll() is not None:
                 raise RuntimeError(f'Watch process exited with code {self.proc.returncode}')
             time.sleep(POLL_SEC)
-        raise TimeoutError('Did not observe a build error within timeout')
+        raise self._timeout('Did not observe a build error within timeout')
 
     def wait_for_successful_rebuild(self):
         """Block until a new rebuild cycle finishes successfully."""
@@ -134,7 +146,7 @@ class WatchProcess:
             if self.proc.poll() is not None:
                 raise RuntimeError(f'Watch process exited with code {self.proc.returncode}')
             time.sleep(POLL_SEC)
-        raise TimeoutError('Did not observe a successful rebuild within timeout')
+        raise self._timeout('Did not observe a successful rebuild within timeout')
 
     def wait_for_rebuild(self, path: Path, condition='modified', before_mtime=None):
         """Wait for a file to be created, modified, or removed."""
@@ -172,7 +184,7 @@ class WatchProcess:
             if self.proc.poll() is not None:
                 raise RuntimeError(f'Watch process exited with code {self.proc.returncode}')
             time.sleep(POLL_SEC)
-        raise TimeoutError(f"File {path} did not meet condition '{condition}' within timeout")
+        raise self._timeout(f"File {path} did not meet condition '{condition}' within timeout")
 
     def assert_no_rebuild(self, path: Path, before_mtime: float, timeout_sec=3):
         """Assert that a file is not modified for a period."""

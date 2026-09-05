@@ -117,19 +117,17 @@ function applyMutations(
       }
       journal.push({ targetPath, backupPath });
       if (mutation.kind === 'write') {
-        const firstCreated = fs.mkdirSync(path.dirname(targetPath), {
-          recursive: true,
-        });
-        if (firstCreated) {
-          let dir = path.dirname(targetPath);
-          while (true) {
-            createdDirs.push(dir);
-            if (dir === firstCreated) {
-              break;
-            }
-            dir = path.dirname(dir);
+        // Track missing parents without relying on mkdir's returned path spelling.
+        let dir = path.dirname(targetPath);
+        while (!fs.existsSync(dir)) {
+          createdDirs.push(dir);
+          const parent = path.dirname(dir);
+          if (parent === dir) {
+            break;
           }
+          dir = parent;
         }
+        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
         renameWithRetry(
           path.join(transactionRoot, `write-${index}`),
           targetPath,
