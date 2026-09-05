@@ -124,11 +124,17 @@ trigger rebuilds.
 
 ## Output Path Conflicts
 
-Watch mode rejects situations where a page source or content asset source and a
-public source would produce the same path in `dist/`.
+Watch mode rejects any two sources that would produce the same path in `dist/`,
+including collisions between content sources and between content and public
+sources. It reports the source paths and shared output path before publishing
+changes. Removing either conflicting source recovers using the surviving source;
+incremental scans retain every source's output ownership during the conflict.
 
 Examples:
 
+- `content/about.md` conflicts with `content/about.html`
+- `content/demo.py` conflicts with `content/demo.py.html` when Python is configured
+- `content/Demo.java.md` conflicts with `content/Demo.java` for the raw download
 - `content/about.md` conflicts with `public/about.html`
 - `content/logo.png` conflicts with `public/logo.png`
 

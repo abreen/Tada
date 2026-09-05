@@ -16,8 +16,11 @@ public/               Static files copied to output as-is
 The `content/` directory contains pages (Markdown, HTML, or source code files)
 and assets (images, PDFs, etc.). Processed files become HTML pages; everything
 else is copied unchanged. The `public/` directory is also copied to the output
-root. If a file in `content/` and a file in `public/` would produce the same
-output path, the build fails.
+root. If any two sources would produce the same output path, the build fails
+before publishing outputs. This includes two content pages (such as `about.md`
+and `about.html`), a generated code page and an HTML source (`demo.py` and
+`demo.py.html`), downloadable raw sources, and content/public collisions.
+The error identifies the conflicting sources and output path.
 
 The output directory is `dist/` for development builds.
 

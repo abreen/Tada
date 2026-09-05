@@ -376,13 +376,28 @@ export function updateProjectScan(
     addPublicSourceToScan({ scan, filePath: sourcePath });
   }
 
+  // Rebuild the selected owners from the complete source inventory. Removing
+  // either producer of a formerly conflicting output must retain its survivor.
+  scan.contentOwners.clear();
+  for (const sourcePath of scan.contentFiles) {
+    for (const outputPath of scan.sourceOutputPaths.get(sourcePath) || []) {
+      scan.contentOwners.set(outputPath, sourcePath);
+    }
+  }
   scan.validTargets = collectValidTargets(scan.sourceTargetPaths);
   return scan;
 }
 
 export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
-  const conflicts = [...scan.contentOwners.keys()].filter(relPath =>
-    scan.publicOwners.has(relPath),
-  );
-  return conflicts.sort();
+  const owners = new Set<string>();
+  const conflicts = new Set<string>();
+  for (const outputs of scan.sourceOutputPaths.values()) {
+    for (const outputPath of outputs) {
+      if (owners.has(outputPath)) {
+        conflicts.add(outputPath);
+      }
+      owners.add(outputPath);
+    }
+  }
+  return [...conflicts].sort();
 }

@@ -1,3 +1,4 @@
+import path from 'path';
 import { B } from '../colors';
 import { makeLogger } from '../log';
 import { config, getConfigFileName } from '../templates';
@@ -29,11 +30,17 @@ export function validateConfig(
     return diagnostics;
   }
   for (const relPath of conflicts) {
-    log.error`content/${B`${relPath}`} conflicts with public/${B`${relPath}`}`;
+    const sources = [...scan.sourceOutputPaths]
+      .filter(([, outputs]) => outputs.has(relPath))
+      .map(([sourcePath]) =>
+        path.relative(path.dirname(scan.contentDir), sourcePath),
+      )
+      .sort();
+    log.error`${sources.join(' conflicts with ')}: same output path ${B`${relPath}`}`;
   }
   const noun = conflicts.length === 1 ? 'file' : 'files';
   diagnostics.push({
-    message: `${conflicts.length} ${noun} in content/ and public/ have the same path`,
+    message: `${conflicts.length} output ${noun} ${conflicts.length === 1 ? 'has' : 'have'} multiple sources with the same path`,
   });
   return diagnostics;
 }

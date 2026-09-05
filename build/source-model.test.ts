@@ -117,11 +117,13 @@ let addGeneratedRouteAliases: typeof import('./source-model').addGeneratedRouteA
 let getProcessedExts: typeof import('./source-model').getProcessedExts;
 let getSourceOutputPaths: typeof import('./source-model').getSourceOutputPaths;
 let getSourceTargetPaths: typeof import('./source-model').getSourceTargetPaths;
+let assertNoOutputPathConflicts: typeof import('./source-model').assertNoOutputPathConflicts;
 let scanProject: typeof import('./source-model').scanProject;
 let updateProjectScan: typeof import('./source-model').updateProjectScan;
 
 beforeAll(async () => {
   ({
+    assertNoOutputPathConflicts,
     addGeneratedRouteAliases,
     getProcessedExts,
     getSourceOutputPaths,
@@ -459,4 +461,62 @@ describe('updateProjectScan', () => {
     expect(updated.validTargets.has('/assets/logo.svg')).toBe(true);
     expect(updated.validTargets.has('/labs/01/SearchTreeDemo.java')).toBe(true);
   });
+});
+
+describe('content output conflicts', () => {
+  test('retains every producer across incremental conflict recovery', () => {
+    const markdown = path.join(projectRoot, 'content', 'about.md');
+    const html = path.join(projectRoot, 'content', 'about.html');
+    writeFile(markdown, '# Markdown');
+    const original = scanProject(siteVariables);
+    writeFile(html, '<p>HTML</p>');
+    const conflict = updateProjectScan(
+      original,
+      makeBatch([{ path: html, kind: 'add' }]),
+    );
+    expect(assertNoOutputPathConflicts(conflict)).toContain('about.html');
+    expect(assertNoOutputPathConflicts(original)).not.toContain('about.html');
+    for (const [removed, survivor] of [
+      [markdown, html],
+      [html, markdown],
+    ]) {
+      const content = files.get(removed)!;
+      files.delete(removed);
+      const recovered = updateProjectScan(
+        conflict,
+        makeBatch([{ path: removed, kind: 'unlink' }]),
+      );
+      expect(assertNoOutputPathConflicts(recovered)).not.toContain(
+        'about.html',
+      );
+      expect(recovered.contentOwners.get('about.html')).toBe(survivor);
+      expect(conflict.sourceOutputPaths.has(removed)).toBe(true);
+      files.set(removed, content);
+    }
+  });
+  test('detects generated code pages and downloadable raw source collisions', () => {
+    for (const [name, content] of [
+      ['demo.py', 'print(1)'],
+      ['demo.py.html', '<p>Page</p>'],
+      ['Demo.java.md', '# Literate'],
+      ['Demo.java', 'class Demo {}'],
+    ]) {
+      writeFile(path.join(projectRoot, 'content', name), content);
+    }
+    expect(assertNoOutputPathConflicts(scanProject(siteVariables))).toEqual([
+      'Demo.java',
+      'Demo.java.html',
+      'demo.py.html',
+    ]);
+  });
+});
+
+test('detects raw copied source conflicts without configured code processing', () => {
+  writeFile(path.join(projectRoot, 'content', 'Demo.java.md'), '# Literate');
+  writeFile(path.join(projectRoot, 'content', 'Demo.java'), 'class Demo {}');
+  expect(
+    assertNoOutputPathConflicts(
+      scanProject({ ...siteVariables, extensionToShikiLanguage: {} }),
+    ),
+  ).toEqual(['Demo.java']);
 });

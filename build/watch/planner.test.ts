@@ -336,3 +336,29 @@ describe('createTadaWatchPlan', () => {
     expect([...incrementalPlan.publicToRemove]).toEqual([publicPath]);
   });
 });
+
+test('rebuilds a surviving content producer when the previous owner is removed', () => {
+  const removed = sitePath('content', 'about.md');
+  const surviving = sitePath('content', 'about.html');
+  const snapshot = makeSnapshot({
+    contentRecords: new Map([[removed, makeRecord(removed, ['about.html'])]]),
+    outputOwners: new Map([
+      ['about.html', { kind: 'content', sourcePath: removed }],
+    ]),
+  });
+  const scan = makeScan({
+    contentFiles: new Set([surviving]),
+    buildContentFiles: new Set([surviving]),
+    contentOwners: new Map([['about.html', surviving]]),
+    validTargets: new Set(['/about.html']),
+  });
+  const plan = expectIncremental(
+    createTadaWatchPlan({
+      snapshot,
+      scan,
+      batch: makeBatch([{ path: removed, kind: 'unlink' }]),
+    }),
+  );
+  expect([...plan.contentToRender]).toEqual([surviving]);
+  expect([...plan.contentToRemove]).toEqual([removed]);
+});
