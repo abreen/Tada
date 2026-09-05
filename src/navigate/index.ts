@@ -68,7 +68,7 @@ export default function mountNavigate(window: Window): () => void {
       return;
     }
 
-    // Same-page hash links: handle locally so we can clear search and
+    // Same-page links: handle locally so we can clear search and
     // close the header without a full SPA fetch.
     const url = new URL(anchor.href);
     if (
@@ -84,6 +84,17 @@ export default function mountNavigate(window: Window): () => void {
         } else {
           globals.setLocationHash(window, url.hash);
         }
+      } else {
+        saveScrollPosition(window);
+        if (window.location.hash) {
+          const state = window.history.state;
+          globals.setLocationHash(window, '');
+          // Native fragment clearing leaves a trailing #. Keep the authored
+          // URL and the current SPA history state on the new entry.
+          window.history.replaceState(state, '', url.href);
+        }
+        window.scrollTo({ top: 0 });
+        saveScrollPosition(window);
       }
       return;
     }

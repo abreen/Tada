@@ -8,6 +8,11 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },
     {
+      name: 'webkit-same-page-navigation',
+      testMatch: '**/navigation-same-page.spec.ts',
+      use: { browserName: 'webkit' },
+    },
+    {
       name: 'webkit-external-link-wrapping',
       testMatch: '**/external-link-wrapping.spec.ts',
       use: { browserName: 'webkit' },

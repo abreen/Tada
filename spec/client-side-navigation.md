@@ -48,6 +48,11 @@ Hash links use real fragment navigation (`location.hash` for same-page,
 listeners keep working. On reload the navigator manually scrolls to the
 URL hash once per-page components have mounted.
 
+A link to the current page without a fragment clears any active fragment and
+scrolls to the top without fetching the page again. Clearing a fragment adds a
+history entry so Back restores the previous fragment and scroll position;
+clicking the already fragment-free URL does not add a duplicate entry.
+
 ## When it falls back
 
 If the fetch fails or returns a non-OK response, the navigator gives up
