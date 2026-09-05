@@ -23,6 +23,13 @@ View Transition where supported unless the visitor has requested reduced
 motion with `prefers-reduced-motion: reduce`. Reduced-motion navigations use
 the same immediate content swap without calling the View Transition API.
 
+Page transitions slide horizontally by 8px over 150ms. Both outgoing and
+incoming content use `cubic-bezier(0.2, 0, 0, 1)` for movement, matching the
+header and search movement curve. Opacity animates independently over the
+same duration: outgoing content fades with `ease-in`, and incoming content
+fades with `ease-out`. Forward navigation slides left; back navigation slides
+right.
+
 Persistent components (header, search, back-to-top, navigate) mount
 once at startup. The page update toast also stays mounted and resets its
 tracking state when navigation completes. Per-page components are torn down and

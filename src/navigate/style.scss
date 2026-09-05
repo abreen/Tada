@@ -1,30 +1,39 @@
-$shift: 12px;
+$shift: 8px;
 $duration: 150ms;
+$movement-easing: cubic-bezier(0.2, 0, 0, 1);
+
+@keyframes page-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+}
 
 @keyframes slide-out-left {
   to {
-    opacity: 0;
     transform: translateX(-$shift);
   }
 }
 
 @keyframes slide-in-right {
   from {
-    opacity: 0;
     transform: translateX($shift);
   }
 }
 
 @keyframes slide-out-right {
   to {
-    opacity: 0;
     transform: translateX($shift);
   }
 }
 
 @keyframes slide-in-left {
   from {
-    opacity: 0;
     transform: translateX(-$shift);
   }
 }
@@ -61,18 +70,26 @@ $duration: 150ms;
 
 // Forward navigation: old content slides left, new content slides in from right
 .nav-forward::view-transition-old(root) {
-  animation: slide-out-left $duration ease-in;
+  animation:
+    slide-out-left $duration $movement-easing,
+    page-fade-out $duration ease-in;
 }
 
 .nav-forward::view-transition-new(root) {
-  animation: slide-in-right $duration ease-out;
+  animation:
+    slide-in-right $duration $movement-easing,
+    page-fade-in $duration ease-out;
 }
 
 // Back navigation: old content slides right, new content slides in from left
 .nav-back::view-transition-old(root) {
-  animation: slide-out-right $duration ease-in;
+  animation:
+    slide-out-right $duration $movement-easing,
+    page-fade-out $duration ease-in;
 }
 
 .nav-back::view-transition-new(root) {
-  animation: slide-in-left $duration ease-out;
+  animation:
+    slide-in-left $duration $movement-easing,
+    page-fade-in $duration ease-out;
 }

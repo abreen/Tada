@@ -8,6 +8,10 @@ configured defaults or stored visitor preferences. The row also includes the
 switch whose two `Aa` endpoints represent
 sans-serif and serif typography for both prose and monospaced text.
 
+The font and contrast selection indicators slide over 200ms using
+`cubic-bezier(0.2, 0, 0, 1)`, matching the header and search movement curve.
+They move immediately when the visitor requests reduced motion.
+
 Sans-serif is the default when `defaultFont` is omitted from the site config.
 Authors can set `defaultFont: serif` to build every page with serif typography
 already active. Sans mode uses Inter for body text and headings and Google Sans
