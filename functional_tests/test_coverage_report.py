@@ -67,7 +67,7 @@ def test_original_source_coverage_across_test_files(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     lcov = (tmp_path / 'coverage/report/lcov.info').read_text()
     records = {
-        record.split('SF:')[1].splitlines()[0]: record
+        Path(record.split('SF:')[1].splitlines()[0]).as_posix(): record
         for record in lcov.split('end_of_record')
         if 'SF:' in record
     }
