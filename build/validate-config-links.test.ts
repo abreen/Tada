@@ -21,6 +21,53 @@ describe('validateNavLinks', () => {
     expect(validateNavLinks(navData, validTargets)).toEqual([]);
   });
 
+  test.each([
+    '/docs/index.html#intro',
+    '/docs/index.html?view=full',
+    '/docs/index.html?view=full#intro',
+    '/my%20notes.html',
+    '/my%20notes.html?view=full#intro',
+    '/caf%C3%A9.html',
+    '/question%3Fmark%23page.html#intro',
+  ])('validates the decoded pathname of %s', internal => {
+    const validTargets = new Set([
+      '/docs/index.html',
+      '/my notes.html',
+      '/café.html',
+      '/question?mark#page.html',
+    ]);
+    expect(
+      validateNavLinks(
+        [{ title: 'Menu', links: [{ text: 'Page', internal }] }],
+        validTargets,
+      ),
+    ).toEqual([]);
+  });
+
+  test.each(['/missing%20page.html?view=full#intro', '/invalid%ZZ.html#intro'])(
+    'still rejects missing pathname in %s',
+    internal => {
+      const errors = validateNavLinks(
+        [{ title: 'Menu', links: [{ text: 'Missing', internal }] }],
+        new Set(['/index.html']),
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain(internal);
+    },
+  );
+
+  test.each(['docs/index.html#intro', 'my%20notes.html?view=full'])(
+    'still rejects relative pathname in %s',
+    internal => {
+      const errors = validateNavLinks(
+        [{ title: 'Menu', links: [{ text: 'Relative', internal }] }],
+        new Set(['/docs/index.html', '/my notes.html']),
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('must start with "/"');
+    },
+  );
+
   test('reports broken internal links', () => {
     const validTargets = new Set(['/about.html']);
     const navData = [

@@ -169,3 +169,57 @@ class TestDisabledNavLinkSkipped:
             assert '/nonexistent.html' not in content, (
                 f'{html_file.name} contains /nonexistent.html'
             )
+
+
+class TestNavAuthoredTargets:
+    def test_encoded_paths_queries_and_fragments_build(self, tmp_path):
+        site = init_site(tmp_path, bare=True)
+        (site / 'content' / 'my notes.md').write_text(
+            '---\ntitle: My notes\n---\n\n## Intro\n\nNotes.\n'
+        )
+        targets = [
+            '/index.html#intro',
+            '/index.html?view=full',
+            '/my%20notes.html',
+            '/my%20notes.html?view=full#intro',
+        ]
+        write_structured_file(
+            site / NAV_CONFIG_FILE,
+            [
+                {
+                    'title': 'Menu',
+                    'links': [
+                        {'text': f'Page {i}', 'internal': href} for i, href in enumerate(targets)
+                    ],
+                }
+            ],
+        )
+        result = run_tada('dev', cwd=str(site))
+        assert result.returncode == 0, result.stdout + result.stderr
+        html = (site / 'dist' / 'index.html').read_text()
+        for href in targets:
+            assert f'href="{href}"' in html
+
+    @pytest.mark.parametrize(
+        'href,diagnostic',
+        [
+            ('/missing%20page.html?view=full#intro', 'broken internal link'),
+            ('index.html?view=full#intro', 'must match pattern'),
+        ],
+    )
+    def test_invalid_targets_still_fail(self, tmp_path, href, diagnostic):
+        site = init_site(tmp_path, bare=True)
+        write_structured_file(
+            site / NAV_CONFIG_FILE,
+            [
+                {
+                    'title': 'Menu',
+                    'links': [{'text': 'Invalid', 'internal': href}],
+                }
+            ],
+        )
+        result = run_tada('dev', cwd=str(site))
+        assert result.returncode != 0
+        output = result.stdout + result.stderr
+        assert diagnostic in output
+        assert 'nav.yaml' in output

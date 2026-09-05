@@ -96,7 +96,7 @@ export function validateNavLinks(
         continue;
       }
 
-      const normalized = normalizeOutputPath(link.internal);
+      const normalized = getInternalHrefTarget(link.internal);
       if (!validTargets.has(normalized)) {
         errors.push(
           `${fileName}: broken internal link in section "${section.title}": "${link.internal}"`,

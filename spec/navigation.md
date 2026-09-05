@@ -15,7 +15,9 @@ The navigation is validated against a JSON schema at build time. Internal links
 are also validated against the set of known pages; a broken link fails the
 build. Internal paths in the nav config must be root-relative (start with `/`)
 because they are rendered site-wide from templates, not relative to any
-individual page. Disabled links render as non-clickable UI without an `href`, so
+individual page. Query strings and fragments are preserved in rendered links but
+ignored when checking the target file; percent-encoded pathnames are decoded
+for that check. Disabled links render as non-clickable UI without an `href`, so
 they do not participate in link validation or reachability.
 
 The collapsed header always keeps the menu control and site logo visible. The
