@@ -349,11 +349,18 @@ describe('walkAndHash', () => {
     expect('pagefind/pagefind.js' in result).toBe(false);
   });
 
-  test('excludes tada.manifest.json', async () => {
+  test('excludes only the root tada.manifest.json', async () => {
     writeFile(path.join(rootDir, 'index.html'), '<html></html>');
     writeFile(path.join(rootDir, 'tada.manifest.json'), '{"schema":1}');
+    writeFile(path.join(rootDir, 'nested', 'tada.manifest.json'), 'asset');
     const result = await walkAndHash(rootDir);
-    expect(Object.keys(result)).toEqual(['index.html']);
+    expect(Object.keys(result).sort()).toEqual([
+      'index.html',
+      'nested/tada.manifest.json',
+    ]);
+    expect(result['nested/tada.manifest.json']).toBe(
+      createHash('sha256').update('asset').digest('hex'),
+    );
     expect('tada.manifest.json' in result).toBe(false);
   });
 

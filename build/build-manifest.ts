@@ -85,7 +85,7 @@ export async function walkAndHash(
     if (EXCLUDED_DIRS.has(topLevel)) {
       continue;
     }
-    if (EXCLUDED_FILES.has(entry.name)) {
+    if (EXCLUDED_FILES.has(rel)) {
       continue;
     }
 

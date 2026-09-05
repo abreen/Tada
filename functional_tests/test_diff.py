@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 
@@ -72,6 +73,25 @@ class TestDiffWithChanges:
         assert 'Changed' in result.stdout
         assert 'index.html' in result.stdout
         assert 'differ' in result.stdout
+
+    def test_tracks_nested_manifest_asset(self, site_dir):
+        relative_path = 'nested/tada.manifest.json'
+        asset = site_dir / 'public' / relative_path
+        asset.parent.mkdir(parents=True)
+        contents = ['{"revision": 1}\n', '{"revision": 2}\n']
+        for version, content in enumerate(contents, start=1):
+            asset.write_text(content)
+            run_tada('prod', cwd=str(site_dir), check=True)
+            output = site_dir / 'dist-prod' / f'v{version}'
+            assert (output / relative_path).read_text() == content
+            manifest = json.loads((output / 'tada.manifest.json').read_text())
+            assert 'tada.manifest.json' not in manifest['files']
+            assert manifest['files'][relative_path] == hashlib.sha256(content.encode()).hexdigest()
+
+        result = run_tada('diff', cwd=str(site_dir))
+        assert result.returncode == 0
+        assert 'Changed' in result.stdout
+        assert relative_path in result.stdout
 
     def test_detects_added_page(self, site_dir):
         run_tada('prod', cwd=str(site_dir), check=True)
