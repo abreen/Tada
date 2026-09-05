@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { createInstrumenter } from 'istanbul-lib-instrument';
+import { instrumentCoverageSource } from './coverage-source';
 import { plugin, type PluginBuilder } from 'bun';
 
 interface BunBuildPlugin {
@@ -19,12 +19,6 @@ interface CoverageGlobal {
 const packageDir = path.resolve(import.meta.dir, '..');
 const buildDir = path.join(packageDir, 'build') + path.sep;
 const srcDir = path.join(packageDir, 'src') + path.sep;
-const transpiler = new Bun.Transpiler({ loader: 'ts', target: 'bun' });
-const instrumenter = createInstrumenter({
-  esModules: true,
-  compact: false,
-  produceSourceMap: false,
-});
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -44,8 +38,7 @@ async function loadSource(filePath: string) {
 
 async function instrumentFile(filePath: string) {
   const source = await loadSource(filePath);
-  const js = transpiler.transformSync(source);
-  return instrumenter.instrumentSync(js, filePath);
+  return instrumentCoverageSource(source, filePath).code;
 }
 
 function createCoveragePlugin(name: string): BunBuildPlugin {

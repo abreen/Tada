@@ -155,7 +155,9 @@ slides: true
 
 ---
 
-# Middle
+## Middle
+
+<input aria-label="Slide notes">
 
 ---
 

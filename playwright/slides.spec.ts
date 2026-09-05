@@ -577,3 +577,59 @@ test.describe('slides controls on touch browsers', () => {
     await expect(page.locator('.heading-present-button')).toBeHidden();
   });
 });
+
+test.describe('presentation fallbacks and focus', () => {
+  for (const fullscreen of ['unavailable', 'rejected'] as const) {
+    test(`presentation remains usable when fullscreen is ${fullscreen}`, async ({
+      page,
+    }) => {
+      await page.addInitScript(mode => {
+        Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+          configurable: true,
+          value:
+            mode === 'unavailable'
+              ? undefined
+              : () => Promise.reject(new Error('Fullscreen denied')),
+        });
+      }, fullscreen);
+      await page.goto('/slides.html');
+      await page.getByRole('button', { name: 'Present', exact: true }).click();
+      const activeSlide = page.locator('.slide.is-active');
+      await expect(activeSlide).toContainText('Intro');
+      await expect(activeSlide).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect(activeSlide).toContainText('Middle');
+      await expect(activeSlide).toBeFocused();
+      await page.mouse.move(100, 1);
+      await page.getByRole('button', { name: 'Close', exact: true }).click();
+      await expect(activeSlide).toHaveCount(0);
+      await expect(
+        page.locator('.slide').filter({ hasText: 'Middle' }),
+      ).not.toHaveAttribute('tabindex');
+      await expect(
+        page.getByRole('button', { name: 'Present', exact: true }),
+      ).toBeVisible();
+    });
+  }
+
+  test('heading controls start the chosen slide and preserve interactive keyboard input', async ({
+    page,
+  }) => {
+    await page.goto('/slides.html');
+    await page.getByRole('checkbox', { name: 'Full screen' }).uncheck();
+    const middle = page.locator('.slide').filter({ hasText: 'Middle' });
+    await middle
+      .getByRole('button', { name: 'Present from this slide' })
+      .click();
+    const activeSlide = page.locator('.slide.is-active');
+    await expect(activeSlide).toContainText('Middle');
+    const notes = page.getByRole('textbox', { name: 'Slide notes' });
+    await notes.fill('two words');
+    await notes.press('ArrowLeft');
+    await notes.press('Space');
+    await expect(activeSlide).toContainText('Middle');
+    await expect(notes).toHaveValue('two word s');
+    await notes.press('Escape');
+    await expect(activeSlide).toHaveCount(0);
+  });
+});
