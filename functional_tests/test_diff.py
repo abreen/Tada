@@ -117,6 +117,43 @@ class TestDiffExplicitVersions:
 
 
 class TestDiffCopy:
+    def test_copy_unchanged_builds_includes_latest_artifacts(self, site_dir):
+        run_tada('prod', cwd=str(site_dir), check=True)
+        run_tada('prod', cwd=str(site_dir), check=True)
+
+        old_dist = site_dir / 'dist-prod' / 'v1'
+        new_dist = site_dir / 'dist-prod' / 'v2'
+        old_manifest = json.loads((old_dist / 'tada.manifest.json').read_text())
+        new_manifest = json.loads((new_dist / 'tada.manifest.json').read_text())
+        assert old_manifest['files'] == new_manifest['files']
+
+        # Search artifacts are excluded from tracked hashes, but still need copying.
+        (old_dist / 'pagefind' / 'latest.txt').write_text('old search artifact')
+        (new_dist / 'pagefind' / 'latest.txt').write_text('new search artifact')
+        upload_dir = site_dir / 'upload'
+        result = run_tada('diff', '--copy', str(upload_dir), cwd=str(site_dir))
+        assert result.returncode == 0
+        assert 'No changes' in result.stdout
+        assert upload_dir.is_dir()
+        assert (upload_dir / 'tada.manifest.json').read_bytes() == (
+            new_dist / 'tada.manifest.json'
+        ).read_bytes()
+        search_files = [p for p in (new_dist / 'pagefind').rglob('*') if p.is_file()]
+        assert search_files
+        for source in search_files:
+            assert (upload_dir / source.relative_to(new_dist)).read_bytes() == source.read_bytes()
+        assert set(p.name for p in upload_dir.iterdir()) == {'tada.manifest.json', 'pagefind'}
+
+        # Builds without search artifacts must still create the destination.
+        (new_dist / 'pagefind').rename(new_dist / 'saved-pagefind')
+        manifest_only_dir = site_dir / 'manifest-only'
+        result = run_tada('diff', '--copy', str(manifest_only_dir), cwd=str(site_dir))
+        assert result.returncode == 0
+        assert (manifest_only_dir / 'tada.manifest.json').read_bytes() == (
+            new_dist / 'tada.manifest.json'
+        ).read_bytes()
+        assert set(p.name for p in manifest_only_dir.iterdir()) == {'tada.manifest.json'}
+
     def test_copies_changed_files(self, site_dir):
         run_tada('prod', cwd=str(site_dir), check=True)
 

@@ -20,5 +20,9 @@ includes:
   deployment, e.g. in an S3 bucket) the manifest reflects the final state of all
   files
 
+Even when no tracked files have changed, copy mode creates the destination and
+copies the newer manifest and search index (when present). Without `--copy`, an
+empty diff only reports that there are no changes.
+
 Removed files are listed in the diff output but not copied. The deployer is
 responsible for deleting them from the target.

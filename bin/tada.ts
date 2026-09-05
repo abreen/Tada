@@ -536,7 +536,9 @@ function diffCommand(args: string[]): void {
 
   if (totalChanges === 0) {
     console.log('\nNo changes between builds.');
-    return;
+    if (copyIdx === -1) {
+      return;
+    }
   }
 
   if (diff.added.length > 0) {
@@ -559,7 +561,9 @@ function diffCommand(args: string[]): void {
   }
 
   const noun = (n: number) => (n === 1 ? 'file' : 'files');
-  console.log(`\nTotal: ${totalChanges} ${noun(totalChanges)} differ`);
+  if (totalChanges > 0) {
+    console.log(`\nTotal: ${totalChanges} ${noun(totalChanges)} differ`);
+  }
 
   if (copyIdx !== -1) {
     const outDirArg = args[copyIdx + 1];
@@ -570,6 +574,7 @@ function diffCommand(args: string[]): void {
 
     const newDistDir = path.join(prodBase, `v${newVer}`);
     const resolvedOutDir = path.resolve(projectDir, outDirArg);
+    fs.mkdirSync(resolvedOutDir, { recursive: true });
     copyChangedFiles(diff, newDistDir, resolvedOutDir);
 
     // Always include pagefind/ (excluded from manifest but needed for search)
