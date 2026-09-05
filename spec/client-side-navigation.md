@@ -8,10 +8,12 @@ across navigations. With JavaScript disabled, every link is a normal
 ## What gets intercepted
 
 Same-origin internal links under the configured `basePath`, with no modifier
-keys held, no `target` attribute, and not pointing to a non-HTML file (`.pdf`,
+keys held, no `target` or `download` attribute, and not pointing to a non-HTML file (`.pdf`,
 `.java`, `.png`, etc.). Non-root base paths match by path segment: `/course`
 matches `/course` and `/course/page.html`, but not `/course2/page.html`.
 Everything else is left to the browser.
+Download links retain native browser behavior even when the `download`
+attribute is empty or the target is an HTML page.
 
 ## What happens on a click
 

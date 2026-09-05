@@ -28,7 +28,7 @@ function shouldIgnoreClick(
     return true;
   }
 
-  if (anchor.target) {
+  if (anchor.target || anchor.hasAttribute('download')) {
     return true;
   }
 
