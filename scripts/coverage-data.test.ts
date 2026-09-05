@@ -1,12 +1,14 @@
 import { expect, test } from 'bun:test';
+import path from 'node:path';
 import { instrumentCoverageSource } from './coverage-source';
 import { isCoverageSource, mergeSourceCoverage } from './coverage-data';
 
-const root = '/project';
+const root = path.resolve('coverage-fixture');
 const sample =
   'interface Value { count: number }\nexport function add(v: Value) {\n  const x = v.count; return x + 1;\n}\nexport const unused = () => 0;';
 const source = () =>
-  instrumentCoverageSource(sample, '/project/build/sample.ts').coverage;
+  instrumentCoverageSource(sample, path.join(root, 'build', 'sample.ts'))
+    .coverage;
 
 test('production scope includes all roots and consistently excludes support files', () => {
   for (const file of [
@@ -16,7 +18,7 @@ test('production scope includes all roots and consistently excludes support file
     'python/module.ts',
   ]) {
     expect(isCoverageSource(file, root)).toBe(true);
-    expect(isCoverageSource(`${root}/${file}`, root)).toBe(true);
+    expect(isCoverageSource(path.join(root, file), root)).toBe(true);
   }
   for (const file of [
     'build/types.d.ts',
@@ -63,15 +65,15 @@ test('compatible suites merge counters without duplicating original-source locat
 test('untouched entrypoints stay in denominator and foreign streams cannot widen scope', () => {
   const cli = instrumentCoverageSource(
     'export const cli = 1;',
-    '/project/bin/tada.ts',
+    path.join(root, 'bin', 'tada.ts'),
   ).coverage;
   const python = instrumentCoverageSource(
     'export const launch = 1;',
-    '/project/python/module.ts',
+    path.join(root, 'python', 'module.ts'),
   ).coverage;
   const helper = instrumentCoverageSource(
     'export const helper = 1;',
-    '/project/src/test-helpers.ts',
+    path.join(root, 'src', 'test-helpers.ts'),
   ).coverage;
   const report = mergeSourceCoverage(
     root,
@@ -102,7 +104,7 @@ test('complementary branch hits share one denominator across suites', () => {
   const make = () =>
     instrumentCoverageSource(
       'export const pick = (v: boolean) => v ? 1 : 2;',
-      '/project/src/pick.ts',
+      path.join(root, 'src', 'pick.ts'),
     ).coverage;
   const unit = make();
   const browser = make();
