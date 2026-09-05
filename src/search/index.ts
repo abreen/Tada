@@ -281,6 +281,7 @@ export default (window: Window) => {
 
   let pagefindLoadPromise: Promise<boolean> | null = null;
   let pagefindLoadGeneration = 0;
+  let disposed = false;
 
   function pagefindModulePath(generation: number) {
     const path = applyBasePath('/pagefind/pagefind.js');
@@ -291,6 +292,9 @@ export default (window: Window) => {
   }
 
   async function loadPagefind(): Promise<boolean> {
+    if (disposed) {
+      return false;
+    }
     if (pagefind) {
       return true;
     }
@@ -317,7 +321,18 @@ export default (window: Window) => {
       }
       pagefind = loadedPagefind;
       return true;
-    })();
+    })().catch(err => {
+      if (generation === pagefindLoadGeneration) {
+        // Failed dynamic imports are cached by URL. Retry only on a later
+        // interaction, with a fresh URL, sharing one pending load.
+        pagefindLoadGeneration += 1;
+        console.log(`failed to load Pagefind: ${err}`);
+        if (state.showResults) {
+          render(input!, resultsContainer, state, false);
+        }
+      }
+      return false;
+    });
 
     const promise = pagefindLoadPromise;
     try {
@@ -343,6 +358,9 @@ export default (window: Window) => {
       render(input!, resultsContainer, state, true);
     }
     const query = state.value;
+    if (!(await loadPagefind()) || updateId !== latestUpdateId) {
+      return;
+    }
     const nextState = await doSearch(query, window);
     if (updateId !== latestUpdateId) {
       return;
@@ -370,7 +388,7 @@ export default (window: Window) => {
   function loadPagefindAndUpdate() {
     loadPagefind()
       .then(loadedCurrentPagefind => {
-        if (loadedCurrentPagefind && state.showResults) {
+        if (loadedCurrentPagefind && !disposed && state.showResults) {
           queueUpdate();
         }
       })
@@ -601,6 +619,9 @@ export default (window: Window) => {
   input.disabled = false;
 
   return () => {
+    disposed = true;
+    pagefindLoadGeneration += 1;
+    invalidateUpdates();
     window.removeEventListener(
       PAGE_UPDATE_REFRESH_EVENT,
       handlePageUpdateRefresh,

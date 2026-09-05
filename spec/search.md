@@ -38,7 +38,9 @@ All matching top-level results and nested sub-results are rendered; the result
 count reflects the number of grouped top-level results.
 If the user opens or types into the combobox before Pagefind finishes loading,
 the results panel shows a loading state and reruns the current query once the
-index is ready.
+index is ready. If initialization fails, a later focus or input change retries
+with a fresh module URL. Concurrent interactions share one pending load; only
+the latest query can publish results.
 
 When motion is enabled, the results panel fades, moves a short distance, and
 subtly scales as it appears and disappears. Its `aria-hidden`, `inert`, and
