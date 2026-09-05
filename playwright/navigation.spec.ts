@@ -360,7 +360,7 @@ test.describe('header menu control', () => {
           styles.bottomTransform !== closed.bottomTransform,
         ];
       })
-      .toEqual([true, '0', true]);
+      .toEqual([true, '1', true]);
     const open = await getIconStyles();
 
     expect(await icon.locator('.menu-icon-line').count()).toBe(3);
@@ -369,9 +369,60 @@ test.describe('header menu control', () => {
     expect(closed.middleTransform).not.toBe(open.middleTransform);
     expect(closed.bottomTransform).not.toBe(open.bottomTransform);
     expect(closed.topTransition).toContain('transform');
-    expect(closed.middleTransition).toContain('opacity');
+    expect(closed.middleTransition).not.toContain('opacity');
     expect(closed.middleTransition).toContain('transform');
     expect(closed.bottomTransition).toContain('transform');
+  });
+
+  test('aligns the square close symbol with the compact menu height and center', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/index.html');
+    const summary = page.locator('header details > summary');
+    const bounds = () =>
+      summary.locator('.menu-icon').evaluate(icon => {
+        const edges = Array.from(icon.querySelectorAll('path'), path => {
+          const style = getComputedStyle(path);
+          const length = path.getTotalLength();
+          const start = Math.max(0, -parseFloat(style.strokeDashoffset));
+          const end =
+            style.strokeDasharray === 'none'
+              ? length
+              : Math.min(length, start + parseFloat(style.strokeDasharray));
+          const matrix = path.getCTM()!;
+          const first = path.getPointAtLength(start).matrixTransform(matrix);
+          const last = path.getPointAtLength(end).matrixTransform(matrix);
+          const radius =
+            (parseFloat(style.strokeWidth) * Math.hypot(matrix.a, matrix.b)) /
+            2;
+          return {
+            left: Math.min(first.x, last.x) - radius,
+            right: Math.max(first.x, last.x) + radius,
+            top: Math.min(first.y, last.y) - radius,
+            bottom: Math.max(first.y, last.y) + radius,
+          };
+        });
+        return {
+          left: Math.min(...edges.map(edge => edge.left)),
+          right: Math.max(...edges.map(edge => edge.right)),
+          top: Math.min(...edges.map(edge => edge.top)),
+          bottom: Math.max(...edges.map(edge => edge.bottom)),
+        };
+      });
+    const closed = await bounds();
+    expect(closed.right - closed.left).toBeCloseTo(19.65, 2);
+    expect(closed.bottom - closed.top).toBeCloseTo(13.65, 2);
+    await summary.click();
+    const open = await bounds();
+    expect(open.right - open.left).toBeCloseTo(open.bottom - open.top, 2);
+    expect((open.left + open.right) / 2).toBeCloseTo(
+      (closed.left + closed.right) / 2,
+      2,
+    );
+    for (const edge of ['top', 'bottom'] as const) {
+      expect(open[edge]).toBeCloseTo(closed[edge], 2);
+    }
   });
 
   test('does not animate the header when reduced motion is requested', async ({

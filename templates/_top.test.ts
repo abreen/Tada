@@ -50,6 +50,13 @@ describe('_top.html template', () => {
     );
   });
 
+  test('defines the closed stroke lengths before styles load', () => {
+    const html = renderTop('sans', 'standard');
+    const icon = html.match(/<svg\b[^>]*class="menu-icon"[^>]*>/)?.[0];
+    expect(icon).toContain('stroke-dasharray="18 36"');
+    expect(icon).toContain('stroke-dashoffset="0"');
+  });
+
   test('keeps search disabled until its client component mounts', () => {
     const html = renderTop('sans', 'standard', undefined, undefined, true);
     const searchInput = html.match(

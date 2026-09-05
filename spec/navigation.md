@@ -27,14 +27,22 @@ progressively shorten, and only when it consumes the remaining room replace,
 the title.
 
 Opening and closing the header morphs one inline SVG between the menu and close
-states: its top and bottom strokes move and rotate into the two diagonals while
-its middle stroke fades. Browsers that support both the `::details-content`
+states: its top and bottom strokes shorten, move, and rotate into two halves of
+one diagonal while its middle stroke shortens and rotates into the other. All
+three strokes remain opaque. Animated dash lengths change the drawn strokes
+while preserving their width and round end caps without scaling them. The fold
+uses a 260ms `cubic-bezier(0.65, 0, 0.35, 1)` transition in both directions.
+The hamburger retains its compact spacing, with horizontal strokes from x=3 to
+x=21 at y=6, 12, and 18 in the 24-unit view box. The square X has endpoints at
+x=6 and 18, y=6 and 18. Both states share the same center and 13.65-unit painted
+height, including the 1.65-unit round stroke; the X is narrower than the
+19.65-unit-wide hamburger. Browsers that support both the `::details-content`
 pseudo-element and discrete transitions expand and collapse the navigation
 content while it fades and moves a short distance. Other browsers retain the
 native immediate disclosure behavior. The effects follow the native `open`
-state. Without JavaScript, the menu remains fully functional and opens
-immediately. All state changes are also immediate when the visitor requests
-reduced motion.
+state. Without JavaScript, the icon still animates and the menu remains fully
+functional, with its navigation content opening immediately. All state changes
+are immediate when the visitor requests reduced motion.
 
 While the navigation is open, a fixed translucent wash covers the page content
 below the header. It uses the active theme's translucent primary background,
