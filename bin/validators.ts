@@ -83,7 +83,7 @@ export function createSiteConfig({
     extensionToShikiLanguage,
     shikiLanguages,
     themeColor,
-    tintHue: Number(tintHue),
+    tintHue: Number(String(tintHue).replace(/deg$/, '')),
     tintAmount: Number(tintAmount),
     vars: { foobar: 123 },
   };

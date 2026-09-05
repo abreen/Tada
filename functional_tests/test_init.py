@@ -112,6 +112,26 @@ class TestInitBare:
 
 
 class TestInitNoInteractiveFlags:
+    @pytest.mark.parametrize('hue', ['20deg', '20'])
+    def test_tint_hue_generates_numeric_configs_and_builds(self, tmp_path, hue):
+        result = run_tada(
+            'init',
+            'testsite',
+            '--bare',
+            '--no-interactive',
+            '--tint-hue',
+            hue,
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 0, result.stderr
+        site = tmp_path / 'testsite'
+        for config_file in (SITE_DEV_CONFIG_FILE, SITE_PROD_CONFIG_FILE):
+            config = load_structured_file(site / config_file)
+            assert config['tintHue'] == 20
+        result = run_tada('prod', cwd=str(site))
+        assert result.returncode == 0, result.stderr
+        assert (site / 'dist-prod' / 'v1' / 'index.html').is_file()
+
     def test_prod_base_path_flag(self, tmp_path):
         result = run_tada(
             'init',

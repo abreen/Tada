@@ -91,10 +91,13 @@ describe('validateHue', () => {
   test('rejects out of range', () => {
     expect(validateHue('-1')).not.toBeNull();
     expect(validateHue('361')).not.toBeNull();
+    expect(validateHue('-1deg')).not.toBeNull();
+    expect(validateHue('361deg')).not.toBeNull();
   });
 
   test('rejects non-integer', () => {
     expect(validateHue('1.5')).not.toBeNull();
+    expect(validateHue('1.5deg')).not.toBeNull();
     expect(validateHue('abc')).not.toBeNull();
   });
 });
@@ -211,6 +214,16 @@ describe('createSiteConfig', () => {
     expect(config.tintHue).toBe(0);
     expect(config.tintAmount).toBe(0);
   });
+
+  test.each(['0deg', '20deg', '360deg'])(
+    'normalizes accepted hue %s',
+    tintHue => {
+      expect(validateHue(tintHue)).toBeNull();
+      expect(createSiteConfig({ ...base, tintHue }).tintHue).toBe(
+        Number(tintHue.slice(0, -3)),
+      );
+    },
+  );
 
   test('allows callers to override code-page defaults', () => {
     const config = createSiteConfig({
