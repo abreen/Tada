@@ -72,6 +72,51 @@ public class Outer {
     expect(toc.map(e => e.name)).toEqual(['outerMethod()']);
   });
 
+  test('excludes anonymous class members in fields, methods, and initializers', () => {
+    const toc = extractJavaMethodToc(`class Outer {
+  Runnable task = new Runnable() {
+    int hiddenField;
+    public void run() {}
+  };
+  Outer() {
+    new Runnable() { public void run() {} };
+  }
+  static {
+    new Runnable() { public void run() {} };
+  }
+  void outerMethod() {
+    new Runnable() { public void run() {} };
+  }
+}`);
+    expect(toc).toEqual([
+      { kind: 'field', label: 'Field', name: 'Runnable task', line: 2 },
+      { kind: 'constructor', label: 'Constructor', name: 'Outer()', line: 6 },
+      { kind: 'method', label: 'Method', name: 'outerMethod()', line: 12 },
+    ]);
+  });
+
+  test('includes abstract and native class methods without entering nested types', () => {
+    const toc = extractJavaMethodToc(`abstract class Outer {
+  abstract String describe(int count);
+  native void send(byte[] data);
+  Outer() {}
+  static { System.out.println("initialized"); }
+  abstract class Inner {
+    int hiddenField;
+    Inner() {}
+    abstract void hidden();
+  }
+  interface Nested { void hidden(); }
+  enum Choice { A; void hidden() {} }
+  record Point(int x) { void hidden() {} }
+}`);
+    expect(toc).toEqual([
+      { kind: 'method', label: 'Method', name: 'describe(count)', line: 2 },
+      { kind: 'method', label: 'Method', name: 'send(data)', line: 3 },
+      { kind: 'constructor', label: 'Constructor', name: 'Outer()', line: 4 },
+    ]);
+  });
+
   test('returns default method from an interface', () => {
     const toc = extractJavaMethodToc(`
 public interface Greeter {

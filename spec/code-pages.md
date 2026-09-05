@@ -31,7 +31,8 @@ file.
 
 For Java files, a table of contents is automatically generated from the source
 structure, listing methods, constructors, and fields with their line numbers.
-Inner class members are excluded.
+Methods include abstract and native declarations without bodies. Named inner
+class members and anonymous inner class members are excluded.
 
 With JavaScript enabled, the current entry follows the linked source line,
 regardless of how entries are grouped in the table. A line range uses its first

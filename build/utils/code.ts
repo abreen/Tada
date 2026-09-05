@@ -122,16 +122,7 @@ const JAVA_TYPE_DECLARATION_NODES = new Set([
   'recordDeclaration',
 ]);
 
-function extractJavaMethodMeta(
-  methodNode: CstNode,
-  requireBody = true,
-): MethodMeta | null {
-  const methodBody = methodNode.children?.methodBody?.[0];
-  const hasBody = Boolean(methodBody?.children?.block?.length);
-  if (requireBody && !hasBody) {
-    return null;
-  }
-
+function extractJavaMethodMeta(methodNode: CstNode): MethodMeta | null {
   const methodHeader = methodNode.children?.methodHeader?.[0];
   const methodDeclarator = methodHeader?.children?.methodDeclarator?.[0];
   const identifier = methodDeclarator?.children?.Identifier?.[0];
@@ -293,13 +284,12 @@ export function extractJavaMethodToc(sourceCode: string): JavaTocEntry[] {
       return;
     }
 
-    if (node.name === 'methodDeclaration' && typeDepth <= 1) {
+    if (
+      (node.name === 'methodDeclaration' ||
+        node.name === 'interfaceMethodDeclaration') &&
+      typeDepth <= 1
+    ) {
       const method = extractJavaMethodMeta(node);
-      if (method) {
-        callables.push({ ...method, kind: 'method' });
-      }
-    } else if (node.name === 'interfaceMethodDeclaration' && typeDepth <= 1) {
-      const method = extractJavaMethodMeta(node, false);
       if (method) {
         callables.push({ ...method, kind: 'method' });
       }
@@ -325,6 +315,13 @@ export function extractJavaMethodToc(sourceCode: string): JavaTocEntry[] {
     for (const value of Object.values(children)) {
       for (const child of value) {
         if (child && child.name) {
+          // Anonymous classes have a classBody without a type declaration.
+          if (
+            node.name === 'unqualifiedClassInstanceCreationExpression' &&
+            child.name === 'classBody'
+          ) {
+            continue;
+          }
           visit(child, nextTypeDepth);
         }
       }
