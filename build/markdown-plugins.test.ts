@@ -872,6 +872,61 @@ describe('columns plugin', () => {
     expect(html).toContain('<p>A paragraph.</p>');
   });
 
+  test.each([
+    ['backticks', '```text\n+++\n```'],
+    ['tildes', '~~~text\n+++\n~~~'],
+    ['long fence', '````text\n```\n+++\n````'],
+    ['mismatched fence', '```text\n~~~\n+++\n```'],
+    ['indented closing fence', '```text\n    ```\n+++\n```'],
+    ['closing fence with text', '~~~text\n~~~ trailing\n+++\n~~~'],
+    ['list fence', '- ```text\n  +++\n  ```'],
+    ['blockquote fence', '> ```text\n> +++\n> ```'],
+    ['nested list fence', '- outer\n  - ~~~text\n    +++\n    ~~~'],
+    ['indented code', '    +++'],
+    ['tab-indented code', '\t+++'],
+  ])('preserves literal delimiters in %s', (_name, code) => {
+    const first = `## Heading\n\n${code}\n\n- item\n`;
+    const second = `A **second** column.\n\n${code}\n`;
+    expect(md.render(`+++\n${first}+++\n${second}+++\n`)).toBe(
+      `<div class="columns">\n<div>\n${md.render(first)}</div>\n<div>\n${md.render(second)}</div>\n</div>\n`,
+    );
+  });
+
+  test('an unclosed code fence cannot supply column boundaries', () => {
+    const html = md.render('+++\n```text\n+++\nSecond\n+++\n');
+    expect(html).not.toContain('<div class="columns">');
+    expect(html).toContain(
+      '<pre><code class="language-text">+++\nSecond\n+++\n</code></pre>',
+    );
+  });
+
+  test('columns nested in a blockquote preserve fenced code', () => {
+    const source = '+++\n~~~text\n+++\n~~~\n+++\nSecond\n+++\n';
+    const quoted = source
+      .trimEnd()
+      .split('\n')
+      .map(line => `> ${line}`)
+      .join('\n');
+    expect(md.render(quoted)).toBe(
+      `<blockquote>\n${md.render(source)}</blockquote>\n`,
+    );
+    expect(md.render(quoted)).toContain(
+      '<code class="language-text">+++\n</code>',
+    );
+  });
+
+  test('columns nested in a list preserve fenced code', () => {
+    const source = '+++\n~~~text\n+++\n~~~\n+++\nSecond\n+++\n';
+    const listed = source
+      .trimEnd()
+      .split('\n')
+      .map((line, index) => `${index === 0 ? '- ' : '  '}${line}`)
+      .join('\n');
+    expect(md.render(listed)).toBe(
+      `<ul>\n<li>\n${md.render(source)}</li>\n</ul>\n`,
+    );
+  });
+
   test('incomplete block with only two fences is not matched', () => {
     const html = md.render('+++\nContent\n+++\n');
     expect(html).not.toContain('<div class="columns">');

@@ -1,8 +1,13 @@
-import type MarkdownIt from 'markdown-it';
+import MarkdownIt from 'markdown-it';
+import type Token from 'markdown-it/lib/token.mjs';
 import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
 
 const MARKER_CHAR = 0x2b; // '+'
 const MIN_MARKERS = 3;
+
+// A separate block parser avoids invoking column rules recursively or mutating
+// the document's tokens and plugin environment while locating literal code.
+const codeContextParser = new MarkdownIt('commonmark');
 
 function isColumnsFence(state: StateBlock, line: number): boolean {
   const start = state.bMarks[line] + state.tShift[line];
@@ -46,7 +51,28 @@ function columnsRule(
   let separatorLine = -1;
   let closeLine = -1;
 
+  // Parse block context, including lists and blockquotes, before looking for
+  // delimiters. Token maps keep code fences and their contents literal.
+  const contextTokens: Token[] = [];
+  codeContextParser.block.parse(
+    state.getLines(startLine + 1, endLine, state.blkIndent, false),
+    codeContextParser,
+    {},
+    contextTokens,
+  );
+  const codeLines = new Set<number>();
+  for (const token of contextTokens) {
+    if ((token.type === 'fence' || token.type === 'code_block') && token.map) {
+      for (let line = token.map[0]; line < token.map[1]; line++) {
+        codeLines.add(startLine + 1 + line);
+      }
+    }
+  }
+
   for (let line = startLine + 1; line < endLine; line++) {
+    if (codeLines.has(line)) {
+      continue;
+    }
     if (!isColumnsFence(state, line)) {
       continue;
     }
