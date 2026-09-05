@@ -40,6 +40,33 @@ class TestWatchEditContent:
         watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
         assert 'New paragraph added by test.' in index_html.read_text()
 
+    def test_repeated_template_failure_preserves_output_until_recovery(self, watch, site_dir):
+        index_md = site_dir / 'content' / 'index.md'
+        index_html = site_dir / 'dist' / 'index.html'
+        other_md = site_dir / 'content' / 'other.md'
+        other_html = site_dir / 'dist' / 'other.html'
+        other_md.write_text('title: Other\n\nOriginal unrelated page')
+        watch.wait_for_rebuild(other_html, 'exists')
+        before = index_html.read_bytes()
+
+        index_md.write_text('title: Home\npublished: not-a-date\n\nRecovered body')
+        watch.wait_for_error()
+        assert index_html.read_bytes() == before
+
+        for attempt in range(2):
+            other_md.write_text(f'title: Other\n\nUnrelated edit {attempt}')
+            watch.wait_for_error()
+            assert index_html.read_bytes() == before
+            assert watch.proc.poll() is None
+
+        index_md.write_text('title: Home\npublished: 2026-09-05\n\nRecovered body')
+        watch.wait_for_successful_rebuild()
+        html = index_html.read_text()
+        assert '<h1' in html
+        assert 'Recovered body' in html
+        assert 'datetime="2026-09-05"' in html
+        assert 'Unrelated edit 1' in other_html.read_text()
+
     def test_editing_html_content_triggers_rebuild(self, watch, site_dir):
         html_dir = site_dir / 'content' / 'test_html'
         html_dir.mkdir()

@@ -53,7 +53,7 @@ export function getConfigFileName(name: ProjectConfigName): string | undefined {
 export function render(
   fileName: string,
   params?: Record<string, unknown> | null,
-): string | undefined {
+): string {
   if (params != null) {
     // Allow the template to call render(), it will use our params
     params.render = (otherFileName: string) => render(otherFileName, params);
@@ -68,16 +68,17 @@ export function render(
   } catch (err) {
     if (errorStack == null) {
       errorStack = renderStack.slice();
-
-      if (renderStack.length > 1) {
-        throw err;
-      }
-    } else if (renderStack.length === 1) {
+    }
+    if (renderStack.length === 1) {
       const topItem = errorStack[errorStack.length - 1];
       throw new Error(`Render error in ${topItem}: ${err}`, { cause: err });
     }
+    throw err;
   } finally {
     renderStack.pop();
+    if (renderStack.length === 0) {
+      errorStack = null;
+    }
   }
 }
 

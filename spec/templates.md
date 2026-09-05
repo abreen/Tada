@@ -27,3 +27,9 @@ Site config values are accessible in templates. You may also use site config
 values in the `nav.*` and `authors.*` config files. In those config files,
 Lodash templating is only supported inside individual values; it cannot
 generate or conditionally modify the YAML/JSON structure itself.
+
+Template rendering failures abort the build and identify the innermost failing
+HTML template. Each render attempt tracks errors independently, including
+retries and template recompilation in watch mode. A failed render never becomes
+a successful partial page; correcting the content allows the next render to
+complete normally.
