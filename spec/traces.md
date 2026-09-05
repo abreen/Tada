@@ -64,7 +64,9 @@ program stderr is part of the trace data and is not printed among Tada's build
 logs. A toolbar with step buttons and a counter lets the user navigate through
 execution steps. Chunks are fetched on demand as the user steps forward. Trace
 controls render disabled and are enabled by the client-side component after the
-trace data is ready.
+trace data is ready. If navigation requests overlap while chunks load, the
+latest request controls the displayed step; an older request finishing later
+cannot replace its source highlight, diagram, or output.
 
 If a Java or Python program terminates because of an uncaught exception, the
 trace still builds successfully. The tracer emits a final step on the throwing

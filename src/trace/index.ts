@@ -5,6 +5,7 @@ interface WidgetState {
   manifest: TraceManifest;
   chunks: Map<number, TraceChunkEntry[]>;
   currentStep: number;
+  navigationRequest: number;
 }
 
 interface TraceResizeState {
@@ -54,6 +55,7 @@ async function goToStep(
   stepIndex: number,
   doc: Document,
 ): Promise<void> {
+  const request = ++state.navigationRequest;
   stepIndex = Math.max(0, Math.min(stepIndex, state.manifest.totalSteps - 1));
   const lastChunk = Math.floor(stepIndex / state.manifest.chunkSize);
   const loads: Promise<void>[] = [];
@@ -61,6 +63,9 @@ async function goToStep(
     loads.push(loadChunk(state, manifestUrl, i));
   }
   await Promise.all(loads);
+  if (request !== state.navigationRequest) {
+    return;
+  }
   state.currentStep = stepIndex;
   renderWidgetState(state, elements, doc);
 }
@@ -492,7 +497,12 @@ async function initWidget(root: HTMLElement, doc: Document): Promise<void> {
   }
   const manifest: TraceManifest = await res.json();
 
-  const state: WidgetState = { manifest, chunks: new Map(), currentStep: 0 };
+  const state: WidgetState = {
+    manifest,
+    chunks: new Map(),
+    currentStep: 0,
+    navigationRequest: 0,
+  };
 
   await loadChunk(state, manifestUrl, 0);
 
