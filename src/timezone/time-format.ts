@@ -22,6 +22,10 @@ function pad(n: number | string) {
   return String(n).padStart(2, '0');
 }
 
+export function to24Hour(h: number, m: number) {
+  return `${pad(h)}:${pad(m)}`;
+}
+
 export function to12Hour(
   h: number,
   m: number,

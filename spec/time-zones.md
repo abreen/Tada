@@ -12,7 +12,11 @@ To place the time zone chooser on a page:
 
 All `<time>` elements on the page are reformatted to display in the chosen time
 zone. The chooser detects the existing time format (12-hour with various period
-styles, or 24-hour) and preserves it when converting. AM/PM periods use
+styles, or 24-hour) and preserves it when converting and resetting. Periodless
+text matching the `datetime` value uses 24-hour formatting, including `00:00`
+for midnight, unless it is a range prefix inheriting an explicit AM/PM from the
+final endpoint. A periodless 12-hour value such as `5:40` with `datetime="17:40"`
+retains its compact 12-hour style. AM/PM periods use
 OpenType small-cap glyphs for both uppercase and lowercase letters when the
 active font provides them. Synthetic small caps are disabled, so a font without
 the necessary glyphs retains ordinary capitals rather than showing scaled-down

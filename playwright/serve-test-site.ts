@@ -261,7 +261,11 @@ Next-day meeting: <time datetime="23:30">11:30 PM</time>
 
 Plain same-period meeting: <time datetime="17:40">5:40</time>
 
-Plain period-changing meeting: <time datetime="11:30">11:30</time>
+Twenty-four-hour meeting: <time id="time-24h" datetime="17:40">17:40</time>
+
+Midnight meeting: <time id="time-midnight" datetime="00:00">00:00</time>
+
+Twenty-four-hour period-changing meeting: <time datetime="11:30">11:30</time>
 
 Time range: <time datetime="12:45">12:45</time>--<time datetime="13:45">1:45 PM</time>
 `,

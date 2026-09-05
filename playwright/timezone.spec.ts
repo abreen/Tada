@@ -123,7 +123,7 @@ test.describe('timezone chooser', () => {
     const selects = page.locator('select.time-zone');
 
     await selects.first().selectOption('UTC');
-    await expect(page.locator('time[datetime="11:30"]')).toContainText('PM');
+    await expect(page.locator('time[datetime="11:30"]')).toHaveText('15:30');
 
     await selects.first().selectOption('America/Chicago');
     await expect(page.locator('time[datetime="17:40"]').nth(1)).toHaveText(
@@ -134,6 +134,34 @@ test.describe('timezone chooser', () => {
     await expect(
       page.locator('time[datetime="23:30"] .next-prev-day'),
     ).toContainText('next day');
+  });
+
+  test('preserves authored 24-hour times through conversion and reset', async ({
+    page,
+  }) => {
+    await page.goto('/timezones.html');
+    const select = page.locator('select.time-zone').first();
+    const afternoon = page.locator('#time-24h');
+    const midnight = page.locator('#time-midnight');
+    await expect(afternoon).toHaveText('17:40');
+    await expect(midnight).toHaveText('00:00');
+
+    await select.selectOption('America/Chicago');
+    await expect(afternoon).toHaveText('16:40');
+    await expect(afternoon).toHaveAttribute('title', '17:40 ET');
+    await expect(midnight).toHaveText('23:00 (prev. day)');
+    await expect(midnight).toHaveAttribute('title', '00:00 ET');
+
+    await page.reload();
+    await expect(afternoon).toHaveText('16:40');
+    await expect(midnight).toHaveText('23:00 (prev. day)');
+    await page
+      .getByRole('button', { name: 'Reset time zone to ET (default)' })
+      .first()
+      .click();
+    await expect(afternoon).toHaveText('17:40');
+    await expect(midnight).toHaveText('00:00');
+    await expect(afternoon).toHaveAttribute('title', '');
   });
 
   test('timezone period and abbreviation are compact across a range', async ({

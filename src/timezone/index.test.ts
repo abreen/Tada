@@ -101,7 +101,7 @@ describe('to12HourMarkup', () => {
     },
   );
 
-  test('omits period markup for a 24-hour-style time', () => {
+  test('omits period markup for a compact 12-hour time', () => {
     expect(to12HourMarkup(14, 0, null)).toBe('2:00');
   });
 });

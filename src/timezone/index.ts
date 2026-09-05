@@ -4,6 +4,7 @@ import {
   normalizeHM,
   to12Hour,
   to12HourMarkup,
+  to24Hour,
   type PeriodStyle,
 } from './time-format';
 
@@ -149,6 +150,23 @@ export default (window: Window) => {
     periodStyles.set(el, detectPeriodStyle(el.textContent ?? ''));
   });
   const pagePeriodStyle = dominantPeriodStyle(periodStyles);
+  const twentyFourHourTimes = new Set<HTMLTimeElement>();
+  for (const [el, style] of periodStyles) {
+    const rangeEnd = getRangeEnd(el);
+    const inheritsPeriod =
+      rangeEnd !== null && periodStyles.get(rangeEnd) != null;
+    const authoredTime = (el.textContent ?? '').trim();
+    // A periodless 12-hour prefix may inherit its range's final AM/PM.
+    // Otherwise text matching datetime is an authored 24-hour time.
+    if (
+      style === null &&
+      !inheritsPeriod &&
+      /^\d{1,2}:\d{2}$/.test(authoredTime) &&
+      parseHHMM(authoredTime) === parseHHMM(el.getAttribute('datetime') ?? '')
+    ) {
+      twentyFourHourTimes.add(el);
+    }
+  }
 
   function updateTimes(targetTz: string) {
     const target = timezones.find(t => t.value === targetTz) || defaultTz;
@@ -187,11 +205,12 @@ export default (window: Window) => {
         }
       }
 
+      const is24Hour = twentyFourHourTimes.has(el);
       const originalStyle = periodStyles.get(el) ?? null;
       const originalIsPm = Math.floor(baseMinutes / 60) >= 12;
       const periodChanged = originalIsPm !== h >= 12 || dayShift !== 0;
       let style =
-        originalStyle === null && periodChanged
+        !is24Hour && originalStyle === null && periodChanged
           ? pagePeriodStyle
           : originalStyle;
 
@@ -201,6 +220,7 @@ export default (window: Window) => {
         ? parseHHMM(rangeEndDatetime)
         : NaN;
       if (
+        !is24Hour &&
         originalStyle === null &&
         rangeEnd !== null &&
         !isNaN(rangeEndMinutes)
@@ -216,14 +236,20 @@ export default (window: Window) => {
         isDefault || style === null || rangeEnd !== null
           ? ''
           : ` <span class="small-caps">${target.abbreviation}</span>`;
-      el.innerHTML = to12HourMarkup(h, m, style) + timeZone + suffix;
+      el.innerHTML =
+        (is24Hour ? to24Hour(h, m) : to12HourMarkup(h, m, style)) +
+        timeZone +
+        suffix;
 
       if (isDefault) {
         el.classList.remove('is-modified');
         el.title = '';
       } else {
         el.classList.add('is-modified');
-        el.title = `${to12Hour(...normalizeHM(baseMinutes), style ?? pagePeriodStyle)} ${defaultTz.abbreviation}`;
+        const originalTime = is24Hour
+          ? to24Hour(...normalizeHM(baseMinutes))
+          : to12Hour(...normalizeHM(baseMinutes), style ?? pagePeriodStyle);
+        el.title = `${originalTime} ${defaultTz.abbreviation}`;
       }
     });
   }
