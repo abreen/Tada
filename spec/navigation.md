@@ -53,3 +53,7 @@ interaction with the page. With JavaScript enabled, clicking it dismisses the
 navigation without activating the content beneath it. Without JavaScript, the
 native summary remains available to close the navigation. The wash fades with
 the navigation unless the visitor requests reduced motion.
+
+Directory-only links, including `/`, must reference `index.html` explicitly
+(for example, `/docs/index.html` instead of `/docs/`). If the corresponding
+index page exists, the build reports its expected path in the error.

@@ -452,3 +452,46 @@ describe('validateParentLink', () => {
     ).toBeNull();
   });
 });
+
+describe('directory configuration links', () => {
+  const validTargets = new Set([
+    '/',
+    '/docs',
+    '/my notes',
+    '/index.html',
+    '/docs/index.html',
+    '/my notes/index.html',
+  ]);
+
+  test.each(['/', '/docs', '/docs/', '/my%20notes/?view=full#intro'])(
+    'rejects nav directory alias %s with an explicit-index diagnostic',
+    href => {
+      const errors = validateNavLinks(
+        [{ title: 'Menu', links: [{ text: 'Section', internal: href }] }],
+        validTargets,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain(
+        'directory link must reference index.html explicitly',
+      );
+      expect(errors[0]).toContain(href);
+    },
+  );
+
+  test.each(['/', '/docs/', '../', '/my%20notes/?view=full#intro'])(
+    'rejects parent directory alias %s with an explicit-index diagnostic',
+    href => {
+      const error = validateParentLink(
+        href,
+        'page.md',
+        validTargets,
+        '/docs/topic/page.html',
+      );
+      expect(error).toContain(
+        'directory link must reference index.html explicitly',
+      );
+      expect(error).toContain('parent');
+      expect(error).toContain(href);
+    },
+  );
+});

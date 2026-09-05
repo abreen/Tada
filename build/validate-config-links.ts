@@ -70,6 +70,21 @@ function getInternalHrefTarget(href: string): string {
   }
 }
 
+function validateDirectoryLink(
+  href: string,
+  resolvedTarget: string,
+  validTargets: Set<string>,
+  context: string,
+): string | null {
+  const indexPath = normalizeOutputPath(
+    path.posix.join(resolvedTarget, 'index.html'),
+  );
+  if (validTargets.has(indexPath)) {
+    return `${context}: directory link must reference index.html explicitly: "${href}" (resolved to "${resolvedTarget}", expected "${indexPath}")`;
+  }
+  return null;
+}
+
 export function validateNavLinks(
   navData: unknown,
   validTargets: Set<string>,
@@ -97,7 +112,15 @@ export function validateNavLinks(
       }
 
       const normalized = getInternalHrefTarget(link.internal);
-      if (!validTargets.has(normalized)) {
+      const directoryError = validateDirectoryLink(
+        link.internal,
+        normalized,
+        validTargets,
+        `${fileName}: internal link in section "${section.title}"`,
+      );
+      if (directoryError) {
+        errors.push(directoryError);
+      } else if (!validTargets.has(normalized)) {
         errors.push(
           `${fileName}: broken internal link in section "${section.title}": "${link.internal}"`,
         );
@@ -198,6 +221,16 @@ export function validateParentLink(
   const resolvedTarget = resolveParentLinkTarget(parent, sourceUrlPath);
   if (!resolvedTarget) {
     return null;
+  }
+
+  const directoryError = validateDirectoryLink(
+    parent as string,
+    resolvedTarget,
+    validTargets,
+    `${filePath}: parent link`,
+  );
+  if (directoryError) {
+    return directoryError;
   }
 
   if (!validTargets.has(resolvedTarget)) {

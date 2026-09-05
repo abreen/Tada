@@ -223,3 +223,44 @@ class TestNavAuthoredTargets:
         output = result.stdout + result.stderr
         assert diagnostic in output
         assert 'nav.yaml' in output
+
+
+class TestDirectoryConfigLinks:
+    @pytest.mark.parametrize('kind', ['nav', 'parent'])
+    @pytest.mark.parametrize('href', ['/', '/docs/', '/docs', '/my%20notes/?view=full#intro'])
+    def test_directory_alias_requires_explicit_index(self, tmp_path, kind, href):
+        site = init_site(tmp_path, bare=True)
+        for directory in ['docs', 'my notes']:
+            folder = site / 'content' / directory
+            folder.mkdir()
+            (folder / 'index.md').write_text('---\ntitle: Section\n---\n\nSection.\n')
+        if kind == 'nav':
+            write_structured_file(
+                site / NAV_CONFIG_FILE,
+                [{'title': 'Menu', 'links': [{'text': 'Section', 'internal': href}]}],
+            )
+        else:
+            (site / 'content' / 'page.md').write_text(
+                f'---\ntitle: Page\nparent: "{href}"\nparentLabel: Section\n---\n\nPage.\n'
+            )
+        result = run_tada('dev', cwd=str(site))
+        output = result.stdout + result.stderr
+        assert result.returncode != 0, output
+        assert 'directory link must reference index.html explicitly' in output
+        assert ('nav.yaml' if kind == 'nav' else 'page.md') in output
+
+    def test_explicit_relative_parent_index_with_suffix_builds(self, tmp_path):
+        site = init_site(tmp_path, bare=True)
+        folder = site / 'content' / 'my notes'
+        folder.mkdir()
+        (folder / 'index.md').write_text('---\ntitle: Section\n---\n\nSection.\n')
+        (site / 'content' / 'page.md').write_text(
+            '---\ntitle: Page\nparent: my%20notes/index.html?view=full#intro\n'
+            'parentLabel: Section\n---\n\nPage.\n'
+        )
+        result = run_tada('dev', cwd=str(site))
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert (
+            'href="my%20notes/index.html?view=full#intro"'
+            in (site / 'dist' / 'page.html').read_text()
+        )

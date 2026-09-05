@@ -14,3 +14,7 @@ trail.
 
 The `parent` URL is validated against the set of known pages at build time. A
 broken parent link fails the build.
+
+Directory-only links, including `/`, must reference `index.html` explicitly
+(for example, `/docs/index.html` instead of `/docs/`). If the corresponding
+index page exists, the build reports its expected path in the error.
