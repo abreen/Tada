@@ -2,6 +2,7 @@ import re
 import subprocess
 import time
 from pathlib import Path
+from stat import S_ISREG
 
 import pytest
 from conftest import (
@@ -51,7 +52,16 @@ class WatchProcess:
             # renamed away and the new dist/ is added. Catch this error and
             # let callers keep polling.
             stat = path.stat()
-            content = path.read_bytes()
+            if not S_ISREG(stat.st_mode):
+                return None
+            try:
+                content = path.read_bytes()
+            except PermissionError:
+                # Windows reports EACCES when a file becomes a directory
+                # between stat() and read_bytes(). Preserve real access errors.
+                if path.is_dir():
+                    return None
+                raise
         except (FileNotFoundError, NotADirectoryError, IsADirectoryError):
             return None
 
