@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
 import { createGlobals } from './globals.test';
 import { createFsModuleMock } from './test-helpers';
+import { sourcePaths } from './source-model';
 import type { SiteVariables } from './types';
 
 const projectRoot = path.resolve(path.sep, 'virtual', 'site');
@@ -170,8 +171,8 @@ beforeEach(() => {
 
 function makeBatch(
   changes: Array<{ path: string; kind: 'add' | 'change' | 'unlink' }>,
-): { changes: Array<{ path: string; kind: 'add' | 'change' | 'unlink' }> } {
-  return { changes };
+): ReadonlySet<string> {
+  return new Set(changes.map(change => path.resolve(change.path)));
 }
 
 describe('getSourceOutputPaths', () => {
@@ -330,46 +331,62 @@ describe('scanProject', () => {
     );
     const scan = scanProject(siteVariables);
 
-    expect(scan.contentFiles.has(homePath)).toBe(true);
-    expect(scan.contentFiles.has(partialPath)).toBe(true);
-    expect(scan.buildContentFiles.has(homePath)).toBe(true);
-    expect(scan.buildContentFiles.has(partialPath)).toBe(false);
-    expect(scan.buildContentFiles.has(literateJavaPath)).toBe(true);
-    expect(scan.buildContentFiles.has(codePath)).toBe(true);
-    expect(scan.publicFiles.has(publicPath)).toBe(true);
-    expect(scan.sourceOutputPaths.get(codePath)).toEqual(
+    expect(scan.sources.get(homePath)?.kind === 'content').toBe(true);
+    expect(scan.sources.get(partialPath)?.kind === 'content').toBe(true);
+    expect(new Set(sourcePaths(scan, 'content', true)).has(homePath)).toBe(
+      true,
+    );
+    expect(new Set(sourcePaths(scan, 'content', true)).has(partialPath)).toBe(
+      false,
+    );
+    expect(
+      new Set(sourcePaths(scan, 'content', true)).has(literateJavaPath),
+    ).toBe(true);
+    expect(new Set(sourcePaths(scan, 'content', true)).has(codePath)).toBe(
+      true,
+    );
+    expect(scan.sources.get(publicPath)?.kind === 'public').toBe(true);
+    expect(scan.sources.get(codePath)?.outputs).toEqual(
       new Set([
         'labs/01/SearchTreeDemo.java',
         'labs/01/SearchTreeDemo.java.html',
       ]),
     );
-    expect(scan.sourceOutputPaths.get(literateJavaPath)).toEqual(
+    expect(scan.sources.get(literateJavaPath)?.outputs).toEqual(
       new Set(['labs/00/VowelCounter.java.html', 'labs/00/VowelCounter.java']),
     );
-    expect(scan.sourceOutputPaths.get(partialPath)).toEqual(new Set());
-    expect(scan.sourceTargetPaths.get(literateJavaPath)).toEqual(
+    expect(scan.sources.get(partialPath)?.outputs).toEqual(new Set());
+    expect(scan.sources.get(literateJavaPath)?.targets).toEqual(
       new Set([
         '/labs/00/VowelCounter.java.html',
         '/labs/00/VowelCounter.java',
       ]),
     );
-    expect(scan.sourceTargetPaths.get(codePath)).toEqual(
+    expect(scan.sources.get(codePath)?.targets).toEqual(
       new Set([
         '/labs/01/SearchTreeDemo.java.html',
         '/labs/01/SearchTreeDemo.java',
       ]),
     );
-    expect(scan.sourceTargetPaths.get(publicPath)).toEqual(
+    expect(scan.sources.get(publicPath)?.targets).toEqual(
       new Set(['/test.txt']),
     );
-    expect(scan.contentOwners.get('index.html')).toBe(homePath);
-    expect(scan.contentOwners.get('labs/00/VowelCounter.java.html')).toBe(
-      literateJavaPath,
+    expect(scan.outputProducers.get('index.html')?.values().next().value).toBe(
+      homePath,
     );
-    expect(scan.contentOwners.get('labs/01/SearchTreeDemo.java')).toBe(
-      codePath,
-    );
-    expect(scan.publicOwners.get('avatars/alex.jpg')).toBe(publicImagePath);
+    expect(
+      scan.outputProducers
+        .get('labs/00/VowelCounter.java.html')
+        ?.values()
+        .next().value,
+    ).toBe(literateJavaPath);
+    expect(
+      scan.outputProducers.get('labs/01/SearchTreeDemo.java')?.values().next()
+        .value,
+    ).toBe(codePath);
+    expect(
+      scan.outputProducers.get('avatars/alex.jpg')?.values().next().value,
+    ).toBe(publicImagePath);
     expect(scan.literateJavaOutputPaths.has('/labs/00/VowelCounter.java')).toBe(
       true,
     );
@@ -424,37 +441,62 @@ describe('updateProjectScan', () => {
       ]),
     );
 
-    expect(snapshot.contentFiles.has(removedContentPath)).toBe(true);
-    expect(snapshot.publicFiles.has(removedPublicPath)).toBe(true);
-    expect(snapshot.sourceOutputPaths.get(removedContentPath)).toEqual(
+    expect(snapshot.sources.get(removedContentPath)?.kind === 'content').toBe(
+      true,
+    );
+    expect(snapshot.sources.get(removedPublicPath)?.kind === 'public').toBe(
+      true,
+    );
+    const unchanged = path.join(projectRoot, 'content', 'index.md');
+    expect(updated.sources.get(unchanged)).toBe(
+      snapshot.sources.get(unchanged),
+    );
+    expect(updated).toEqual(scanProject(siteVariables));
+    expect(snapshot.sources.get(removedContentPath)?.outputs).toEqual(
       new Set(['markdown.html']),
     );
-    expect(updated.contentFiles.has(removedContentPath)).toBe(false);
-    expect(updated.publicFiles.has(removedPublicPath)).toBe(false);
-    expect(updated.contentFiles.has(addedContentPath)).toBe(true);
-    expect(updated.buildContentFiles.has(addedContentPath)).toBe(true);
-    expect(updated.publicFiles.has(addedPublicPath)).toBe(true);
-    expect(updated.sourceOutputPaths.get(removedContentPath)).toBeUndefined();
-    expect(updated.sourceTargetPaths.get(removedContentPath)).toBeUndefined();
-    expect(updated.sourceOutputPaths.get(addedContentPath)).toEqual(
+    expect(updated.sources.get(removedContentPath)?.kind === 'content').toBe(
+      false,
+    );
+    expect(updated.sources.get(removedPublicPath)?.kind === 'public').toBe(
+      false,
+    );
+    expect(updated.sources.get(addedContentPath)?.kind === 'content').toBe(
+      true,
+    );
+    expect(
+      new Set(sourcePaths(updated, 'content', true)).has(addedContentPath),
+    ).toBe(true);
+    expect(updated.sources.get(addedPublicPath)?.kind === 'public').toBe(true);
+    expect(updated.sources.get(removedContentPath)?.outputs).toBeUndefined();
+    expect(updated.sources.get(removedContentPath)?.targets).toBeUndefined();
+    expect(updated.sources.get(addedContentPath)?.outputs).toEqual(
       new Set(['docs/index.html']),
     );
-    expect(updated.sourceTargetPaths.get(addedContentPath)).toEqual(
+    expect(updated.sources.get(addedContentPath)?.targets).toEqual(
       new Set(['/docs/index.html', '/docs/', '/docs']),
     );
-    expect(updated.sourceOutputPaths.get(changedCodePath)).toEqual(
+    expect(updated.sources.get(changedCodePath)?.outputs).toEqual(
       new Set([
         'labs/01/SearchTreeDemo.java',
         'labs/01/SearchTreeDemo.java.html',
       ]),
     );
-    expect(updated.sourceTargetPaths.get(addedPublicPath)).toEqual(
+    expect(updated.sources.get(addedPublicPath)?.targets).toEqual(
       new Set(['/assets/logo.svg']),
     );
-    expect(updated.contentOwners.get('markdown.html')).toBeUndefined();
-    expect(updated.publicOwners.get('test.txt')).toBeUndefined();
-    expect(updated.contentOwners.get('docs/index.html')).toBe(addedContentPath);
-    expect(updated.publicOwners.get('assets/logo.svg')).toBe(addedPublicPath);
+    expect(
+      updated.outputProducers.get('markdown.html')?.values().next().value,
+    ).toBeUndefined();
+    expect(
+      updated.outputProducers.get('test.txt')?.values().next().value,
+    ).toBeUndefined();
+    expect(
+      updated.outputProducers.get('docs/index.html')?.values().next().value,
+    ).toBe(addedContentPath);
+    expect(
+      updated.outputProducers.get('assets/logo.svg')?.values().next().value,
+    ).toBe(addedPublicPath);
     expect(updated.validTargets.has('/docs/index.html')).toBe(true);
     expect(updated.validTargets.has('/docs/')).toBe(true);
     expect(updated.validTargets.has('/docs')).toBe(true);
@@ -489,8 +531,10 @@ describe('content output conflicts', () => {
       expect(assertNoOutputPathConflicts(recovered)).not.toContain(
         'about.html',
       );
-      expect(recovered.contentOwners.get('about.html')).toBe(survivor);
-      expect(conflict.sourceOutputPaths.has(removed)).toBe(true);
+      expect(
+        recovered.outputProducers.get('about.html')?.values().next().value,
+      ).toBe(survivor);
+      expect(conflict.sources.has(removed)).toBe(true);
       files.set(removed, content);
     }
   });
@@ -519,4 +563,25 @@ test('detects raw copied source conflicts without configured code processing', (
       scanProject({ ...siteVariables, extensionToShikiLanguage: {} }),
     ),
   ).toEqual(['Demo.java']);
+});
+
+test('directory notifications reconcile descendants across file and directory transitions', () => {
+  const item = path.join(projectRoot, 'public', 'item');
+  const child = path.join(item, 'nested', 'child.txt');
+  writeFile(item, 'file');
+  const before = scanProject(siteVariables);
+  files.delete(item);
+  writeFile(child, 'child');
+  const directory = updateProjectScan(before, new Set([item]));
+  expect(directory).toEqual(scanProject(siteVariables));
+  expect(directory.sources.has(item)).toBe(false);
+  expect(directory.sources.has(child)).toBe(true);
+  files.delete(child);
+  directories.delete(path.dirname(child));
+  directories.delete(item);
+  writeFile(item, 'file again');
+  const after = updateProjectScan(directory, new Set([item]));
+  expect(after).toEqual(scanProject(siteVariables));
+  expect(after.sources.has(child)).toBe(false);
+  expect(before.sources.has(item)).toBe(true);
 });

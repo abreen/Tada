@@ -1,182 +1,98 @@
-import path from 'path';
-import { loadProjectConfig } from '../config-loader';
-import { getProjectConfigDir } from '../templates';
-import type { ChangeBatch } from './types';
-import type { TadaProjectScan, TadaSnapshot } from './snapshot';
-import { classifyWatchConfigPath } from './config-paths';
+import type { TadaProjectScan } from '../source-model';
+import type { TadaSnapshot } from './snapshot';
 
 export interface TadaIncrementalWatchPlan {
   kind: 'incremental';
   scan: TadaProjectScan;
-  contentToRender: Set<string>;
-  publicToRender: Set<string>;
-  contentToRemove: Set<string>;
-  publicToRemove: Set<string>;
+  renderSources: Set<string>;
+  removeSources: Set<string>;
 }
 
 type TadaWatchPlan = { kind: 'full' } | TadaIncrementalWatchPlan;
 
 export function diffAuthorKeys(previous: unknown, next: unknown): Set<string> {
-  const previousMap =
-    previous && typeof previous === 'object'
-      ? (previous as Record<string, unknown>)
+  const asMap = (value: unknown): Record<string, unknown> =>
+    value && typeof value === 'object'
+      ? (value as Record<string, unknown>)
       : {};
-  const nextMap =
-    next && typeof next === 'object' ? (next as Record<string, unknown>) : {};
-  const keys = new Set([...Object.keys(previousMap), ...Object.keys(nextMap)]);
-  const changed = new Set<string>();
-
-  for (const key of keys) {
-    if (JSON.stringify(previousMap[key]) !== JSON.stringify(nextMap[key])) {
-      changed.add(key);
-    }
-  }
-
-  return changed;
-}
-
-function addDependents(
-  destination: Set<string>,
-  reverseMap: Map<string, Set<string>>,
-  key: string,
-): void {
-  const dependents = reverseMap.get(key);
-  if (!dependents) {
-    return;
-  }
-  for (const dependent of dependents) {
-    destination.add(dependent);
-  }
-}
-
-function sourceExists(filePath: string, scan: TadaProjectScan): boolean {
-  return scan.contentFiles.has(filePath) || scan.publicFiles.has(filePath);
+  const before = asMap(previous);
+  const after = asMap(next);
+  return new Set(
+    [...Object.keys(before), ...Object.keys(after)].filter(
+      key => JSON.stringify(before[key]) !== JSON.stringify(after[key]),
+    ),
+  );
 }
 
 export function createTadaWatchPlan({
   snapshot,
-  batch,
+  paths,
   scan,
+  full = false,
+  changedAuthors = new Set<string>(),
 }: {
   snapshot: TadaSnapshot;
-  batch: ChangeBatch;
+  paths: ReadonlySet<string>;
   scan: TadaProjectScan;
+  full?: boolean;
+  changedAuthors?: ReadonlySet<string>;
 }): TadaWatchPlan {
-  const contentToRender = new Set<string>();
-  const publicToRender = new Set<string>();
-  const contentToRemove = new Set<string>();
-  const publicToRemove = new Set<string>();
-  const projectConfigDir = getProjectConfigDir();
-
-  for (const change of batch.changes) {
-    const configKind = classifyWatchConfigPath(change.path);
-    if (configKind === 'site' || configKind === 'nav') {
-      return { kind: 'full' };
-    }
+  if (full) {
+    return { kind: 'full' };
   }
-
-  for (const change of batch.changes) {
-    const resolvedPath = path.resolve(change.path);
-    if (classifyWatchConfigPath(resolvedPath) === 'authors') {
-      const nextAuthorsData = loadProjectConfig(
-        projectConfigDir,
-        'authors',
-        snapshot.siteVariables,
-      )?.value;
-      if (snapshot.authorsData === undefined || nextAuthorsData === undefined) {
-        return { kind: 'full' };
-      }
-      const changedAuthorKeys = diffAuthorKeys(
-        snapshot.authorsData,
-        nextAuthorsData,
-      );
-      for (const key of changedAuthorKeys) {
-        addDependents(contentToRender, snapshot.reverseAuthorDeps, key);
-      }
-      continue;
+  const renderSources = new Set<string>();
+  const removeSources = new Set(
+    [...snapshot.records.keys()].filter(source => !scan.sources.has(source)),
+  );
+  const include = (
+    index: ReadonlyMap<string, ReadonlySet<string>>,
+    key: string,
+  ) => {
+    for (const source of index.get(key) ?? []) {
+      renderSources.add(source);
     }
-
-    if (scan.contentFiles.has(resolvedPath)) {
-      contentToRender.add(resolvedPath);
-    } else if (snapshot.contentRecords.has(resolvedPath)) {
-      contentToRemove.add(resolvedPath);
-    }
-
-    if (scan.publicFiles.has(resolvedPath)) {
-      publicToRender.add(resolvedPath);
-    } else if (snapshot.publicRecords.has(resolvedPath)) {
-      publicToRemove.add(resolvedPath);
-    }
-
-    addDependents(contentToRender, snapshot.reversePartialDeps, resolvedPath);
-    addDependents(contentToRender, snapshot.reverseTraceDeps, resolvedPath);
-  }
-
-  const changedTargets = new Set<string>();
-  for (const target of snapshot.scan.validTargets) {
-    if (!scan.validTargets.has(target)) {
-      changedTargets.add(target);
-    }
-  }
-  for (const target of scan.validTargets) {
-    if (!snapshot.scan.validTargets.has(target)) {
-      changedTargets.add(target);
-    }
-  }
-  for (const target of changedTargets) {
-    addDependents(contentToRender, snapshot.reverseInternalTargetDeps, target);
-  }
-
-  for (const [outputPath, owner] of snapshot.outputOwners) {
-    const nextContentOwner = scan.contentOwners.get(outputPath);
-    const nextPublicOwner = scan.publicOwners.get(outputPath);
-    const nextKind = nextPublicOwner
-      ? 'public'
-      : nextContentOwner
-        ? 'content'
-        : null;
-    const nextSourcePath = nextPublicOwner || nextContentOwner;
-
-    if (!nextKind || !nextSourcePath) {
-      continue;
-    }
-    if (owner.kind !== nextKind || owner.sourcePath !== nextSourcePath) {
-      if (nextKind === 'content') {
-        contentToRender.add(nextSourcePath);
-      } else {
-        publicToRender.add(nextSourcePath);
-      }
-    }
-  }
-
-  for (const [outputPath, nextSourcePath] of scan.contentOwners) {
-    if (!snapshot.outputOwners.has(outputPath)) {
-      contentToRender.add(nextSourcePath);
-    }
-  }
-  for (const [outputPath, nextSourcePath] of scan.publicOwners) {
-    if (!snapshot.outputOwners.has(outputPath)) {
-      publicToRender.add(nextSourcePath);
-    }
-  }
-
-  for (const sourcePath of [...contentToRender]) {
-    if (!sourceExists(sourcePath, scan)) {
-      contentToRender.delete(sourcePath);
-    }
-  }
-  for (const sourcePath of [...publicToRender]) {
-    if (!sourceExists(sourcePath, scan)) {
-      publicToRender.delete(sourcePath);
-    }
-  }
-
-  return {
-    kind: 'incremental',
-    scan,
-    contentToRender,
-    publicToRender,
-    contentToRemove,
-    publicToRemove,
   };
+  const changedSources = new Set([...paths, ...removeSources]);
+  for (const source of snapshot.scan.sources.keys()) {
+    if (!scan.sources.has(source)) {
+      changedSources.add(source);
+    }
+  }
+  for (const [source, entry] of scan.sources) {
+    if (entry !== snapshot.scan.sources.get(source)) {
+      changedSources.add(source);
+    }
+  }
+  for (const source of changedSources) {
+    if (scan.sources.has(source)) {
+      renderSources.add(source);
+    }
+    include(snapshot.fileDependents, source);
+  }
+  for (const key of changedAuthors) {
+    include(snapshot.authorDependents, key);
+  }
+  for (const target of new Set([
+    ...snapshot.scan.validTargets,
+    ...scan.validTargets,
+  ])) {
+    if (
+      snapshot.scan.validTargets.has(target) !== scan.validTargets.has(target)
+    ) {
+      include(snapshot.targetDependents, target);
+    }
+  }
+  for (const [output, producers] of scan.outputProducers) {
+    for (const source of producers) {
+      if (snapshot.outputs.get(output)?.sourcePath !== source) {
+        renderSources.add(source);
+      }
+    }
+  }
+  for (const source of renderSources) {
+    if (!scan.sources.has(source)) {
+      renderSources.delete(source);
+    }
+  }
+  return { kind: 'incremental', scan, renderSources, removeSources };
 }

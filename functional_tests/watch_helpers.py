@@ -52,7 +52,7 @@ class WatchProcess:
             # let callers keep polling.
             stat = path.stat()
             content = path.read_bytes()
-        except FileNotFoundError:
+        except (FileNotFoundError, NotADirectoryError, IsADirectoryError):
             return None
 
         return {
@@ -162,7 +162,7 @@ class WatchProcess:
             rebuild_succeeded = self._has_success_since(start)
 
             if condition == 'exists':
-                if not path.exists():
+                if not path.is_file():
                     return False
                 return rebuild_succeeded if rebuild_started else True
             if condition == 'removed':

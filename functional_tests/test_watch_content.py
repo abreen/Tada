@@ -649,3 +649,81 @@ class TestWatchLiterateJavaError:
             assert pair_html.read_text() == before_html
         finally:
             wp.stop()
+
+
+@pytest.mark.parametrize('directory_first', [True, False])
+def test_public_file_directory_transitions(watch, site_dir, directory_first):
+    item = site_dir / 'public' / 'transition'
+    child = item / 'nested' / 'child.txt'
+    output = site_dir / 'dist' / 'transition'
+    if directory_first:
+        child.parent.mkdir(parents=True)
+        child.write_text('child')
+        watch.wait_for_rebuild(output / 'nested' / 'child.txt', 'exists')
+        shutil.rmtree(item)
+        item.write_text('parent file')
+        watch.wait_for_rebuild(output, 'exists')
+        assert output.is_file()
+        assert output.read_text() == 'parent file'
+        before = output.stat().st_mtime
+        item.write_text('edited parent')
+        watch.wait_for_rebuild(output, 'modified', before_mtime=before)
+        assert output.read_text() == 'edited parent'
+    else:
+        item.write_text('parent file')
+        watch.wait_for_rebuild(output, 'exists')
+        item.unlink()
+        child.parent.mkdir(parents=True)
+        child.write_text('child')
+        watch.wait_for_rebuild(output / 'nested' / 'child.txt', 'exists')
+        assert output.is_dir()
+        child_output = output / 'nested' / 'child.txt'
+        assert child_output.read_text() == 'child'
+        before = child_output.stat().st_mtime
+        child.write_text('edited child')
+        watch.wait_for_rebuild(child_output, 'modified', before_mtime=before)
+        assert child_output.read_text() == 'edited child'
+
+
+def test_incremental_outputs_match_fresh_watch_build(site_dir):
+    set_site_config(site_dir, {'features': {'search': False}})
+    wp = WatchProcess(site_dir)
+    try:
+        wp.wait_for_initial_build()
+        content = site_dir / 'content'
+        partial = content / '_shared.md'
+        partial.write_text('First value')
+        page = content / 'chapter.md'
+        page.write_text('---\ntitle: Chapter\n---\n\n{{{ _shared.md }}}\n')
+        wp.wait_for_rebuild(site_dir / 'dist' / 'chapter.html', 'exists')
+        partial.write_text('Updated value')
+        wp.wait_for_successful_rebuild()
+        renamed = content / 'renamed.md'
+        page.rename(renamed)
+        wp.wait_for_successful_rebuild()
+        assert not (site_dir / 'dist' / 'chapter.html').exists()
+
+        copied = content / 'readme.txt'
+        copied.write_text('content asset')
+        wp.wait_for_rebuild(site_dir / 'dist' / 'readme.txt', 'exists')
+        copied.unlink()
+        (site_dir / 'public' / 'readme.txt').write_text('public replacement')
+        wp.wait_for_successful_rebuild()
+
+        def source_outputs():
+            outputs = {'renamed.html', 'index.html', 'readme.txt'}
+            return {name: (site_dir / 'dist' / name).read_bytes() for name in outputs}
+
+        incremental = source_outputs()
+        assert b'Updated value' in incremental['renamed.html']
+        assert incremental['readme.txt'] == b'public replacement'
+    finally:
+        wp.stop()
+    shutil.rmtree(site_dir / 'dist')
+    wp = WatchProcess(site_dir)
+    try:
+        wp.wait_for_initial_build()
+        assert source_outputs() == incremental
+        assert not (site_dir / 'dist' / 'chapter.html').exists()
+    finally:
+        wp.stop()

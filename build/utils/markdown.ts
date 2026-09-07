@@ -28,9 +28,9 @@ interface CreateMarkdownOptions {
   filePath?: string;
   slides?: boolean;
   validatorOptions?: Record<string, unknown>;
-  literateJavaOutputPaths?: Set<string>;
+  literateJavaOutputPaths?: ReadonlySet<string>;
   sourceUrlPath?: string;
-  validTargets?: Set<string>;
+  validTargets?: ReadonlySet<string>;
   templateParams?: Record<string, unknown>;
   dependencyCollector?: RenderDependencyCollector;
 }

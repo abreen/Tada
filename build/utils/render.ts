@@ -448,7 +448,7 @@ function renderPlainTextContent(
   subPath: string,
   sourceUrlPath: string,
   siteVariables: SiteVariables,
-  validInternalTargets: Set<string>,
+  validInternalTargets: ReadonlySet<string>,
   isWatchMode: boolean,
   {
     dependencyCollector,

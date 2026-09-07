@@ -1,364 +1,238 @@
 import path from 'path';
-import { describe, expect, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { createTadaWatchPlan, diffAuthorKeys } from './planner';
-import type { ChangeBatch } from './types';
-import type {
-  TadaProjectScan,
-  TadaSnapshot,
-  TadaSourceRecord,
-} from './snapshot';
+import { indexSources, type SourceEntry } from '../source-model';
+import { createSnapshot, type TadaSnapshot } from './snapshot';
+import type { TadaSourceRecord } from '../source-records';
 
-const SITE_ROOT = path.resolve(path.sep, 'site');
-
-function sitePath(...parts: string[]): string {
-  return path.join(SITE_ROOT, ...parts);
-}
-
-function makeRecord(
-  sourcePath: string,
+const root = path.resolve('planner-site');
+const source = (name: string) => path.join(root, name);
+const siteVariables: TadaSnapshot['siteVariables'] = {
+  base: 'http://localhost',
+  basePath: '/',
+  title: 'Site',
+  titlePostfix: ' - Site',
+  themeColor: 'black',
+  defaultTimeZone: 'America/New_York',
+  features: { search: true, favicon: true, footer: true, pickers: true },
+};
+function record(
+  name: string,
   outputs: string[],
-  options: Partial<TadaSourceRecord> = {},
+  deps: Partial<TadaSourceRecord> = {},
 ): TadaSourceRecord {
   return {
-    sourcePath,
-    kind: options.kind || 'content',
+    sourcePath: source(name),
+    kind: name.startsWith('public/') ? 'public' : 'content',
     outputs: new Map(outputs.map(output => [output, output])),
-    partialDeps: options.partialDeps || new Set(),
-    traceDeps: options.traceDeps || new Set(),
-    internalTargets: options.internalTargets || new Set(),
-    generatedOutputPaths: options.generatedOutputPaths || new Set(),
-    authorKey: options.authorKey,
+    partialDeps: new Set(),
+    traceDeps: new Set(),
+    internalTargets: new Set(),
+    generatedOutputPaths: new Set(),
+    ...deps,
   };
 }
-
-function makeScan(overrides: Partial<TadaProjectScan> = {}): TadaProjectScan {
-  return {
-    contentDir: sitePath('content'),
-    publicDir: sitePath('public'),
-    distDir: sitePath('dist'),
-    contentFiles: new Set(),
-    buildContentFiles: new Set(),
-    publicFiles: new Set(),
-    validTargets: new Set(),
-    literateJavaOutputPaths: new Set(),
-    processedExts: new Set(['md', 'html']),
-    contentOwners: new Map(),
-    publicOwners: new Map(),
-    sourceOutputPaths: new Map(),
-    sourceTargetPaths: new Map(),
-    ...overrides,
-  };
-}
-
-function makeSnapshot(overrides: Partial<TadaSnapshot> = {}): TadaSnapshot {
-  const contentRecord = makeRecord(sitePath('content', 'index.md'), [
-    'index.html',
-  ]);
-  const scan = makeScan({
-    contentFiles: new Set([contentRecord.sourcePath]),
-    buildContentFiles: new Set([contentRecord.sourcePath]),
-    contentOwners: new Map([['index.html', contentRecord.sourcePath]]),
-    sourceOutputPaths: new Map([
-      [contentRecord.sourcePath, new Set(['index.html'])],
-    ]),
-    sourceTargetPaths: new Map([
-      [contentRecord.sourcePath, new Set(['/index.html'])],
-    ]),
-    validTargets: new Set(['/index.html']),
-  });
-  return {
-    siteVariables: {
-      base: 'http://localhost',
-      basePath: '/',
-      title: 'Site',
-      titlePostfix: ' - Site',
-      themeColor: 'black',
-      defaultTimeZone: 'America/New_York',
-      features: { search: true, favicon: true, footer: true, pickers: true },
+function scan(records: TadaSourceRecord[]) {
+  return indexSources(
+    {
+      contentDir: source('content'),
+      publicDir: source('public'),
+      distDir: source('dist'),
+      processedExts: new Set(['md', 'html']),
     },
+    new Map(
+      records.map(record => [
+        record.sourcePath,
+        {
+          kind: record.kind,
+          renderKind:
+            record.kind === 'public' ? 'public-copy' : 'plain-text-page',
+          outputs: new Set(record.outputs.keys()),
+          targets: new Set(
+            [...record.outputs.keys()].map(output => '/' + output),
+          ),
+        } satisfies SourceEntry,
+      ]),
+    ),
+  );
+}
+function snapshot(records: TadaSourceRecord[]) {
+  return createSnapshot({
+    siteVariables,
     assetFiles: [],
-    navData: [],
     authorsData: {},
-    contentRecords: new Map([[contentRecord.sourcePath, contentRecord]]),
-    publicRecords: new Map(),
-    outputOwners: new Map([
-      ['index.html', { kind: 'content', sourcePath: contentRecord.sourcePath }],
-    ]),
-    reversePartialDeps: new Map(),
-    reverseTraceDeps: new Map(),
-    reverseInternalTargetDeps: new Map(),
-    reverseAuthorDeps: new Map(),
-    scan,
-    ...overrides,
-  };
+    scan: scan(records),
+    records: new Map(
+      records
+        .filter(record => record.outputs.size > 0)
+        .map(record => [record.sourcePath, record]),
+    ),
+  });
 }
-
-function makeBatch(changes: ChangeBatch['changes']): ChangeBatch {
-  return { changes };
-}
-
-function expectIncremental(plan: ReturnType<typeof createTadaWatchPlan>) {
-  expect(plan.kind).toBe('incremental');
-  if (plan.kind !== 'incremental') {
-    throw new Error('expected incremental watch plan');
+function plan(
+  before: TadaSourceRecord[],
+  after: TadaSourceRecord[],
+  changes: string[],
+  extra: Partial<Parameters<typeof createTadaWatchPlan>[0]> = {},
+) {
+  const previous = snapshot(before);
+  const nextScan = scan(after);
+  const sources = new Map(nextScan.sources);
+  for (const record of after) {
+    if (
+      before.includes(record) &&
+      !changes.map(source).includes(record.sourcePath)
+    ) {
+      sources.set(
+        record.sourcePath,
+        previous.scan.sources.get(record.sourcePath)!,
+      );
+    }
   }
-  return plan;
+  const result = createTadaWatchPlan({
+    snapshot: previous,
+    scan: { ...nextScan, sources },
+    paths: new Set(changes.map(source)),
+    ...extra,
+  });
+  if (result.kind !== 'incremental') {
+    throw new Error('expected incremental');
+  }
+  return result;
 }
 
-describe('createTadaWatchPlan', () => {
-  test('diffAuthorKeys returns only changed keys', () => {
-    expect(
-      [
-        ...diffAuthorKeys(
-          {
-            alex: { name: 'Alex', avatar: '/avatars/alex.jpg' },
-            sam: { name: 'Sam', avatar: '/avatars/sam.jpg' },
-          },
-          {
-            alex: { name: 'Alexandra', avatar: '/avatars/alex.jpg' },
-            sam: { name: 'Sam', avatar: '/avatars/sam.jpg' },
-            taylor: { name: 'Taylor', avatar: '/avatars/taylor.jpg' },
-          },
-        ),
-      ].sort(),
-    ).toEqual(['alex', 'taylor']);
-  });
-
-  test('rebuilds reverse partial dependents for partial edits', () => {
-    const partialPath = sitePath('content', '_greeting.md');
-    const dependentPath = sitePath('content', 'page.md');
-    const snapshot = makeSnapshot({
-      reversePartialDeps: new Map([[partialPath, new Set([dependentPath])]]),
-    });
-    const scan = makeScan({
-      contentFiles: new Set([partialPath, dependentPath]),
-      buildContentFiles: new Set([dependentPath]),
-    });
-
-    const plan = createTadaWatchPlan({
-      snapshot,
-      batch: makeBatch([{ path: partialPath, kind: 'change' }]),
-      scan,
-    });
-
-    const incrementalPlan = expectIncremental(plan);
-    expect([...incrementalPlan.contentToRender].sort()).toEqual(
-      [dependentPath, partialPath].sort(),
-    );
-  });
-
-  test('does not rebuild root page when deleting an unreferenced content page', () => {
-    const indexPath = sitePath('content', 'index.md');
-    const removedPath = sitePath('content', 'orphan.md');
-    const snapshot = makeSnapshot({
-      contentRecords: new Map([
-        [indexPath, makeRecord(indexPath, ['index.html'])],
-        [removedPath, makeRecord(removedPath, ['orphan.html'])],
-      ]),
-      outputOwners: new Map([
-        ['index.html', { kind: 'content', sourcePath: indexPath }],
-        ['orphan.html', { kind: 'content', sourcePath: removedPath }],
-      ]),
-      scan: makeScan({
-        contentFiles: new Set([indexPath, removedPath]),
-        buildContentFiles: new Set([indexPath, removedPath]),
-        contentOwners: new Map([
-          ['index.html', indexPath],
-          ['orphan.html', removedPath],
-        ]),
-        sourceOutputPaths: new Map([
-          [indexPath, new Set(['index.html'])],
-          [removedPath, new Set(['orphan.html'])],
-        ]),
-        sourceTargetPaths: new Map([
-          [indexPath, new Set(['/index.html'])],
-          [removedPath, new Set(['/orphan.html'])],
-        ]),
-        validTargets: new Set(['/index.html', '/orphan.html']),
-      }),
-    });
-    const scan = makeScan({
-      contentFiles: new Set([indexPath]),
-      buildContentFiles: new Set([indexPath]),
-      contentOwners: new Map([['index.html', indexPath]]),
-      sourceOutputPaths: new Map([[indexPath, new Set(['index.html'])]]),
-      sourceTargetPaths: new Map([[indexPath, new Set(['/index.html'])]]),
-      validTargets: new Set(['/index.html']),
-    });
-
-    const plan = createTadaWatchPlan({
-      snapshot,
-      batch: makeBatch([{ path: removedPath, kind: 'unlink' }]),
-      scan,
-    });
-
-    const incrementalPlan = expectIncremental(plan);
-    expect([...incrementalPlan.contentToRender]).toEqual([]);
-    expect([...incrementalPlan.contentToRemove]).toEqual([removedPath]);
-  });
-
-  test('does not rebuild sibling pages when deleting a page with shared dependencies', () => {
-    const partialPath = sitePath('content', '_shared.md');
-    const tracePath = sitePath('content', 'TraceDemo.java');
-    const removedPath = sitePath('content', 'removed.md');
-    const siblingPath = sitePath('content', 'sibling.md');
-    const removedRecord = makeRecord(removedPath, ['removed.html'], {
-      partialDeps: new Set([partialPath]),
-      traceDeps: new Set([tracePath]),
-    });
-    const siblingRecord = makeRecord(siblingPath, ['sibling.html'], {
-      partialDeps: new Set([partialPath]),
-      traceDeps: new Set([tracePath]),
-    });
-    const snapshot = makeSnapshot({
-      contentRecords: new Map([
-        [removedPath, removedRecord],
-        [siblingPath, siblingRecord],
-      ]),
-      outputOwners: new Map([
-        ['removed.html', { kind: 'content', sourcePath: removedPath }],
-        ['sibling.html', { kind: 'content', sourcePath: siblingPath }],
-      ]),
-      reversePartialDeps: new Map([
-        [partialPath, new Set([removedPath, siblingPath])],
-      ]),
-      reverseTraceDeps: new Map([
-        [tracePath, new Set([removedPath, siblingPath])],
-      ]),
-      scan: makeScan({
-        contentFiles: new Set([removedPath, siblingPath]),
-        buildContentFiles: new Set([removedPath, siblingPath]),
-        contentOwners: new Map([
-          ['removed.html', removedPath],
-          ['sibling.html', siblingPath],
-        ]),
-        sourceOutputPaths: new Map([
-          [removedPath, new Set(['removed.html'])],
-          [siblingPath, new Set(['sibling.html'])],
-        ]),
-        sourceTargetPaths: new Map([
-          [removedPath, new Set(['/removed.html'])],
-          [siblingPath, new Set(['/sibling.html'])],
-        ]),
-        validTargets: new Set(['/removed.html', '/sibling.html']),
-      }),
-    });
-    const scan = makeScan({
-      contentFiles: new Set([siblingPath]),
-      buildContentFiles: new Set([siblingPath]),
-      contentOwners: new Map([['sibling.html', siblingPath]]),
-      sourceOutputPaths: new Map([[siblingPath, new Set(['sibling.html'])]]),
-      sourceTargetPaths: new Map([[siblingPath, new Set(['/sibling.html'])]]),
-      validTargets: new Set(['/sibling.html']),
-    });
-
-    const plan = createTadaWatchPlan({
-      snapshot,
-      batch: makeBatch([{ path: removedPath, kind: 'unlink' }]),
-      scan,
-    });
-
-    const incrementalPlan = expectIncremental(plan);
-    expect([...incrementalPlan.contentToRender]).toEqual([]);
-    expect([...incrementalPlan.contentToRemove]).toEqual([removedPath]);
-  });
-
-  test('rebuilds a content owner after public handoff removal', () => {
-    const contentPath = sitePath('content', 'about.md');
-    const publicPath = sitePath('public', 'about.html');
-    const snapshot = makeSnapshot({
-      contentRecords: new Map([
-        [contentPath, makeRecord(contentPath, ['about.html'])],
-      ]),
-      publicRecords: new Map([
-        [
-          publicPath,
-          makeRecord(publicPath, ['about.html'], { kind: 'public' }),
-        ],
-      ]),
-      outputOwners: new Map([
-        ['about.html', { kind: 'public', sourcePath: publicPath }],
-      ]),
-    });
-    const scan = makeScan({
-      contentFiles: new Set([contentPath]),
-      buildContentFiles: new Set([contentPath]),
-      contentOwners: new Map([['about.html', contentPath]]),
-      validTargets: new Set(['/about.html']),
-    });
-
-    const plan = createTadaWatchPlan({
-      snapshot,
-      batch: makeBatch([{ path: publicPath, kind: 'unlink' }]),
-      scan,
-    });
-
-    const incrementalPlan = expectIncremental(plan);
-    expect([...incrementalPlan.contentToRender]).toEqual([contentPath]);
-    expect([...incrementalPlan.publicToRemove]).toEqual([publicPath]);
-  });
-
-  test('re-renders copied content after public handoff removal', () => {
-    const contentPath = sitePath('content', 'assets', 'logo.svg');
-    const publicPath = sitePath('public', 'assets', 'logo.svg');
-    const snapshot = makeSnapshot({
-      contentRecords: new Map([
-        [contentPath, makeRecord(contentPath, ['assets/logo.svg'])],
-      ]),
-      publicRecords: new Map([
-        [
-          publicPath,
-          makeRecord(publicPath, ['assets/logo.svg'], { kind: 'public' }),
-        ],
-      ]),
-      outputOwners: new Map([
-        ['assets/logo.svg', { kind: 'public', sourcePath: publicPath }],
-      ]),
-    });
-    const scan = makeScan({
-      contentFiles: new Set([contentPath]),
-      contentOwners: new Map([['assets/logo.svg', contentPath]]),
-      sourceOutputPaths: new Map([[contentPath, new Set(['assets/logo.svg'])]]),
-      sourceTargetPaths: new Map([
-        [contentPath, new Set(['/assets/logo.svg'])],
-      ]),
-      validTargets: new Set(['/assets/logo.svg']),
-    });
-
-    const plan = createTadaWatchPlan({
-      snapshot,
-      batch: makeBatch([{ path: publicPath, kind: 'unlink' }]),
-      scan,
-    });
-
-    const incrementalPlan = expectIncremental(plan);
-    expect([...incrementalPlan.contentToRender]).toEqual([contentPath]);
-    expect([...incrementalPlan.publicToRemove]).toEqual([publicPath]);
-  });
+test('diffAuthorKeys returns changed and added keys only', () => {
+  expect(
+    diffAuthorKeys(
+      { alex: { name: 'Alex' }, sam: { name: 'Sam' } },
+      { alex: { name: 'Alexandra' }, sam: { name: 'Sam' }, taylor: {} },
+    ),
+  ).toEqual(new Set(['alex', 'taylor']));
 });
 
-test('rebuilds a surviving content producer when the previous owner is removed', () => {
-  const removed = sitePath('content', 'about.md');
-  const surviving = sitePath('content', 'about.html');
-  const snapshot = makeSnapshot({
-    contentRecords: new Map([[removed, makeRecord(removed, ['about.html'])]]),
-    outputOwners: new Map([
-      ['about.html', { kind: 'content', sourcePath: removed }],
-    ]),
+test('partial edits rebuild dependents', () => {
+  const partial = record('content/_greeting.md', []);
+  const page = record('content/page.md', ['page.html'], {
+    partialDeps: new Set([partial.sourcePath]),
   });
-  const scan = makeScan({
-    contentFiles: new Set([surviving]),
-    buildContentFiles: new Set([surviving]),
-    contentOwners: new Map([['about.html', surviving]]),
-    validTargets: new Set(['/about.html']),
-  });
-  const plan = expectIncremental(
-    createTadaWatchPlan({
-      snapshot,
-      scan,
-      batch: makeBatch([{ path: removed, kind: 'unlink' }]),
-    }),
+  const result = plan(
+    [partial, page],
+    [partial, page],
+    ['content/_greeting.md'],
   );
-  expect([...plan.contentToRender]).toEqual([surviving]);
-  expect([...plan.contentToRemove]).toEqual([removed]);
+  expect(result.renderSources).toEqual(
+    new Set([partial.sourcePath, page.sourcePath]),
+  );
+});
+
+test('deleting an unreferenced page leaves the root untouched', () => {
+  const home = record('content/index.md', ['index.html']);
+  const orphan = record('content/orphan.md', ['orphan.html']);
+  const result = plan([home, orphan], [home], ['content/orphan.md']);
+  expect(result.renderSources.size).toBe(0);
+  expect(result.removeSources).toEqual(new Set([orphan.sourcePath]));
+});
+
+test('deleting a page does not rebuild siblings sharing its dependencies', () => {
+  const deps = {
+    partialDeps: new Set([source('content/_shared.md')]),
+    traceDeps: new Set([source('content/Trace.java')]),
+  };
+  const removed = record('content/removed.md', ['removed.html'], deps);
+  const sibling = record('content/sibling.md', ['sibling.html'], deps);
+  const result = plan([removed, sibling], [sibling], ['content/removed.md']);
+  expect(result.renderSources.size).toBe(0);
+  expect(result.removeSources).toEqual(new Set([removed.sourcePath]));
+});
+
+test.each(['about.html', 'assets/logo.svg'])(
+  'public handoff restores the content producer of %s',
+  output => {
+    const content = record('content/' + output, [output]);
+    const pub = record('public/' + output, [output]);
+    const result = plan([content, pub], [content], ['public/' + output]);
+    expect(result.renderSources).toEqual(new Set([content.sourcePath]));
+    expect(result.removeSources).toEqual(new Set([pub.sourcePath]));
+  },
+);
+
+test('removing the previous owner rebuilds the surviving content producer', () => {
+  const removed = record('content/about.md', ['about.html']);
+  const survivor = record('content/about.html', ['about.html']);
+  const result = plan([removed], [survivor], ['content/about.md']);
+  expect(result.renderSources).toEqual(new Set([survivor.sourcePath]));
+  expect(result.removeSources).toEqual(new Set([removed.sourcePath]));
+});
+
+test('file, target and author dependencies invalidate independently', () => {
+  const trace = record('content/Trace.java', ['Trace.java']);
+  const page = record('content/page.md', ['page.html'], {
+    traceDeps: new Set([trace.sourcePath]),
+    internalTargets: new Set(['/Trace.java']),
+    authorKey: 'alex',
+  });
+  const plain = record('content/plain.md', ['plain.html']);
+  expect(
+    plan([page, plain, trace], [page, plain, trace], ['content/Trace.java'])
+      .renderSources,
+  ).toEqual(new Set([trace.sourcePath, page.sourcePath]));
+  expect(
+    plan([page, plain, trace], [page, plain], ['content/Trace.java'])
+      .renderSources,
+  ).toEqual(new Set([page.sourcePath]));
+  expect(
+    plan([page, plain], [page, plain], [], {
+      changedAuthors: new Set(['alex']),
+    }).renderSources,
+  ).toEqual(new Set([page.sourcePath]));
+});
+
+test('skipping a page schedules its record replacement and invalidates inbound links', () => {
+  const page = record('content/page.md', ['page.html']);
+  const inbound = record('content/inbound.md', ['inbound.html'], {
+    internalTargets: new Set(['/page.html']),
+  });
+  expect(
+    plan(
+      [page, inbound],
+      [record('content/page.md', []), inbound],
+      ['content/page.md'],
+    ).renderSources,
+  ).toEqual(new Set([page.sourcePath, inbound.sourcePath]));
+});
+
+test('explicit full rebuild decision does not consult the filesystem', () => {
+  const before = snapshot([]);
+  expect(
+    createTadaWatchPlan({
+      snapshot: before,
+      scan: before.scan,
+      paths: new Set(),
+      full: true,
+    }),
+  ).toEqual({ kind: 'full' });
+});
+
+test('directory reconciliation invalidates partial dependents without individual file events', () => {
+  const partial = record('content/parts/_shared.md', []);
+  const page = record('content/page.md', ['page.html'], {
+    partialDeps: new Set([partial.sourcePath]),
+  });
+  const nextPartial = record('content/parts/_shared.md', []);
+  const unrelated = record('content/unrelated.md', ['unrelated.html']);
+  expect(snapshot([partial, page]).records.has(partial.sourcePath)).toBe(false);
+  expect(
+    plan(
+      [partial, page, unrelated],
+      [nextPartial, page, unrelated],
+      ['content/parts'],
+    ).renderSources,
+  ).toEqual(new Set([partial.sourcePath, page.sourcePath]));
+  const deleted = plan(
+    [partial, page, unrelated],
+    [page, unrelated],
+    ['content/parts'],
+  );
+  expect(deleted.renderSources).toEqual(new Set([page.sourcePath]));
+  expect(deleted.removeSources.size).toBe(0);
 });

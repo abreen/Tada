@@ -23,3 +23,13 @@ def test_timeout_includes_watch_process_diagnostics(tmp_path, monkeypatch):
     assert 'publication failed' in message
     assert 'filesystem diagnostic' in message
     assert 'running' in message
+
+
+def test_file_snapshot_tolerates_file_directory_transitions(tmp_path):
+    watch = WatchProcess.__new__(WatchProcess)
+    parent = tmp_path / 'parent'
+    parent.write_text('file')
+    assert watch._file_snapshot(parent / 'child') is None
+    parent.unlink()
+    parent.mkdir()
+    assert watch._file_snapshot(parent) is None

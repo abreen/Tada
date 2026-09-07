@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { sourcePaths } from './source-model';
 import path from 'path';
 import { makeLogger } from './log';
 import { getRuntimeBundledShikiLanguages } from './site-variables';
@@ -14,7 +15,7 @@ import type {
   HtmlOutputAnalysis,
   TraceToolAvailability,
 } from './types';
-import type { TraceCache } from './watch/compiler-types';
+import type { TraceCache } from './build-types';
 
 const log = makeLogger(import.meta.url);
 
@@ -53,7 +54,7 @@ export class ContentRenderer {
     assetFiles,
     scan,
   }: ContentRenderOptions): ContentRenderResult {
-    const buildContentFiles = [...scan.buildContentFiles];
+    const buildContentFiles = [...sourcePaths(scan, 'content', true)];
     const validInternalTargets = scan.validTargets;
 
     const errors: Error[] = [];

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'node:path';
-import { createGlobals } from '../globals.test';
-import { createFsModuleMock } from '../test-helpers';
-import type { FileMutation } from './types';
+import { createGlobals } from './globals.test';
+import { createFsModuleMock } from './test-helpers';
+import type { FileMutation } from './output-publication';
 
 // Directories are null; files retain their contents so rollback assertions
 // verify restored data as well as which paths survive.
@@ -114,7 +114,7 @@ function installMocks(): void {
       },
     }),
   );
-  mock.module('../globals', () => ({
+  mock.module('./globals', () => ({
     globals: createGlobals({
       now: () => 1234567890,
       pid: () => 42,
@@ -124,7 +124,7 @@ function installMocks(): void {
 }
 
 installMocks();
-const { applyCommitPlan } = await import('./fs-commit');
+const { applyCommitPlan } = await import('./output-publication');
 
 beforeEach(() => {
   entries.clear();
@@ -269,4 +269,51 @@ describe('applyCommitPlan', () => {
       [...entries.keys()].some(file => file.includes('.watch-stage-')),
     ).toBe(false);
   });
+});
+
+test('publishes a directory-to-file transition regardless of mutation order', () => {
+  put(path.join(dist, 'item', 'nested', 'child.txt'), 'old');
+  applyCommitPlan({
+    kind: 'apply-mutations',
+    rootDir: dist,
+    mutations: [
+      { kind: 'write', path: 'item', content: 'new' },
+      { kind: 'delete', path: 'item/nested/child.txt' },
+    ],
+  });
+  expect(entries.get(path.join(dist, 'item'))).toBe('new');
+  expect(entries.has(path.join(dist, 'item', 'nested'))).toBe(false);
+});
+
+test('publishes a file-to-directory transition regardless of mutation order', () => {
+  put(path.join(dist, 'item'), 'old');
+  applyCommitPlan({
+    kind: 'apply-mutations',
+    rootDir: dist,
+    mutations: [
+      { kind: 'write', path: 'item/nested/child.txt', content: 'new' },
+      { kind: 'delete', path: 'item' },
+    ],
+  });
+  expect(entries.get(path.join(dist, 'item', 'nested', 'child.txt'))).toBe(
+    'new',
+  );
+});
+
+test('restores deleted nested directories after a later publication failure', () => {
+  put(path.join(dist, 'item', 'nested', 'child.txt'), 'old');
+  put(path.join(dist, 'blocked', 'keep.txt'), 'unrelated');
+  const before = snapshot();
+  expect(() =>
+    applyCommitPlan({
+      kind: 'apply-mutations',
+      rootDir: dist,
+      mutations: [
+        { kind: 'write', path: 'item', content: 'new' },
+        { kind: 'delete', path: 'item/nested/child.txt' },
+        { kind: 'write', path: 'blocked', content: 'fail' },
+      ],
+    }),
+  ).toThrow('Cannot publish file mutation over directory');
+  expect(snapshot()).toEqual(before);
 });

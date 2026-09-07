@@ -1,7 +1,7 @@
 import { compileTemplates, config } from '../templates';
 import { getDistDir } from '../util';
-import type { CompilerBuildResult } from './types';
-import type { TraceCache, WatchTraceOptions } from './compiler-types';
+import type { CompilerBuildResult } from './snapshot';
+import type { TraceCache, WatchTraceOptions } from '../build-types';
 import type { TadaIncrementalWatchPlan } from './planner';
 import { createSnapshot, type TadaSnapshot } from './snapshot';
 import {
@@ -11,13 +11,12 @@ import {
   removeDirIfExists,
 } from './assets';
 import { computeMutations } from './mutations';
-import { validateConfig, validateProjectConfigLinks } from './validation';
-import { buildFailedFromError, buildSucceeded } from './build-result';
 import {
-  buildFailedWithDiagnostics,
-  renderContentRecord,
-  renderPublicRecord,
-} from './build-helpers';
+  validateConfig,
+  validateProjectConfigLinks,
+} from '../build-validation';
+import { buildFailedFromError, buildSucceeded } from './build-result';
+import { buildFailedWithDiagnostics, renderSource } from './build-helpers';
 
 export async function buildIncremental({
   plan,
@@ -43,20 +42,14 @@ export async function buildIncremental({
     await ensureHighlighter(siteVariables);
     copyExistingBuildAssets(distDir, outputDir, snapshot.assetFiles);
 
-    const nextContentRecords = new Map(snapshot.contentRecords);
-    const nextPublicRecords = new Map(snapshot.publicRecords);
-
-    for (const sourcePath of plan.contentToRemove) {
-      nextContentRecords.delete(sourcePath);
+    const records = new Map(snapshot.records);
+    for (const source of plan.removeSources) {
+      records.delete(source);
     }
-    for (const sourcePath of plan.publicToRemove) {
-      nextPublicRecords.delete(sourcePath);
-    }
-
-    for (const sourcePath of plan.contentToRender) {
-      nextContentRecords.delete(sourcePath);
-      const record = renderContentRecord({
-        filePath: sourcePath,
+    for (const filePath of plan.renderSources) {
+      records.delete(filePath);
+      const record = renderSource({
+        filePath,
         siteVariables,
         scan: plan.scan,
         assetFiles: snapshot.assetFiles,
@@ -66,27 +59,16 @@ export async function buildIncremental({
         cachedTraceSourceDir: distDir,
       });
       if (record) {
-        nextContentRecords.set(sourcePath, record);
+        records.set(filePath, record);
       }
-    }
-
-    for (const sourcePath of plan.publicToRender) {
-      nextPublicRecords.delete(sourcePath);
-      const record = renderPublicRecord({
-        filePath: sourcePath,
-        publicDir: plan.scan.publicDir,
-      });
-      nextPublicRecords.set(sourcePath, record);
     }
 
     const nextSnapshot = createSnapshot({
       siteVariables,
       assetFiles: snapshot.assetFiles,
-      navData: config('nav'),
       authorsData: config('authors'),
       scan: plan.scan,
-      contentRecords: nextContentRecords,
-      publicRecords: nextPublicRecords,
+      records,
     });
 
     const linkDiagnostics = validateProjectConfigLinks(
@@ -96,14 +78,10 @@ export async function buildIncremental({
       return buildFailedWithDiagnostics(outputDir, linkDiagnostics);
     }
 
-    const forceSourcePaths = new Set([
-      ...plan.contentToRender,
-      ...plan.publicToRender,
-    ]);
     const mutations = computeMutations(
       snapshot,
       nextSnapshot,
-      forceSourcePaths,
+      plan.renderSources,
     );
     removeDirIfExists(outputDir);
     return buildSucceeded(nextSnapshot, {

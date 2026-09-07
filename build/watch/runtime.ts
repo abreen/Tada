@@ -4,6 +4,7 @@ import { makeLogger, printFlair } from '../log';
 import { startServer } from '../serve';
 import { WatchPagefindRunner } from '../pagefind';
 import type { WatchLifecycleEvent } from './types';
+import type { TadaBuildMeta } from '../build-types';
 import {
   WATCH_RELOAD_MESSAGE_REBUILDING,
   WATCH_RELOAD_MESSAGE_RELOAD,
@@ -13,16 +14,6 @@ import {
 
 const log = makeLogger(import.meta.url);
 const wslog = makeLogger('WebSocket');
-
-function describeChange(kind: 'add' | 'change' | 'unlink'): string {
-  if (kind === 'add') {
-    return 'added, rebuilding';
-  }
-  if (kind === 'unlink') {
-    return 'removed, rebuilding';
-  }
-  return 'changed, rebuilding';
-}
 
 export class TadaWatchRuntime {
   private httpPort: number | undefined;
@@ -64,21 +55,26 @@ export class TadaWatchRuntime {
     wslog.debug`WebSocket server listening at ws://localhost:${this.server.port}${WATCH_RELOAD_PATH}`;
   }
 
-  async onEvent(event: WatchLifecycleEvent): Promise<void> {
+  close(): void {
+    this.server?.stop(true);
+    this.server = null;
+  }
+
+  async onEvent(event: WatchLifecycleEvent<TadaBuildMeta>): Promise<void> {
     switch (event.kind) {
       case 'build-started':
-        if (!event.batch) {
+        if (!event.paths) {
           return;
         }
-        for (const change of event.batch.changes) {
-          log.event`${B`${path.basename(change.path)}`} ${describeChange(change.kind)}`;
+        for (const filePath of event.paths) {
+          log.event`${B`${path.basename(filePath)}`} changed, rebuilding`;
         }
         this.broadcast(WATCH_RELOAD_MESSAGE_REBUILDING);
         return;
       case 'build-succeeded': {
         printFlair();
         this.ensureServerStarted();
-        if (event.batch) {
+        if (event.paths) {
           this.broadcast(WATCH_RELOAD_MESSAGE_RELOAD);
         }
         if (event.meta.siteVariables.features.search !== false) {

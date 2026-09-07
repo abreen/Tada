@@ -1,73 +1,42 @@
-import type { FileMutation } from './types';
-import type { TadaOutputOwner, TadaSnapshot } from './snapshot';
+import type { FileMutation } from '../output-publication';
+import type { TadaSnapshot } from './snapshot';
 
-function outputsEqual(
-  left: string | Buffer | undefined,
-  right: string | Buffer | undefined,
-): boolean {
-  if (left === undefined || right === undefined) {
-    return left === right;
+type OutputSnapshot = Pick<TadaSnapshot, 'outputs'>;
+
+function outputsEqual(left: string | Buffer, right: string | Buffer): boolean {
+  if (left === right) {
+    return true;
   }
   if (typeof left === 'string' && typeof right === 'string') {
-    return left === right;
+    return false;
   }
-  const leftBuffer = typeof left === 'string' ? Buffer.from(left) : left;
-  const rightBuffer = typeof right === 'string' ? Buffer.from(right) : right;
-  return Buffer.compare(leftBuffer, rightBuffer) === 0;
-}
-
-function getOutputContent(
-  snapshot: TadaSnapshot,
-  owner: TadaOutputOwner | undefined,
-  outputPath: string,
-): string | Buffer | undefined {
-  if (!owner) {
-    return undefined;
-  }
-  const records =
-    owner.kind === 'content' ? snapshot.contentRecords : snapshot.publicRecords;
-  return records.get(owner.sourcePath)?.outputs.get(outputPath);
+  return (
+    Buffer.compare(
+      typeof left === 'string' ? Buffer.from(left) : left,
+      typeof right === 'string' ? Buffer.from(right) : right,
+    ) === 0
+  );
 }
 
 export function computeMutations(
-  previous: TadaSnapshot,
-  next: TadaSnapshot,
-  forceSourcePaths: Set<string> = new Set(),
+  previous: OutputSnapshot,
+  next: OutputSnapshot,
+  forceSourcePaths: ReadonlySet<string> = new Set(),
 ): FileMutation[] {
   const mutations: FileMutation[] = [];
-  const allPaths = new Set([
-    ...previous.outputOwners.keys(),
-    ...next.outputOwners.keys(),
-  ]);
-
-  for (const outputPath of [...allPaths].sort()) {
-    const previousOwner = previous.outputOwners.get(outputPath);
-    const nextOwner = next.outputOwners.get(outputPath);
-
-    const previousContent = getOutputContent(
-      previous,
-      previousOwner,
-      outputPath,
-    );
-    const nextContent = getOutputContent(next, nextOwner, outputPath);
-
-    if (!nextOwner) {
-      mutations.push({ path: outputPath, kind: 'delete' });
-      continue;
-    }
-
-    if (
-      !previousOwner ||
-      !outputsEqual(previousContent, nextContent) ||
-      forceSourcePaths.has(nextOwner.sourcePath)
+  const outputs = new Set([...previous.outputs.keys(), ...next.outputs.keys()]);
+  for (const output of outputs) {
+    const before = previous.outputs.get(output);
+    const after = next.outputs.get(output);
+    if (!after) {
+      mutations.push({ kind: 'delete', path: output });
+    } else if (
+      !before ||
+      !outputsEqual(before.content, after.content) ||
+      forceSourcePaths.has(after.sourcePath)
     ) {
-      mutations.push({
-        path: outputPath,
-        kind: 'write',
-        content: nextContent!,
-      });
+      mutations.push({ kind: 'write', path: output, content: after.content });
     }
   }
-
   return mutations;
 }

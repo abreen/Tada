@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { getExtensionToShikiLanguage } from './site-variables';
 import {
   renderCodePageAsset,
   renderCopiedContentAsset,
@@ -8,28 +7,28 @@ import {
   renderPlainTextPageAsset,
   toPosix,
 } from './util';
-import { extensionIsMarkdown, isLiterateJava } from './utils/file-types';
 import type {
   Asset,
+  HtmlOutputAnalysis,
   RenderDependencyCollector,
   SiteVariables,
   TraceToolAvailability,
 } from './types';
 import type { TadaProjectScan } from './source-model';
-import {
-  collectSourceHtmlAnalysis,
-  collectSourceOutputs,
-  type TadaSourceRecord,
-} from './watch/snapshot';
-import type { TraceCache } from './watch/compiler-types';
 
-export type TadaSourceRenderKind =
-  | 'skip'
-  | 'plain-text-page'
-  | 'literate-java'
-  | 'code-page'
-  | 'content-copy'
-  | 'public-copy';
+import type { TraceCache } from './build-types';
+
+export interface TadaSourceRecord {
+  sourcePath: string;
+  kind: 'content' | 'public';
+  outputs: Map<string, string | Buffer>;
+  htmlAnalysisByOutputPath?: Map<string, HtmlOutputAnalysis>;
+  partialDeps: Set<string>;
+  traceDeps: Set<string>;
+  internalTargets: Set<string>;
+  generatedOutputPaths: Set<string>;
+  authorKey?: string;
+}
 
 function createDependencyCollector(): {
   collector: RenderDependencyCollector;
@@ -87,48 +86,6 @@ function createRawContentAsset(filePath: string, contentDir: string): Asset[] {
   ];
 }
 
-export function classifySourceRenderKind({
-  filePath,
-  scan,
-  siteVariables,
-}: {
-  filePath: string;
-  scan: TadaProjectScan;
-  siteVariables: SiteVariables;
-}): TadaSourceRenderKind {
-  if (scan.publicFiles.has(filePath)) {
-    return 'public-copy';
-  }
-
-  if (!scan.contentFiles.has(filePath)) {
-    return 'skip';
-  }
-
-  const ext = path.extname(filePath).slice(1).toLowerCase();
-  const lowerExt = path.extname(filePath).toLowerCase();
-  if (!scan.processedExts.has(ext)) {
-    return 'content-copy';
-  }
-
-  if (!scan.buildContentFiles.has(filePath)) {
-    return 'skip';
-  }
-
-  if (isLiterateJava(filePath)) {
-    return 'literate-java';
-  }
-
-  if (extensionIsMarkdown(lowerExt) || lowerExt === '.html') {
-    return 'plain-text-page';
-  }
-
-  if (Object.hasOwn(getExtensionToShikiLanguage(siteVariables), ext)) {
-    return 'code-page';
-  }
-
-  return 'skip';
-}
-
 export function createContentRecord({
   filePath,
   siteVariables,
@@ -150,11 +107,7 @@ export function createContentRecord({
   cachedTraceSourceDir?: string;
   skipLiterateJavaExecution?: boolean;
 }): TadaSourceRecord {
-  const renderKind = classifySourceRenderKind({
-    filePath,
-    scan,
-    siteVariables,
-  });
+  const renderKind = scan.sources.get(filePath)?.renderKind ?? 'skip';
   if (renderKind === 'skip' || renderKind === 'public-copy') {
     return createEmptyContentRecord(filePath);
   }
@@ -249,4 +202,41 @@ export function createPublicRecord(
     internalTargets: new Set(),
     generatedOutputPaths: new Set(),
   };
+}
+
+export function collectSourceOutputs(
+  assets: Asset[],
+  generatedOutputPaths: Set<string>,
+  stageDir: string,
+): Map<string, string | Buffer> {
+  const outputs = new Map<string, string | Buffer>();
+  for (const asset of assets) {
+    outputs.set(asset.assetPath, asset.content);
+  }
+  for (const outputPath of generatedOutputPaths) {
+    outputs.set(outputPath, fs.readFileSync(path.join(stageDir, outputPath)));
+  }
+  return outputs;
+}
+
+function cloneHtmlOutputAnalysis(
+  analysis: HtmlOutputAnalysis,
+): HtmlOutputAnalysis {
+  return { outgoingTargets: new Set(analysis.outgoingTargets) };
+}
+
+export function collectSourceHtmlAnalysis(
+  assets: Asset[],
+): Map<string, HtmlOutputAnalysis> {
+  const htmlAnalysisByOutputPath = new Map<string, HtmlOutputAnalysis>();
+  for (const asset of assets) {
+    if (!asset.assetPath.endsWith('.html') || !asset.htmlAnalysis) {
+      continue;
+    }
+    htmlAnalysisByOutputPath.set(
+      asset.assetPath,
+      cloneHtmlOutputAnalysis(asset.htmlAnalysis),
+    );
+  }
+  return htmlAnalysisByOutputPath;
 }

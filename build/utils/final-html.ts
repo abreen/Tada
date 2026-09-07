@@ -14,8 +14,8 @@ interface FinalizeHtmlPageOptions {
   html: string;
   siteVariables: SiteVariables;
   sourceUrlPath: string;
-  validInternalTargets: Set<string>;
-  literateJavaOutputPaths?: Set<string>;
+  validInternalTargets: ReadonlySet<string>;
+  literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
 }
 
@@ -92,9 +92,9 @@ function resolveAnchorTarget({
 }: {
   href: string;
   sourceUrlPath: string;
-  validInternalTargets: Set<string>;
+  validInternalTargets: ReadonlySet<string>;
   codeExtensions: string[];
-  literateJavaOutputPaths?: Set<string>;
+  literateJavaOutputPaths?: ReadonlySet<string>;
   skipCodeLinkRewrite: boolean;
 }): { finalHref: string; resolvedTarget: string | null } {
   if (!isInternalLink(href)) {

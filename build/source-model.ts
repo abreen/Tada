@@ -15,23 +15,212 @@ import {
   normalizeOutputPath,
   toPosix,
 } from './utils/paths';
-import type { ChangeBatch } from './watch/types';
 import type { SiteVariables } from './types';
 
+export type TadaSourceRenderKind =
+  | 'skip'
+  | 'plain-text-page'
+  | 'literate-java'
+  | 'code-page'
+  | 'content-copy'
+  | 'public-copy';
+
+export interface SourceEntry {
+  readonly kind: 'content' | 'public';
+  readonly renderKind: TadaSourceRenderKind;
+  readonly outputs: ReadonlySet<string>;
+  readonly targets: ReadonlySet<string>;
+}
+
 export interface TadaProjectScan {
-  contentDir: string;
-  publicDir: string;
-  distDir: string;
-  contentFiles: Set<string>;
-  buildContentFiles: Set<string>;
-  publicFiles: Set<string>;
-  validTargets: Set<string>;
-  literateJavaOutputPaths: Set<string>;
-  processedExts: Set<string>;
-  contentOwners: Map<string, string>;
-  publicOwners: Map<string, string>;
-  sourceOutputPaths: Map<string, Set<string>>;
-  sourceTargetPaths: Map<string, Set<string>>;
+  readonly contentDir: string;
+  readonly publicDir: string;
+  readonly distDir: string;
+  readonly processedExts: ReadonlySet<string>;
+  readonly sources: ReadonlyMap<string, SourceEntry>;
+  readonly outputProducers: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly validTargets: ReadonlySet<string>;
+  readonly literateJavaOutputPaths: ReadonlySet<string>;
+}
+
+export function* sourcePaths(
+  scan: TadaProjectScan,
+  kind?: SourceEntry['kind'],
+  pagesOnly = false,
+): Iterable<string> {
+  for (const [filePath, entry] of scan.sources) {
+    if (kind && entry.kind !== kind) {
+      continue;
+    }
+    if (
+      pagesOnly &&
+      ['skip', 'content-copy', 'public-copy'].includes(entry.renderKind)
+    ) {
+      continue;
+    }
+    yield filePath;
+  }
+}
+
+export function getSourceRenderKind(
+  filePath: string,
+  kind: SourceEntry['kind'],
+  processedExts: ReadonlySet<string>,
+  buildContent: boolean,
+): TadaSourceRenderKind {
+  const ext = path.extname(filePath).toLowerCase();
+  if (kind === 'public') {
+    return 'public-copy';
+  }
+  if (!processedExts.has(ext.slice(1))) {
+    return 'content-copy';
+  }
+  if (!buildContent) {
+    return 'skip';
+  }
+  if (isLiterateJava(filePath)) {
+    return 'literate-java';
+  }
+  return extensionIsMarkdown(ext) || ext === '.html'
+    ? 'plain-text-page'
+    : 'code-page';
+}
+
+function createSourceEntry(
+  scan: Pick<TadaProjectScan, 'contentDir' | 'publicDir' | 'processedExts'>,
+  filePath: string,
+  kind: SourceEntry['kind'],
+): SourceEntry {
+  const buildContent =
+    kind === 'content' && isBuildContentSource(filePath, scan.processedExts);
+  const renderKind = getSourceRenderKind(
+    filePath,
+    kind,
+    scan.processedExts,
+    buildContent,
+  );
+  const rootDir = kind === 'content' ? scan.contentDir : scan.publicDir;
+  return {
+    kind,
+    renderKind,
+    outputs:
+      kind === 'public'
+        ? new Set([toPosix(path.relative(rootDir, filePath))])
+        : getSourceOutputPaths({
+            contentDir: rootDir,
+            filePath,
+            processedExts: scan.processedExts,
+            buildContent,
+          }),
+    targets: getSourceTargetPaths({
+      kind,
+      rootDir,
+      filePath,
+      processedExts: scan.processedExts,
+      buildContent,
+    }),
+  };
+}
+
+export function indexSources(
+  roots: Pick<
+    TadaProjectScan,
+    'contentDir' | 'publicDir' | 'distDir' | 'processedExts'
+  >,
+  sources: ReadonlyMap<string, SourceEntry>,
+): TadaProjectScan {
+  const outputProducers = new Map<string, Set<string>>();
+  const validTargets = new Set<string>();
+  const literateJavaOutputPaths = new Set<string>();
+  for (const [filePath, entry] of sources) {
+    for (const output of entry.outputs) {
+      if (!outputProducers.has(output)) {
+        outputProducers.set(output, new Set());
+      }
+      outputProducers.get(output)!.add(filePath);
+    }
+    for (const target of entry.targets) {
+      validTargets.add(target);
+    }
+    if (entry.renderKind === 'literate-java') {
+      const parsed = path.parse(path.relative(roots.contentDir, filePath));
+      literateJavaOutputPaths.add(
+        `/${toPosix(path.join(parsed.dir, parsed.name))}`,
+      );
+    }
+  }
+  return {
+    ...roots,
+    sources,
+    outputProducers,
+    validTargets,
+    literateJavaOutputPaths,
+  };
+}
+
+export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
+  const roots = {
+    contentDir: getContentDir(),
+    publicDir: getPublicDir(),
+    distDir: getDistDir(),
+    processedExts: getProcessedExts(
+      Object.keys(getExtensionToShikiLanguage(siteVariables)),
+    ),
+  };
+  const sources = new Map<string, SourceEntry>();
+  for (const kind of ['content', 'public'] as const) {
+    const dir = kind === 'content' ? roots.contentDir : roots.publicDir;
+    for (const filePath of walkFiles(dir).sort()) {
+      sources.set(filePath, createSourceEntry(roots, filePath, kind));
+    }
+  }
+  return indexSources(roots, sources);
+}
+
+export function updateProjectScan(
+  snapshot: TadaProjectScan,
+  paths: ReadonlySet<string>,
+): TadaProjectScan {
+  const sources = new Map(snapshot.sources);
+  for (const sourcePath of paths) {
+    const kind = sourcePath.startsWith(`${snapshot.contentDir}${path.sep}`)
+      ? 'content'
+      : sourcePath.startsWith(`${snapshot.publicDir}${path.sep}`)
+        ? 'public'
+        : undefined;
+    if (!kind) {
+      continue;
+    }
+    sources.delete(sourcePath);
+    const stat = fs.existsSync(sourcePath)
+      ? fs.statSync(sourcePath)
+      : undefined;
+    const isFile = stat?.isFile();
+    if (!snapshot.sources.has(sourcePath) || !isFile) {
+      // Directory notifications reconcile descendants without relying on child events.
+      for (const existing of sources.keys()) {
+        if (existing.startsWith(sourcePath + path.sep)) {
+          sources.delete(existing);
+        }
+      }
+    }
+    const files = isFile
+      ? [sourcePath]
+      : stat?.isDirectory()
+        ? walkFiles(sourcePath)
+        : [];
+    for (const filePath of files) {
+      sources.set(filePath, createSourceEntry(snapshot, filePath, kind));
+    }
+  }
+  return indexSources(snapshot, sources);
+}
+
+export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
+  return [...scan.outputProducers]
+    .filter(([, producers]) => producers.size > 1)
+    .map(([output]) => output)
+    .sort();
 }
 
 export function shouldSkipContentFile(filePath: string): boolean {
@@ -53,7 +242,7 @@ export function getProcessedExts(codeExtensions: string[]): Set<string> {
 
 export function isBuildContentSource(
   filePath: string,
-  processedExts: Set<string>,
+  processedExts: ReadonlySet<string>,
 ): boolean {
   const ext = path.extname(filePath).slice(1).toLowerCase();
   if (!processedExts.has(ext) || isPartial(filePath)) {
@@ -98,114 +287,6 @@ function walkFiles(dir: string): string[] {
   });
 }
 
-function cloneSetMap(
-  source: Map<string, Set<string>>,
-): Map<string, Set<string>> {
-  return new Map(
-    [...source.entries()].map(([key, values]) => [key, new Set(values)]),
-  );
-}
-
-function addContentSourceToScan({
-  scan,
-  filePath,
-}: {
-  scan: TadaProjectScan;
-  filePath: string;
-}): void {
-  const buildContent = isBuildContentSource(filePath, scan.processedExts);
-
-  scan.contentFiles.add(filePath);
-  if (buildContent) {
-    scan.buildContentFiles.add(filePath);
-  }
-  if (buildContent && isLiterateJava(filePath)) {
-    const parsed = path.parse(path.relative(scan.contentDir, filePath));
-    scan.literateJavaOutputPaths.add(
-      `/${toPosix(path.join(parsed.dir, parsed.name))}`,
-    );
-  }
-
-  const outputs = getSourceOutputPaths({
-    contentDir: scan.contentDir,
-    filePath,
-    processedExts: scan.processedExts,
-    buildContent,
-  });
-  scan.sourceOutputPaths.set(filePath, outputs);
-  for (const outputPath of outputs) {
-    scan.contentOwners.set(outputPath, filePath);
-  }
-
-  const targets = getSourceTargetPaths({
-    kind: 'content',
-    rootDir: scan.contentDir,
-    filePath,
-    processedExts: scan.processedExts,
-    buildContent,
-  });
-  scan.sourceTargetPaths.set(filePath, targets);
-  for (const target of targets) {
-    scan.validTargets.add(target);
-  }
-}
-
-function addPublicSourceToScan({
-  scan,
-  filePath,
-}: {
-  scan: TadaProjectScan;
-  filePath: string;
-}): void {
-  const relPath = toPosix(path.relative(scan.publicDir, filePath));
-
-  scan.publicFiles.add(filePath);
-  scan.publicOwners.set(relPath, filePath);
-  scan.sourceOutputPaths.set(filePath, new Set([relPath]));
-
-  const targets = getSourceTargetPaths({
-    kind: 'public',
-    rootDir: scan.publicDir,
-    filePath,
-    processedExts: scan.processedExts,
-    buildContent: false,
-  });
-  scan.sourceTargetPaths.set(filePath, targets);
-  for (const target of targets) {
-    scan.validTargets.add(target);
-  }
-}
-
-function collectValidTargets(
-  sourceTargetPaths: Map<string, Set<string>>,
-): Set<string> {
-  const validTargets = new Set<string>();
-  for (const targets of sourceTargetPaths.values()) {
-    for (const target of targets) {
-      validTargets.add(target);
-    }
-  }
-  return validTargets;
-}
-
-function createEmptyScan(processedExts: Set<string>): TadaProjectScan {
-  return {
-    contentDir: getContentDir(),
-    publicDir: getPublicDir(),
-    distDir: getDistDir(),
-    contentFiles: new Set(),
-    buildContentFiles: new Set(),
-    publicFiles: new Set(),
-    validTargets: new Set(),
-    literateJavaOutputPaths: new Set(),
-    processedExts,
-    contentOwners: new Map(),
-    publicOwners: new Map(),
-    sourceOutputPaths: new Map(),
-    sourceTargetPaths: new Map(),
-  };
-}
-
 export function getSourceOutputPaths({
   contentDir,
   filePath,
@@ -214,7 +295,7 @@ export function getSourceOutputPaths({
 }: {
   contentDir: string;
   filePath: string;
-  processedExts: Set<string>;
+  processedExts: ReadonlySet<string>;
   buildContent: boolean;
 }): Set<string> {
   const relPath = toPosix(path.relative(contentDir, filePath));
@@ -260,7 +341,7 @@ export function getSourceTargetPaths({
   kind: 'content' | 'public';
   rootDir: string;
   filePath: string;
-  processedExts: Set<string>;
+  processedExts: ReadonlySet<string>;
   buildContent: boolean;
 }): Set<string> {
   const targets = new Set<string>();
@@ -281,123 +362,17 @@ export function getSourceTargetPaths({
     return targets;
   }
 
-  const parsed = path.parse(relPath);
-  const subPath = toPosix(path.join(parsed.dir, parsed.name));
-
-  if (isLiterateJava(filePath)) {
-    const javaSubPath = toPosix(path.join(parsed.dir, parsed.name));
-    addGeneratedRouteAliases(targets, `/${javaSubPath}.html`);
-    targets.add(normalizeOutputPath(`/${javaSubPath}`));
-    return targets;
+  for (const output of getSourceOutputPaths({
+    contentDir: rootDir,
+    filePath,
+    processedExts,
+    buildContent,
+  })) {
+    if (output.endsWith('.html')) {
+      addGeneratedRouteAliases(targets, `/${output}`);
+    } else {
+      targets.add(normalizeOutputPath(`/${output}`));
+    }
   }
-
-  if (
-    extensionIsMarkdown(parsed.ext.toLowerCase()) ||
-    parsed.ext.toLowerCase() === '.html'
-  ) {
-    addGeneratedRouteAliases(targets, `/${subPath}.html`);
-    return targets;
-  }
-
-  addGeneratedRouteAliases(targets, `/${relPath}.html`);
-  targets.add(normalizeOutputPath(`/${relPath}`));
   return targets;
-}
-
-export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
-  const scan = createEmptyScan(
-    getProcessedExts(Object.keys(getExtensionToShikiLanguage(siteVariables))),
-  );
-
-  for (const filePath of walkFiles(scan.contentDir).sort()) {
-    addContentSourceToScan({ scan, filePath });
-  }
-
-  for (const filePath of walkFiles(scan.publicDir).sort()) {
-    addPublicSourceToScan({ scan, filePath });
-  }
-
-  return scan;
-}
-
-export function updateProjectScan(
-  snapshot: TadaProjectScan,
-  batch: ChangeBatch,
-): TadaProjectScan {
-  const scan = createEmptyScan(snapshot.processedExts);
-  scan.contentFiles = new Set(snapshot.contentFiles);
-  scan.buildContentFiles = new Set(snapshot.buildContentFiles);
-  scan.publicFiles = new Set(snapshot.publicFiles);
-  scan.literateJavaOutputPaths = new Set(snapshot.literateJavaOutputPaths);
-  scan.contentOwners = new Map(snapshot.contentOwners);
-  scan.publicOwners = new Map(snapshot.publicOwners);
-  scan.sourceOutputPaths = cloneSetMap(snapshot.sourceOutputPaths);
-  scan.sourceTargetPaths = cloneSetMap(snapshot.sourceTargetPaths);
-  scan.validTargets = collectValidTargets(scan.sourceTargetPaths);
-
-  for (const change of batch.changes) {
-    const sourcePath = path.resolve(change.path);
-    const inContent = sourcePath.startsWith(`${scan.contentDir}${path.sep}`);
-    const inPublic = sourcePath.startsWith(`${scan.publicDir}${path.sep}`);
-    if (!inContent && !inPublic) {
-      continue;
-    }
-
-    for (const outputPath of scan.sourceOutputPaths.get(sourcePath) || []) {
-      if (inContent) {
-        scan.contentOwners.delete(outputPath);
-      } else {
-        scan.publicOwners.delete(outputPath);
-      }
-    }
-
-    scan.sourceOutputPaths.delete(sourcePath);
-    scan.sourceTargetPaths.delete(sourcePath);
-    scan.contentFiles.delete(sourcePath);
-    scan.buildContentFiles.delete(sourcePath);
-    scan.publicFiles.delete(sourcePath);
-
-    if (inContent && isLiterateJava(sourcePath)) {
-      const parsed = path.parse(path.relative(scan.contentDir, sourcePath));
-      scan.literateJavaOutputPaths.delete(
-        `/${toPosix(path.join(parsed.dir, parsed.name))}`,
-      );
-    }
-
-    if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
-      continue;
-    }
-
-    if (inContent) {
-      addContentSourceToScan({ scan, filePath: sourcePath });
-      continue;
-    }
-
-    addPublicSourceToScan({ scan, filePath: sourcePath });
-  }
-
-  // Rebuild the selected owners from the complete source inventory. Removing
-  // either producer of a formerly conflicting output must retain its survivor.
-  scan.contentOwners.clear();
-  for (const sourcePath of scan.contentFiles) {
-    for (const outputPath of scan.sourceOutputPaths.get(sourcePath) || []) {
-      scan.contentOwners.set(outputPath, sourcePath);
-    }
-  }
-  scan.validTargets = collectValidTargets(scan.sourceTargetPaths);
-  return scan;
-}
-
-export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
-  const owners = new Set<string>();
-  const conflicts = new Set<string>();
-  for (const outputs of scan.sourceOutputPaths.values()) {
-    for (const outputPath of outputs) {
-      if (owners.has(outputPath)) {
-        conflicts.add(outputPath);
-      }
-      owners.add(outputPath);
-    }
-  }
-  return [...conflicts].sort();
 }

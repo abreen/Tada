@@ -1,28 +1,32 @@
 import path from 'path';
-import { B } from '../colors';
-import { makeLogger } from '../log';
-import { config, getConfigFileName } from '../templates';
-import { validateConfigLinks } from '../validate-config-links';
-import { validateCustomFontOverrides } from '../custom-fonts';
-import type { SiteVariables } from '../types';
-import type { WatchDiagnostic } from './types';
-import { assertNoOutputPathConflicts, type TadaProjectScan } from './snapshot';
+import { B } from './colors';
+import { makeLogger } from './log';
+import { config, getConfigFileName } from './templates';
+import { validateConfigLinks } from './validate-config-links';
+import { validateCustomFontOverrides } from './custom-fonts';
+import type { SiteVariables } from './types';
+import type { BuildDiagnostic } from './build-types';
+import {
+  assertNoOutputPathConflicts,
+  sourcePaths,
+  type TadaProjectScan,
+} from './source-model';
 
 const log = makeLogger(import.meta.url);
 
-export function diagnosticsFromMessages(messages: string[]): WatchDiagnostic[] {
+export function diagnosticsFromMessages(messages: string[]): BuildDiagnostic[] {
   return messages.map(message => ({ message }));
 }
 
 export function validateConfig(
   scan: TadaProjectScan,
   siteVariables: SiteVariables,
-): WatchDiagnostic[] {
+): BuildDiagnostic[] {
   const diagnostics = diagnosticsFromMessages(
     validateCustomFontOverrides({
       fontOverrides: siteVariables.fontOverrides,
       publicDir: scan.publicDir,
-      publicFiles: scan.publicFiles,
+      publicFiles: new Set(sourcePaths(scan, 'public')),
     }),
   );
   const conflicts = assertNoOutputPathConflicts(scan);
@@ -30,9 +34,8 @@ export function validateConfig(
     return diagnostics;
   }
   for (const relPath of conflicts) {
-    const sources = [...scan.sourceOutputPaths]
-      .filter(([, outputs]) => outputs.has(relPath))
-      .map(([sourcePath]) =>
+    const sources = [...scan.outputProducers.get(relPath)!]
+      .map(sourcePath =>
         path.relative(path.dirname(scan.contentDir), sourcePath),
       )
       .sort();
@@ -46,8 +49,8 @@ export function validateConfig(
 }
 
 export function validateProjectConfigLinks(
-  validTargets: Set<string>,
-): WatchDiagnostic[] {
+  validTargets: ReadonlySet<string>,
+): BuildDiagnostic[] {
   return diagnosticsFromMessages(
     validateConfigLinks(validTargets, config('nav'), config('authors'), {
       navFileName: getConfigFileName('nav'),

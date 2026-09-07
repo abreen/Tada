@@ -9,9 +9,16 @@ export async function runWatch(options: { httpPort?: number }): Promise<void> {
     distDir: getDistDir(),
   });
 
-  await runWatchEngine({
-    compiler: new TadaWatchCompiler(),
+  const compiler = new TadaWatchCompiler();
+  const handle = runWatchEngine({
+    targets: compiler.getWatchTargets(),
+    build: paths => compiler.build(paths),
     onEvent: event => runtime.onEvent(event),
     debounceMs: 300,
   });
+  try {
+    await handle.done;
+  } finally {
+    runtime.close();
+  }
 }

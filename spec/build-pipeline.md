@@ -27,10 +27,14 @@ The build and watch pipelines share the same source-discovery model.
 
 - `build/source-model.ts` scans `content/` and `public/`, classifies which
   content files are processed, and records output ownership, valid internal
-  link targets, and generated route aliases
+  link targets, and generated route aliases. Incremental updates replace dirty
+  entries in a shared source inventory and derive indexes once per update
 - `build/source-records.ts` turns individual content or public sources into
   source records containing rendered/copied outputs plus dependency metadata
   such as partial, trace, internal-target, and author relationships
 
 Production builds use that shared scan-and-record layer during full builds, and
 watch mode reuses the same layer for incremental planning and recompilation.
+
+Both modes use the shared output publisher in `build/output-publication.ts`.
+Shared validation and source-record helpers do not depend on watch scheduling.

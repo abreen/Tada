@@ -73,7 +73,7 @@ function getInternalHrefTarget(href: string): string {
 function validateDirectoryLink(
   href: string,
   resolvedTarget: string,
-  validTargets: Set<string>,
+  validTargets: ReadonlySet<string>,
   context: string,
 ): string | null {
   const indexPath = normalizeOutputPath(
@@ -87,7 +87,7 @@ function validateDirectoryLink(
 
 export function validateNavLinks(
   navData: unknown,
-  validTargets: Set<string>,
+  validTargets: ReadonlySet<string>,
   fileName: string = 'nav.yaml',
 ): string[] {
   if (!Array.isArray(navData)) {
@@ -139,7 +139,7 @@ interface AuthorEntry {
 
 export function validateAuthorLinks(
   authorsData: unknown,
-  validTargets: Set<string>,
+  validTargets: ReadonlySet<string>,
   fileName: string = 'authors.yaml',
 ): string[] {
   if (!authorsData || typeof authorsData !== 'object') {
@@ -189,7 +189,7 @@ export function validateAuthorLinks(
 }
 
 export function validateConfigLinks(
-  validTargets: Set<string>,
+  validTargets: ReadonlySet<string>,
   navData: unknown,
   authorsData: unknown,
   {
@@ -211,7 +211,7 @@ function splitHref(href: string): { pathname: string; suffix: string } {
 export function validateParentLink(
   parent: unknown,
   filePath: string,
-  validTargets: Set<string>,
+  validTargets: ReadonlySet<string>,
   sourceUrlPath: string,
 ): string | null {
   if (typeof parent === 'string' && splitHref(parent).pathname === '') {

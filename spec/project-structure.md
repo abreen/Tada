@@ -31,3 +31,8 @@ the build source pipeline:
   output ownership, valid link targets, and processed content classification
 - `build/source-records.ts` for rendering or copying one source into concrete
   outputs plus dependency metadata consumed by builds and watch snapshots
+
+Generic output staging, publication and rollback live in
+`build/output-publication.ts`; shared build types and validation also live outside
+`build/watch/`. The watcher engine only schedules build callbacks and owns its
+subscriptions and timers.

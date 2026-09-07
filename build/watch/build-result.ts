@@ -1,6 +1,7 @@
-import type { CommitPlan, CompilerBuildResult } from './types';
+import type { CommitPlan } from '../output-publication';
+import type { CompilerBuildResult } from './snapshot';
 import { createBuildMeta, type TadaSnapshot } from './snapshot';
-import { diagnosticsFromMessages } from './validation';
+import { diagnosticsFromMessages } from '../build-validation';
 
 export function buildSucceeded(
   snapshot: TadaSnapshot,

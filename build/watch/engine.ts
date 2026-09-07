@@ -1,213 +1,244 @@
+import path from 'path';
+import fs from 'fs';
 import chokidar from 'chokidar';
-import { applyCommitPlan } from './fs-commit';
 import type {
-  ChangeBatch,
-  CompilerBuildResult,
+  WatchBuildResult,
+  WatchClock,
   WatchEngineOptions,
-  WatchEventKind,
+  WatchHandle,
   WatchLifecycleEvent,
 } from './types';
-import type { TadaSnapshot } from './snapshot';
 
-function normalizeBatch(changes: Map<string, WatchEventKind>): ChangeBatch {
-  return {
-    changes: [...changes.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([path, kind]) => ({ path, kind })),
-  };
-}
-
-function mapBatch(batch: ChangeBatch): Map<string, WatchEventKind> {
-  return new Map(batch.changes.map(change => [change.path, change.kind]));
-}
-
-function mergeChangeKind(
-  previous: WatchEventKind | undefined,
-  next: WatchEventKind,
-): WatchEventKind {
-  if (!previous) {
-    return next;
-  }
-  if (previous === 'add' && next === 'unlink') {
-    return 'change';
-  }
-  if (previous === 'unlink' && next === 'add') {
-    return 'change';
-  }
-  if (previous === 'add' || next === 'add') {
-    return 'add';
-  }
-  if (previous === 'unlink' || next === 'unlink') {
-    return 'unlink';
-  }
-  return 'change';
-}
-
-function toDiagnostics(error: unknown): { message: string }[] {
-  if (error instanceof Error) {
-    return [{ message: error.message }];
-  }
-  return [{ message: String(error) }];
-}
-
-export async function runWatchEngine(
-  options: WatchEngineOptions,
-  dependencies = { watch: chokidar.watch, applyCommitPlan },
-): Promise<void> {
+export function runWatchEngine<Meta>(
+  options: WatchEngineOptions<Meta>,
+  dependencies = {
+    watch: chokidar.watch,
+    stat: (filePath: string): Pick<fs.Stats, 'isFile'> | undefined =>
+      fs.statSync(filePath, { throwIfNoEntry: false }),
+    clock: { setTimeout, clearTimeout } as WatchClock,
+  },
+): WatchHandle {
+  const { clock } = dependencies;
   const debounceMs = options.debounceMs ?? 300;
-  let snapshot: TadaSnapshot | undefined;
-  let uncommitted = new Map<string, WatchEventKind>();
-  let pending = new Map<string, WatchEventKind>();
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let running = false;
+  const watchers: ReturnType<typeof chokidar.watch>[] = [];
+  const pending = new Set<string>();
+  let uncommitted = new Set<string>();
+  let closed = false;
+  let fatal: { error: unknown } | undefined;
+  let closing: Promise<PromiseSettledResult<void>[]> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let wake: (() => void) | undefined;
+  const stopped = Promise.withResolvers<void>();
 
-  async function emit(event: WatchLifecycleEvent): Promise<void> {
-    await options.onEvent?.(event);
-  }
-
-  async function waitForQuietPeriod(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, debounceMs));
-  }
-
-  async function runBuild(batch?: ChangeBatch): Promise<CompilerBuildResult> {
-    await emit({ kind: 'build-started', batch });
-    try {
-      const outcome = await options.compiler.build(snapshot, batch);
-      if (outcome.ok) {
-        try {
-          dependencies.applyCommitPlan(outcome.commit);
-        } catch (error) {
-          // The compiler may have mutated cached state before publication failed.
-          // Rebuild from sources on the next change instead of reusing that state.
-          snapshot = undefined;
-          return {
-            ok: false,
-            diagnostics: toDiagnostics(error).map(diagnostic => ({
-              message: `Failed to publish build output: ${diagnostic.message}`,
-            })),
-          };
-        }
-        snapshot = outcome.snapshot;
-      }
-      return outcome;
-    } catch (error) {
-      return { ok: false, diagnostics: toDiagnostics(error) };
+  function stop(): void {
+    closed = true;
+    pending.clear();
+    if (timer !== undefined) {
+      clock.clearTimeout(timer);
     }
+    timer = undefined;
+    wake?.();
+    stopped.resolve();
+    closing ??= Promise.allSettled(
+      watchers.map(async watcher => watcher.close()),
+    );
   }
 
-  async function flush(): Promise<void> {
-    if (running) {
+  function fail(error: unknown): void {
+    fatal ??= { error };
+    stop();
+  }
+
+  function wait(quiet = false): Promise<void> {
+    if (closed) {
+      return Promise.resolve();
+    }
+    return new Promise(resolve => {
+      wake = () => {
+        wake = undefined;
+        timer = undefined;
+        resolve();
+      };
+      if (quiet) {
+        timer = clock.setTimeout(() => wake?.(), debounceMs);
+      }
+    });
+  }
+
+  function changed(filePath: string): void {
+    if (closed) {
       return;
     }
-    running = true;
+    pending.add(path.resolve(filePath));
+    if (timer !== undefined) {
+      clock.clearTimeout(timer);
+      timer = clock.setTimeout(() => wake?.(), debounceMs);
+    } else {
+      wake?.();
+    }
+  }
+
+  async function emit(event: WatchLifecycleEvent<Meta>): Promise<void> {
+    if (!closed) {
+      await options.onEvent?.(event);
+    }
+  }
+
+  async function build(
+    paths?: ReadonlySet<string>,
+  ): Promise<WatchBuildResult<Meta> | undefined> {
+    await emit({ kind: 'build-started', paths });
+    if (closed) {
+      return;
+    }
+    let outcome: WatchBuildResult<Meta>;
     try {
-      let finalSuccess:
-        | {
-            batch?: ChangeBatch;
-            result: Extract<CompilerBuildResult, { ok: true }>;
-          }
-        | undefined;
-
-      while (pending.size > 0) {
-        const changes = new Map(uncommitted);
-        for (const [filePath, kind] of pending) {
-          changes.set(filePath, mergeChangeKind(changes.get(filePath), kind));
-        }
-
-        const batch = normalizeBatch(changes);
-        pending = new Map();
-        const outcome = await runBuild(batch);
-
-        if (!outcome.ok) {
-          uncommitted = mapBatch(batch);
-          await emit({
-            kind: 'build-failed',
-            batch,
-            diagnostics: outcome.diagnostics,
-          });
-          return;
-        }
-
-        uncommitted = new Map();
-        finalSuccess = { batch, result: outcome };
-
-        if (pending.size === 0) {
-          await waitForQuietPeriod();
-        }
-      }
-
-      if (finalSuccess) {
-        await emit({
-          kind: 'build-succeeded',
-          batch: finalSuccess.batch,
-          meta: finalSuccess.result.meta,
-        });
-      }
-    } finally {
-      running = false;
-      if (pending.size > 0) {
-        schedule();
-      }
+      outcome = await options.build(paths);
+    } catch (error) {
+      outcome = {
+        ok: false,
+        diagnostics: [
+          { message: error instanceof Error ? error.message : String(error) },
+        ],
+      };
     }
-  }
-
-  function schedule(): void {
-    if (timer) {
-      clearTimeout(timer);
+    if (!outcome.ok) {
+      await emit({
+        kind: 'build-failed',
+        paths,
+        diagnostics: outcome.diagnostics,
+      });
     }
-    timer = setTimeout(() => {
-      timer = null;
-      void flush();
-    }, debounceMs);
+    return outcome;
   }
 
-  function onFileChange(filePath: string, kind: WatchEventKind): void {
-    pending.set(filePath, mergeChangeKind(pending.get(filePath), kind));
-    schedule();
-  }
-
-  const startupOutcome = await runBuild();
-  if (!startupOutcome.ok) {
-    await emit({
-      kind: 'build-failed',
-      diagnostics: startupOutcome.diagnostics,
-    });
-  } else {
-    await emit({ kind: 'build-succeeded', meta: startupOutcome.meta });
-  }
-
-  const watcherEntries = options.compiler
-    .getWatchTargets()
-    .map(target => ({
-      target,
-      watcher: dependencies.watch(target.path, {
+  async function run(): Promise<void> {
+    if (closed) {
+      return;
+    }
+    const ready = options.targets.map(target => {
+      if (closed) {
+        return Promise.resolve();
+      }
+      const watcher = dependencies.watch(target.path, {
         ignoreInitial: true,
         atomic: true,
         awaitWriteFinish: { stabilityThreshold: 100 },
         ...target.chokidar,
-      }),
-    }));
-
-  let readyCount = 0;
-  const readyGoal = watcherEntries.length;
-  const onReady = async () => {
-    readyCount += 1;
-    if (readyCount === readyGoal) {
-      await emit({ kind: 'watching' });
+      });
+      watchers.push(watcher);
+      const included = (filePath: string) => {
+        if (closed) {
+          return;
+        }
+        try {
+          if (!target.filter || target.filter(filePath)) {
+            changed(filePath);
+          }
+        } catch (error) {
+          fail(error);
+        }
+      };
+      watcher.on('add', included).on('unlink', included);
+      watcher.on('change', (filePath, stats) => {
+        if (closed) {
+          return;
+        }
+        // A polling file subscription does not become recursive on its own.
+        try {
+          if (stats?.isDirectory()) {
+            watcher.add(filePath);
+          }
+          included(filePath);
+        } catch (error) {
+          fail(error);
+        }
+      });
+      watcher.on('addDir', included);
+      watcher.on('unlinkDir', filePath => {
+        included(filePath);
+        // Wait until Chokidar finishes closing the old directory subscription.
+        queueMicrotask(() => {
+          if (closed) {
+            return;
+          }
+          try {
+            if (dependencies.stat(filePath)?.isFile()) {
+              watcher.add(filePath);
+            }
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOTDIR') {
+              fail(error);
+            }
+          }
+        });
+      });
+      watcher.on('error', fail);
+      return new Promise<void>(resolve => watcher.once('ready', resolve));
+    });
+    await Promise.race([Promise.all(ready), stopped.promise]);
+    if (closed) {
+      return;
     }
-  };
-
-  for (const { watcher, target } of watcherEntries) {
-    const emitIfIncluded = (filePath: string, kind: WatchEventKind) => {
-      if (!target.filter || target.filter(filePath)) {
-        onFileChange(filePath, kind);
+    const startup = await build();
+    if (startup?.ok) {
+      await emit({ kind: 'build-succeeded', meta: startup.meta });
+    }
+    await emit({ kind: 'watching' });
+    while (!closed) {
+      if (!pending.size) {
+        await wait();
       }
-    };
-    watcher.on('add', filePath => emitIfIncluded(filePath, 'add'));
-    watcher.on('change', filePath => emitIfIncluded(filePath, 'change'));
-    watcher.on('unlink', filePath => emitIfIncluded(filePath, 'unlink'));
-    watcher.on('ready', () => void onReady());
+      if (closed) {
+        break;
+      }
+      await wait(true);
+      let success: { paths: ReadonlySet<string>; meta: Meta } | undefined;
+      while (!closed && pending.size) {
+        const paths = new Set([...uncommitted, ...pending]);
+        pending.clear();
+        const outcome = await build(paths);
+        if (!outcome?.ok) {
+          uncommitted = paths;
+          success = undefined;
+          break;
+        }
+        uncommitted.clear();
+        success = { paths, meta: outcome.meta };
+        if (!pending.size) {
+          await wait(true);
+        }
+      }
+      if (success) {
+        await emit({ kind: 'build-succeeded', ...success });
+      }
+    }
   }
 
-  return new Promise(() => {});
+  const done = (async () => {
+    // Defer setup so callers can install their completion handler first.
+    await Promise.resolve();
+    try {
+      await run();
+    } catch (error) {
+      fatal ??= { error };
+    } finally {
+      stop();
+      const results = await closing!;
+      const failure = results.find(result => result.status === 'rejected');
+      if (failure?.status === 'rejected') {
+        fatal ??= { error: failure.reason };
+      }
+    }
+    if (fatal) {
+      throw fatal.error;
+    }
+  })();
+  return {
+    done,
+    close: () => {
+      stop();
+      return done;
+    },
+  };
 }

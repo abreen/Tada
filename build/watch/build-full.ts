@@ -1,10 +1,11 @@
 import { compileTemplates, config } from '../templates';
 import { getDevSiteVariables } from '../site-variables';
 import { getDistDir } from '../util';
-import type { CompilerBuildResult } from './types';
-import { createSnapshot, type TadaSourceRecord } from './snapshot';
+import type { CompilerBuildResult } from './snapshot';
+import { createSnapshot } from './snapshot';
+import type { TadaSourceRecord } from '../source-records';
 import { scanProject } from '../source-model';
-import type { TraceCache, WatchTraceOptions } from './compiler-types';
+import type { TraceCache, WatchTraceOptions } from '../build-types';
 import {
   bundleWatchAssets,
   ensureHighlighter,
@@ -12,13 +13,12 @@ import {
   populateStaticAssets,
   removeDirIfExists,
 } from './assets';
-import { validateConfig, validateProjectConfigLinks } from './validation';
-import { buildFailedFromError, buildSucceeded } from './build-result';
 import {
-  buildFailedWithDiagnostics,
-  renderContentRecord,
-  renderPublicRecord,
-} from './build-helpers';
+  validateConfig,
+  validateProjectConfigLinks,
+} from '../build-validation';
+import { buildFailedFromError, buildSucceeded } from './build-result';
+import { buildFailedWithDiagnostics, renderSource } from './build-helpers';
 
 export async function buildFull({
   traceCache,
@@ -43,9 +43,9 @@ export async function buildFull({
     const assetFiles = await bundleWatchAssets(outputDir, siteVariables);
     await populateStaticAssets(outputDir, siteVariables);
 
-    const contentRecords = new Map<string, TadaSourceRecord>();
-    for (const filePath of scan.contentFiles) {
-      const record = renderContentRecord({
+    const records = new Map<string, TadaSourceRecord>();
+    for (const filePath of scan.sources.keys()) {
+      const record = renderSource({
         filePath,
         siteVariables,
         scan,
@@ -56,18 +56,8 @@ export async function buildFull({
         cachedTraceSourceDir: distDir,
       });
       if (record) {
-        contentRecords.set(filePath, record);
+        records.set(filePath, record);
       }
-    }
-
-    const publicRecords = new Map<string, TadaSourceRecord>();
-    for (const filePath of scan.publicFiles) {
-      const record = renderPublicRecord({
-        filePath,
-        publicDir: scan.publicDir,
-        outputDir,
-      });
-      publicRecords.set(filePath, record);
     }
 
     const linkDiagnostics = validateProjectConfigLinks(scan.validTargets);
@@ -78,11 +68,9 @@ export async function buildFull({
     const nextSnapshot = createSnapshot({
       siteVariables,
       assetFiles,
-      navData: config('nav'),
       authorsData: config('authors'),
       scan,
-      contentRecords,
-      publicRecords,
+      records,
     });
 
     return buildSucceeded(nextSnapshot, {

@@ -1,27 +1,28 @@
 import path from 'path';
 import { getProjectConfigDir } from '../templates';
 import { getContentDir, getPublicDir } from '../util';
-import type {
-  ChangeBatch,
-  CompilerBuildResult,
-  WatchCompiler,
-  WatchTarget,
-} from './types';
+import type { WatchTarget, WatchBuildResult } from './types';
+import type { CompilerBuildResult } from './snapshot';
+import type { TadaBuildMeta } from '../build-types';
+import { applyCommitPlan } from '../output-publication';
+import { loadProjectConfig } from '../config-loader';
 import { buildFull } from './build-full';
 import { buildIncremental } from './build-incremental';
-import type { TraceCache, WatchTraceOptions } from './compiler-types';
+import type { TraceCache, WatchTraceOptions } from '../build-types';
 import { checkTraceToolAvailability, isTraceSourceFile } from '../utils/trace';
-import { createTadaWatchPlan } from './planner';
+import { createTadaWatchPlan, diffAuthorKeys } from './planner';
 import { updateProjectScan } from '../source-model';
 import type { TadaSnapshot } from './snapshot';
-import { getWatchConfigFilePaths } from './config-paths';
+import {
+  getWatchConfigFilePaths,
+  classifyWatchConfigPath,
+} from './config-paths';
 
 export function invalidateTraceCacheForBatch(
   traceCache: TraceCache,
-  batch: ChangeBatch,
+  paths: ReadonlySet<string>,
 ): void {
-  for (const change of batch.changes) {
-    const sourcePath = path.resolve(change.path);
+  for (const sourcePath of paths) {
     if (isTraceSourceFile(sourcePath)) {
       for (const [cacheKey, entry] of traceCache) {
         if (sourcePath in entry.sourceMtims) {
@@ -32,9 +33,13 @@ export function invalidateTraceCacheForBatch(
   }
 }
 
-export class TadaWatchCompiler implements WatchCompiler {
+export class TadaWatchCompiler {
   private traceCache: TraceCache;
   private traceOptions: WatchTraceOptions;
+
+  readonly build = createBuildSession((snapshot, paths) =>
+    this.compile(snapshot, paths),
+  );
 
   constructor() {
     this.traceCache = new Map();
@@ -58,23 +63,49 @@ export class TadaWatchCompiler implements WatchCompiler {
     ];
   }
 
-  async build(
+  private async compile(
     snapshot: TadaSnapshot | undefined,
-    batch?: ChangeBatch,
+    paths?: ReadonlySet<string>,
   ): Promise<CompilerBuildResult> {
-    if (batch) {
-      invalidateTraceCacheForBatch(this.traceCache, batch);
+    if (paths) {
+      invalidateTraceCacheForBatch(this.traceCache, paths);
     }
-
-    if (!snapshot || !batch) {
+    const configKinds = new Set(
+      [...(paths ?? [])].map(classifyWatchConfigPath),
+    );
+    if (
+      !snapshot ||
+      !paths ||
+      configKinds.has('site') ||
+      configKinds.has('nav')
+    ) {
       return buildFull({
         traceCache: this.traceCache,
         traceOptions: this.traceOptions,
       });
     }
 
-    const scan = updateProjectScan(snapshot.scan, batch);
-    const plan = createTadaWatchPlan({ snapshot, batch, scan });
+    const authorsChanged = configKinds.has('authors');
+    const nextAuthors = authorsChanged
+      ? loadProjectConfig(
+          getProjectConfigDir(),
+          'authors',
+          snapshot.siteVariables,
+        )?.value
+      : snapshot.authorsData;
+    const full =
+      authorsChanged &&
+      (snapshot.authorsData === undefined || nextAuthors === undefined);
+    const scan = full ? snapshot.scan : updateProjectScan(snapshot.scan, paths);
+    const plan = createTadaWatchPlan({
+      snapshot,
+      paths,
+      scan,
+      full,
+      changedAuthors: authorsChanged
+        ? diffAuthorKeys(snapshot.authorsData, nextAuthors)
+        : new Set(),
+    });
     if (plan.kind === 'full') {
       return buildFull({
         traceCache: this.traceCache,
@@ -89,4 +120,35 @@ export class TadaWatchCompiler implements WatchCompiler {
       traceOptions: this.traceOptions,
     });
   }
+}
+
+export function createBuildSession(
+  compile: (
+    snapshot: TadaSnapshot | undefined,
+    paths?: ReadonlySet<string>,
+  ) => Promise<CompilerBuildResult>,
+  publish = applyCommitPlan,
+): (paths?: ReadonlySet<string>) => Promise<WatchBuildResult<TadaBuildMeta>> {
+  let snapshot: TadaSnapshot | undefined;
+  return async (
+    paths?: ReadonlySet<string>,
+  ): Promise<WatchBuildResult<TadaBuildMeta>> => {
+    const outcome = await compile(snapshot, paths);
+    if (outcome.ok) {
+      try {
+        publish(outcome.commit);
+      } catch (error) {
+        snapshot = undefined;
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          ok: false,
+          diagnostics: [
+            { message: `Failed to publish build output: ${message}` },
+          ],
+        };
+      }
+      snapshot = outcome.snapshot;
+    }
+    return outcome;
+  };
 }

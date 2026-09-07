@@ -1,11 +1,33 @@
 import fs from 'fs';
 import path from 'path';
-import { globals, type Globals } from '../globals';
-import type {
-  ApplyMutationsCommitPlan,
-  CommitPlan,
-  ReplaceRootCommitPlan,
-} from './types';
+import { globals, type Globals } from './globals';
+
+export interface WriteFileMutation {
+  kind: 'write';
+  path: string;
+  content: string | Buffer;
+}
+
+export interface DeleteFileMutation {
+  kind: 'delete';
+  path: string;
+}
+
+export type FileMutation = WriteFileMutation | DeleteFileMutation;
+
+export interface ReplaceRootCommitPlan {
+  kind: 'replace-root';
+  stagedPath: string;
+  targetPath: string;
+}
+
+export interface ApplyMutationsCommitPlan {
+  kind: 'apply-mutations';
+  rootDir: string;
+  mutations: FileMutation[];
+}
+
+export type CommitPlan = ReplaceRootCommitPlan | ApplyMutationsCommitPlan;
 
 type CommitPlanGlobals = Pick<Globals, 'now' | 'pid' | 'sleepSync'>;
 
@@ -101,7 +123,14 @@ function applyMutations(
       }
     }
 
-    for (const [index, mutation] of plan.mutations.entries()) {
+    // Keep original indexes so staging and rollback use the same backup paths.
+    const ordered = [...plan.mutations.entries()].sort(([, a], [, b]) => {
+      if (a.kind !== b.kind) {
+        return a.kind === 'delete' ? -1 : 1;
+      }
+      return a.kind === 'delete' ? b.path.length - a.path.length : 0;
+    });
+    for (const [index, mutation] of ordered) {
       const targetPath = path.resolve(plan.rootDir, mutation.path);
       const existing = fs.lstatSync(targetPath, { throwIfNoEntry: false });
       if (existing?.isDirectory()) {
@@ -116,7 +145,9 @@ function applyMutations(
         renameWithRetry(targetPath, backupPath, globals);
       }
       journal.push({ targetPath, backupPath });
-      if (mutation.kind === 'write') {
+      if (mutation.kind === 'delete') {
+        pruneEmptyDirs(plan.rootDir, targetPath);
+      } else {
         // Track missing parents without relying on mkdir's returned path spelling.
         let dir = path.dirname(targetPath);
         while (!fs.existsSync(dir)) {
@@ -133,11 +164,6 @@ function applyMutations(
           targetPath,
           globals,
         );
-      }
-    }
-    for (const mutation of plan.mutations) {
-      if (mutation.kind === 'delete') {
-        pruneEmptyDirs(plan.rootDir, path.resolve(plan.rootDir, mutation.path));
       }
     }
   } catch (publicationError) {

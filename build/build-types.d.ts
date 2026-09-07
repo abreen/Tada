@@ -2,7 +2,7 @@ import type {
   HtmlOutputAnalysis,
   SiteVariables,
   TraceToolAvailability,
-} from '../types';
+} from './types';
 
 export interface TraceCacheEntry {
   manifestUrl: string;
@@ -22,4 +22,8 @@ export interface TadaBuildMeta {
 
 export interface WatchTraceOptions {
   toolAvailability: TraceToolAvailability;
+}
+
+export interface BuildDiagnostic {
+  message: string;
 }

@@ -3,13 +3,13 @@ import path from 'path';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { createGlobals } from './globals.test';
 import { createFsModuleMock } from './test-helpers';
+import { createContentRecord, createPublicRecord } from './source-records';
 import {
-  classifySourceRenderKind,
-  createContentRecord,
-  createPublicRecord,
+  getSourceRenderKind,
+  indexSources,
+  type TadaProjectScan,
   type TadaSourceRenderKind,
-} from './source-records';
-import type { TadaProjectScan } from './source-model';
+} from './source-model';
 import type { SiteVariables } from './types';
 
 const SITE_ROOT = path.resolve(path.sep, 'site');
@@ -47,106 +47,53 @@ beforeEach(() => {
   mock.module('./globals', () => ({ globals: createGlobals() }));
 });
 
-function makeScan(overrides: Partial<TadaProjectScan> = {}): TadaProjectScan {
-  return {
-    contentDir: sitePath('content'),
-    publicDir: sitePath('public'),
-    distDir: sitePath('dist'),
-    contentFiles: new Set(),
-    buildContentFiles: new Set(),
-    publicFiles: new Set(),
-    validTargets: new Set(),
-    literateJavaOutputPaths: new Set(),
-    processedExts: new Set(['md', 'markdown', 'html', 'ts', 'java']),
-    contentOwners: new Map(),
-    publicOwners: new Map(),
-    sourceOutputPaths: new Map(),
-    sourceTargetPaths: new Map(),
-    ...overrides,
-  };
-}
-
-function expectRenderKind(
+function makeScan(
   filePath: string,
-  scan: TadaProjectScan,
-  expected: TadaSourceRenderKind,
-): void {
-  expect(classifySourceRenderKind({ filePath, scan, siteVariables })).toBe(
-    expected,
+  renderKind: TadaSourceRenderKind,
+  contentDir = sitePath('content'),
+): TadaProjectScan {
+  return indexSources(
+    {
+      contentDir,
+      publicDir: sitePath('public'),
+      distDir: sitePath('dist'),
+      processedExts: new Set(['md', 'html', 'ts', 'java']),
+    },
+    new Map([
+      [
+        filePath,
+        { kind: 'content', renderKind, outputs: new Set(), targets: new Set() },
+      ],
+    ]),
   );
 }
 
-describe('classifySourceRenderKind', () => {
-  test('classifies content code pages', () => {
-    const filePath = sitePath('content', 'examples', 'hello.ts');
-    const scan = makeScan({
-      contentFiles: new Set([filePath]),
-      buildContentFiles: new Set([filePath]),
-    });
-
-    expectRenderKind(filePath, scan, 'code-page');
-  });
-
-  test('classifies literate Java pages', () => {
-    const filePath = sitePath('content', 'java', 'Counter.java.md');
-    const scan = makeScan({
-      contentFiles: new Set([filePath]),
-      buildContentFiles: new Set([filePath]),
-    });
-
-    expectRenderKind(filePath, scan, 'literate-java');
-  });
-
-  test('skips literate Java partials that are not build inputs', () => {
-    const filePath = sitePath('content', 'java', '_Partial.java.md');
-    const scan = makeScan({ contentFiles: new Set([filePath]) });
-
-    expectRenderKind(filePath, scan, 'skip');
-  });
-
-  test('skips excluded literate Java sources that are not build inputs', () => {
-    const filePath = sitePath('content', 'java', 'Excluded.java.md');
-    const scan = makeScan({ contentFiles: new Set([filePath]) });
-
-    expectRenderKind(filePath, scan, 'skip');
-  });
-
-  test('classifies public files as copied assets', () => {
-    const filePath = sitePath('public', 'images', 'logo.svg');
-    const scan = makeScan({ publicFiles: new Set([filePath]) });
-
-    expectRenderKind(filePath, scan, 'public-copy');
-  });
-
-  test('classifies raw content assets as copied assets', () => {
-    const filePath = sitePath('content', 'images', 'logo.svg');
-    const scan = makeScan({ contentFiles: new Set([filePath]) });
-
-    expectRenderKind(filePath, scan, 'content-copy');
-  });
-
-  test('skips processed content sources that are not build inputs', () => {
-    const filePath = sitePath('content', '_partial.md');
-    const scan = makeScan({ contentFiles: new Set([filePath]) });
-
-    expectRenderKind(filePath, scan, 'skip');
-  });
-
-  test('classifies markdown pages as plain text pages', () => {
-    const filePath = sitePath('content', 'notes', 'index.md');
-    const scan = makeScan({
-      contentFiles: new Set([filePath]),
-      buildContentFiles: new Set([filePath]),
-    });
-
-    expectRenderKind(filePath, scan, 'plain-text-page');
+describe('source render classification', () => {
+  test.each([
+    ['hello.ts', 'content', true, 'code-page'],
+    ['Counter.java.md', 'content', true, 'literate-java'],
+    ['_Partial.java.md', 'content', false, 'skip'],
+    ['Excluded.java.md', 'content', false, 'skip'],
+    ['logo.svg', 'public', false, 'public-copy'],
+    ['logo.svg', 'content', false, 'content-copy'],
+    ['_partial.md', 'content', false, 'skip'],
+    ['index.md', 'content', true, 'plain-text-page'],
+  ] as const)('%s (%s) renders as %s', (name, kind, buildContent, expected) => {
+    expect(
+      getSourceRenderKind(
+        name,
+        kind,
+        new Set(['md', 'html', 'ts', 'java']),
+        buildContent,
+      ),
+    ).toBe(expected);
   });
 });
 
 describe('createContentRecord', () => {
   test('returns an empty record for excluded literate Java sources', () => {
     const filePath = sitePath('content', 'java', 'Excluded.java.md');
-    const scan = makeScan({ contentFiles: new Set([filePath]) });
+    const scan = makeScan(filePath, 'skip');
 
     const record = createContentRecord({
       filePath,
@@ -173,7 +120,7 @@ describe('createContentRecord', () => {
     const filePath = path.join(contentDir, 'test.txt');
     const fileContent = Buffer.from('copied raw asset');
     mockFs({ [path.resolve(filePath)]: fileContent });
-    const scan = makeScan({ contentDir, contentFiles: new Set([filePath]) });
+    const scan = makeScan(filePath, 'content-copy', contentDir);
 
     const record = createContentRecord({
       filePath,
