@@ -110,6 +110,7 @@ export interface RenderPlainTextOptions {
   distDir: string;
   siteVariables: SiteVariables;
   validInternalTargets: ReadonlySet<string>;
+  generatedPageTargets?: ReadonlySet<string>;
   assetFiles: string[];
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
@@ -140,6 +141,7 @@ export interface RenderCodePageOptions {
   siteVariables: SiteVariables;
   assetFiles: string[];
   validInternalTargets: ReadonlySet<string>;
+  generatedPageTargets?: ReadonlySet<string>;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
 }
@@ -153,6 +155,7 @@ export interface RenderLiterateJavaOptions {
   assetFiles: string[];
   skipExecution?: boolean;
   validInternalTargets: ReadonlySet<string>;
+  generatedPageTargets?: ReadonlySet<string>;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
 }

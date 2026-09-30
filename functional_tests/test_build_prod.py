@@ -92,7 +92,10 @@ class TestProdBuildWithBasePath:
 
     def test_raw_html_links_include_base_path(self, built_prod_site):
         html = (built_prod_site / 'dist-prod' / 'v1' / 'index.html').read_text()
-        assert '<a href="/test/about/index.html">HTML link</a>' in html
+        link = re.search(r'<a\b([^>]*)>HTML link</a>', html)
+        assert link, 'Missing raw HTML link'
+        assert 'href="/test/about/index.html"' in link[1]
+        assert re.search(r'\sdata-tada-page(?:\s|=|$)', link[1])
 
     def test_markdown_images_include_base_path(self, built_prod_site):
         html = (built_prod_site / 'dist-prod' / 'v1' / 'index.html').read_text()

@@ -24,11 +24,17 @@ function shouldIgnoreClick(
   event: MouseEvent,
   anchor: HTMLAnchorElement,
 ): boolean {
-  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+  if (
+    event.button !== 0 ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
     return true;
   }
 
-  if (anchor.target || anchor.hasAttribute('download')) {
+  if (anchor.hasAttribute('target') || anchor.hasAttribute('download')) {
     return true;
   }
 
@@ -96,6 +102,10 @@ export default function mountNavigate(window: Window): () => void {
         window.scrollTo({ top: 0 });
         saveScrollPosition(window);
       }
+      return;
+    }
+
+    if (!anchor.hasAttribute('data-tada-page')) {
       return;
     }
 

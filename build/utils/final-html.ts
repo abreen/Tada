@@ -15,6 +15,7 @@ interface FinalizeHtmlPageOptions {
   siteVariables: SiteVariables;
   sourceUrlPath: string;
   validInternalTargets: ReadonlySet<string>;
+  generatedPageTargets?: ReadonlySet<string>;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
 }
@@ -136,6 +137,7 @@ export function finalizeHtmlPage({
   sourceUrlPath,
   validInternalTargets,
   literateJavaOutputPaths,
+  generatedPageTargets,
   dependencyCollector,
 }: FinalizeHtmlPageOptions): FinalizedHtmlPage {
   const dom = new JSDOM(html);
@@ -210,6 +212,54 @@ export function finalizeHtmlPage({
     const rewrittenHref = rewriteAbsoluteHrefWithBasePath(href, applyBasePath);
     if (rewrittenHref !== href) {
       element.setAttribute('href', rewrittenHref);
+    }
+  }
+
+  // Classify final hrefs after all rewriting, including links outside content.
+  const origin = new URL(siteVariables.base).origin;
+  // Source paths contain no query or fragment. Escape filesystem delimiters
+  // while preserving the percent-encoded segments supplied by code pages.
+  const sourcePathname = sourceUrlPath.replace(/[?#]/g, encodeURIComponent);
+  const sourceUrl = new URL(applyBasePath(sourcePathname), origin);
+  const basePath = (siteVariables.basePath || '/').replace(/\/$/, '');
+  for (const anchor of document.querySelectorAll('a')) {
+    anchor.removeAttribute('data-tada-page');
+    const href = anchor.getAttribute('href');
+    if (href === null) {
+      continue;
+    }
+    let url: URL;
+    try {
+      url = new URL(href, sourceUrl);
+    } catch {
+      continue;
+    }
+    if (url.origin !== origin) {
+      continue;
+    }
+    if (
+      basePath &&
+      url.pathname !== basePath &&
+      !url.pathname.startsWith(`${basePath}/`)
+    ) {
+      continue;
+    }
+    let target = url.pathname.slice(basePath.length) || '/';
+    try {
+      target = decodeURIComponent(target);
+    } catch {
+      // Preserve malformed encodings for classification as authored.
+    }
+    target = normalizeOutputPath(target);
+    if (generatedPageTargets) {
+      dependencyCollector?.internalTargets?.add(target);
+    }
+    if (
+      generatedPageTargets?.has(target) &&
+      !anchor.hasAttribute('target') &&
+      !anchor.hasAttribute('download')
+    ) {
+      anchor.setAttribute('data-tada-page', '');
     }
   }
 

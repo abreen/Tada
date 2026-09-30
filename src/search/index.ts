@@ -141,6 +141,10 @@ function render(
     a.id = `result-${i}`;
     a.className = 'result';
     a.href = result.url;
+    const isGeneratedPage = Boolean(result.template);
+    if (isGeneratedPage) {
+      a.setAttribute('data-tada-page', '');
+    }
     a.tabIndex = 0;
 
     const titleEl = doc.createElement('div');
@@ -177,6 +181,9 @@ function render(
       for (const sub of subsToShow) {
         const subA = doc.createElement('a');
         subA.href = sub.url;
+        if (isGeneratedPage) {
+          subA.setAttribute('data-tada-page', '');
+        }
         subA.className = 'sub-result';
 
         const subTitle = doc.createElement('div');

@@ -39,6 +39,7 @@ export interface TadaProjectScan {
   readonly processedExts: ReadonlySet<string>;
   readonly sources: ReadonlyMap<string, SourceEntry>;
   readonly outputProducers: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly generatedPageTargets: ReadonlySet<string>;
   readonly validTargets: ReadonlySet<string>;
   readonly literateJavaOutputPaths: ReadonlySet<string>;
 }
@@ -130,6 +131,7 @@ export function indexSources(
   sources: ReadonlyMap<string, SourceEntry>,
 ): TadaProjectScan {
   const outputProducers = new Map<string, Set<string>>();
+  const generatedPageTargets = new Set<string>();
   const validTargets = new Set<string>();
   const literateJavaOutputPaths = new Set<string>();
   for (const [filePath, entry] of sources) {
@@ -138,6 +140,17 @@ export function indexSources(
         outputProducers.set(output, new Set());
       }
       outputProducers.get(output)!.add(filePath);
+    }
+    if (
+      ['plain-text-page', 'code-page', 'literate-java'].includes(
+        entry.renderKind,
+      )
+    ) {
+      for (const output of entry.outputs) {
+        if (output.endsWith('.html')) {
+          addGeneratedRouteAliases(generatedPageTargets, `/${output}`);
+        }
+      }
     }
     for (const target of entry.targets) {
       validTargets.add(target);
@@ -154,6 +167,7 @@ export function indexSources(
     sources,
     outputProducers,
     validTargets,
+    generatedPageTargets,
     literateJavaOutputPaths,
   };
 }

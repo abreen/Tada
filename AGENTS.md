@@ -71,6 +71,12 @@ Use the correct type of test (unit, Playwright, or functional) following the rul
 - Geometry checks are allowed only when geometry is the behavior under test, such as scroll restoration or target-in-viewport checks, and should use broad user-observable outcomes
 - Prefer role, text, URL, DOM state, accessibility attributes, and interaction outcomes over computed styles or style-only classes
 
+## Python rules
+
+Do not use virtualenv or create temporary environments to work around issues with running Python.
+Follow the rules in `CONTRIBUTING.md` to install the correct version of Python and any dependencies.
+If there is an issue with the Python environment, stop and inform the user.
+
 ## Code style/formatting
 
 The pre-commit hook runs the code formatter. Do not run formatting commands manually.

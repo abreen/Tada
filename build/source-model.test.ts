@@ -356,6 +356,15 @@ describe('scanProject', () => {
       new Set(['labs/00/VowelCounter.java.html', 'labs/00/VowelCounter.java']),
     );
     expect(scan.sources.get(partialPath)?.outputs).toEqual(new Set());
+    expect(scan.generatedPageTargets.has('/')).toBe(true);
+    expect(scan.generatedPageTargets.has('/index.html')).toBe(true);
+    expect(
+      scan.generatedPageTargets.has('/labs/01/SearchTreeDemo.java.html'),
+    ).toBe(true);
+    expect(scan.generatedPageTargets.has('/labs/01/SearchTreeDemo.java')).toBe(
+      false,
+    );
+    expect(scan.generatedPageTargets.has('/test.txt')).toBe(false);
     expect(scan.sources.get(literateJavaPath)?.targets).toEqual(
       new Set([
         '/labs/00/VowelCounter.java.html',

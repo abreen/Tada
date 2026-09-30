@@ -918,3 +918,47 @@ test.describe('client-side navigation', () => {
     await expect(returnFocus).toBeFocused();
   });
 });
+
+test('generated navigation uses one GET and no post-swap HEAD', async ({
+  page,
+}) => {
+  await page.goto('/index.html');
+  const requests: string[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/markdown.html') {
+      requests.push(request.method());
+    }
+  });
+  await page.locator('main.body a[href="/markdown.html"]').click();
+  await expect(page.locator('h1')).toContainText('Markdown Examples');
+  await page.waitForLoadState('networkidle');
+  expect(requests).toEqual(['GET']);
+});
+
+test('unmarked HTML uses one document request with simulated latency', async ({
+  page,
+}) => {
+  await page.goto('/index.html');
+  await page.route('**/plain.html', async route => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await route.fulfill({
+      contentType: 'text/html',
+      body: '<h1>Plain HTML</h1>',
+    });
+  });
+  await page.evaluate(() => {
+    const a = document.createElement('a');
+    a.href = '/plain.html';
+    a.textContent = 'Plain destination';
+    document.querySelector('main.body')!.prepend(a);
+  });
+  const requests: string[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/plain.html') {
+      requests.push(request.resourceType());
+    }
+  });
+  await page.getByRole('link', { name: 'Plain destination' }).click();
+  await expect(page.locator('h1')).toHaveText('Plain HTML');
+  expect(requests).toEqual(['document']);
+});

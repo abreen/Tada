@@ -75,9 +75,14 @@ export function createTadaWatchPlan({
   for (const target of new Set([
     ...snapshot.scan.validTargets,
     ...scan.validTargets,
+    ...snapshot.scan.generatedPageTargets,
+    ...scan.generatedPageTargets,
   ])) {
     if (
-      snapshot.scan.validTargets.has(target) !== scan.validTargets.has(target)
+      snapshot.scan.validTargets.has(target) !==
+        scan.validTargets.has(target) ||
+      snapshot.scan.generatedPageTargets.has(target) !==
+        scan.generatedPageTargets.has(target)
     ) {
       include(snapshot.targetDependents, target);
     }

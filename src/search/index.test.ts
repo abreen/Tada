@@ -271,7 +271,14 @@ describe('search UI', () => {
           activeIndex === 'initial'
             ? Array.from({ length: 26 }, (_, i) => ({
                 data: async () => ({
-                  meta: { title: `Alpha ${i + 1}` },
+                  meta: { title: `Alpha ${i + 1}`, template: 'default' },
+                  sub_results: [
+                    {
+                      title: 'Section',
+                      url: `/alpha-${i + 1}/#section`,
+                      excerpt: 'Section match',
+                    },
+                  ],
                   url: `/alpha-${i + 1}/`,
                   excerpt: `Matched alpha ${i + 1}`,
                   score: 26 - i,
@@ -326,6 +333,12 @@ describe('search UI', () => {
     expect(results).toHaveLength(26);
     expect(results[0]?.getAttribute('href')).toBe('/alpha-1/');
     expect(results[25]?.getAttribute('href')).toBe('/alpha-26/');
+    expect(results[0]?.hasAttribute('data-tada-page')).toBe(true);
+    expect(
+      win.document
+        .querySelector('a.sub-result')
+        ?.hasAttribute('data-tada-page'),
+    ).toBe(true);
 
     availableIndex = 'reloaded';
     win.dispatchEvent(new win.Event(PAGE_UPDATE_REFRESH_EVENT));
@@ -345,5 +358,8 @@ describe('search UI', () => {
     expect(win.document.querySelector('a.result')?.getAttribute('href')).toBe(
       '/reloaded-alpha/',
     );
+    expect(
+      win.document.querySelector('a.result')?.hasAttribute('data-tada-page'),
+    ).toBe(false);
   });
 });

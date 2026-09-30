@@ -39,45 +39,9 @@ describe('isEligibleLink', () => {
     ).toBe(false);
   });
 
-  test('ineligible: PDF file', () => {
+  test('origin eligibility does not infer route ownership from extensions', () => {
     expect(isEligibleLink('http://localhost/doc.pdf', origin, basePath)).toBe(
-      false,
-    );
-  });
-
-  test('ineligible: Java file', () => {
-    expect(isEligibleLink('http://localhost/Main.java', origin, basePath)).toBe(
-      false,
-    );
-  });
-
-  test('ineligible: Python file', () => {
-    expect(isEligibleLink('http://localhost/script.py', origin, basePath)).toBe(
-      false,
-    );
-  });
-
-  test('ineligible: PNG image', () => {
-    expect(isEligibleLink('http://localhost/image.png', origin, basePath)).toBe(
-      false,
-    );
-  });
-
-  test('ineligible: ZIP file', () => {
-    expect(
-      isEligibleLink('http://localhost/archive.zip', origin, basePath),
-    ).toBe(false);
-  });
-
-  test('ineligible: JPG image', () => {
-    expect(isEligibleLink('http://localhost/photo.jpg', origin, basePath)).toBe(
-      false,
-    );
-  });
-
-  test('ineligible: JSON file', () => {
-    expect(isEligibleLink('http://localhost/data.json', origin, basePath)).toBe(
-      false,
+      true,
     );
   });
 

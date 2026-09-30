@@ -236,3 +236,21 @@ test('directory reconciliation invalidates partial dependents without individual
   expect(deleted.renderSources).toEqual(new Set([page.sourcePath]));
   expect(deleted.removeSources.size).toBe(0);
 });
+
+test('route ownership changes invalidate links even when the pathname stays valid', () => {
+  const generated = record('content/destination.md', ['destination.html']);
+  const copied = record('public/destination.html', ['destination.html']);
+  const inbound = record('content/inbound.md', ['inbound.html'], {
+    internalTargets: new Set(['/destination.html']),
+  });
+  expect(
+    plan([generated, inbound], [copied, inbound], []).renderSources.has(
+      inbound.sourcePath,
+    ),
+  ).toBe(true);
+  expect(
+    plan([copied, inbound], [generated, inbound], []).renderSources.has(
+      inbound.sourcePath,
+    ),
+  ).toBe(true);
+});

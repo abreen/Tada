@@ -271,3 +271,57 @@ describe('finalizeHtmlPage', () => {
     ).toHaveLength(3);
   });
 });
+
+test.each([
+  '/notes#1/page.html',
+  '/notes?1/page.html',
+  '/notes%231/code.py.html',
+  '/notes%3F1/code.py.html',
+])('classifies relative links against source pathname %s', sourceUrlPath => {
+  const collector = createCollector();
+  const directory =
+    sourceUrlPath.includes('#') || sourceUrlPath.includes('%23')
+      ? '/notes#1'
+      : '/notes?1';
+  const target = `${directory}/destination.html`;
+  const result = finalizeHtmlPage({
+    filePath: 'content/page.md',
+    html: '<nav><a href="destination.html?query=1#part">Destination</a></nav>',
+    siteVariables,
+    sourceUrlPath,
+    validInternalTargets: new Set([target]),
+    generatedPageTargets: new Set([target, '/destination.html']),
+    dependencyCollector: collector,
+  });
+  const anchor = new JSDOM(result.html).window.document.querySelector('a')!;
+  expect(anchor.hasAttribute('data-tada-page')).toBe(true);
+  expect(anchor.getAttribute('href')).toBe('destination.html?query=1#part');
+  expect([...collector.internalTargets]).toEqual([target]);
+});
+
+test('annotates generated destinations throughout the document and removes reserved markers', () => {
+  const collector = createCollector();
+  const result = finalizeHtmlPage({
+    filePath: 'content/docs/index.md',
+    html: `<nav><a href="guide%20one.html?x=1#part">Relative</a>
+      <a href="https://example.edu/course/docs/guide%20one.html">Absolute</a>
+      <a href="/copied.html" data-tada-page>Copied</a>
+      <a href="/docs/guide%20one.html" download data-tada-page>Download</a>
+      <a href="/docs/guide%20one.html" target="_self" data-tada-page>Target</a></nav>`,
+    siteVariables,
+    sourceUrlPath: '/docs/index.html',
+    validInternalTargets: new Set(['/copied.html', '/docs/guide one.html']),
+    generatedPageTargets: new Set(['/docs/guide one.html']),
+    dependencyCollector: collector,
+  });
+  const anchors = new JSDOM(result.html).window.document.querySelectorAll('a');
+  expect(Array.from(anchors, a => a.hasAttribute('data-tada-page'))).toEqual([
+    true,
+    true,
+    false,
+    false,
+    false,
+  ]);
+  expect(anchors[0].getAttribute('href')).toBe('guide%20one.html?x=1#part');
+  expect(collector.internalTargets.has('/copied.html')).toBe(true);
+});

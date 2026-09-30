@@ -363,3 +363,90 @@ describe('page-update behavior', () => {
     expect(win.document.querySelector('.page-update-container')).toBeNull();
   });
 });
+
+test('adopts navigation GET validators without an immediate HEAD', async () => {
+  jest.useFakeTimers();
+  const win = create();
+  const fetchMock = mock(async () => responseWithHeaders({ ETag: '"new"' }));
+  mockGlobals({ fetch: fetchMock });
+  const cleanup = mountPageUpdate(win, { pollIntervalMs: 100 });
+  await flush();
+  win.history.pushState({}, '', '/other?view=full#part');
+  win.dispatchEvent(
+    new (win as unknown as { CustomEvent: typeof CustomEvent }).CustomEvent(
+      NAVIGATION_EVENT,
+      {
+        detail: {
+          path: '/other?view=full',
+          validators: { etag: '"new"', lastModified: null },
+        },
+      },
+    ),
+  );
+  await flush();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  await advancePolling(100);
+  expect(fetchMock).toHaveBeenLastCalledWith('/other?view=full', {
+    method: 'HEAD',
+    cache: 'no-cache',
+  });
+  expect(win.document.querySelector('.is-showing')).toBeNull();
+  cleanup?.();
+});
+
+test('discards stale checks across A to B to A and suppresses queued baseline checks', async () => {
+  jest.useFakeTimers();
+  const win = create('http://localhost/a');
+  const pending = deferred<Response>();
+  const fetchMock = mock(() => pending.promise);
+  mockGlobals({ fetch: fetchMock });
+  const cleanup = mountPageUpdate(win, { pollIntervalMs: 100 });
+  win.document.dispatchEvent(new win.Event('visibilitychange'));
+  for (const path of ['/b', '/a']) {
+    win.history.pushState({}, '', path);
+    win.dispatchEvent(
+      new (win as unknown as { CustomEvent: typeof CustomEvent }).CustomEvent(
+        NAVIGATION_EVENT,
+        { detail: { path, validators: { etag: '"get"', lastModified: null } } },
+      ),
+    );
+  }
+  pending.resolve(responseWithHeaders({ ETag: '"stale"' }));
+  await flush();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(win.document.querySelector('.is-showing')).toBeNull();
+  await advancePolling(100);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(win.document.querySelector('.is-showing')).not.toBeNull();
+  cleanup?.();
+});
+
+test('navigation without validators defers baseline checking to the normal poll', async () => {
+  jest.useFakeTimers();
+  const win = create();
+  const fetchMock = mock(async () => responseWithHeaders({ ETag: '"v1"' }));
+  mockGlobals({ fetch: fetchMock });
+  const cleanup = mountPageUpdate(win, { pollIntervalMs: 100 });
+  await flush();
+  win.dispatchEvent(new win.Event(NAVIGATION_EVENT));
+  await flush();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  await advancePolling(100);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(win.document.querySelector('.is-showing')).toBeNull();
+  cleanup?.();
+});
+
+test('visibility checks queued after navigation run when the stale request finishes', async () => {
+  const win = create();
+  const pending = deferred<Response>();
+  const fetchMock = mock(() => pending.promise);
+  mockGlobals({ fetch: fetchMock });
+  const cleanup = mountPageUpdate(win);
+  win.dispatchEvent(new win.Event(NAVIGATION_EVENT));
+  win.document.dispatchEvent(new win.Event('visibilitychange'));
+  pending.resolve(responseWithHeaders({ ETag: '"v1"' }));
+  await flush();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  cleanup?.();
+});

@@ -8,10 +8,14 @@ across navigations. With JavaScript disabled, every link is a normal
 ## What gets intercepted
 
 Same-origin internal links under the configured `basePath`, with no modifier
-keys held, no `target` or `download` attribute, and not pointing to a non-HTML file (`.pdf`,
-`.java`, `.png`, etc.). Non-root base paths match by path segment: `/course`
+keys held, no `target` or `download` attribute, and a build-time
+`data-tada-page` marker identifying a generated Tada destination. Non-root base paths match by path segment: `/course`
 matches `/course` and `/course/page.html`, but not `/course2/page.html`.
-Everything else is left to the browser.
+Same-page links are handled locally before requiring a marker, with no request.
+Unmarked cross-page links, including copied public HTML and links created by
+author JavaScript, use normal browser navigation without a speculative fetch.
+Search marks generated-page results and their fragment subresults using Pagefind
+template metadata; PDF results remain unmarked. Everything else is left to the browser.
 Download links retain native browser behavior even when the `download`
 attribute is empty or the target is an HTML page.
 
@@ -34,7 +38,9 @@ right.
 
 Persistent components (header, search, back-to-top, navigate) mount
 once at startup. The page update toast also stays mounted and resets its
-tracking state when navigation completes. Per-page components are torn down and
+tracking state when navigation completes, adopting validators from the successful
+HTML GET. The `tada:navigation` event includes `{ path, validators }` for clicks,
+Back/Forward, and in-place refreshes. Per-page components are torn down and
 re-mounted on every navigation.
 
 ## Scroll and `:target`

@@ -1,3 +1,4 @@
+import { getResponseValidators, type ResponseValidators } from '../validators';
 import { mountPerPageComponents, teardownPerPageComponents } from './lifecycle';
 import { globals } from '../globals';
 
@@ -93,12 +94,22 @@ export function closeHeaderDetails(document: Document): void {
   }
 }
 
-function dispatchNavigationEvent(window: Window): void {
+export interface NavigationEventDetail {
+  path: string;
+  validators: ResponseValidators;
+}
+
+function dispatchNavigationEvent(
+  window: Window,
+  validators: ResponseValidators,
+): void {
   const CustomEventCtor = (
     window as unknown as { CustomEvent: typeof CustomEvent }
   ).CustomEvent;
   window.dispatchEvent(
-    new CustomEventCtor(NAVIGATION_EVENT, { detail: { path: currentPath } }),
+    new CustomEventCtor(NAVIGATION_EVENT, {
+      detail: { path: currentPath, validators },
+    }),
   );
 }
 
@@ -396,7 +407,7 @@ export async function navigateToUrl(
   }
 
   currentAbortController = null;
-  dispatchNavigationEvent(window);
+  dispatchNavigationEvent(window, getResponseValidators(response));
 }
 
 export async function refreshCurrentPage(window: Window): Promise<void> {

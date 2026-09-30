@@ -72,7 +72,9 @@ export function mountPageUpdate(
   const { container, toast, reloadButton, dismissButton } =
     createToast(document);
 
-  let currentPath = window.location.pathname;
+  let currentPath = window.location.pathname + window.location.search;
+  let navigationGeneration = 0;
+  let disposed = false;
   let baseline = EMPTY_RESPONSE_VALIDATORS;
   let dismissedValidatorKey: string | null = null;
   let nextValidator: ResponseValidators | null = null;
@@ -98,7 +100,7 @@ export function mountPageUpdate(
 
   function scheduleNextCheck() {
     clearTimer();
-    if (globals.isDocumentHidden(document)) {
+    if (disposed || globals.isDocumentHidden(document)) {
       return;
     }
     timer = window.setTimeout(() => {
@@ -145,11 +147,16 @@ export function mountPageUpdate(
     }
 
     const requestedPath = currentPath;
-    let shouldRerun = false;
+    const requestedGeneration = navigationGeneration;
     checkInFlight = true;
     try {
       const validators = await fetchValidators(requestedPath);
-      if (!validators || requestedPath !== currentPath) {
+      if (
+        !validators ||
+        disposed ||
+        requestedGeneration !== navigationGeneration ||
+        requestedPath !== currentPath
+      ) {
         return;
       }
 
@@ -175,30 +182,32 @@ export function mountPageUpdate(
       // best-effort
     } finally {
       checkInFlight = false;
-      if (rerunAfterCurrentCheck && !globals.isDocumentHidden(document)) {
+      if (
+        rerunAfterCurrentCheck &&
+        !disposed &&
+        !globals.isDocumentHidden(document)
+      ) {
         rerunAfterCurrentCheck = false;
-        shouldRerun = true;
-      } else {
+        void checkForUpdate();
+      } else if (requestedGeneration === navigationGeneration) {
         scheduleNextCheck();
       }
     }
-
-    if (shouldRerun) {
-      void checkForUpdate();
-    }
   }
 
-  function resetState() {
-    currentPath = window.location.pathname;
-    baseline = EMPTY_RESPONSE_VALIDATORS;
+  function resetState(
+    validators: ResponseValidators = EMPTY_RESPONSE_VALIDATORS,
+  ) {
+    navigationGeneration++;
+    rerunAfterCurrentCheck = false;
+    currentPath = window.location.pathname + window.location.search;
+    baseline = validators;
     dismissedValidatorKey = null;
     nextValidator = null;
-    hasBaseline = false;
+    hasBaseline = hasUsableResponseValidators(validators);
     hideToast();
     clearTimer();
-    if (!globals.isDocumentHidden(document)) {
-      void checkForUpdate();
-    }
+    scheduleNextCheck();
   }
 
   function handleVisibilityChange() {
@@ -216,13 +225,16 @@ export function mountPageUpdate(
     void checkForUpdate();
   }
 
-  function handleNavigation() {
+  function handleNavigation(event: Event) {
     if (__IS_DEV__) {
       console.log(
         `[page-update] navigation path=${window.location.pathname} visibility=${document.visibilityState} focus=${document.hasFocus()}`,
       );
     }
-    resetState();
+    resetState(
+      (event as CustomEvent<{ validators?: ResponseValidators }>).detail
+        ?.validators,
+    );
   }
 
   function handleDismiss() {
@@ -272,6 +284,7 @@ export function mountPageUpdate(
   }
 
   return () => {
+    disposed = true;
     clearTimer();
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('focus', handleWindowFocus);

@@ -67,3 +67,20 @@ as either `[x](</my notes.md>)` (angle-bracket form) or `[x](/my%20notes.md)`
 (percent-encoded form). The bare form `[x](/my notes.md)` is rejected by
 markdown-it's own parser before reaching the validator, per the CommonMark
 link-destination grammar.
+
+## Generated-page navigation markers
+
+After link rewriting, the final HTML pass recomputes the reserved boolean
+`data-tada-page` attribute on anchors throughout the document, including raw
+HTML, partials, banners, navigation, breadcrumbs, and author links. Only routes
+produced by Tada page renderers (including index aliases) receive this marker.
+Copied public HTML, raw source downloads, other assets, and anchors with `target`
+or `download` remain unmarked. Author-supplied markers are removed and recomputed.
+
+Classification preserves the final `href`, resolves relative URLs against the
+page output URL (escaping filesystem `#` and `?` characters while preserving
+already encoded code-page paths), decodes paths, ignores queries and fragments, and handles the
+configured base path and absolute URLs on the configured site origin. Watch mode
+tracks classification dependencies for marked and unmarked internal links and
+rebuilds dependent pages when route ownership changes, even if the pathname
+remains valid. Ordinary hrefs continue to work with JavaScript disabled.

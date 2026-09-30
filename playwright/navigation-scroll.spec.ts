@@ -84,6 +84,7 @@ test.describe('scroll and hash behavior', () => {
     await page.evaluate(hash => {
       const a = document.createElement('a');
       a.href = `/markdown.html#${hash}`;
+      a.setAttribute('data-tada-page', '');
       a.textContent = 'test link';
       a.id = 'test-hash-link';
       document.querySelector('main.body')!.appendChild(a);
@@ -173,6 +174,7 @@ test.describe('scroll and hash behavior', () => {
     await page.evaluate(() => {
       const a = document.createElement('a');
       a.href = '/lectures/01/Rectangle.java.html#L24';
+      a.setAttribute('data-tada-page', '');
       a.textContent = 'jump to L24';
       a.id = 'test-cross-hash-link';
       document.querySelector('main.body')!.appendChild(a);
@@ -289,6 +291,7 @@ test.describe('scroll and hash behavior', () => {
     await page.evaluate(() => {
       const link = document.createElement('a');
       link.href = '/lectures/01/Rectangle.java.html';
+      link.setAttribute('data-tada-page', '');
       link.textContent = 'test code page link';
       link.id = 'test-code-page-link';
       document.querySelector('main.body')!.appendChild(link);
