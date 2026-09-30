@@ -1,4 +1,5 @@
 import path from 'path';
+import { getDefaultFontPreloadFiles } from './generate-fonts';
 import { describe, expect, test } from 'bun:test';
 import {
   CUSTOM_FONT_FACE_DEFINITIONS,
@@ -25,6 +26,40 @@ function validWoff2(): Buffer {
 }
 
 describe('custom font configuration', () => {
+  test('tunes bundled families without declaring or reading custom faces', () => {
+    const overrides = {
+      serif: { tuning: { scale: 1.1 } },
+      serifMono: { tuning: { scale: 0.85, lineHeight: 1.5 } },
+    };
+    expect(getSerifFontStack(overrides)).toBe(getSerifFontStack(undefined));
+    expect(getSerifMonoFontStack(overrides)).toBe(
+      getSerifMonoFontStack(undefined),
+    );
+    expect(renderCustomFontFaceScss(overrides)).toBe('');
+    expect(
+      getDefaultFontPreloadFiles({
+        defaultFont: 'serif',
+        fontOverrides: overrides,
+      }),
+    ).toEqual(getDefaultFontPreloadFiles({ defaultFont: 'serif' }));
+    expect(renderCustomFontTuningScss(overrides)).toContain(
+      '--mono-font-size: 0.85em;',
+    );
+    expect(renderCustomFontTuningScss(overrides)).toContain(
+      '--font-size: 1.1rem;',
+    );
+    expect(
+      validateCustomFontOverrides({
+        fontOverrides: overrides,
+        publicDir: PUBLIC_DIR,
+        publicFiles: new Set(),
+        readFile: () => {
+          throw new Error('must not read fonts');
+        },
+      }),
+    ).toEqual([]);
+  });
+
   test('defines stable family aliases and face descriptors', () => {
     expect(CUSTOM_FONT_FAMILY_DEFINITIONS).toEqual({
       serif: { configKey: 'serif', cssFamily: 'Tada Custom Serif' },

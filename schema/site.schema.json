@@ -85,7 +85,14 @@
   "$defs": {
     "serifFontOverride": {
       "type": "object",
-      "required": ["regular"],
+      "anyOf": [
+        { "required": ["regular"] },
+        {
+          "required": ["tuning"],
+          "properties": { "tuning": {} },
+          "additionalProperties": false
+        }
+      ],
       "properties": {
         "regular": { "$ref": "#/$defs/publicWoff2Path" },
         "italic": { "$ref": "#/$defs/publicWoff2Path" },
@@ -112,7 +119,14 @@
     },
     "serifMonoFontOverride": {
       "type": "object",
-      "required": ["regular"],
+      "anyOf": [
+        { "required": ["regular"] },
+        {
+          "required": ["tuning"],
+          "properties": { "tuning": {} },
+          "additionalProperties": false
+        }
+      ],
       "properties": {
         "regular": { "$ref": "#/$defs/publicWoff2Path" },
         "italic": { "$ref": "#/$defs/publicWoff2Path" },

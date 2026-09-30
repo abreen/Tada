@@ -112,8 +112,11 @@ fontOverrides:
       fontSizeAdjust: 0.613
 ```
 
-Each family is independent. When a family is present, `regular` is required;
-the browser synthesizes any omitted italic or bold styles. Face paths use
+Each family is independent. A family may contain only `tuning` to adjust the
+bundled Source Serif 4 or Courier Prime without replacing it. Bundled styled
+faces, preloads, and font-switch loading behavior are retained. Custom face
+paths or `features` require `regular`; the browser synthesizes any omitted
+italic or bold styles in a custom family. Face paths use
 POSIX separators and are relative to `public/`. Absolute paths, traversal,
 query strings, fragments, and extensions other than `.woff2` are rejected.
 

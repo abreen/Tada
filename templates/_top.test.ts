@@ -96,7 +96,10 @@ describe('_top.html template', () => {
       undefined,
       undefined,
       false,
-      { serif: {}, serifMono: {} },
+      {
+        serif: { regular: 'fonts/body.woff2' },
+        serifMono: { regular: 'fonts/mono.woff2' },
+      },
     );
 
     expect(bundledHtml).toContain("sans: ['Inter', 'Google Sans Code']");
@@ -114,6 +117,16 @@ describe('_top.html template', () => {
       `document.fonts.load('normal 400 1em "' + monoFamily + '"')`,
     );
     expect(customHtml).not.toContain('document.fonts.ready');
+  });
+
+  test('uses bundled families for the loading barrier with tuning alone', () => {
+    const html = renderTop('serif', 'standard', undefined, undefined, false, {
+      serif: { tuning: { scale: 1.1 } },
+      serifMono: { tuning: { scale: 0.85 } },
+    });
+    expect(html).toContain("'Source Serif 4'");
+    expect(html).toContain("'Courier Prime'");
+    expect(html).not.toContain('Tada Custom Serif');
   });
 
   test('renders a non-empty banner without a title', () => {

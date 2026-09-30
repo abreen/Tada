@@ -209,7 +209,7 @@ export function renderCustomFontTuningScss(
 export function getSerifFontStack(
   fontOverrides: FontOverrides | undefined,
 ): string {
-  const custom = fontOverrides?.serif
+  const custom = fontOverrides?.serif?.regular
     ? `'${CUSTOM_FONT_FAMILY_DEFINITIONS.serif.cssFamily}', `
     : '';
   return `${custom}'Source Serif 4', 'Times New Roman', 'Times', serif`;
@@ -218,7 +218,7 @@ export function getSerifFontStack(
 export function getSerifMonoFontStack(
   fontOverrides: FontOverrides | undefined,
 ): string {
-  const custom = fontOverrides?.serifMono
+  const custom = fontOverrides?.serifMono?.regular
     ? `'${CUSTOM_FONT_FAMILY_DEFINITIONS.serifMono.cssFamily}', `
     : '';
   return `${custom}'Courier Prime', 'Courier New', 'Courier', monospace`;

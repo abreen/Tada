@@ -18,7 +18,7 @@ export interface SerifMonoFontTuning {
 }
 
 export interface FontFamilyOverride<Tuning = unknown> {
-  regular: string;
+  regular?: string;
   italic?: string;
   bold?: string;
   boldItalic?: string;

@@ -213,7 +213,36 @@ describe('site config schema', () => {
     ).not.toThrow();
   });
 
+  test('accepts tuning alone for both bundled serif families', () => {
+    expect(() =>
+      doValidation(
+        compile(siteSchema),
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          defaultTimeZone: 'America/New_York',
+          themeColor: 'tomato',
+          fontOverrides: {
+            serif: { tuning: { scale: 1.1 } },
+            serifMono: { tuning: { scale: 0.85 } },
+          },
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
   test.each([
+    [{ serif: {} }, 'required property'],
+    [{ serifMono: { tuning: { scale: 0.5 } } }, 'must be >= 0.75'],
+    [
+      { serifMono: { features: ['ss02'], tuning: { scale: 0.9 } } },
+      'required property',
+    ],
+    [
+      { serif: { italic: 'fonts/body.woff2', tuning: { scale: 1.1 } } },
+      'required property',
+    ],
     [{ serif: { italic: 'fonts/body-italic.woff2' } }, 'required property'],
     [
       { serif: { regular: 'fonts/body.otf' } },

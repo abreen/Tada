@@ -29,7 +29,7 @@ figures.
 
 The optional `fontOverrides.serif` and `fontOverrides.serifMono` configuration
 replace either serif family independently with licensed WOFF2 files from the
-site's `public/` directory. Each override requires a regular face and may add
+site's `public/` directory. Each custom family requires a regular face and may add
 italic, bold, and bold-italic faces. Tada declares these as fixed 400/700,
 normal/italic faces under internal family aliases. When a styled face is
 omitted, the browser may synthesize it. Source Serif 4 or Courier Prime stays
@@ -48,6 +48,20 @@ successful output after such an error.
 Each override may also carry font-specific `tuning`. The serif family supports
 `scale`, `lineHeight`, `headingScale`, `headingWeight`, and `fontSizeAdjust`;
 the serif-mono family supports `scale`, `lineHeight`, and `fontSizeAdjust`.
+Either family may contain only `tuning`, retaining the bundled Source Serif 4
+or Courier Prime family, its styled faces, preloads, and font-switch loading
+behavior. Custom face paths and `features` still require `regular`. For example,
+this reduces bundled Courier Prime's size relative to serif prose:
+
+```yaml
+fontOverrides:
+  serifMono:
+    tuning:
+      scale: 0.85
+```
+
+Bundled Courier Prime retains its face-level metric size adjustment; `scale`
+multiplies the surrounding prose size before that adjustment.
 Body scaling changes the serif-mode
 base font size, so authored content and inheriting interface text such as
 metadata and navigation scale together.
