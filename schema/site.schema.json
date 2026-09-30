@@ -46,6 +46,8 @@
       "maximum": 100,
       "default": 100
     },
+    "logo": { "type": "string" },
+    "favicon": { "type": "string" },
     "faviconColor": { "type": "string" },
     "faviconSymbol": { "type": "string", "pattern": "^[A-Z0-9\\- ]{1,5}$" },
     "faviconFontWeight": {

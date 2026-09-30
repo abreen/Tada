@@ -53,6 +53,11 @@ await runTada(
   repoDir,
 );
 
+writeFileSync(
+  path.join(siteDir, 'public', 'logo.svg'),
+  '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="24"><rect width="48" height="24" fill="red"/></svg>',
+);
+
 const configPath = path.join(siteDir, 'site.dev.yaml');
 const config = readFileSync(configPath, 'utf-8')
   .replace('basePath: /', 'basePath: /custom')
@@ -60,7 +65,7 @@ const config = readFileSync(configPath, 'utf-8')
   .replace('defaultContrast: standard', 'defaultContrast: high');
 writeFileSync(
   configPath,
-  `${config}${installCustomFontFixtures(repoDir, siteDir)}`,
+  `${config}${installCustomFontFixtures(repoDir, siteDir)}\nlogo: logo.svg\n`,
 );
 writeFileSync(
   path.join(siteDir, 'content', 'index.md'),

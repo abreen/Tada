@@ -59,7 +59,7 @@ export async function populateStaticAssets(
 ): Promise<void> {
   copyFonts(outputDir);
   copyKatexAssets(outputDir);
-  if (siteVariables.features.favicon !== false) {
+  if (siteVariables.features.favicon !== false && !siteVariables.favicon) {
     await generateFavicons(siteVariables, outputDir);
     generateWebAppManifest(siteVariables, outputDir);
   }

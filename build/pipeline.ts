@@ -60,14 +60,14 @@ export async function runPipeline(
       copyKatexAssets(distDir),
     ];
 
-    if (isFeatureEnabled(siteVariables, 'favicon')) {
+    if (isFeatureEnabled(siteVariables, 'favicon') && !siteVariables.favicon) {
       parallelTasks.push(generateFavicons(siteVariables, distDir));
     }
 
     const results = await Promise.all(parallelTasks);
     const assetFiles = results[0] as string[]; // bundle output filenames
 
-    if (isFeatureEnabled(siteVariables, 'favicon')) {
+    if (isFeatureEnabled(siteVariables, 'favicon') && !siteVariables.favicon) {
       generateWebAppManifest(siteVariables, distDir);
     }
 

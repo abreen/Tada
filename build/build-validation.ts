@@ -1,4 +1,5 @@
 import path from 'path';
+import { validateBranding } from './branding';
 import { B } from './colors';
 import { makeLogger } from './log';
 import { config, getConfigFileName } from './templates';
@@ -28,6 +29,14 @@ export function validateConfig(
       publicDir: scan.publicDir,
       publicFiles: new Set(sourcePaths(scan, 'public')),
     }),
+  );
+  diagnostics.push(
+    ...diagnosticsFromMessages(
+      validateBranding(siteVariables, {
+        publicDir: scan.publicDir,
+        publicFiles: new Set(sourcePaths(scan, 'public')),
+      }),
+    ),
   );
   const conflicts = assertNoOutputPathConflicts(scan);
   if (conflicts.length === 0) {

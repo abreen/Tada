@@ -6,6 +6,9 @@
       data-contrast-preference="high"<% } %>>
   <head>
     <% if (site.features.favicon) { %>
+    <% if (site.favicon) { %>
+    <link rel="icon" type="image/x-icon" href="/<%- encodePublicAssetPath(site.favicon) %>" sizes="any" />
+    <% } else { %>
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512.png" />
@@ -21,6 +24,7 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-title" content="<%= site.symbol %>">
     <meta name="mobile-web-app-capable" content="yes">
+    <% } %>
     <% } %>
     <meta name="generator" content="Tada <%= tadaVersion %>" />
     <meta charset="UTF-8" />
@@ -215,7 +219,7 @@
             <path class="menu-icon-line menu-icon-line-middle" d="M3 12h18" />
             <path class="menu-icon-line menu-icon-line-bottom" d="M3 18h18" />
           </svg>
-          <% if (site.symbol) { %><span class="logo" aria-hidden="true"><%= site.symbol %></span><% } %>
+          <% if (site.logo) { %><img class="logo-image" src="/<%- encodePublicAssetPath(site.logo) %>" alt="" aria-hidden="true" /><% } else if (site.symbol) { %><span class="logo" aria-hidden="true"><%= site.symbol %></span><% } %>
           <span class="site-title" aria-hidden="true"><%= site.title %></span>
         </summary>
         <div class="content">

@@ -57,7 +57,9 @@ Generated development and production site configs explicitly include
 - **basePath**: URL prefix for all internal links (default: `/`); it may contain
   multiple slash-separated segments, such as `/old/26summer`, and must not end
   with a slash
-- **symbol**: short text (1 to 5 chars) for the site logo and favicon
+- **logo**: optional image path relative to `public/`, replacing the header symbol (see [Header logo](logo.md))
+- **favicon**: optional public-relative `.ico` path replacing all generated favicons and manifest (see [Favicons](favicons.md))
+- **symbol**: short text (1 to 5 chars) for the header fallback and generated favicon
 - **faviconSymbol**: overrides symbol for the favicon (defaults to symbol)
 - **faviconColor**: overrides theme color for the favicon
 - **faviconFontWeight**: font weight for the favicon symbol (1 to 1000)

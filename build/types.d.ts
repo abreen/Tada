@@ -40,6 +40,8 @@ export interface SiteVariables {
   banner?: string;
   symbol?: string;
   faviconSymbol?: string;
+  logo?: string;
+  favicon?: string;
   themeColor: string;
   faviconColor?: string;
   faviconFontWeight?: number;

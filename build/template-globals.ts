@@ -1,3 +1,4 @@
+import { encodePublicAssetPath } from './custom-fonts';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import type { SiteVariables } from './types';
 
@@ -24,6 +25,7 @@ interface TemplateGlobals {
   classNames: (obj: Record<string, unknown>) => string;
   cx: (obj: Record<string, unknown>) => string;
   encodeAuthoredUrl: (value: string) => string;
+  encodePublicAssetPath: (value: string) => string;
   renderTimeZoneChooser: () => string;
 }
 
@@ -53,6 +55,7 @@ export default function createTemplateGlobals(
     classNames,
     cx: classNames,
     encodeAuthoredUrl,
+    encodePublicAssetPath,
     renderTimeZoneChooser,
   };
 }

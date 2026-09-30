@@ -8,7 +8,13 @@ Sites are visually customized through a few config values:
   applied across the site (hue in degrees, amount as a percentage).
 - **defaultContrast**: selects standard or high contrast before the page is
   rendered; visitors can override it with the appearance picker.
-- **symbol**: short text displayed in the site logo area.
+- **symbol**: short text displayed in the site logo area when `logo` is absent.
+- **logo**: optional public-relative image replacing the header symbol; see [Header logo](logo.md).
+- **favicon**: optional public-relative ICO replacing generated favicon assets and manifest; see [Favicons](favicons.md).
+
+For example, `logo: branding/logo.svg` and `favicon: branding/favicon.ico` use
+files in `public/branding/`. Both fields are independent; generated favicons use
+`faviconSymbol` or `symbol`, even when a custom header logo is configured.
 
 Theme values are compiled into CSS variables at build time and applied
 site-wide. Text colors for both light and dark modes are derived automatically

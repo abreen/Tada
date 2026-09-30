@@ -45,7 +45,8 @@ A static site generator. The successor to Presto.
   * `+++ ... +++ ... +++` renders a two-column layout
   * Special heading subtitles with `## Heading # A subtitle here`
   * `{{{ _partial.md }}}` syntax for including partials
-- Automatically generated favicon
+- Custom header logo from an image in `public/`
+- Automatically generated favicon or custom ICO from `public/`
   * Text, color, font and font weight taken from config file
 
 ## Prerequisites
@@ -267,16 +268,18 @@ vars:
 | `title` | Title for the whole site (also used to derive `titlePostfix`) |
 | `titlePostfix` | *Optional*, the string to append to each page's `title` |
 | `banner` | *Optional*, Markdown rendered in a bordered box above every page |
-| `symbol` | Text (1-5 chars) displayed in header (also used as the favicon symbol) |
+| `symbol` | Text (1-5 chars) displayed in header when `logo` is absent; also used for generated favicons |
+| `logo` | *Optional*, image path relative to `public/`, replacing the header symbol |
+| `favicon` | *Optional*, `.ico` path relative to `public/`, replacing generated favicons and the web app manifest |
 | `themeColor` | Theme color for the site (e.g., `"tomato"`, `"#c04040"`, `"hsl(195 70% 40%)"`) |
 | `tintHue` | *Optional*, hue (0-360) for background and foreground tinting (default `20`) |
 | `tintAmount` | *Optional*, percentage (0-100) of tint to apply to the neutral palette (default `100`); link saturation stays fixed |
 | `defaultFont` | *Optional*, initial font pairing: `sans` or `serif` (default `sans`) |
 | `defaultContrast` | *Optional*, initial neutral-palette contrast: `standard` or `high` (default `standard`) |
 | `fontOverrides` | *Optional*, custom serif and serif-monospace WOFF2 faces from `public/`; each configured family requires `regular` and may include styled faces, OpenType `features`, and font-specific `tuning` |
-| `faviconSymbol` | *Optional*, the text to use instead of `symbol` in the favicon |
+| `faviconSymbol` | *Optional*, the text to use instead of `symbol` in generated favicons |
 | `features.search` | Enable search UI and Pagefind index generation |
-| `features.favicon` | Enable automatically generated favicons |
+| `features.favicon` | Enable favicon links and generation (default `true`); `false` also omits custom favicon links |
 | `features.footer` | Show the Tada footer at the bottom of every page |
 | `features.pickers` | Show the font and contrast pickers at the bottom of every page (default `true`) |
 | `base` | Full base URL of the deployed site, used for metadata and URL generation |
@@ -284,9 +287,37 @@ vars:
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |
 | `extensionToShikiLanguage` | *Optional*, map from source-file extension to the Shiki language used for generated code pages and copied-source processing |
 | `shikiLanguages` | *Optional*, list of Shiki languages permitted in code blocks |
-| `faviconColor` | *Optional*, background color for favicon (defaults to `themeColor`) |
-| `faviconFontWeight` | *Optional*, font weight used for favicon text (default `700`) |
+| `faviconColor` | *Optional*, background color for generated favicons (defaults to `themeColor`) |
+| `faviconFontWeight` | *Optional*, font weight used for generated favicon text (default `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content as `vars.*` (e.g., `<%= vars.staffEmail %>`) |
+
+### Custom logo and favicon
+
+Place your assets in `public/` and configure their relative paths:
+
+```yaml
+logo: branding/logo.svg
+favicon: branding/favicon.ico
+symbol: TADA
+```
+
+Here the files are `public/branding/logo.svg` and
+`public/branding/favicon.ico`. Both fields are optional and independent. The
+logo replaces the header symbol and works without JavaScript. Without a custom
+favicon, Tada generates favicons from `faviconSymbol` or `symbol`, never from
+the logo image. A custom favicon replaces all generated icon assets, the web
+app manifest, and related web app metadata; `symbol` can be omitted when both
+logo and favicon are supplied.
+
+Paths must use forward slashes and cannot contain absolute paths, empty
+segments, `.` or `..` segments, query strings, or fragments. Assets must exist
+and be readable. The favicon must end in `.ico`; logo extensions are unrestricted,
+so choose a browser-supported image format. Asset URLs encode filenames and
+respect `basePath`, and files are copied unchanged.
+
+`features.favicon: false` omits all favicon links and generation. Configured
+assets are still validated and public files still copy normally. See
+[Header logo](spec/logo.md) and [Favicons](spec/favicons.md) for details.
 
 #### `nav.yaml`
 

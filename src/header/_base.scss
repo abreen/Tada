@@ -191,6 +191,16 @@ header summary .logo {
   background: var(--theme-color);
 }
 
+header summary .logo-image {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 96px;
+  height: 24px;
+  margin: 0 8px 0 0;
+  pointer-events: none;
+  object-fit: contain;
+}
+
 header summary .site-title {
   flex: 1 1 0;
   min-width: 0;

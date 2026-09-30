@@ -41,14 +41,17 @@ interface CustomFontValidationOptions {
 }
 
 export function isValidPublicWoff2Path(filePath: string): boolean {
+  return isValidPublicAssetPath(filePath) && filePath.endsWith('.woff2');
+}
+
+export function isValidPublicAssetPath(filePath: string): boolean {
   if (
     filePath.length === 0 ||
     filePath.startsWith('/') ||
     /^[A-Za-z]:/.test(filePath) ||
     filePath.includes('\\') ||
     filePath.includes('?') ||
-    filePath.includes('#') ||
-    !filePath.endsWith('.woff2')
+    filePath.includes('#')
   ) {
     return false;
   }
