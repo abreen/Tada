@@ -7,7 +7,6 @@ import markdownItAnchor from 'markdown-it-anchor';
 import markdownItFootnote from 'markdown-it-footnote';
 import markdownItDeflist from 'markdown-it-deflist';
 import markdownItContainer from 'markdown-it-container';
-import textToId, { deduplicateId } from '../text-to-id';
 import { highlightCode } from './shiki-highlighter';
 import { isBundledLanguage, isPlainTextLanguage } from '../site-variables';
 import headingSubtitlePlugin from '../heading-subtitle-plugin';
@@ -460,18 +459,12 @@ export function createMarkdown(
     state.tokens = transformedTokens;
   });
 
-  const usedIds = new Map<string, number>();
   markdown.use(markdownItContainer, 'alert', {
     marker: '!',
     validate: function (params: string) {
       return ALERT_PATTERN.test(params.trim());
     },
-    render: function (
-      tokens: Token[],
-      idx: number,
-      _options: unknown,
-      env: Record<string, unknown>,
-    ) {
+    render: function (tokens: Token[], idx: number) {
       const matches = tokens[idx].info.trim().match(ALERT_PATTERN);
 
       if (tokens[idx].nesting === 1) {
@@ -485,13 +478,7 @@ export function createMarkdown(
         const displayTitle = title
           ? markdown.utils.escapeHtml(curlyQuote(title))
           : capitalize(type || '');
-        const baseId = textToId(title || type || '');
-        const titleId = deduplicateId(usedIds, baseId);
-
-        if (!env.alertIds) {
-          env.alertIds = [];
-        }
-        (env.alertIds as string[]).push(titleId);
+        const titleId = tokens[idx].attrGet('id')!;
 
         let html = `<div class="${classNames.join(' ')}">`;
         html += `<p class="title" id="${titleId}">${displayTitle}</p>\n`;

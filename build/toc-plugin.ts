@@ -1,6 +1,7 @@
 import type MarkdownIt from 'markdown-it';
 import { convertMarkdown as curlyQuote } from 'quote-quote';
 import type { JavaTocEntry } from './types';
+import textToId, { deduplicateId } from './text-to-id';
 
 interface HeadingItem {
   kind: 'heading';
@@ -17,7 +18,7 @@ interface AlertItem {
   kind: 'alert';
   type: string;
   title: string;
-  id?: string;
+  id: string;
 }
 
 type TocItem = HeadingItem | DinkusItem | AlertItem;
@@ -31,6 +32,7 @@ export function tocPlugin(md: MarkdownIt): void {
     const tokens = state.tokens;
     const items: TocItem[] = [];
     const containerStack: string[] = [];
+    const usedAlertIds = new Map<string, number>();
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
@@ -70,19 +72,22 @@ export function tocPlugin(md: MarkdownIt): void {
         const depth = containerStack.length;
         const parentIsSection = depth === 1 && containerStack[0] === 'section';
 
-        if (depth === 0 || parentIsSection) {
-          const match = token.info
-            .trim()
-            .match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
-          if (match) {
-            const type = match[1];
-            let title = (match[2] || match[3])?.trim();
-            if (title) {
-              title = md.utils.escapeHtml(curlyQuote(title));
-            } else {
-              title = type === 'warning' ? 'Warning' : 'Note';
-            }
-            items.push({ kind: 'alert', type, title });
+        const match = token.info
+          .trim()
+          .match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
+        if (match) {
+          const type = match[1];
+          const title = (match[2] || match[3])?.trim();
+          // Assign IDs to every alert, including those excluded from the TOC.
+          const id = deduplicateId(usedAlertIds, textToId(title || type));
+          token.attrSet('id', id);
+          if (depth === 0 || parentIsSection) {
+            const displayTitle = title
+              ? md.utils.escapeHtml(curlyQuote(title))
+              : type === 'warning'
+                ? 'Warning'
+                : 'Note';
+            items.push({ kind: 'alert', type, title: displayTitle, id });
           }
         }
         // Fall through to push 'alert' onto container stack
@@ -110,16 +115,12 @@ export function tocPlugin(md: MarkdownIt): void {
   });
 }
 
-export function generateTocHtml(
-  tocItems: TocItem[],
-  alertIds: string[],
-): string {
+export function generateTocHtml(tocItems: TocItem[]): string {
   if (!tocItems || tocItems.length === 0) {
     return '';
   }
 
   let lastHeadingLevel = 1;
-  let alertIdx = 0;
   const parts = ['<ol>'];
 
   for (const item of tocItems) {
@@ -139,8 +140,7 @@ export function generateTocHtml(
 
     if (item.kind === 'alert') {
       const level = lastHeadingLevel + 1;
-      const id = alertIds[alertIdx++];
-      const href = `#${id}`;
+      const href = `#${item.id}`;
       parts.push(
         `<li class="alert-item level${level} ${item.type}">` +
           `<a href="${href}">${item.title}</a></li>`,

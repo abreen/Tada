@@ -267,7 +267,7 @@ export function renderPlainTextPageAsset({
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
   const watchMode = isWatchMode(assetFiles);
-  const { content, pageVariables, tocItems, alertIds } = renderPlainTextContent(
+  const { content, pageVariables, tocItems } = renderPlainTextContent(
     filePath,
     subPath,
     sourceUrlPath,
@@ -293,7 +293,6 @@ export function renderPlainTextPageAsset({
   if (pageVariables.toc && tocItems) {
     pageVariables.tocHtml = generateTocHtml(
       tocItems as Parameters<typeof generateTocHtml>[0],
-      alertIds,
     );
   }
 
@@ -486,7 +485,6 @@ function renderPlainTextContent(
   content: string | null;
   pageVariables: Record<string, unknown>;
   tocItems: unknown[] | null;
-  alertIds: string[];
 } {
   const applyBasePath = createApplyBasePath(siteVariables);
 
@@ -576,7 +574,6 @@ function renderPlainTextContent(
   }
 
   let tocItems: unknown[] | null = null;
-  let alertIds: string[] = [];
   if (extensionIsMarkdown(ext)) {
     const md = createMarkdown(siteVariables, {
       filePath,
@@ -584,17 +581,15 @@ function renderPlainTextContent(
       templateParams: params,
       dependencyCollector,
     });
-    const env: Record<string, unknown> = { alertIds: [] as string[] };
+    const env: Record<string, unknown> = {};
     html = md.render(html!, env);
     tocItems = (env.tocItems as unknown[] | undefined) || null;
-    alertIds = env.alertIds as string[];
   }
 
   return {
     content: html,
     pageVariables: params.page as Record<string, unknown>,
     tocItems,
-    alertIds,
   };
 }
 
@@ -633,7 +628,7 @@ export function renderLiterateJavaPageAsset({
     preserveHtmlComments: true,
     dependencyCollector,
   });
-  const env: Record<string, unknown> = { alertIds: [] as string[] };
+  const env: Record<string, unknown> = {};
   const tokens = md.parse(_.template(content)(params), env);
   const { javaSource, codeBlocks, visibleBlockIndices } =
     extractLiterateJavaCode(tokens);
@@ -735,7 +730,6 @@ export function renderLiterateJavaPageAsset({
   if (pageVariables.toc && env.tocItems) {
     pageVariables.tocHtml = generateTocHtml(
       env.tocItems as Parameters<typeof generateTocHtml>[0],
-      env.alertIds as string[],
     );
   }
 
