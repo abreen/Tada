@@ -110,6 +110,7 @@ describe('finalizeHtmlPage', () => {
       siteVariables,
       sourceUrlPath: '/docs/index.html',
       validInternalTargets: new Set(['/docs/App.java.html']),
+      codePageSourceTargets: new Set(['/docs/App.java']),
       dependencyCollector: collector,
     });
 
@@ -325,3 +326,27 @@ test('annotates generated destinations throughout the document and removes reser
   expect(anchors[0].getAttribute('href')).toBe('guide%20one.html?x=1#part');
   expect(collector.internalTargets.has('/copied.html')).toBe(true);
 });
+
+test.each(['/sample.py?view=1#code', './sample.py?view=1#code'])(
+  'preserves public source link %s when a similarly named HTML file exists',
+  href => {
+    const collector = createCollector();
+    const result = finalizeHtmlPage({
+      filePath: 'content/index.md',
+      html: `<main class="body"><a href="${href}">Source</a></main>`,
+      siteVariables,
+      sourceUrlPath: '/index.html',
+      validInternalTargets: new Set(['/sample.py', '/sample.py.html']),
+      generatedPageTargets: new Set(),
+      codePageSourceTargets: new Set(),
+      dependencyCollector: collector,
+    });
+    const anchor = new JSDOM(result.html).window.document.querySelector('a')!;
+    expect(anchor.getAttribute('href')).toBe(
+      href.startsWith('/') ? `/course${href}` : href,
+    );
+    expect(anchor.hasAttribute('data-tada-page')).toBe(false);
+    expect([...result.analysis.outgoingTargets]).toEqual(['/sample.py']);
+    expect([...collector.internalTargets]).toEqual(['/sample.py']);
+  },
+);

@@ -255,6 +255,7 @@ export function renderPlainTextPageAsset({
   assetFiles,
   literateJavaOutputPaths,
   generatedPageTargets,
+  codePageSourceTargets,
   dependencyCollector,
   cachedTraceSourceDir,
   traceCache,
@@ -322,6 +323,7 @@ export function renderPlainTextPageAsset({
     validInternalTargets,
     literateJavaOutputPaths,
     generatedPageTargets,
+    codePageSourceTargets,
     dependencyCollector,
   });
 
@@ -343,6 +345,7 @@ export function renderCodePageAsset({
   validInternalTargets,
   literateJavaOutputPaths,
   generatedPageTargets,
+  codePageSourceTargets,
   dependencyCollector,
 }: RenderCodePageOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
@@ -403,6 +406,7 @@ export function renderCodePageAsset({
     validInternalTargets,
     literateJavaOutputPaths,
     generatedPageTargets,
+    codePageSourceTargets,
     dependencyCollector,
   });
 
@@ -604,6 +608,7 @@ export function renderLiterateJavaPageAsset({
   validInternalTargets,
   literateJavaOutputPaths,
   generatedPageTargets,
+  codePageSourceTargets,
   dependencyCollector,
 }: RenderLiterateJavaOptions): Asset[] {
   const { dir, name } = path.parse(filePath);
@@ -759,6 +764,7 @@ export function renderLiterateJavaPageAsset({
     validInternalTargets,
     literateJavaOutputPaths,
     generatedPageTargets,
+    codePageSourceTargets,
     dependencyCollector,
   });
 

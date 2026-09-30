@@ -16,6 +16,7 @@ interface FinalizeHtmlPageOptions {
   sourceUrlPath: string;
   validInternalTargets: ReadonlySet<string>;
   generatedPageTargets?: ReadonlySet<string>;
+  codePageSourceTargets?: ReadonlySet<string>;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
 }
@@ -86,15 +87,15 @@ function rewriteAbsoluteSrcWithBasePath(
 function resolveAnchorTarget({
   href,
   sourceUrlPath,
-  validInternalTargets,
   codeExtensions,
+  codePageSourceTargets,
   literateJavaOutputPaths,
   skipCodeLinkRewrite,
 }: {
   href: string;
   sourceUrlPath: string;
-  validInternalTargets: ReadonlySet<string>;
   codeExtensions: string[];
+  codePageSourceTargets?: ReadonlySet<string>;
   literateJavaOutputPaths?: ReadonlySet<string>;
   skipCodeLinkRewrite: boolean;
 }): { finalHref: string; resolvedTarget: string | null } {
@@ -117,12 +118,8 @@ function resolveAnchorTarget({
     const htmlTarget = `${resolvedPath}.html`;
     if (literateJavaOutputPaths?.has(resolvedPath)) {
       resolvedTarget = resolvedPath;
-    } else if (validInternalTargets.has(htmlTarget)) {
+    } else if (codePageSourceTargets?.has(resolvedPath)) {
       finalPathname = `${pathname}.html`;
-      resolvedTarget = htmlTarget;
-    } else if (validInternalTargets.has(resolvedPath)) {
-      resolvedTarget = resolvedPath;
-    } else {
       resolvedTarget = htmlTarget;
     }
   }
@@ -138,6 +135,7 @@ export function finalizeHtmlPage({
   validInternalTargets,
   literateJavaOutputPaths,
   generatedPageTargets,
+  codePageSourceTargets,
   dependencyCollector,
 }: FinalizeHtmlPageOptions): FinalizedHtmlPage {
   const dom = new JSDOM(html);
@@ -161,8 +159,8 @@ export function finalizeHtmlPage({
       const { finalHref, resolvedTarget } = resolveAnchorTarget({
         href,
         sourceUrlPath,
-        validInternalTargets,
         codeExtensions,
+        codePageSourceTargets,
         literateJavaOutputPaths,
         skipCodeLinkRewrite: element.hasAttribute('download'),
       });

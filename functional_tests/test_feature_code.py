@@ -282,3 +282,26 @@ class TestCodeSourceTemplatingDisabled:
         java = (built_dev_site / 'dist' / 'marker' / 'Marker.java').read_text()
         assert '<%= vars.foobar %>' in java
         assert MARKER not in java
+
+
+@pytest.mark.parametrize('html_owner', ['public', 'content'])
+def test_public_source_link_keeps_raw_target_with_html_sibling(tmp_path, html_owner):
+    site = init_site(tmp_path, bare=True)
+    set_site_config(site, {'extensionToShikiLanguage': {'py': 'python'}, 'basePath': '/course'})
+    (site / 'public' / 'sample.py').write_text('print("public")\n')
+    (site / html_owner / 'sample.py.html').write_text(
+        '---\ntitle: Unrelated\n---\n<p>Unrelated HTML page</p>\n'
+    )
+    (site / 'content' / 'owned.py').write_text('print("content")\n')
+    (site / 'content' / 'links.md').write_text(
+        '---\ntitle: Links\n---\n\n'
+        '[Public absolute](/sample.py?view=1#code)\n\n'
+        '[Public relative](./sample.py?view=1#code)\n\n'
+        '[Content](./owned.py)\n'
+    )
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 0, result.stdout + result.stderr
+    html = (site / 'dist' / 'links.html').read_text()
+    assert '<a href="/course/sample.py?view=1#code">Public absolute</a>' in html
+    assert '<a href="./sample.py?view=1#code">Public relative</a>' in html
+    assert '<a href="./owned.py.html" data-tada-page="">Content</a>' in html

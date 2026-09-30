@@ -39,6 +39,7 @@ export interface TadaProjectScan {
   readonly processedExts: ReadonlySet<string>;
   readonly sources: ReadonlyMap<string, SourceEntry>;
   readonly outputProducers: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly codePageSourceTargets: ReadonlySet<string>;
   readonly generatedPageTargets: ReadonlySet<string>;
   readonly validTargets: ReadonlySet<string>;
   readonly literateJavaOutputPaths: ReadonlySet<string>;
@@ -132,6 +133,7 @@ export function indexSources(
 ): TadaProjectScan {
   const outputProducers = new Map<string, Set<string>>();
   const generatedPageTargets = new Set<string>();
+  const codePageSourceTargets = new Set<string>();
   const validTargets = new Set<string>();
   const literateJavaOutputPaths = new Set<string>();
   for (const [filePath, entry] of sources) {
@@ -155,6 +157,13 @@ export function indexSources(
     for (const target of entry.targets) {
       validTargets.add(target);
     }
+    if (entry.renderKind === 'code-page') {
+      codePageSourceTargets.add(
+        normalizeOutputPath(
+          `/${toPosix(path.relative(roots.contentDir, filePath))}`,
+        ),
+      );
+    }
     if (entry.renderKind === 'literate-java') {
       const parsed = path.parse(path.relative(roots.contentDir, filePath));
       literateJavaOutputPaths.add(
@@ -168,6 +177,7 @@ export function indexSources(
     outputProducers,
     validTargets,
     generatedPageTargets,
+    codePageSourceTargets,
     literateJavaOutputPaths,
   };
 }
