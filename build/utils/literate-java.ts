@@ -1,4 +1,5 @@
 import fs from 'fs';
+import type Token from 'markdown-it/lib/token.mjs';
 import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
@@ -63,6 +64,15 @@ export function parseLiterateJava(
   });
   const tokens = md.parse(content, {});
 
+  return { pageVariables, content, ...extractLiterateJavaCode(tokens) };
+}
+
+export function extractLiterateJavaCode(
+  tokens: Token[],
+): Pick<
+  LiterateJavaParseResult,
+  'javaSource' | 'codeBlocks' | 'visibleBlockIndices'
+> {
   const codeBlocks: LiterateCodeBlock[] = [];
   let javaLine = 1;
 
@@ -98,13 +108,7 @@ export function parseLiterateJava(
   const hiddenCount = codeBlocks.length - visibleBlockIndices.length;
   log.debug`Parsed ${codeBlocks.length} code block(s) (${hiddenCount} hidden), ${javaSource.split('\n').length} Java line(s)`;
 
-  return {
-    pageVariables,
-    content,
-    javaSource,
-    codeBlocks,
-    visibleBlockIndices,
-  };
+  return { javaSource, codeBlocks, visibleBlockIndices };
 }
 
 export function hasMainMethod(javaSource: string): boolean {

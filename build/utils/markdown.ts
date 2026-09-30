@@ -32,6 +32,7 @@ interface CreateMarkdownOptions {
   sourceUrlPath?: string;
   validTargets?: ReadonlySet<string>;
   templateParams?: Record<string, unknown>;
+  preserveHtmlComments?: boolean;
   dependencyCollector?: RenderDependencyCollector;
 }
 
@@ -102,6 +103,7 @@ export function createMarkdown(
     markdown.use(markdownPartialsPlugin, {
       filePath,
       templateParams: options.templateParams,
+      preserveHtmlComments: options.preserveHtmlComments,
       dependencyCollector: options.dependencyCollector,
     });
   }

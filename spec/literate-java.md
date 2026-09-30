@@ -23,3 +23,8 @@ double-quoted strings to include escape sequences like `\n`:
 ```
 stdin: "hello, world!\n"
 ```
+
+Literate pages support [Markdown partials](partials.md) with the including
+page's template context. Partials expand before Java code extraction and HTML
+rendering, so their visible and hidden code blocks contribute to the source
+in document order. Watch mode tracks nested partial dependencies.

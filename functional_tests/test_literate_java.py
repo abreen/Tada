@@ -156,3 +156,50 @@ def test_literate_java_stdout_round_trip(tmp_path, output):
     result = subprocess.run(['bun', str(script)], capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
     assert json.loads(result.stdout) == [{'blockIndex': 0, 'output': output}]
+
+
+def test_literate_java_partials_render_extract_and_watch(tmp_path):
+    from watch_helpers import WatchProcess
+
+    site = init_site(tmp_path, bare=True)
+    content = site / 'content'
+    (content / 'parts').mkdir()
+    (content / 'Example.java.md').write_text(
+        '---\ntitle: Included example\ntoc: true\n---\n\n{{{ parts/_outer.md }}}\n'
+    )
+    (content / 'parts' / '_outer.md').write_text('## <%= page.title %>\n\n{{{ _body.md }}}\n')
+    partial = content / 'parts' / '_body.md'
+
+    def write_partial(value):
+        partial.write_text(
+            f'Included prose {value}.\n\n'
+            '<!---\n```java\npublic class Example {\n```\n-->\n\n'
+            '```java\n'
+            f'  public static int value = {value};\n'
+            '```\n\n<!---\n```java\n}\n```\n-->\n'
+        )
+
+    write_partial(1)
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 0, result.stdout + result.stderr
+    page = site / 'dist' / 'Example.java.html'
+    source = site / 'dist' / 'Example.java'
+    html = page.read_text()
+    assert 'Included prose 1.' in html
+    assert 'href="#included-example"' in html
+    assert '{{{' not in html
+    assert 'public class Example' not in html
+    assert 'id="L2"' in html
+    assert 'public static int value = 1;' in source.read_text()
+    assert not (site / 'dist' / 'parts' / '_body.html').exists()
+
+    wp = WatchProcess(site)
+    try:
+        wp.wait_for_initial_build()
+        before = page.stat().st_mtime
+        write_partial(2)
+        wp.wait_for_rebuild(page, 'modified', before_mtime=before)
+        assert 'Included prose 2.' in page.read_text()
+        assert 'public static int value = 2;' in source.read_text()
+    finally:
+        wp.stop()

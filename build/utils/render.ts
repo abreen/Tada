@@ -41,7 +41,7 @@ import { parseFrontMatterAndContent } from './front-matter';
 import { createMarkdown } from './markdown';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
 import {
-  parseLiterateJava,
+  extractLiterateJavaCode,
   hasMainMethod,
   deriveClassName,
   compileJavaSource,
@@ -613,15 +613,25 @@ export function renderLiterateJavaPageAsset({
   log.info`Rendering literate Java page ${B`${name}`}`;
 
   const raw = fs.readFileSync(filePath, 'utf-8');
-  const {
-    pageVariables,
-    content,
-    javaSource,
-    codeBlocks,
-    visibleBlockIndices,
-  } = parseLiterateJava(raw, siteVariables);
-
+  const { pageVariables, content } = parseFrontMatterAndContent(raw, '.md');
   validateFrontMatter(pageVariables, filePath);
+  const params = createTemplateParameters({
+    pageVariables,
+    siteVariables,
+    content,
+    subPath,
+    isWatchMode: isWatchMode(assetFiles),
+  });
+  const md = createMarkdown(siteVariables, {
+    filePath,
+    templateParams: params,
+    preserveHtmlComments: true,
+    dependencyCollector,
+  });
+  const env: Record<string, unknown> = { alertIds: [] as string[] };
+  const tokens = md.parse(_.template(content)(params), env);
+  const { javaSource, codeBlocks, visibleBlockIndices } =
+    extractLiterateJavaCode(tokens);
 
   const stdin =
     typeof pageVariables.stdin === 'string' ? pageVariables.stdin : undefined;
@@ -655,7 +665,6 @@ export function renderLiterateJavaPageAsset({
   // Render full markdown with a custom fence rule that replaces fences
   // with Shiki-highlighted code blocks and optional JDI output columns
   const sourceUrlPath = `/${subPath}.java.html`;
-  const md = createMarkdown(siteVariables, { filePath });
   let fenceIndex = 0;
   const defaultFence = md.renderer.rules.fence!;
 
@@ -703,8 +712,9 @@ export function renderLiterateJavaPageAsset({
     return codeHtml;
   };
 
-  const env: Record<string, unknown> = { alertIds: [] as string[] };
-  const contentHtml = md.render(stripHtmlComments(content), env);
+  const contentHtml = stripHtmlComments(
+    md.renderer.render(tokens, md.options, env),
+  );
 
   // Build page variables
   const javaFileName = `${className}.java`;

@@ -26,6 +26,7 @@ interface MarkdownPartialsEnv {
 interface MarkdownPartialsOptions {
   filePath: string;
   templateParams: Record<string, unknown>;
+  preserveHtmlComments?: boolean;
   dependencyCollector?: RenderDependencyCollector;
 }
 
@@ -77,7 +78,7 @@ function renderPartialContent(
   }
 
   const raw = fs.readFileSync(resolvedPath, 'utf-8');
-  const content = stripHtmlComments(raw);
+  const content = options.preserveHtmlComments ? raw : stripHtmlComments(raw);
 
   try {
     return {
