@@ -1,10 +1,10 @@
 import MarkdownIt from 'markdown-it';
 import path from 'path';
 import { parse as parseJava } from 'java-parser';
-import { JSDOM } from 'jsdom';
+import { hastToHtml } from 'shiki';
 import { makeLogger } from '../log';
 import { getExtensionToShikiLanguage } from '../site-variables';
-import { highlightCode } from './shiki-highlighter';
+import { highlightCodeToHast } from './shiki-highlighter';
 import externalLinksPlugin from '../external-links-plugin';
 import { createApplyBasePath } from './paths';
 import katexPlugin from './katex';
@@ -360,104 +360,42 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;');
 }
 
-function createCodeLine(document: Document): HTMLSpanElement {
-  const line = document.createElement('span');
-  line.className = 'code-line';
-  return line;
+interface HastNode {
+  type: string;
+  value?: string;
+  children?: HastNode[];
 }
 
-function cloneOpenElements(
-  openElements: Node[],
-  line: HTMLSpanElement,
-): Node[] {
-  const containers: Node[] = [line];
-
-  for (const openElement of openElements) {
-    const clone = openElement.cloneNode(false);
-    containers[containers.length - 1].appendChild(clone);
-    containers.push(clone);
+function hasText(node: HastNode): boolean {
+  if (node.type === 'text') {
+    return Boolean(node.value);
   }
-
-  return containers;
+  return node.children?.some(hasText) ?? false;
 }
 
-function splitHighlightedHtmlIntoLines(
-  highlightedHtml: string,
-  lineCount: number,
-): string[] {
-  const fragment = JSDOM.fragment(`<code>${highlightedHtml}</code>`);
-  const codeEl = fragment.firstChild as HTMLElement;
-  const document = codeEl.ownerDocument;
-  const lines: HTMLSpanElement[] = [];
-  const openElements: Node[] = [];
-  let currentLine = createCodeLine(document);
-  let currentContainers: Node[] = [currentLine];
-  let currentLineHasContent = false;
-
-  function finishCurrentLine(): void {
-    if (!currentLineHasContent) {
-      currentContainers[currentContainers.length - 1].appendChild(
-        document.createTextNode('\u00A0'),
-      );
-    }
-    lines.push(currentLine);
-    currentLine = createCodeLine(document);
-    currentContainers = cloneOpenElements(openElements, currentLine);
-    currentLineHasContent = false;
+/**
+ * Returns the HTML of each highlighted line. Shiki tokenizes line by line, so
+ * each `span.line` is balanced on its own, even inside multi-line tokens such
+ * as block comments. Empty lines get a non-breaking space so that their row
+ * keeps its height.
+ */
+function highlightLines(source: string, lang: string): string[] {
+  const pre = highlightCodeToHast(source, lang).children[0];
+  const code = pre?.type === 'element' ? pre.children[0] : undefined;
+  if (code?.type !== 'element') {
+    throw new Error('unexpected highlighter output');
   }
 
-  function visit(node: Node): void {
-    if (node.nodeType === 3) {
-      const parts = (node.textContent || '').split('\n');
-      for (let i = 0; i < parts.length; i++) {
-        if (parts[i].length > 0) {
-          currentContainers[currentContainers.length - 1].appendChild(
-            document.createTextNode(parts[i]),
-          );
-          currentLineHasContent = true;
-        }
-        if (i < parts.length - 1) {
-          finishCurrentLine();
-        }
-      }
-      return;
+  const lines: string[] = [];
+  for (const line of code.children) {
+    if (line.type === 'element') {
+      const html = hastToHtml(line, {
+        characterReferences: { useNamedReferences: true },
+      });
+      lines.push(hasText(line) ? html : `${html}&nbsp;`);
     }
-
-    if (node.nodeType !== 1) {
-      return;
-    }
-
-    const clone = node.cloneNode(false);
-    currentContainers[currentContainers.length - 1].appendChild(clone);
-    openElements.push(node);
-    currentContainers.push(clone);
-
-    for (const child of Array.from(node.childNodes)) {
-      visit(child);
-    }
-
-    currentContainers.pop();
-    openElements.pop();
   }
-
-  for (const child of Array.from(codeEl.childNodes)) {
-    visit(child);
-  }
-
-  if (currentLineHasContent || lines.length < lineCount) {
-    if (!currentLineHasContent) {
-      currentContainers[currentContainers.length - 1].appendChild(
-        document.createTextNode('\u00A0'),
-      );
-    }
-    lines.push(currentLine);
-  }
-
-  while (lines.length < lineCount) {
-    lines.push(createCodeLine(document));
-  }
-
-  return lines.map(line => line.innerHTML);
+  return lines;
 }
 
 export function renderCodeSegment(
@@ -466,20 +404,19 @@ export function renderCodeSegment(
   lang: string,
   { linkLineNumbers = true }: { linkLineNumbers?: boolean } = {},
 ): string {
-  const source = lines.join('\n');
-  let lineHtml: string[] | undefined;
+  // Lines from CRLF sources end with CR. Shiki treats CRLF as a line break
+  // but would keep the last line's CR as text.
+  const sourceLines = lines.map(line =>
+    line.endsWith('\r') ? line.slice(0, -1) : line,
+  );
+  let lineHtml: string[];
 
   try {
-    const html = highlightCode(source, lang);
-    const fragment = JSDOM.fragment(html);
-    const inner = (fragment.querySelector('code') as HTMLElement).innerHTML;
-    lineHtml = splitHighlightedHtmlIntoLines(inner, lines.length);
+    const highlighted = highlightLines(sourceLines.join('\n'), lang);
+    lineHtml = sourceLines.map((_, i) => highlighted[i] ?? '');
   } catch (err: unknown) {
     log.error`Failed to highlight code block: ${(err as Error).message}`;
-  }
-
-  if (!lineHtml) {
-    lineHtml = lines.map(line => escapeHtml(line));
+    lineHtml = sourceLines.map(line => escapeHtml(line));
   }
 
   const rows = lineHtml.map((line, i) => {
