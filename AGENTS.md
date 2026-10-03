@@ -45,6 +45,10 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 
 Functional tests are CPU intensive and may take over 2 minutes, even on powerful machines.
 
+## Cross-platform tests
+
+Functional and Playwright tests must work on every supported operating system. Do not assume POSIX paths or path separators; construct and compare filesystem paths with platform-aware utilities.
+
 ## Fixing a bug
 
 Use red/green test-driven development to fix bugs.

@@ -1,7 +1,9 @@
 import { expect, test } from 'bun:test';
+import path from 'path';
 import { validateBranding } from './branding';
 
-const publicDir = '/site/public';
+const publicDir = path.resolve('site', 'public');
+const publicFile = (...segments: string[]) => path.join(publicDir, ...segments);
 const validate = (
   site: { logo?: string; favicon?: string },
   files: string[] = [],
@@ -16,8 +18,8 @@ test('accepts optional and nested branding assets without decoding', () => {
   expect(validate({})).toEqual([]);
   expect(
     validate({ logo: 'brand/my logo.svg', favicon: 'brand/icon.ico' }, [
-      '/site/public/brand/my logo.svg',
-      '/site/public/brand/icon.ico',
+      publicFile('brand', 'my logo.svg'),
+      publicFile('brand', 'icon.ico'),
     ]),
   ).toEqual([]);
 });
@@ -48,7 +50,7 @@ test('requires ICO and reports missing and unreadable assets', () => {
       { favicon: 'icon.ico' },
       {
         publicDir,
-        publicFiles: new Set(['/site/public/icon.ico']),
+        publicFiles: new Set([publicFile('icon.ico')]),
         readFile: () => {
           throw new Error('unreadable');
         },

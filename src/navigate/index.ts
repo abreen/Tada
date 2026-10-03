@@ -131,9 +131,21 @@ export default function mountNavigate(window: Window): () => void {
   function handlePopState(event: PopStateEvent) {
     const newPath = window.location.pathname + window.location.search;
     if (newPath === getCurrentPath()) {
-      const savedY = getSavedLocationScroll(newPath + window.location.hash);
+      const locationKey = newPath + window.location.hash;
+      const savedY = getSavedLocationScroll(locationKey);
       if (typeof savedY === 'number') {
-        window.scrollTo({ top: savedY });
+        // Fragment traversal can apply its native target scroll after popstate.
+        // Restore in the next task so our saved position wins. Capture savedY
+        // now because the native scroll event can update the location map first.
+        window.setTimeout(() => {
+          const currentLocationKey =
+            window.location.pathname +
+            window.location.search +
+            window.location.hash;
+          if (currentLocationKey === locationKey) {
+            window.scrollTo({ top: savedY });
+          }
+        }, 0);
         return;
       }
 
