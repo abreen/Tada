@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from conftest import (
     AUTHORS_CONFIG_FILE,
@@ -301,6 +303,68 @@ class TestInitInteractive:
         assert 'Logo symbol' in result.stdout
         assert 'Theme color' in result.stdout
         assert 'Production base URL' in result.stdout
+
+
+def _env_with_tz(tz):
+    return {**os.environ, 'TZ': tz}
+
+
+class TestInitTimeZone:
+    """The default time zone must be one that builds accept."""
+
+    def test_unsupported_system_zone_falls_back_to_utc_and_builds(self, tmp_path):
+        result = run_tada(
+            'init',
+            'testsite',
+            '--bare',
+            '--no-interactive',
+            cwd=str(tmp_path),
+            env=_env_with_tz('Europe/Berlin'),
+        )
+        assert result.returncode == 0, result.stderr
+        assert 'System time zone Europe/Berlin is not supported; using UTC' in result.stdout
+        site = tmp_path / 'testsite'
+        for config_file in (SITE_DEV_CONFIG_FILE, SITE_PROD_CONFIG_FILE):
+            assert load_structured_file(site / config_file)['defaultTimeZone'] == 'UTC'
+
+        result = run_tada('dev', cwd=str(site), env=_env_with_tz('Europe/Berlin'))
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert (site / 'dist' / 'index.html').is_file()
+
+    def test_supported_system_zone_is_default(self, tmp_path):
+        result = run_tada(
+            'init',
+            'testsite',
+            '--bare',
+            '--no-interactive',
+            cwd=str(tmp_path),
+            env=_env_with_tz('America/Chicago'),
+        )
+        assert result.returncode == 0, result.stderr
+        assert 'not supported' not in result.stdout
+        dev = load_structured_file(tmp_path / 'testsite' / SITE_DEV_CONFIG_FILE)
+        assert dev['defaultTimeZone'] == 'America/Chicago'
+
+    def test_unsupported_flag_value_exits_1(self, tmp_path):
+        result = run_tada(
+            'init',
+            'testsite',
+            '--no-interactive',
+            '--default-time-zone',
+            'Europe/Berlin',
+            cwd=str(tmp_path),
+        )
+        assert result.returncode == 1
+        assert 'Error: --default-time-zone:' in result.stderr
+        assert not (tmp_path / 'testsite').exists()
+
+    def test_interactive_reprompts_for_unsupported_zone(self, tmp_path):
+        answers = '\n' * 5 + 'Europe/Berlin\nAsia/Tokyo\n' + '\n' * 2
+        result = run_tada('init', 'testsite', '--bare', cwd=str(tmp_path), input=answers)
+        assert result.returncode == 0, result.stderr
+        assert 'Error:' in result.stderr
+        dev = load_structured_file(tmp_path / 'testsite' / SITE_DEV_CONFIG_FILE)
+        assert dev['defaultTimeZone'] == 'Asia/Tokyo'
 
 
 class TestInitErrors:

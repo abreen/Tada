@@ -10,6 +10,8 @@ import {
   validateHue,
   validateUrl,
   validateBasePath,
+  validateTimeZone,
+  resolveDefaultTimeZone,
   createSiteConfig,
 } from './validators';
 import {
@@ -28,7 +30,9 @@ import {
 
 const { version } = packageJson;
 
-const SYSTEM_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const DEFAULT_TIME_ZONE = resolveDefaultTimeZone(
+  Intl.DateTimeFormat().resolvedOptions().timeZone,
+);
 
 const packageDir = path.resolve(import.meta.dir, '..');
 
@@ -102,8 +106,8 @@ const INIT_QUESTIONS: Record<string, InitQuestion> = {
   },
   defaultTimeZone: {
     prompt: 'Default time zone',
-    defaultValue: SYSTEM_TIME_ZONE,
-    validate: (v: string) => (v ? null : 'Time zone is required'),
+    defaultValue: DEFAULT_TIME_ZONE.timeZone,
+    validate: validateTimeZone,
   },
   prodBase: {
     prompt: 'Production base URL',
@@ -218,10 +222,8 @@ async function initCommand(args: string[]): Promise<void> {
           type: 'string',
           default: INIT_QUESTIONS.tintAmount.defaultValue,
         },
-        'default-time-zone': {
-          type: 'string',
-          default: INIT_QUESTIONS.defaultTimeZone.defaultValue,
-        },
+        // No parseArgs default, so an omitted flag can be told apart
+        'default-time-zone': { type: 'string' },
         'prod-base': {
           type: 'string',
           default: INIT_QUESTIONS.prodBase.defaultValue,
@@ -267,6 +269,13 @@ async function initCommand(args: string[]): Promise<void> {
   }
 
   const config: Record<string, string> = {};
+
+  const usesDefaultTimeZone =
+    !noInteractive || values['default-time-zone'] === undefined;
+  if (usesDefaultTimeZone && DEFAULT_TIME_ZONE.note) {
+    console.log(DEFAULT_TIME_ZONE.note);
+  }
+  values['default-time-zone'] ??= DEFAULT_TIME_ZONE.timeZone;
 
   if (noInteractive) {
     for (const [flag, key] of Object.entries(FLAG_TO_KEY)) {

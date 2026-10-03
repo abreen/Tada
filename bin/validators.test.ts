@@ -6,6 +6,8 @@ import {
   validateHue,
   validateUrl,
   validateBasePath,
+  validateTimeZone,
+  resolveDefaultTimeZone,
   createSiteConfig,
 } from './validators';
 
@@ -165,6 +167,50 @@ describe('validateBasePath', () => {
 
   test('rejects empty path segments', () => {
     expect(validateBasePath('/foo//bar')).not.toBeNull();
+  });
+});
+
+describe('validateTimeZone', () => {
+  test('accepts zones listed in timezones.json', () => {
+    expect(validateTimeZone('America/New_York')).toBeNull();
+    expect(validateTimeZone('UTC')).toBeNull();
+    expect(validateTimeZone('Asia/Tokyo')).toBeNull();
+  });
+
+  test('rejects empty string', () => {
+    expect(validateTimeZone('')).not.toBeNull();
+  });
+
+  test('rejects valid IANA zones that builds do not support', () => {
+    const error = validateTimeZone('Europe/Berlin');
+    expect(error).not.toBeNull();
+    expect(error).toContain('America/New_York');
+    expect(error).not.toContain('\n');
+  });
+
+  test('rejects unknown names', () => {
+    expect(validateTimeZone('Mars/Olympus_Mons')).not.toBeNull();
+  });
+});
+
+describe('resolveDefaultTimeZone', () => {
+  test('uses a supported system time zone without a note', () => {
+    expect(resolveDefaultTimeZone('America/Chicago')).toEqual({
+      timeZone: 'America/Chicago',
+      note: null,
+    });
+  });
+
+  test('falls back to UTC with a note for an unsupported system zone', () => {
+    expect(resolveDefaultTimeZone('Europe/Berlin')).toEqual({
+      timeZone: 'UTC',
+      note: 'System time zone Europe/Berlin is not supported; using UTC',
+    });
+  });
+
+  test('falls back to UTC when the system zone is unknown', () => {
+    expect(resolveDefaultTimeZone(undefined).timeZone).toBe('UTC');
+    expect(resolveDefaultTimeZone('').timeZone).toBe('UTC');
   });
 });
 

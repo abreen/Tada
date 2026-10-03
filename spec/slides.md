@@ -9,8 +9,8 @@ slides: true
 ---
 ```
 
-HTML content pages cannot use `slides: true`; the build fails with an error if
-an HTML source file sets it.
+HTML content pages and literate Java pages cannot use `slides: true`; the build
+fails with an error if one of those source files sets it.
 
 This does not change the page template. The page still builds as a normal
 default page with its usual heading, metadata, and body content. Slide pages

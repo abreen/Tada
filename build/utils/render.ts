@@ -1,8 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import _ from 'lodash';
+import { compileTemplate } from '../lodash-template';
 import type MarkdownIt from 'markdown-it';
-import { stripHtml } from 'string-strip-html';
 import { makeLogger } from '../log';
 import { B } from '../colors';
 import createTemplateGlobals from '../template-globals';
@@ -28,9 +27,11 @@ import {
 import { extensionIsMarkdown } from './file-types';
 import { createTraceHelpers } from './trace';
 import { stripHtmlComments } from './html-comments';
+import { htmlToPlainText } from './plain-text';
 import { finalizeHtmlPage } from './final-html';
 import {
   createApplyBasePath,
+  getProjectDir,
   normalizeOutputPath,
   toPosix,
   toUrlPath,
@@ -66,6 +67,19 @@ export { stripHtmlComments } from './html-comments';
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 
+// Page variables that renderers assign themselves. Front matter that sets one
+// would be overwritten or, for `template`, select a nonexistent template.
+const RESERVED_FRONT_MATTER_KEYS: readonly string[] = [
+  'template',
+  'titleHtml',
+  'descriptionHtml',
+  'tocHtml',
+  'tocItems',
+  'codeFilePath',
+  'downloadName',
+  'filePath',
+];
+
 function isWatchMode(assetFiles: string[]): boolean {
   return assetFiles.some(f => f.includes('watch-reload-client'));
 }
@@ -81,7 +95,7 @@ function renderInlineField(
   }
   const html = md.renderInline(raw);
   vars[`${field}Html`] = html;
-  vars[field] = stripHtml(html).result;
+  vars[field] = htmlToPlainText(html);
 }
 
 interface TemplateParametersInput {
@@ -118,6 +132,19 @@ function resolveAuthor(
     );
   }
   pageVariables.author = authorEntry;
+}
+
+function rejectReservedFrontMatterKeys(
+  pageVariables: Record<string, unknown>,
+  filePath: string,
+): void {
+  const key = RESERVED_FRONT_MATTER_KEYS.find(k =>
+    Object.hasOwn(pageVariables, k),
+  );
+  if (key) {
+    const displayPath = toPosix(path.relative(getProjectDir(), filePath));
+    throw new Error(`${displayPath}: front matter key "${key}" is reserved`);
+  }
 }
 
 function validateFrontMatter(
@@ -284,11 +311,7 @@ export function renderPlainTextPageAsset({
     },
   );
 
-  validateFrontMatter(pageVariables, filePath);
-
-  if (!pageVariables.template) {
-    pageVariables.template = 'default';
-  }
+  pageVariables.template = 'default';
 
   if (pageVariables.toc && tocItems) {
     pageVariables.tocHtml = generateTocHtml(
@@ -449,6 +472,89 @@ export function renderCopiedContentAsset({
   return [{ assetPath: relPath, content: templated }];
 }
 
+interface PreparePageVariablesInput {
+  rawPageVariables: Record<string, unknown>;
+  filePath: string;
+  subPath: string;
+  sourceUrlPath: string;
+  siteVariables: SiteVariables;
+  validInternalTargets: ReadonlySet<string>;
+  isWatchMode: boolean;
+  /** Whether this renderer supports `slides: true` (Markdown pages only) */
+  allowSlides: boolean;
+  dependencyCollector?: RenderDependencyCollector;
+}
+
+/**
+ * Turns parsed front matter into page variables. Shared by every renderer
+ * whose source has front matter, so each one applies the same rules:
+ * Lodash processing of string values, inline Markdown for the title and
+ * description, required fields, author lookup, and parent link validation.
+ */
+function preparePageVariables({
+  rawPageVariables,
+  filePath,
+  subPath,
+  sourceUrlPath,
+  siteVariables,
+  validInternalTargets,
+  isWatchMode,
+  allowSlides,
+  dependencyCollector,
+}: PreparePageVariablesInput): Record<string, unknown> {
+  rejectReservedFrontMatterKeys(rawPageVariables, filePath);
+  if (rawPageVariables.slides === true && !allowSlides) {
+    throw new Error(
+      `${filePath}: slides mode is only supported on Markdown pages`,
+    );
+  }
+
+  // Handle substitutions inside front matter using siteVariables
+  const siteOnlyParams = createTemplateParameters({
+    pageVariables: {},
+    siteVariables,
+    content: null,
+    subPath,
+    isWatchMode,
+  });
+  const pageVariables: Record<string, unknown> = Object.fromEntries(
+    Object.entries(rawPageVariables).map(([k, v]) => [
+      k,
+      typeof v === 'string' ? compileTemplate(v)(siteOnlyParams) : v,
+    ]),
+  );
+
+  // Render title and description as inline Markdown
+  const frontMatterMd = createMarkdown(siteVariables, {
+    filePath,
+    slides: pageVariables.slides === true,
+  });
+  renderInlineField(frontMatterMd, pageVariables, 'title');
+  renderInlineField(frontMatterMd, pageVariables, 'description');
+
+  validateFrontMatter(pageVariables, filePath);
+  resolveAuthor(pageVariables, filePath, dependencyCollector);
+
+  const parentError = validateParentLink(
+    pageVariables.parent,
+    filePath,
+    validInternalTargets,
+    sourceUrlPath,
+  );
+  if (parentError) {
+    throw new Error(parentError);
+  }
+  const resolvedParentTarget = resolveParentLinkTarget(
+    pageVariables.parent,
+    sourceUrlPath,
+  );
+  if (resolvedParentTarget) {
+    dependencyCollector?.internalTargets?.add(resolvedParentTarget);
+  }
+
+  return pageVariables;
+}
+
 /** Parses the file, renders using template, returns HTML & params used to generate page */
 function renderPlainTextContent(
   filePath: string,
@@ -490,59 +596,24 @@ function renderPlainTextContent(
 
   const ext = path.extname(filePath);
   const raw = fs.readFileSync(filePath, 'utf-8');
-  const { pageVariables, content } = parseFrontMatterAndContent(raw, ext);
-  if (pageVariables.slides === true && !extensionIsMarkdown(ext)) {
-    throw new Error(
-      `${filePath}: slides mode is only supported on Markdown pages`,
-    );
-  }
-  const frontMatterMd = createMarkdown(siteVariables, {
+  const { pageVariables: rawPageVariables, content } =
+    parseFrontMatterAndContent(raw, ext);
+  const pageVariables = preparePageVariables({
+    rawPageVariables,
     filePath,
-    slides: pageVariables.slides === true,
-  });
-
-  // Handle substitutions inside front matter using siteVariables
-  const siteOnlyParams = createTemplateParameters({
-    pageVariables: {},
-    siteVariables,
-    content: null,
     subPath,
-    isWatchMode,
-  });
-  const pageVariablesProcessed: Record<string, unknown> = Object.fromEntries(
-    Object.entries(pageVariables).map(([k, v]) => [
-      k,
-      typeof v === 'string' ? _.template(v)(siteOnlyParams) : v,
-    ]),
-  );
-
-  // Render title and description as inline Markdown
-  renderInlineField(frontMatterMd, pageVariablesProcessed, 'title');
-  renderInlineField(frontMatterMd, pageVariablesProcessed, 'description');
-
-  resolveAuthor(pageVariablesProcessed, filePath, dependencyCollector);
-
-  const parentError = validateParentLink(
-    pageVariablesProcessed.parent,
-    filePath,
+    sourceUrlPath,
+    siteVariables,
     validInternalTargets,
-    sourceUrlPath,
-  );
-  if (parentError) {
-    throw new Error(parentError);
-  }
-  const resolvedParentTarget = resolveParentLinkTarget(
-    pageVariablesProcessed.parent,
-    sourceUrlPath,
-  );
-  if (resolvedParentTarget) {
-    dependencyCollector?.internalTargets?.add(resolvedParentTarget);
-  }
+    isWatchMode,
+    allowSlides: extensionIsMarkdown(ext),
+    dependencyCollector,
+  });
 
   const strippedContent = stripHtmlComments(content);
 
   const params = createTemplateParameters({
-    pageVariables: pageVariablesProcessed,
+    pageVariables,
     siteVariables,
     content: strippedContent,
     subPath,
@@ -565,7 +636,7 @@ function renderPlainTextContent(
 
   let html: string;
   try {
-    html = _.template(strippedContent)(params);
+    html = compileTemplate(strippedContent)(params);
   } catch (err: unknown) {
     throw new Error(
       `${filePath}: Lodash template error in page or template: ${(err as Error).message}`,
@@ -612,15 +683,28 @@ export function renderLiterateJavaPageAsset({
 
   log.info`Rendering literate Java page ${B`${name}`}`;
 
+  const sourceUrlPath = `/${subPath}.java.html`;
+  const watchMode = isWatchMode(assetFiles);
   const raw = fs.readFileSync(filePath, 'utf-8');
-  const { pageVariables, content } = parseFrontMatterAndContent(raw, '.md');
-  validateFrontMatter(pageVariables, filePath);
+  const { pageVariables: rawPageVariables, content } =
+    parseFrontMatterAndContent(raw, '.md');
+  const pageVariables = preparePageVariables({
+    rawPageVariables,
+    filePath,
+    subPath,
+    sourceUrlPath,
+    siteVariables,
+    validInternalTargets,
+    isWatchMode: watchMode,
+    allowSlides: false,
+    dependencyCollector,
+  });
   const params = createTemplateParameters({
     pageVariables,
     siteVariables,
     content,
     subPath,
-    isWatchMode: isWatchMode(assetFiles),
+    isWatchMode: watchMode,
   });
   const md = createMarkdown(siteVariables, {
     filePath,
@@ -629,7 +713,7 @@ export function renderLiterateJavaPageAsset({
     dependencyCollector,
   });
   const env: Record<string, unknown> = {};
-  const tokens = md.parse(_.template(content)(params), env);
+  const tokens = md.parse(compileTemplate(content)(params), env);
   const { javaSource, codeBlocks, visibleBlockIndices } =
     extractLiterateJavaCode(tokens);
 
@@ -664,7 +748,6 @@ export function renderLiterateJavaPageAsset({
 
   // Render full markdown with a custom fence rule that replaces fences
   // with Shiki-highlighted code blocks and optional JDI output columns
-  const sourceUrlPath = `/${subPath}.java.html`;
   let fenceIndex = 0;
   const defaultFence = md.renderer.rules.fence!;
 
@@ -722,7 +805,6 @@ export function renderLiterateJavaPageAsset({
     `/${toUrlPath(path.relative(contentDir, path.join(dir, javaFileName)))}`,
   );
 
-  renderInlineField(md, pageVariables, 'title');
   pageVariables.template = 'literate';
   pageVariables.codeFilePath = codeFilePath;
   pageVariables.downloadName = javaFileName;
@@ -733,14 +815,12 @@ export function renderLiterateJavaPageAsset({
     );
   }
 
-  resolveAuthor(pageVariables, filePath, dependencyCollector);
-
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,
     content: contentHtml,
     subPath,
-    isWatchMode: isWatchMode(assetFiles),
+    isWatchMode: watchMode,
     bannerHtml: renderSiteBanner(siteVariables),
   });
 

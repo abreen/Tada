@@ -16,8 +16,8 @@
     <div class="code-search-index" aria-hidden="true" inert>
       <% page.tocItems.forEach(function(item) { %>
       <section>
-        <h2 id="L<%= item.line %>"><%= item.name %></h2>
-        <p><%= item.label %> defined at line <%= item.line %>.</p>
+        <h2 id="L<%- item.line %>"><%- item.name %></h2>
+        <p><%- item.label %> defined at line <%- item.line %>.</p>
       </section>
       <% }); %>
     </div>

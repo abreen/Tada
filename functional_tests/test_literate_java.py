@@ -1,8 +1,20 @@
 import json
+import os
+import re
 import subprocess
 
 import pytest
-from conftest import PACKAGE_DIR, init_site, run_tada, set_site_config
+from conftest import (
+    PACKAGE_DIR,
+    SITE_DEV_CONFIG_FILE,
+    init_site,
+    load_structured_file,
+    make_fake_failing_command,
+    parse_head_metadata,
+    run_tada,
+    set_site_config,
+    straight_quotes,
+)
 
 
 def _write_basic_literate_java_site(site):
@@ -119,6 +131,77 @@ class TestLiterateJavaBrokenLink:
         assert result.returncode != 0
         output = result.stdout + result.stderr
         assert 'broken internal link' in output
+
+
+def _write_literate_page(site, front_matter):
+    (site / 'content' / 'Pair.java.md').write_text(
+        f'---\n{front_matter}---\n\n```java\npublic class Pair {{}}\n```\n'
+    )
+
+
+def _env_without_javac(tmp_path):
+    fake_dir = tmp_path / 'fake_bin'
+    fake_dir.mkdir()
+    make_fake_failing_command(fake_dir, 'javac')
+    return {**os.environ, 'PATH': str(fake_dir) + os.pathsep + os.environ.get('PATH', '')}
+
+
+class TestLiterateJavaFrontMatter:
+    """Literate Java pages prepare front matter the same way as other pages."""
+
+    def test_broken_parent_fails_build(self, site_dir):
+        _write_literate_page(site_dir, 'title: Pair\nparent: /does-not-exist.html\n')
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode != 0
+        assert 'Pair.java.md: broken parent link: "/does-not-exist.html"' in (
+            result.stdout + result.stderr
+        )
+
+    def test_broken_parent_fails_build_without_javac(self, site_dir, tmp_path):
+        _write_literate_page(site_dir, 'title: Pair\nparent: /does-not-exist.html\n')
+        result = run_tada('dev', cwd=str(site_dir), env=_env_without_javac(tmp_path))
+        output = result.stdout + result.stderr
+        assert 'javac was not found' in output
+        assert result.returncode != 0
+        assert 'Pair.java.md: broken parent link: "/does-not-exist.html"' in output
+
+    def test_valid_parent_renders_breadcrumb(self, site_dir):
+        _write_literate_page(site_dir, 'title: Pair\nparent: ./index.html\nparentLabel: Home\n')
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, result.stdout + result.stderr
+        html = (site_dir / 'dist' / 'Pair.java.html').read_text()
+        breadcrumb = re.search(r'<a\b([^>]*\bclass="breadcrumb"[^>]*)>([^<]*)</a>', html)
+        assert breadcrumb, 'missing breadcrumb link'
+        assert 'href="./index.html"' in breadcrumb[1]
+        assert breadcrumb[2] == 'Home'
+
+    def test_description_with_quotes_produces_valid_meta(self, site_dir):
+        _write_literate_page(site_dir, 'title: Pair\ndescription: She said "hi" to *Pair*\n')
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, result.stdout + result.stderr
+        head = parse_head_metadata((site_dir / 'dist' / 'Pair.java.html').read_text())
+        assert straight_quotes(head.meta['description']) == 'She said "hi" to Pair'
+        assert sorted(head.meta_attrs['description']) == ['content', 'name']
+
+    def test_front_matter_templates_are_interpolated(self, site_dir):
+        site_title = load_structured_file(site_dir / SITE_DEV_CONFIG_FILE)['title']
+        _write_literate_page(
+            site_dir,
+            'title: <%= site.title %> Pair\ndescription: About <%= site.title %>\n',
+        )
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, result.stdout + result.stderr
+        head = parse_head_metadata((site_dir / 'dist' / 'Pair.java.html').read_text())
+        assert head.meta['og:title'] == f'{site_title} Pair'
+        assert head.meta['description'] == f'About {site_title}'
+
+    def test_slides_front_matter_fails_build(self, site_dir):
+        _write_literate_page(site_dir, 'title: Pair\nslides: true\n')
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode != 0
+        assert 'Pair.java.md: slides mode is only supported on Markdown pages' in (
+            result.stdout + result.stderr
+        )
 
 
 @pytest.mark.parametrize(

@@ -47,6 +47,8 @@ A maximum nesting depth of 10 is enforced to prevent infinite recursion.
 Partials must be Markdown files (`.md` or `.markdown`) and must have a basename
 that starts with `_`. The partial is Lodash-processed with the including page's
 template context, then parsed as Markdown at the directive's block position.
+Only `<% %>`, `<%= %>`, and `<%- %>` are template syntax; `${...}` is literal
+text.
 This means headings, links, lists, blockquotes, and other Markdown syntax in the
 partial render in the context where the directive appears.
 

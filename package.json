@@ -65,6 +65,7 @@
     "chokidar": "^4.0.3",
     "culori": "^4.0.2",
     "d3-flextree": "^2.1.2",
+    "entities": "^4.5.0",
     "fontkit": "^2.0.4",
     "front-matter": "^4.0.2",
     "java-parser": "^3.0.1",
@@ -81,8 +82,7 @@
     "quote-quote": "^1.2.0",
     "sass": "^1.99.0",
     "sharp": "^0.35.3",
-    "shiki": "^4.0.2",
-    "string-strip-html": "^8.5.0"
+    "shiki": "^4.0.2"
   },
   "lint-staged": {
     "*.{ts,js}": "prettier --write",

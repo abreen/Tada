@@ -1,3 +1,6 @@
+import html
+import re
+
 import pytest
 from conftest import init_site, run_tada, set_site_config
 
@@ -282,6 +285,28 @@ class TestCodeSourceTemplatingDisabled:
         java = (built_dev_site / 'dist' / 'marker' / 'Marker.java').read_text()
         assert '<%= vars.foobar %>' in java
         assert MARKER not in java
+
+
+class TestCodeSourceEsTemplateLiteral:
+    """`${...}` in mapped source files is literal text, not Lodash syntax."""
+
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        site = init_site(tmp_path, bare=True)
+        set_site_config(site, {'vars': {'foobar': MARKER}})
+        set_site_config(site, {'extensionToShikiLanguage': {'sh': 'shellscript'}})
+        (site / 'content' / 'greet.sh').write_text('# <%= vars.foobar %>\necho "Home is ${HOME}"\n')
+        yield site
+
+    def test_code_page_keeps_dollar_brace_literal(self, built_dev_site):
+        page = (built_dev_site / 'dist' / 'greet.sh.html').read_text()
+        text = html.unescape(re.sub(r'<[^>]+>', '', page))
+        assert 'echo "Home is ${HOME}"' in text
+        assert MARKER in text
+
+    def test_download_keeps_dollar_brace_literal(self, built_dev_site):
+        source = (built_dev_site / 'dist' / 'greet.sh').read_text()
+        assert source == f'# {MARKER}\necho "Home is ${{HOME}}"\n'
 
 
 @pytest.mark.parametrize('html_owner', ['public', 'content'])

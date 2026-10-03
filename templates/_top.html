@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"
-      data-default-font-preference="<%= site.defaultFont %>"
-      data-default-contrast-preference="<%= site.defaultContrast %>"<% if (site.defaultFont === 'serif') { %>
+      data-default-font-preference="<%- site.defaultFont %>"
+      data-default-contrast-preference="<%- site.defaultContrast %>"<% if (site.defaultFont === 'serif') { %>
       data-font-preference="serif"<% } %><% if (site.defaultContrast === 'high') { %>
       data-contrast-preference="high"<% } %>>
   <head>
@@ -22,25 +22,25 @@
     <link rel="apple-touch-icon" sizes="512x512" href="/favicon-512.png" />
     <link rel="apple-touch-icon" sizes="256x256" href="/favicon-256.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="apple-mobile-web-app-title" content="<%= site.symbol %>">
+    <meta name="apple-mobile-web-app-title" content="<%- site.symbol %>">
     <meta name="mobile-web-app-capable" content="yes">
     <% } %>
     <% } %>
-    <meta name="generator" content="Tada <%= tadaVersion %>" />
+    <meta name="generator" content="Tada <%- tadaVersion %>" />
     <meta charset="UTF-8" />
     <meta http-equiv="cache-control" content="no-cache" />
     <meta http-equiv="expires" content="0" />
     <meta http-equiv="pragma" content="no-cache" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <% if (page.description) { %>
-    <meta name="description" content="<%= page.description %>" />
+    <meta name="description" content="<%- page.description %>" />
     <% } %>
-    <meta property="og:title" content="<%= page.title %>" />
+    <meta property="og:title" content="<%- page.title %>" />
     <% if (page.author) { %>
-    <meta name="author" content="<%= page.author.name %>" />
-    <meta property="og:author" content="<%= page.author.name %>" />
+    <meta name="author" content="<%- page.author.name %>" />
+    <meta property="og:author" content="<%- page.author.name %>" />
     <% } %>
-    <title><%= page.title %><%= site.titlePostfix %></title>
+    <title><%- page.title %><%- site.titlePostfix %></title>
     <script>
       (() => {
       document.documentElement.classList.add('js');
@@ -219,8 +219,8 @@
             <path class="menu-icon-line menu-icon-line-middle" d="M3 12h18" />
             <path class="menu-icon-line menu-icon-line-bottom" d="M3 18h18" />
           </svg>
-          <% if (site.logo) { %><img class="logo-image" src="/<%- encodePublicAssetPath(site.logo) %>" alt="" aria-hidden="true" /><% } else if (site.symbol) { %><span class="logo" aria-hidden="true"><%= site.symbol %></span><% } %>
-          <span class="site-title" aria-hidden="true"><%= site.title %></span>
+          <% if (site.logo) { %><img class="logo-image" src="/<%- encodePublicAssetPath(site.logo) %>" alt="" aria-hidden="true" /><% } else if (site.symbol) { %><span class="logo" aria-hidden="true"><%- site.symbol %></span><% } %>
+          <span class="site-title" aria-hidden="true"><%- site.title %></span>
         </summary>
         <div class="content">
           <%= render('_nav.html') %>

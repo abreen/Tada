@@ -49,7 +49,9 @@ Generated development and production site configs explicitly include
 
 - **base**: full URL without trailing slash (e.g., `https://example.edu`)
 - **title**: site title, used in the page header and derived values
-- **defaultTimeZone**: IANA time zone identifier (e.g., `America/New_York`)
+- **defaultTimeZone**: IANA time zone identifier (e.g., `America/New_York`);
+  it must be one of the zones in `src/timezone/timezones.json`, or the build
+  fails
 - **themeColor**: CSS color for the site theme
 
 ## Optional fields
