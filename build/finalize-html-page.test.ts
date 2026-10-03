@@ -350,3 +350,125 @@ test.each(['/sample.py?view=1#code', './sample.py?view=1#code'])(
     expect([...collector.internalTargets]).toEqual(['/sample.py']);
   },
 );
+
+describe('finalizeHtmlPage markup handling', () => {
+  test('preserves the doctype and untouched markup exactly', () => {
+    const html = `<!doctype html>
+<html lang=en>
+  <head><meta charset=utf-8 /><script defer src='/app.js'></script></head>
+  <body><main class="body"><p>Tom &amp; Jerry<br/>&nbsp;<a href="https://example.com/x" title='say "hi"'>x</a></p></main></body>
+</html>
+`;
+
+    const result = finalizeHtmlPage({
+      filePath: 'content/index.md',
+      html,
+      siteVariables,
+      sourceUrlPath: '/index.html',
+      validInternalTargets: new Set(),
+    });
+
+    expect(result.html).toBe(
+      html.replace("src='/app.js'", 'src="/course/app.js"'),
+    );
+  });
+
+  test('decodes character references in attribute values and re-encodes rewrites', () => {
+    const collector = createCollector();
+
+    const result = finalizeHtmlPage({
+      filePath: 'content/index.md',
+      html: `<nav><a href="/R&#x26;D.html">Nav</a></nav><main class="body"><a href="/R&amp;D.html?x=1&amp;y=2">R&amp;D</a></main>`,
+      siteVariables,
+      sourceUrlPath: '/index.html',
+      validInternalTargets: new Set(['/R&D.html']),
+      generatedPageTargets: new Set(['/R&D.html']),
+      dependencyCollector: collector,
+    });
+
+    expect(result.html).toBe(
+      `<nav><a href="/course/R&amp;D.html" data-tada-page="">Nav</a></nav><main class="body"><a href="/course/R&amp;D.html?x=1&amp;y=2" data-tada-page="">R&amp;D</a></main>`,
+    );
+    expect([...result.analysis.outgoingTargets]).toEqual(['/R&D.html']);
+    expect([...collector.internalTargets]).toEqual(['/R&D.html']);
+  });
+
+  test('classifies anchors with empty href values as links to the page itself', () => {
+    const result = finalizeHtmlPage({
+      filePath: 'content/index.md',
+      html: '<nav><a href="">Self</a><a href>Bare</a><a data-tada-page>None</a></nav>',
+      siteVariables,
+      sourceUrlPath: '/index.html',
+      validInternalTargets: new Set(),
+      generatedPageTargets: new Set(['/index.html']),
+    });
+
+    expect(result.html).toBe(
+      '<nav><a href="" data-tada-page="">Self</a><a href data-tada-page="">Bare</a><a>None</a></nav>',
+    );
+  });
+
+  test('rewrites and validates links inside noscript elements', () => {
+    const result = finalizeHtmlPage({
+      filePath: 'content/index.md',
+      html: `<head><noscript><link rel="stylesheet" href="/no-js.css"></noscript></head><body><noscript><img src="/img/a.png"></noscript><main class="body"><noscript><a href="/about.html">About</a></noscript></main></body>`,
+      siteVariables,
+      sourceUrlPath: '/index.html',
+      validInternalTargets: new Set(['/about.html']),
+      generatedPageTargets: new Set(['/about.html']),
+    });
+
+    expect(result.html).toContain(
+      '<noscript><link rel="stylesheet" href="/course/no-js.css"></noscript>',
+    );
+    expect(result.html).toContain(
+      '<noscript><img src="/course/img/a.png"></noscript>',
+    );
+    expect(result.html).toContain(
+      '<noscript><a href="/course/about.html" data-tada-page="">About</a></noscript>',
+    );
+    expect([...result.analysis.outgoingTargets]).toEqual(['/about.html']);
+
+    expect(() =>
+      finalizeHtmlPage({
+        filePath: 'content/index.md',
+        html: `<main class="body"><noscript><a href="/missing.html">Missing</a></noscript></main>`,
+        siteVariables,
+        sourceUrlPath: '/index.html',
+        validInternalTargets: new Set(),
+      }),
+    ).toThrow('broken internal link: "/missing.html"');
+  });
+
+  test('leaves template contents untouched', () => {
+    const html = `<main class="body"><template><a href="/missing.html" data-tada-page>Missing</a><img src="/img/a.png"></template></main>`;
+
+    const result = finalizeHtmlPage({
+      filePath: 'content/index.md',
+      html,
+      siteVariables,
+      sourceUrlPath: '/index.html',
+      validInternalTargets: new Set(),
+      generatedPageTargets: new Set(['/missing.html']),
+    });
+
+    expect(result.html).toBe(html);
+    expect(result.analysis.outgoingTargets.size).toBe(0);
+  });
+
+  test('applies the base path to SVG links without validating them as content links', () => {
+    const result = finalizeHtmlPage({
+      filePath: 'content/index.md',
+      html: `<main class="body"><svg><a href="/diagram.html"><use href="/sprite.svg#icon"></use></a></svg></main>`,
+      siteVariables,
+      sourceUrlPath: '/index.html',
+      validInternalTargets: new Set(),
+      generatedPageTargets: new Set(['/diagram.html']),
+    });
+
+    expect(result.html).toBe(
+      `<main class="body"><svg><a href="/course/diagram.html" data-tada-page=""><use href="/course/sprite.svg#icon"></use></a></svg></main>`,
+    );
+    expect(result.analysis.outgoingTargets.size).toBe(0);
+  });
+});
