@@ -1,7 +1,9 @@
 # Time Zones
 
-Each site has a default time zone set in the config. A client-side time zone
-chooser lets visitors select their preferred zone. The selection is stored in
+Each site has a default time zone set in the config. `defaultTimeZone` must be
+one of the zones listed in `src/timezone/timezones.json`; any other value fails
+the build, and `tada init` only offers zones from that list. A client-side time
+zone chooser lets visitors select their preferred zone. The selection is stored in
 the browser's local storage.
 
 To place the time zone chooser on a page:
