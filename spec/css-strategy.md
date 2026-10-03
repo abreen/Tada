@@ -30,6 +30,27 @@ font-face declarations are available to the font-loading barrier before a
 stored font preference is applied. The JavaScript bundle is loaded with
 `<script defer>` at the end of `<head>`.
 
+## Sass sources
+
+`src/style.scss` is the only Sass entry point. `src/index.ts` imports it, and
+Bun's Sass plugin compiles it once per build. Every other Sass file is a
+partial (its name starts with `_`) that `style.scss` loads with `@use`:
+
+- shared partials live directly in `src/`, such as `_mixins.scss`,
+  `_base.scss`, `_layout.scss`, `_alerts.scss`, `_fonts.scss`, and
+  `_content.scss`
+- each client component's styles live next to its code in
+  `src/<component>/_index.scss` and are loaded as `@use '<component>'` (see
+  [Client-Side Components](client-components.md))
+
+Sass emits each module's CSS once, in the order `style.scss` first loads it, so
+the order of the `@use` rules is the cascade order. Partials that need the
+shared mixins load them with `@use 'mixins' as *` (or `'../mixins'`).
+
+The theme module, `config/theme`, is rendered at build time from
+`templates/_theme.scss` with Lodash using the site's theme and font
+configuration (see [Theming](theming.md)).
+
 ## Bundle names
 
 CSS and JavaScript bundle filenames include the Tada package version, for

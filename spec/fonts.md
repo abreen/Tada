@@ -86,7 +86,7 @@ adjustments are independent, including for inline SVG text that selects
 `var(--mono-font)`. KaTeX retains its own font metrics, and omitted adjustments
 retain normal font sizing.
 
-All browser faces are declared in the stylesheet and use
+All browser faces are declared in the stylesheet (`src/_fonts.scss`) and use
 `font-display: swap`. Each build preloads the normal body and mono faces for its
 configured default pairing only. Before applying an alternate pairing, Tada
 uses `document.fonts.load()` as a barrier for its primary proportional 400

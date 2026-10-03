@@ -3,8 +3,12 @@
 Tada includes several interactive components that run in the browser.
 
 Each component lives in `src/<name>/` with an `index.ts` (exporting async
-`mount()`) and `style.scss`. Import Sass styles in `src/index.ts` to include
-them in the bundle. Shared utilities are in `src/util.ts`.
+`mount()`) and, if it has styles, a Sass partial `_index.scss`. To include a
+component's styles in the stylesheet, load the partial from `src/style.scss`
+with `@use '<name>'`; the position of that rule sets its cascade order. Do not
+import Sass from TypeScript: `src/index.ts` imports only `style.scss`, which is
+compiled once per build (see [CSS Strategy](css-strategy.md)). Shared utilities
+are in `src/util.ts`.
 
 - **Anchor links**: clickable headings that scroll themselves into view; slide
   title headings also get a presentation icon button
