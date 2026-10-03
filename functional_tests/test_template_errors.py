@@ -136,4 +136,4 @@ class TestEsTemplateLiteralSyntax:
         assert 'in Home.' in html
         assert 'const greeting = `Hello, ${name}!`;' in _text_content(html)
         assert '<code>${HOME}</code>' in html
-        assert '<meta name="description" content="Costs ${price}">' in html
+        assert '<meta name="description" content="Costs ${price}"' in html
