@@ -440,20 +440,30 @@ describe('finalizeHtmlPage markup handling', () => {
     ).toThrow('broken internal link: "/missing.html"');
   });
 
-  test('leaves template contents untouched', () => {
-    const html = `<main class="body"><template><a href="/missing.html" data-tada-page>Missing</a><img src="/img/a.png"></template></main>`;
-
+  test('rewrites and validates links inside template elements', () => {
     const result = finalizeHtmlPage({
       filePath: 'content/index.md',
-      html,
+      html: `<main class="body"><template><a href="/about.html">About</a><img src="/img/a.png"></template></main>`,
       siteVariables,
       sourceUrlPath: '/index.html',
-      validInternalTargets: new Set(),
-      generatedPageTargets: new Set(['/missing.html']),
+      validInternalTargets: new Set(['/about.html']),
+      generatedPageTargets: new Set(['/about.html']),
     });
 
-    expect(result.html).toBe(html);
-    expect(result.analysis.outgoingTargets.size).toBe(0);
+    expect(result.html).toBe(
+      '<main class="body"><template><a href="/course/about.html" data-tada-page="">About</a><img src="/course/img/a.png"></template></main>',
+    );
+    expect([...result.analysis.outgoingTargets]).toEqual(['/about.html']);
+
+    expect(() =>
+      finalizeHtmlPage({
+        filePath: 'content/index.md',
+        html: `<main class="body"><template><a href="/missing.html">Missing</a></template></main>`,
+        siteVariables,
+        sourceUrlPath: '/index.html',
+        validInternalTargets: new Set(),
+      }),
+    ).toThrow('broken internal link: "/missing.html"');
   });
 
   test('applies the base path to SVG links without validating them as content links', () => {

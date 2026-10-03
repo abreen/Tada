@@ -292,22 +292,17 @@ export function finalizeHtmlPage({
     }
   }
 
-  // HTMLRewriter edits the original markup in place. `<template>` contents are
-  // skipped because they are not part of the document tree. HTMLRewriter reads
-  // `<noscript>` contents as raw text, so a nested rewriter parses them as
-  // markup (as a parser with scripting disabled would), inheriting whether the
-  // element is inside `main.body`.
+  // HTMLRewriter edits the original markup in place. It reads `<noscript>`
+  // contents as raw text, so a nested rewriter parses them as markup (as a
+  // parser with scripting disabled would), inheriting whether the element is
+  // inside `main.body`.
   function rewrite(input: string, initialContentDepth: number): string {
     let contentDepth = initialContentDepth;
-    let templateDepth = 0;
     let noscriptSource = '';
 
     return new HTMLRewriter()
       .on('main.body', {
         element(element) {
-          if (templateDepth > 0) {
-            return;
-          }
           contentDepth++;
           element.onEndTag(() => {
             contentDepth--;
@@ -316,9 +311,6 @@ export function finalizeHtmlPage({
       })
       .on('[href]', {
         element(element) {
-          if (templateDepth > 0) {
-            return;
-          }
           const href = getAttributeValue(element, 'href');
           const finalHref = href
             ? rewriteHref(element, href, contentDepth > 0)
@@ -330,16 +322,11 @@ export function finalizeHtmlPage({
       })
       .on('a:not([href])', {
         element(element) {
-          if (templateDepth === 0) {
-            classifyAnchor(element, null);
-          }
+          classifyAnchor(element, null);
         },
       })
       .on('[src]', {
         element(element) {
-          if (templateDepth > 0) {
-            return;
-          }
           const src = getAttributeValue(element, 'src');
           if (!src) {
             return;
@@ -355,9 +342,6 @@ export function finalizeHtmlPage({
       })
       .on('noscript', {
         text(chunk) {
-          if (templateDepth > 0) {
-            return;
-          }
           noscriptSource += chunk.text;
           if (!chunk.lastInTextNode) {
             chunk.remove();
@@ -365,15 +349,6 @@ export function finalizeHtmlPage({
           }
           chunk.replace(rewrite(noscriptSource, contentDepth), { html: true });
           noscriptSource = '';
-        },
-      })
-      .on('template', {
-        // Registered last so the template element itself is still processed.
-        element(element) {
-          templateDepth++;
-          element.onEndTag(() => {
-            templateDepth--;
-          });
         },
       })
       .transform(input);
