@@ -64,6 +64,9 @@ export function render(
 
   renderStack.push(fileName);
   try {
+    if (!Object.hasOwn(templates, fileName)) {
+      throw new Error(`Unknown template "${fileName}"`);
+    }
     return compileTemplate(templates[fileName])(params ?? undefined);
   } catch (err) {
     if (errorStack == null) {

@@ -31,6 +31,7 @@ import { htmlToPlainText } from './plain-text';
 import { finalizeHtmlPage } from './final-html';
 import {
   createApplyBasePath,
+  getProjectDir,
   normalizeOutputPath,
   toPosix,
   toUrlPath,
@@ -65,6 +66,19 @@ const tadaVersion: string = pkg.version;
 export { stripHtmlComments } from './html-comments';
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
+
+// Page variables that renderers assign themselves. Front matter that sets one
+// would be overwritten or, for `template`, select a nonexistent template.
+const RESERVED_FRONT_MATTER_KEYS: readonly string[] = [
+  'template',
+  'titleHtml',
+  'descriptionHtml',
+  'tocHtml',
+  'tocItems',
+  'codeFilePath',
+  'downloadName',
+  'filePath',
+];
 
 function isWatchMode(assetFiles: string[]): boolean {
   return assetFiles.some(f => f.includes('watch-reload-client'));
@@ -118,6 +132,19 @@ function resolveAuthor(
     );
   }
   pageVariables.author = authorEntry;
+}
+
+function rejectReservedFrontMatterKeys(
+  pageVariables: Record<string, unknown>,
+  filePath: string,
+): void {
+  const key = RESERVED_FRONT_MATTER_KEYS.find(k =>
+    Object.hasOwn(pageVariables, k),
+  );
+  if (key) {
+    const displayPath = toPosix(path.relative(getProjectDir(), filePath));
+    throw new Error(`${displayPath}: front matter key "${key}" is reserved`);
+  }
 }
 
 function validateFrontMatter(
@@ -284,9 +311,7 @@ export function renderPlainTextPageAsset({
     },
   );
 
-  if (!pageVariables.template) {
-    pageVariables.template = 'default';
-  }
+  pageVariables.template = 'default';
 
   if (pageVariables.toc && tocItems) {
     pageVariables.tocHtml = generateTocHtml(
@@ -477,6 +502,7 @@ function preparePageVariables({
   allowSlides,
   dependencyCollector,
 }: PreparePageVariablesInput): Record<string, unknown> {
+  rejectReservedFrontMatterKeys(rawPageVariables, filePath);
   if (rawPageVariables.slides === true && !allowSlides) {
     throw new Error(
       `${filePath}: slides mode is only supported on Markdown pages`,

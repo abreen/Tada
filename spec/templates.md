@@ -36,7 +36,8 @@ Lodash templating is only supported inside individual values; it cannot
 generate or conditionally modify the YAML/JSON structure itself.
 
 Template rendering failures abort the build and identify the innermost failing
-HTML template. Each render attempt tracks errors independently, including
+HTML template. Rendering a template name that does not exist is a failure too,
+never an empty page. Each render attempt tracks errors independently, including
 retries and template recompilation in watch mode. A failed render never becomes
 a successful partial page; correcting the content allows the next render to
 complete normally.
