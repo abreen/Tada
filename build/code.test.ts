@@ -1,6 +1,7 @@
 import { describe, expect, mock, test, beforeAll } from 'bun:test';
 import { createGlobals } from './globals.test';
 import { initHighlighter } from './utils/shiki-highlighter';
+import { htmlToPlainText } from './utils/plain-text';
 import {
   renderCodeSegment,
   renderCodeWithComments,
@@ -452,13 +453,7 @@ function codeCells(html: string): string[] {
 }
 
 function textOf(cellHtml: string): string {
-  return cellHtml
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&');
+  return htmlToPlainText(cellHtml);
 }
 
 function countOf(text: string, search: string): number {
