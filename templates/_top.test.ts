@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import _ from 'lodash';
+import { compileTemplate } from '../build/lodash-template';
 import TOP_TEMPLATE from './_top.html' with { type: 'text' };
 
 function renderTop(
@@ -149,5 +150,50 @@ describe('_top.html template', () => {
     const html = renderTop('sans', 'standard', banner, '');
 
     expect(html).not.toContain('<aside class="site-banner');
+  });
+
+  test('escapes plain-text page and site values', () => {
+    const html = compileTemplate(TOP_TEMPLATE)({
+      site: {
+        defaultFont: 'sans',
+        defaultContrast: 'standard',
+        features: { favicon: true, search: false },
+        title: 'Tom & Jerry <Lab>',
+        titlePostfix: ' - Tom & Jerry <Lab>',
+        symbol: 'A&B',
+      },
+      page: {
+        title: 'Width is 5" bold & more',
+        description: 'Uses a < b and 6" rulers',
+        author: { name: `Ann "Annie" O'Neil` },
+        template: 'default',
+      },
+      tadaVersion: '0.0.0',
+      isWatchMode: false,
+      speculationRulesHrefMatches: '/*',
+      render: () => '',
+    });
+
+    expect(html).toContain(
+      '<meta name="description" content="Uses a &lt; b and 6&quot; rulers" />',
+    );
+    expect(html).toContain(
+      '<meta property="og:title" content="Width is 5&quot; bold &amp; more" />',
+    );
+    expect(html).toContain(
+      '<meta name="author" content="Ann &quot;Annie&quot; O&#39;Neil" />',
+    );
+    expect(html).toContain(
+      '<title>Width is 5&quot; bold &amp; more - Tom &amp; Jerry &lt;Lab&gt;</title>',
+    );
+    expect(html).toContain(
+      '<meta name="apple-mobile-web-app-title" content="A&amp;B">',
+    );
+    expect(html).toContain(
+      '<span class="logo" aria-hidden="true">A&amp;B</span>',
+    );
+    expect(html).toContain(
+      '<span class="site-title" aria-hidden="true">Tom &amp; Jerry &lt;Lab&gt;</span>',
+    );
   });
 });

@@ -23,6 +23,13 @@ Utility functions are available for formatting dates, rendering other templates,
 loading project config files, generating CSS class strings, and rendering the
 time zone chooser.
 
+Templates output plain-text values (page title and description, author name,
+breadcrumb label, nav section titles and link text, site title and symbol,
+download names, and code search entries) with the escaping `<%- %>` form, so
+quotes, `<`, and `&` never break an attribute or element. Values that already
+hold HTML (`content`, `bannerHtml`, `page.tocHtml`, `page.titleHtml` in element
+bodies, and `render(...)` output) use `<%= %>`.
+
 Site config values are accessible in templates. You may also use site config
 values in the `nav.*` and `authors.*` config files. In those config files,
 Lodash templating is only supported inside individual values; it cannot

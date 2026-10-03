@@ -60,7 +60,12 @@ results; choose one per file.
 - **skip**: set to `true` to exclude the page from the build
 - **stdin**: input string sent to a literate Java program's stdin at build time (see [Literate Java](literate-java.md))
 
-Title and description support inline Markdown formatting.
+Title and description support inline Markdown formatting. The rendered HTML is
+used for the page heading, and a plain-text version is used for `<title>`,
+`og:title`, and the meta description. The plain text keeps every character the
+reader sees: tags are removed and character references are decoded exactly
+once, so a description such as ``Uses `a < b` and 6" rulers`` keeps both the
+`<` and the `b`.
 
 Arbitrary fields are also allowed and accessible in the body of the page as
 page variables. For example:

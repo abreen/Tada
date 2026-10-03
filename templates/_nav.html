@@ -1,7 +1,7 @@
 <nav>
 <% config('nav').forEach(function(section) { %>
   <div>
-    <p><%= section.title %></p>
+    <p><%- section.title %></p>
     <ul>
       <% section.links.forEach(function(link) { %>
         <li>
@@ -10,7 +10,7 @@
             <% if (!link.disabled) { %>href="<%- encodeAuthoredUrl(link.internal || link.external) %>"<% } %>
             <% if (link.external) { %>target="_blank" rel="noopener noreferrer"<% } %>
           >
-            <%= link.text %></a>
+            <%- link.text %></a>
         </li>
       <% }) %>
     </ul>

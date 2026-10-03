@@ -5,6 +5,7 @@ import socket
 import stat
 import subprocess
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -70,6 +71,47 @@ def init_site(tmp_path, *, bare=True, extra_args=None):
     site = tmp_path / 'testsite'
     assert site.is_dir()
     return site
+
+
+class _HeadMetadataParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.title = None
+        self.meta = {}
+        self.meta_attrs = {}
+        self._in_title = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'title':
+            self._in_title = True
+            self.title = ''
+        elif tag == 'meta':
+            attr_map = dict(attrs)
+            key = attr_map.get('name') or attr_map.get('property')
+            if key is not None and key not in self.meta:
+                self.meta[key] = attr_map.get('content')
+                self.meta_attrs[key] = [name for name, _ in attrs]
+
+    def handle_endtag(self, tag):
+        if tag == 'title':
+            self._in_title = False
+
+    def handle_data(self, data):
+        if self._in_title:
+            self.title += data
+
+
+def parse_head_metadata(html):
+    """Parse a page's <title> text and its <meta name/property> tags.
+
+    Returns a parser with `title` (entity-decoded text), `meta` (key to
+    decoded content), and `meta_attrs` (key to the attribute names found on
+    that tag, so tests can detect content that broke out of its attribute).
+    """
+    parser = _HeadMetadataParser()
+    parser.feed(html)
+    parser.close()
+    return parser
 
 
 def load_structured_file(file_path):

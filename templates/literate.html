@@ -4,7 +4,7 @@
   <%= render('_heading.html') %>
   <main class="body" data-pagefind-body>
     <div class="file-header">
-      <code><%= page.downloadName %></code><%= render('_download.html') %>
+      <code><%- page.downloadName %></code><%= render('_download.html') %>
     </div>
     <%= content %>
     <%= render('_footer.html') %>

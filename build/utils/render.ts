@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { compileTemplate } from '../lodash-template';
 import type MarkdownIt from 'markdown-it';
-import { stripHtml } from 'string-strip-html';
 import { makeLogger } from '../log';
 import { B } from '../colors';
 import createTemplateGlobals from '../template-globals';
@@ -28,6 +27,7 @@ import {
 import { extensionIsMarkdown } from './file-types';
 import { createTraceHelpers } from './trace';
 import { stripHtmlComments } from './html-comments';
+import { htmlToPlainText } from './plain-text';
 import { finalizeHtmlPage } from './final-html';
 import {
   createApplyBasePath,
@@ -81,7 +81,7 @@ function renderInlineField(
   }
   const html = md.renderInline(raw);
   vars[`${field}Html`] = html;
-  vars[field] = stripHtml(html).result;
+  vars[field] = htmlToPlainText(html);
 }
 
 interface TemplateParametersInput {

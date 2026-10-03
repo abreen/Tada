@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import _ from 'lodash';
+import { compileTemplate } from '../build/lodash-template';
 import { classNames, encodeAuthoredUrl } from '../build/template-globals';
 import NAV_TEMPLATE from './_nav.html' with { type: 'text' };
 
@@ -110,5 +111,21 @@ describe('_nav.html template', () => {
       'href="https://example.com/files/a%2Fb?q=hello%20world"',
     );
     expect(html).not.toContain('a%252Fb');
+  });
+
+  test('escapes section titles and link text', () => {
+    const html = compileTemplate(NAV_TEMPLATE)({
+      config: () => [
+        {
+          title: 'Q&A <Live>',
+          links: [{ text: 'Labs & "Demos"', internal: '/labs/index.html' }],
+        },
+      ],
+      cx: classNames,
+      encodeAuthoredUrl,
+    });
+
+    expect(html).toContain('<p>Q&amp;A &lt;Live&gt;</p>');
+    expect(html).toContain('Labs &amp; &quot;Demos&quot;</a>');
   });
 });

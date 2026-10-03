@@ -2,7 +2,7 @@ import re
 import shutil
 
 import pytest
-from conftest import PACKAGE_DIR, run_tada, set_site_config
+from conftest import PACKAGE_DIR, parse_head_metadata, run_tada, set_site_config
 
 SOURCE_SERIF_REGULAR = (
     PACKAGE_DIR / 'fonts' / 'source-serif-4' / 'woff2' / 'SourceSerif4-VariableFont_opsz,wght.woff2'
@@ -368,6 +368,33 @@ class TestDevBuildDefaultContent:
         html = page.read_text()
         # _pr1.md uses <%= page.title %> which should resolve to "Lecture 2"
         assert 'Lecture 2' in html
+
+
+def _straight_quotes(text):
+    return text.replace('\u201c', '"').replace('\u201d', '"')
+
+
+class TestPageMetadataText:
+    """Plain-text title and description values survive into <title> and <meta>."""
+
+    def test_title_and_description_keep_full_text(self, site_dir):
+        (site_dir / 'content' / 'index.md').write_text(
+            '---\n'
+            "title: 'Width is 5\" <b>bold</b> & more'\n"
+            "description: 'Uses `a < b` and 6\" rulers'\n"
+            '---\n\nBody.\n'
+        )
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, result.stdout + result.stderr
+
+        html = (site_dir / 'dist' / 'index.html').read_text()
+        head = parse_head_metadata(html)
+        title = 'Width is 5" bold & more'
+        assert _straight_quotes(head.title).startswith(f'{title} - ')
+        assert _straight_quotes(head.meta['og:title']) == title
+        assert _straight_quotes(head.meta['description']) == 'Uses a < b and 6" rulers'
+        assert sorted(head.meta_attrs['og:title']) == ['content', 'property']
+        assert sorted(head.meta_attrs['description']) == ['content', 'name']
 
 
 class TestDevBuildErrors:
