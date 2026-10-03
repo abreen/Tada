@@ -16,11 +16,11 @@ public/               Static files copied to output as-is
 The `content/` directory contains pages (Markdown, HTML, or source code files)
 and assets (images, PDFs, etc.). Processed files become HTML pages; everything
 else is copied unchanged. The `public/` directory is also copied to the output
-root. If any two sources would produce the same output path, the build fails
-before publishing outputs. This includes two content pages (such as `about.md`
-and `about.html`), a generated code page and an HTML source (`demo.py` and
-`demo.py.html`), downloadable raw sources, and content/public collisions.
-The error identifies the conflicting sources and output path.
+root. If two sources would produce the same output path, the build stops with an
+output conflict (see [Build errors](build-pipeline.md#build-errors)). This
+includes two content pages (such as `about.md` and `about.html`), a code page
+and an HTML page (`demo.py` and `demo.py.html`), content and public files with
+the same path, and files that collide with output Tada generates itself.
 
 The output directory is `dist/` for development builds.
 
@@ -32,7 +32,5 @@ the build source pipeline:
 - `build/source-records.ts` for rendering or copying one source into concrete
   outputs plus dependency metadata consumed by builds and watch snapshots
 
-Generic output staging, publication and rollback live in
-`build/output-publication.ts`; shared build types and validation also live outside
-`build/watch/`. The watcher engine only schedules build callbacks and owns its
-subscriptions and timers.
+Writing build output to disk lives in `build/output-publication.ts`. The
+watcher engine only schedules builds and owns its subscriptions and timers.
