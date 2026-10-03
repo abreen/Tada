@@ -1,21 +1,5 @@
+// The single Sass entry point; it loads every other stylesheet
 import './style.scss';
-
-import './material-symbols.scss';
-import './anchor/style.scss';
-import './code.scss';
-import './code/style.scss';
-import './literate.scss';
-import './header/style.scss';
-import './print/style.scss';
-import './question/style.scss';
-import './search/style.scss';
-import './slides/style.scss';
-import './timezone/style.scss';
-import './toc/style.scss';
-import './trace/style.scss';
-import './appearance-picker/style.scss';
-import './navigate/style.scss';
-import './page-update/style.scss';
 
 import mountSearch from './search';
 import mountHeader from './header';

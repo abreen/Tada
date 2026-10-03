@@ -31,6 +31,12 @@ function renderTop(
 }
 
 describe('_top.html template', () => {
+  test('renders the charset declaration as the first element in head', () => {
+    const html = renderTop('sans', 'standard');
+
+    expect(html).toMatch(/<head>\s*<meta charset="UTF-8" \/>/);
+  });
+
   test('renders one menu icon with three persistent SVG strokes', () => {
     const html = renderTop('sans', 'standard');
     const icon = html.match(/<svg\b[^>]*class="menu-icon"[^>]*>/)?.[0];

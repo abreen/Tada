@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import signal
 import socket
 import stat
@@ -271,3 +272,24 @@ def built_prod_site(site_dir):
     result = run_tada('prod', cwd=str(site_dir))
     assert result.returncode == 0, f'prod build failed: {result.stderr}'
     yield site_dir
+
+
+# Browsers only prescan the first 1024 bytes of a document for its encoding
+CHARSET_PRESCAN_BYTES = 1024
+
+
+def assert_charset_declared_first(dist_dir):
+    """Assert every generated page starts <head> with <meta charset> inside the
+    browser's encoding prescan window."""
+    pages = [
+        page
+        for page in dist_dir.rglob('*.html')
+        if 'pagefind' not in page.relative_to(dist_dir).parts
+    ]
+    assert pages, f'No HTML pages found in {dist_dir}'
+    for page in pages:
+        prescan = page.read_bytes()[:CHARSET_PRESCAN_BYTES]
+        assert re.search(rb'<head[^>]*>\s*<meta charset="UTF-8"', prescan), (
+            f'{page} does not declare its charset first in <head> within '
+            f'{CHARSET_PRESCAN_BYTES} bytes'
+        )

@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import { renderThemeScss } from '../build/bundle';
 import { getPackageDir } from '../build/utils/paths';
@@ -17,10 +16,6 @@ const stylelintArgs = [
   '0',
 ];
 
-if (fix) {
-  stylelintArgs.push('--fix');
-}
-
 const lintThemeSiteVariables: SiteVariables = {
   base: 'https://example.com',
   basePath: '/',
@@ -33,12 +28,12 @@ const lintThemeSiteVariables: SiteVariables = {
   tintAmount: 100,
 };
 
-async function runStylelint(args: string[]): Promise<number> {
+async function runStylelint(args: string[], input?: string): Promise<number> {
   const proc = Bun.spawn({
     cmd: ['bunx', ...stylelintArgs, ...args],
     cwd: packageDir,
     env: process.env,
-    stdin: 'ignore',
+    stdin: input === undefined ? 'ignore' : new Blob([input]),
     stdout: 'inherit',
     stderr: 'inherit',
   });
@@ -47,20 +42,17 @@ async function runStylelint(args: string[]): Promise<number> {
 }
 
 async function main() {
-  let themeDir: string | undefined;
-  let exitCode = 0;
+  let exitCode = await runStylelint([
+    ...(fix ? ['--fix'] : []),
+    'src/**/*.scss',
+  ]);
 
-  try {
-    exitCode ||= await runStylelint(['src/**/*.scss']);
-
-    themeDir = renderThemeScss(lintThemeSiteVariables);
-    const renderedThemePath = path.join(themeDir, 'config/_theme.scss');
-    exitCode ||= await runStylelint([renderedThemePath]);
-  } finally {
-    if (themeDir) {
-      fs.rmSync(themeDir, { recursive: true, force: true });
-    }
-  }
+  // The theme is a Lodash template, so lint its rendered output through stdin.
+  // Fixes cannot be written back to the template, so --fix is not passed.
+  exitCode ||= await runStylelint(
+    ['--stdin-filename', 'templates/_theme.scss (rendered)'],
+    renderThemeScss(lintThemeSiteVariables),
+  );
 
   if (exitCode !== 0) {
     process.exit(exitCode);

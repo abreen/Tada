@@ -140,6 +140,40 @@ describe('preparePageTemplateHtml', () => {
     expect(result).toContain('href="/katex/katex.min.css"');
   });
 
+  test('injects head tags after the charset meta tag without inlining CSS', () => {
+    for (const fontPath of DEFAULT_FONT_PRELOAD_FILES.sans) {
+      writeFile(path.join('/virtual/dist', fontPath), 'font');
+    }
+    writeFile(
+      path.join('/virtual/dist', 'index.bundle.css'),
+      ':root{--theme-color:red}',
+    );
+
+    const result = preparePageTemplateHtml({
+      templateHtml:
+        '<html><head><meta charset="UTF-8" /><title>Page</title></head>' +
+        '<body><span class="katex">x</span></body></html>',
+      assetFiles: ['index.bundle.js', 'index.bundle.css'],
+      distDir: '/virtual/dist',
+      siteVariables,
+    });
+
+    const head = result.slice(0, result.indexOf('</head>'));
+    expect(head).toStartWith('<html><head><meta charset="UTF-8" />');
+    const positions = [
+      '<meta charset="UTF-8" />',
+      '<link href="/katex/katex.min.css" rel="stylesheet">',
+      'rel="preload" href="/inter/InterVariable.woff2"',
+      '<link href="/index.bundle.css" rel="stylesheet">',
+      '<title>Page</title>',
+      '<script defer src="/index.bundle.js"></script>',
+    ].map(tag => head.indexOf(tag));
+    expect(positions).not.toContain(-1);
+    expect(positions).toEqual(positions.toSorted((a, b) => a - b));
+    expect(result).not.toContain('<style>');
+    expect(result).not.toContain('--theme-color');
+  });
+
   test('leaves plain html unchanged when there are no assets and no KaTeX markup', () => {
     const templateHtml =
       '<html><head><meta charset="UTF-8"></head><body><p>Hello</p></body></html>';
@@ -185,7 +219,8 @@ describe('preparePageTemplateHtml', () => {
       }
 
       const result = preparePageTemplateHtml({
-        templateHtml: '<html><head></head><body></body></html>',
+        templateHtml:
+          '<html><head><meta charset="UTF-8"></head><body></body></html>',
         assetFiles: [],
         distDir: '/virtual/dist',
         siteVariables: { ...siteVariables, defaultFont },
@@ -207,7 +242,8 @@ describe('preparePageTemplateHtml', () => {
     );
 
     const result = preparePageTemplateHtml({
-      templateHtml: '<html><head></head><body></body></html>',
+      templateHtml:
+        '<html><head><meta charset="UTF-8"></head><body></body></html>',
       assetFiles: [],
       distDir: '/virtual/dist',
       siteVariables: {
@@ -243,7 +279,8 @@ describe('preparePageTemplateHtml', () => {
     }
 
     const result = preparePageTemplateHtml({
-      templateHtml: '<html><head></head><body></body></html>',
+      templateHtml:
+        '<html><head><meta charset="UTF-8"></head><body></body></html>',
       assetFiles: [],
       distDir: '/virtual/dist',
       siteVariables: {

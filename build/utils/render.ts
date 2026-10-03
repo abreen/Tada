@@ -193,6 +193,14 @@ function renderSiteBanner(siteVariables: SiteVariables): string {
   return createMarkdown(siteVariables).render(siteVariables.banner);
 }
 
+// `<meta charset>` is the first element in `<head>` so browsers find it within
+// the first 1024 bytes. Tags injected into the head go right after it.
+const CHARSET_META_PATTERN = /<meta charset="UTF-8"\s*\/?>/;
+
+function insertAfterCharsetMeta(html: string, tags: string): string {
+  return html.replace(CHARSET_META_PATTERN, charsetMeta => charsetMeta + tags);
+}
+
 export function injectAssetTags(
   html: string,
   assetFiles: string[],
@@ -208,15 +216,8 @@ export function injectAssetTags(
         `<script defer src="${normalizeOutputPath('/' + asset)}"></script>`,
     )
     .join('');
-  const criticalAssets = cssAssets.filter(f => f.includes('critical.bundle.'));
-  const asyncAssets = cssAssets.filter(f => !f.includes('critical.bundle.'));
-  const criticalTags = criticalAssets
-    .map(asset => {
-      const css = fs.readFileSync(path.join(distDir, asset), 'utf-8');
-      return `<style>${css}</style>`;
-    })
-    .join('');
-  const asyncLinkTags = asyncAssets
+  // Render-blocking on purpose: pages never paint without the full stylesheet
+  const stylesheetTags = cssAssets
     .map(
       asset =>
         `<link href="${normalizeOutputPath('/' + asset)}" rel="stylesheet">`,
@@ -238,17 +239,15 @@ export function injectAssetTags(
     })
     .join('');
 
-  return html
-    .replace(
-      '<head>',
-      `<head>${fontPreloadTags}${criticalTags}${asyncLinkTags}`,
-    )
-    .replace('</head>', `${scriptTags}</head>`);
+  return insertAfterCharsetMeta(
+    html,
+    `${fontPreloadTags}${stylesheetTags}`,
+  ).replace('</head>', `${scriptTags}</head>`);
 }
 
 export function injectKatexStylesheet(html: string): string {
   const tag = `<link href="/katex/katex.min.css" rel="stylesheet">`;
-  return html.replace('<head>', `<head>${tag}`);
+  return insertAfterCharsetMeta(html, tag);
 }
 
 export function preparePageTemplateHtml({

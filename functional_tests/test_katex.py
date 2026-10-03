@@ -1,5 +1,7 @@
+import re
+
 import pytest
-from conftest import init_site, run_tada
+from conftest import assert_charset_declared_first, init_site, run_tada
 
 
 class TestKatexRendering:
@@ -28,6 +30,14 @@ class TestKatexRendering:
     def test_katex_stylesheet_is_linked(self, built_dev_site):
         html = (built_dev_site / 'dist' / 'math.html').read_text()
         assert 'rel="stylesheet"' in html
+
+    def test_katex_stylesheet_follows_charset_and_precedes_main_stylesheet(self, built_dev_site):
+        assert_charset_declared_first(built_dev_site / 'dist')
+        html = (built_dev_site / 'dist' / 'math.html').read_text()
+        katex = html.index('href="/katex/katex.min.css"')
+        main = re.search(r'href="/index\.bundle\.tada-[^"]+\.css"', html)
+        assert main, 'Missing main stylesheet link'
+        assert html.index('<meta charset') < katex < main.start()
 
     def test_non_math_page_has_no_katex_stylesheet(self, built_dev_site):
         html = (built_dev_site / 'dist' / 'index.html').read_text()
