@@ -48,6 +48,7 @@ function shouldIgnoreClick(
 
 export default function mountNavigate(window: Window): () => void {
   initNavigation(window);
+  let clearingFragment = false;
 
   // Track scroll position on every scroll event. We keep the latest
   // scrollY per navIndex so that back/forward navigation can restore
@@ -94,6 +95,10 @@ export default function mountNavigate(window: Window): () => void {
         saveScrollPosition(window);
         if (window.location.hash) {
           const state = window.history.state;
+          // WebKit fires popstate synchronously while clearing the fragment.
+          // Ignore that internal navigation so it cannot restore the previous
+          // fragment-free entry's saved scroll position.
+          clearingFragment = true;
           globals.setLocationHash(window, '');
           // Native fragment clearing leaves a trailing #. Keep the authored
           // URL and the current SPA history state on the new entry.
@@ -129,6 +134,13 @@ export default function mountNavigate(window: Window): () => void {
   }
 
   function handlePopState(event: PopStateEvent) {
+    if (clearingFragment) {
+      clearingFragment = false;
+      if (!window.location.hash) {
+        return;
+      }
+    }
+
     const newPath = window.location.pathname + window.location.search;
     if (newPath === getCurrentPath()) {
       const locationKey = newPath + window.location.hash;

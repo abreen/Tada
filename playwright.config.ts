@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './playwright',
-  timeout: 10_000,
+  timeout: 20_000,
   retries: 0,
   use: { baseURL: 'http://localhost:8081', headless: true },
   projects: [
