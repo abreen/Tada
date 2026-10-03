@@ -53,8 +53,8 @@ results; choose one per file.
 - **toc**: set to `true` to render a table of contents
 - **slides**: on Markdown pages, set to `true` to treat top-level `---` lines
   in the page body as slide separators and add a `Present` control (see
-  [Slides Mode](slides.md)); HTML content pages with `slides: true` fail the
-  build
+  [Slides Mode](slides.md)); HTML content pages and literate Java pages with
+  `slides: true` fail the build
 - **parent**: URL for a breadcrumb link above the title
 - **parentLabel**: label for the breadcrumb link
 - **skip**: set to `true` to exclude the page from the build

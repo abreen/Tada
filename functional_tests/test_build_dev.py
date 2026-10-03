@@ -2,7 +2,13 @@ import re
 import shutil
 
 import pytest
-from conftest import PACKAGE_DIR, parse_head_metadata, run_tada, set_site_config
+from conftest import (
+    PACKAGE_DIR,
+    parse_head_metadata,
+    run_tada,
+    set_site_config,
+    straight_quotes,
+)
 
 SOURCE_SERIF_REGULAR = (
     PACKAGE_DIR / 'fonts' / 'source-serif-4' / 'woff2' / 'SourceSerif4-VariableFont_opsz,wght.woff2'
@@ -370,10 +376,6 @@ class TestDevBuildDefaultContent:
         assert 'Lecture 2' in html
 
 
-def _straight_quotes(text):
-    return text.replace('\u201c', '"').replace('\u201d', '"')
-
-
 class TestPageMetadataText:
     """Plain-text title and description values survive into <title> and <meta>."""
 
@@ -390,9 +392,9 @@ class TestPageMetadataText:
         html = (site_dir / 'dist' / 'index.html').read_text()
         head = parse_head_metadata(html)
         title = 'Width is 5" bold & more'
-        assert _straight_quotes(head.title).startswith(f'{title} - ')
-        assert _straight_quotes(head.meta['og:title']) == title
-        assert _straight_quotes(head.meta['description']) == 'Uses a < b and 6" rulers'
+        assert straight_quotes(head.title).startswith(f'{title} - ')
+        assert straight_quotes(head.meta['og:title']) == title
+        assert straight_quotes(head.meta['description']) == 'Uses a < b and 6" rulers'
         assert sorted(head.meta_attrs['og:title']) == ['content', 'property']
         assert sorted(head.meta_attrs['description']) == ['content', 'name']
 

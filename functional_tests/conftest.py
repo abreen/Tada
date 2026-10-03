@@ -114,6 +114,11 @@ def parse_head_metadata(html):
     return parser
 
 
+def straight_quotes(text):
+    """Undo typographer curly double quotes so tests can compare plain text."""
+    return text.replace('\u201c', '"').replace('\u201d', '"')
+
+
 def load_structured_file(file_path):
     return yaml.safe_load(file_path.read_text())
 
