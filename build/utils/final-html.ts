@@ -1,5 +1,5 @@
 import path from 'path';
-import { JSDOM } from 'jsdom';
+import { decodeHTMLAttribute } from 'entities';
 import { getExtensionToShikiLanguage } from '../site-variables';
 import { createApplyBasePath, normalizeOutputPath } from './paths';
 import { isInternalLink } from './link';
@@ -25,6 +25,10 @@ interface FinalizedHtmlPage {
   html: string;
   analysis: HtmlOutputAnalysis;
 }
+
+type RewriterElement = HTMLRewriterTypes.Element;
+
+const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 
 function splitHref(href: string): { pathname: string; suffix: string } {
   const match = href.match(/^([^?#]*)(.*)$/);
@@ -127,6 +131,29 @@ function resolveAnchorTarget({
   return { finalHref: `${finalPathname}${suffix}`, resolvedTarget };
 }
 
+// HTMLRewriter exposes attribute values exactly as authored, without decoding
+// character references, so decode them the way an HTML parser would. It also
+// reports empty values as null.
+function getAttributeValue(
+  element: RewriterElement,
+  name: string,
+): string | null {
+  const value = element.getAttribute(name);
+  if (value === null) {
+    return element.hasAttribute(name) ? '' : null;
+  }
+  return value.includes('&') ? decodeHTMLAttribute(value) : value;
+}
+
+// HTMLRewriter writes new values verbatim apart from escaping double quotes.
+function setAttributeValue(
+  element: RewriterElement,
+  name: string,
+  value: string,
+): void {
+  element.setAttribute(name, value.replaceAll('&', '&amp;'));
+}
+
 export function finalizeHtmlPage({
   filePath,
   html,
@@ -138,24 +165,34 @@ export function finalizeHtmlPage({
   codePageSourceTargets,
   dependencyCollector,
 }: FinalizeHtmlPageOptions): FinalizedHtmlPage {
-  const dom = new JSDOM(html);
-  const document = dom.window.document;
   const applyBasePath = createApplyBasePath(siteVariables);
   const codeExtensions = Object.keys(
     getExtensionToShikiLanguage(siteVariables),
   );
   const analysis: HtmlOutputAnalysis = { outgoingTargets: new Set() };
+  // Content link targets are recorded before classification targets, matching
+  // the order of the original separate passes.
+  const classificationTargets: string[] = [];
 
-  for (const element of document.querySelectorAll('[href]')) {
-    const href = element.getAttribute('href');
-    if (!href) {
-      continue;
-    }
+  const origin = new URL(siteVariables.base).origin;
+  // Source paths contain no query or fragment. Escape filesystem delimiters
+  // while preserving the percent-encoded segments supplied by code pages.
+  const sourcePathname = sourceUrlPath.replace(/[?#]/g, encodeURIComponent);
+  const sourceUrl = new URL(applyBasePath(sourcePathname), origin);
+  const basePath = (siteVariables.basePath || '/').replace(/\/$/, '');
 
-    const isAnchor = element.tagName === 'A';
-    const isContentAnchor = isAnchor && element.closest('main.body') !== null;
+  // Rewrites an href and returns its final value. Anchors inside `main.body`
+  // are page content: they are resolved, rewritten to code pages, and
+  // validated. Other hrefs only receive the base path.
+  function rewriteHref(
+    element: RewriterElement,
+    href: string,
+    isContent: boolean,
+  ): string {
+    const isAnchor =
+      element.tagName === 'a' && element.namespaceURI === HTML_NAMESPACE;
 
-    if (isContentAnchor) {
+    if (isAnchor && isContent) {
       const { finalHref, resolvedTarget } = resolveAnchorTarget({
         href,
         sourceUrlPath,
@@ -169,13 +206,11 @@ export function finalizeHtmlPage({
         : finalHref;
 
       if (rewrittenHref !== href) {
-        element.setAttribute('href', rewrittenHref);
+        setAttributeValue(element, 'href', rewrittenHref);
       }
 
       if (resolvedTarget) {
-        if (isAnchor) {
-          analysis.outgoingTargets.add(resolvedTarget);
-        }
+        analysis.outgoingTargets.add(resolvedTarget);
 
         const directoryIndexPath = getDirectoryIndexPath(resolvedTarget);
         if (
@@ -196,7 +231,7 @@ export function finalizeHtmlPage({
         dependencyCollector?.internalTargets?.add(resolvedTarget);
       }
 
-      continue;
+      return rewrittenHref;
     }
 
     if (isAnchor && isInternalLink(href)) {
@@ -209,38 +244,34 @@ export function finalizeHtmlPage({
 
     const rewrittenHref = rewriteAbsoluteHrefWithBasePath(href, applyBasePath);
     if (rewrittenHref !== href) {
-      element.setAttribute('href', rewrittenHref);
+      setAttributeValue(element, 'href', rewrittenHref);
     }
+    return rewrittenHref;
   }
 
-  // Classify final hrefs after all rewriting, including links outside content.
-  const origin = new URL(siteVariables.base).origin;
-  // Source paths contain no query or fragment. Escape filesystem delimiters
-  // while preserving the percent-encoded segments supplied by code pages.
-  const sourcePathname = sourceUrlPath.replace(/[?#]/g, encodeURIComponent);
-  const sourceUrl = new URL(applyBasePath(sourcePathname), origin);
-  const basePath = (siteVariables.basePath || '/').replace(/\/$/, '');
-  for (const anchor of document.querySelectorAll('a')) {
-    anchor.removeAttribute('data-tada-page');
-    const href = anchor.getAttribute('href');
+  // Recomputes the generated-page marker from an anchor's final href.
+  function classifyAnchor(anchor: RewriterElement, href: string | null): void {
+    if (anchor.hasAttribute('data-tada-page')) {
+      anchor.removeAttribute('data-tada-page');
+    }
     if (href === null) {
-      continue;
+      return;
     }
     let url: URL;
     try {
       url = new URL(href, sourceUrl);
     } catch {
-      continue;
+      return;
     }
     if (url.origin !== origin) {
-      continue;
+      return;
     }
     if (
       basePath &&
       url.pathname !== basePath &&
       !url.pathname.startsWith(`${basePath}/`)
     ) {
-      continue;
+      return;
     }
     let target = url.pathname.slice(basePath.length) || '/';
     try {
@@ -250,7 +281,7 @@ export function finalizeHtmlPage({
     }
     target = normalizeOutputPath(target);
     if (generatedPageTargets) {
-      dependencyCollector?.internalTargets?.add(target);
+      classificationTargets.push(target);
     }
     if (
       generatedPageTargets?.has(target) &&
@@ -261,27 +292,97 @@ export function finalizeHtmlPage({
     }
   }
 
-  for (const element of document.querySelectorAll('[src]')) {
-    const src = element.getAttribute('src');
-    if (!src) {
-      continue;
-    }
+  // HTMLRewriter edits the original markup in place. `<template>` contents are
+  // skipped because they are not part of the document tree. HTMLRewriter reads
+  // `<noscript>` contents as raw text, so a nested rewriter parses them as
+  // markup (as a parser with scripting disabled would), inheriting whether the
+  // element is inside `main.body`.
+  function rewrite(input: string, initialContentDepth: number): string {
+    let contentDepth = initialContentDepth;
+    let templateDepth = 0;
+    let noscriptSource = '';
 
-    const rewrittenSrc = rewriteAbsoluteSrcWithBasePath(src, applyBasePath);
-    if (rewrittenSrc !== src) {
-      element.setAttribute('src', rewrittenSrc);
-    }
+    return new HTMLRewriter()
+      .on('main.body', {
+        element(element) {
+          if (templateDepth > 0) {
+            return;
+          }
+          contentDepth++;
+          element.onEndTag(() => {
+            contentDepth--;
+          });
+        },
+      })
+      .on('[href]', {
+        element(element) {
+          if (templateDepth > 0) {
+            return;
+          }
+          const href = getAttributeValue(element, 'href');
+          const finalHref = href
+            ? rewriteHref(element, href, contentDepth > 0)
+            : href;
+          if (element.tagName === 'a') {
+            classifyAnchor(element, finalHref);
+          }
+        },
+      })
+      .on('a:not([href])', {
+        element(element) {
+          if (templateDepth === 0) {
+            classifyAnchor(element, null);
+          }
+        },
+      })
+      .on('[src]', {
+        element(element) {
+          if (templateDepth > 0) {
+            return;
+          }
+          const src = getAttributeValue(element, 'src');
+          if (!src) {
+            return;
+          }
+          const rewrittenSrc = rewriteAbsoluteSrcWithBasePath(
+            src,
+            applyBasePath,
+          );
+          if (rewrittenSrc !== src) {
+            setAttributeValue(element, 'src', rewrittenSrc);
+          }
+        },
+      })
+      .on('noscript', {
+        text(chunk) {
+          if (templateDepth > 0) {
+            return;
+          }
+          noscriptSource += chunk.text;
+          if (!chunk.lastInTextNode) {
+            chunk.remove();
+            return;
+          }
+          chunk.replace(rewrite(noscriptSource, contentDepth), { html: true });
+          noscriptSource = '';
+        },
+      })
+      .on('template', {
+        // Registered last so the template element itself is still processed.
+        element(element) {
+          templateDepth++;
+          element.onEndTag(() => {
+            templateDepth--;
+          });
+        },
+      })
+      .transform(input);
   }
 
-  const doctype = document.doctype;
-  const doctypePrefix = doctype
-    ? `<!DOCTYPE ${doctype.name}${
-        doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : ''
-      }${doctype.systemId ? ` "${doctype.systemId}"` : ''}>`
-    : '';
+  const finalizedHtml = rewrite(html, 0);
+  for (const target of classificationTargets) {
+    dependencyCollector?.internalTargets?.add(target);
+  }
 
-  return {
-    html: `${doctypePrefix}${document.documentElement.outerHTML}`,
-    analysis,
-  };
+  return { html: finalizedHtml, analysis };
 }

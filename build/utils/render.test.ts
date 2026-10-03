@@ -284,7 +284,7 @@ describe('renderCodePageAsset', () => {
     const html = pageAsset.content.toString();
 
     expect(html).toContain('<link href="/course/styles.css" rel="stylesheet">');
-    expect(html).toContain('<script defer="" src="/course/app.js"></script>');
+    expect(html).toContain('<script defer src="/course/app.js"></script>');
     expect(html).not.toContain('href="/katex/katex.min.css"');
   });
 
