@@ -47,9 +47,11 @@ Sass emits each module's CSS once, in the order `style.scss` first loads it, so
 the order of the `@use` rules is the cascade order. Partials that need the
 shared mixins load them with `@use 'mixins' as *` (or `'../mixins'`).
 
-The theme module, `config/theme`, is rendered at build time from
+The theme module, `config/theme`, does not exist on disk. The build renders
 `templates/_theme.scss` with Lodash using the site's theme and font
-configuration (see [Theming](theming.md)).
+configuration (see [Theming](theming.md)), and a Sass in-memory importer serves
+the result to `@use 'config/theme'`. `bun run lint:sass` lints the Sass sources
+and a rendered copy of the theme template.
 
 ## Bundle names
 

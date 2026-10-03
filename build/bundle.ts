@@ -1,14 +1,8 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 import _ from 'lodash';
 import * as sass from 'sass';
-import {
-  getPackageDir,
-  getProjectDir,
-  getDistDir,
-  toPosix,
-} from './utils/paths';
+import { getPackageDir, getDistDir, toPosix } from './utils/paths';
 import {
   deriveTheme,
   deriveLinkHue,
@@ -53,6 +47,7 @@ function formatCssNumber(value: number, precision = 4): string {
   return value.toFixed(precision).replace(/\.?0+$/, '');
 }
 
+// Returns the rendered SCSS source of the theme module (`config/theme`)
 function renderThemeScss(siteVariables: SiteVariables): string {
   const templatePath = path.join(getPackageDir(), 'templates/_theme.scss');
   const template = fs.readFileSync(templatePath, 'utf-8');
@@ -98,12 +93,7 @@ function renderThemeScss(siteVariables: SiteVariables): string {
     .replace('/* TADA_CUSTOM_FONT_TUNING */', customFontTuning)
     .replace('/* TADA_MATERIAL_SYMBOL_VARIABLES */', materialSymbolVariables);
 
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-'));
-  const configDir = path.join(tmpDir, 'config');
-  fs.mkdirSync(configDir);
-  fs.writeFileSync(path.join(configDir, '_theme.scss'), rendered);
-
-  return tmpDir;
+  return rendered;
 }
 
 function createDefine(
@@ -119,14 +109,31 @@ function createDefine(
   };
 }
 
-function createScssPlugin(themeDir: string) {
+const THEME_MODULE_URL = 'config/theme';
+const THEME_CANONICAL_URL = 'tada:config/theme';
+
+// Serves the rendered theme from memory to `@use 'config/theme'`
+function createThemeImporter(themeScss: string): sass.Importer<'sync'> {
+  return {
+    canonicalize(url) {
+      return url === THEME_MODULE_URL ? new URL(THEME_CANONICAL_URL) : null;
+    },
+    load(canonicalUrl) {
+      if (canonicalUrl.href !== THEME_CANONICAL_URL) {
+        return null;
+      }
+      return { contents: themeScss, syntax: 'scss' };
+    },
+  };
+}
+
+function createScssPlugin(themeScss: string) {
+  const importers = [createThemeImporter(themeScss)];
   return {
     name: 'scss',
     setup(build: PluginBuilder) {
       build.onLoad({ filter: /\.scss$/ }, args => {
-        const result = sass.compile(args.path, {
-          loadPaths: [themeDir, getProjectDir()],
-        });
+        const result = sass.compile(args.path, { importers });
         return { contents: result.css, loader: 'css' as const };
       });
     },
@@ -147,44 +154,34 @@ export async function bundle(
   const resolvedDistDir = distDir ?? getDistDir();
   const isDev = mode === 'development';
 
-  const entrypoints = [path.resolve(packageDir, 'src/index.ts')];
-
-  const themeDir = renderThemeScss(siteVariables);
-
-  try {
-    const plugins = [createScssPlugin(themeDir)];
-    const coverageBundlePlugin = getCoverageBundlePlugin();
-    if (coverageBundlePlugin) {
-      plugins.push(coverageBundlePlugin);
-    }
-
-    const result = await Bun.build({
-      entrypoints,
-      outdir: resolvedDistDir,
-      naming: getBundleNaming(),
-      minify: mode === 'production',
-      sourcemap: isDev ? 'inline' : 'none',
-      define: createDefine(siteVariables, isDev),
-      external: ['*.woff2'],
-      plugins,
-    });
-
-    if (!result.success) {
-      const messages = result.logs
-        .filter(log => log.level === 'error')
-        .map(log => log.message || String(log));
-      throw new Error(`Bundle failed:\n${messages.join('\n')}`);
-    }
-
-    // Return the output filenames for asset tag injection
-    const assetFiles = result.outputs.map(output =>
-      toPosix(path.relative(resolvedDistDir, output.path)),
-    );
-
-    return assetFiles;
-  } finally {
-    fs.rmSync(themeDir, { recursive: true, force: true });
+  const plugins = [createScssPlugin(renderThemeScss(siteVariables))];
+  const coverageBundlePlugin = getCoverageBundlePlugin();
+  if (coverageBundlePlugin) {
+    plugins.push(coverageBundlePlugin);
   }
+
+  const result = await Bun.build({
+    entrypoints: [path.resolve(packageDir, 'src/index.ts')],
+    outdir: resolvedDistDir,
+    naming: getBundleNaming(),
+    minify: mode === 'production',
+    sourcemap: isDev ? 'inline' : 'none',
+    define: createDefine(siteVariables, isDev),
+    external: ['*.woff2'],
+    plugins,
+  });
+
+  if (!result.success) {
+    const messages = result.logs
+      .filter(log => log.level === 'error')
+      .map(log => log.message || String(log));
+    throw new Error(`Bundle failed:\n${messages.join('\n')}`);
+  }
+
+  // Return the output filenames for asset tag injection
+  return result.outputs.map(output =>
+    toPosix(path.relative(resolvedDistDir, output.path)),
+  );
 }
 
 export { renderThemeScss };
