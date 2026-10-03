@@ -1,7 +1,13 @@
 import re
 
 import pytest
-from conftest import SITE_PROD_CONFIG_FILE, init_site, load_structured_file, run_tada
+from conftest import (
+    SITE_PROD_CONFIG_FILE,
+    assert_charset_declared_first,
+    init_site,
+    load_structured_file,
+    run_tada,
+)
 
 
 class TestProdBuild:
@@ -16,7 +22,10 @@ class TestProdBuild:
         dist = built_prod_site / 'dist-prod' / 'v1'
         assert list(dist.glob('index.bundle.tada-*.css'))
         assert list(dist.glob('index.bundle.tada-*.js'))
-        assert list(dist.glob('critical.bundle.tada-*.css'))
+        assert not list(dist.glob('critical.bundle.tada-*.css'))
+
+    def test_declares_charset_first_in_head(self, built_prod_site):
+        assert_charset_declared_first(built_prod_site / 'dist-prod' / 'v1')
 
     def test_no_watch_reload_client_in_prod(self, built_prod_site):
         dist = built_prod_site / 'dist-prod' / 'v1'

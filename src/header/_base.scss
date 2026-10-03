@@ -240,12 +240,6 @@ header .to-top-container {
   }
 }
 
-// Hide until the full stylesheet loads (prevents FOUC where the container
-// is visible as a block element before it gets position: absolute)
-header .results-container {
-  display: none;
-}
-
 header .search-controls {
   position: relative;
   display: flex;

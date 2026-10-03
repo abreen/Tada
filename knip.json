@@ -6,7 +6,6 @@
     "build/watch/index.ts",
     "build/watch-reload-client.ts",
     "src/index.ts",
-    "src/critical.scss",
     "scripts/*.ts",
     "playwright.coverage.config.ts",
     "playwright/*.spec.ts",

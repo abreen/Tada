@@ -2,7 +2,7 @@ import re
 import shutil
 
 import pytest
-from conftest import PACKAGE_DIR, run_tada, set_site_config
+from conftest import PACKAGE_DIR, assert_charset_declared_first, run_tada, set_site_config
 
 SOURCE_SERIF_REGULAR = (
     PACKAGE_DIR / 'fonts' / 'source-serif-4' / 'woff2' / 'SourceSerif4-VariableFont_opsz,wght.woff2'
@@ -76,14 +76,21 @@ class TestDevBuild:
         dist = built_dev_site / 'dist'
         assert list(dist.glob('index.bundle.tada-*.js'))
 
-    def test_produces_critical_css(self, built_dev_site):
+    def test_produces_a_single_css_bundle(self, built_dev_site):
         dist = built_dev_site / 'dist'
-        assert list(dist.glob('critical.bundle.tada-*.css'))
+        names = [f.name for f in dist.glob('*.bundle.tada-*.css')]
+        assert len(names) == 1
+        assert names[0].startswith('index.bundle.tada-')
 
-    def test_inlines_critical_css_in_html(self, built_dev_site):
-        index = built_dev_site / 'dist' / 'index.html'
-        html = index.read_text()
-        assert '<style>' in html
+    def test_links_stylesheet_without_inlining_css(self, built_dev_site):
+        html = (built_dev_site / 'dist' / 'index.html').read_text()
+        link = re.search(r'<link\b[^>]*href="/index\.bundle\.tada-[^"]+\.css"[^>]*>', html)
+        assert link, 'Missing stylesheet link'
+        assert 'rel="stylesheet"' in link[0]
+        assert '--theme-color:' not in html
+
+    def test_declares_charset_first_in_head(self, built_dev_site):
+        assert_charset_declared_first(built_dev_site / 'dist')
 
     def test_produces_font_files(self, built_dev_site):
         dist = built_dev_site / 'dist'

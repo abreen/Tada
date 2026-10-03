@@ -147,10 +147,7 @@ export async function bundle(
   const resolvedDistDir = distDir ?? getDistDir();
   const isDev = mode === 'development';
 
-  const entrypoints = [
-    path.resolve(packageDir, 'src/index.ts'),
-    path.resolve(packageDir, 'src/critical.scss'),
-  ];
+  const entrypoints = [path.resolve(packageDir, 'src/index.ts')];
 
   const themeDir = renderThemeScss(siteVariables);
 
