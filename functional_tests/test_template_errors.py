@@ -1,3 +1,5 @@
+import re
+
 from conftest import run_tada
 
 
@@ -52,3 +54,32 @@ class TestMissingFrontMatter:
         (site_dir / 'content' / 'index.md').write_text('---\ntitle:\n---\n\nSome content.\n')
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode != 0
+
+
+def _text_content(html):
+    """Return the text of an HTML document with tags removed."""
+    return re.sub(r'<[^>]+>', '', html)
+
+
+class TestEsTemplateLiteralSyntax:
+    """`${...}` is literal text; only `<% %>` delimiters are Lodash template syntax."""
+
+    def test_markdown_keeps_dollar_brace_literal(self, site_dir):
+        (site_dir / 'content' / 'index.md').write_text(
+            "---\ntitle: Home\ndescription: 'Costs ${price}'\n---\n\n"
+            'Run `echo ${name}` in <%= page.title %>.\n\n'
+            '```\n'
+            'const greeting = `Hello, ${name}!`;\n'
+            '```\n\n'
+            '{{{ _part.md }}}\n'
+        )
+        (site_dir / 'content' / '_part.md').write_text('Partial prints `${HOME}`.\n')
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, result.stdout + result.stderr
+
+        html = (site_dir / 'dist' / 'index.html').read_text()
+        assert '<code>echo ${name}</code>' in html
+        assert 'in Home.' in html
+        assert 'const greeting = `Hello, ${name}!`;' in _text_content(html)
+        assert '<code>${HOME}</code>' in html
+        assert '<meta name="description" content="Costs ${price}">' in html

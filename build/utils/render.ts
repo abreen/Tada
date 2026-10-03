@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import _ from 'lodash';
+import { compileTemplate } from '../lodash-template';
 import type MarkdownIt from 'markdown-it';
 import { stripHtml } from 'string-strip-html';
 import { makeLogger } from '../log';
@@ -512,7 +512,7 @@ function renderPlainTextContent(
   const pageVariablesProcessed: Record<string, unknown> = Object.fromEntries(
     Object.entries(pageVariables).map(([k, v]) => [
       k,
-      typeof v === 'string' ? _.template(v)(siteOnlyParams) : v,
+      typeof v === 'string' ? compileTemplate(v)(siteOnlyParams) : v,
     ]),
   );
 
@@ -565,7 +565,7 @@ function renderPlainTextContent(
 
   let html: string;
   try {
-    html = _.template(strippedContent)(params);
+    html = compileTemplate(strippedContent)(params);
   } catch (err: unknown) {
     throw new Error(
       `${filePath}: Lodash template error in page or template: ${(err as Error).message}`,
@@ -629,7 +629,7 @@ export function renderLiterateJavaPageAsset({
     dependencyCollector,
   });
   const env: Record<string, unknown> = {};
-  const tokens = md.parse(_.template(content)(params), env);
+  const tokens = md.parse(compileTemplate(content)(params), env);
   const { javaSource, codeBlocks, visibleBlockIndices } =
     extractLiterateJavaCode(tokens);
 

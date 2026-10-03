@@ -33,3 +33,13 @@ HTML template. Each render attempt tracks errors independently, including
 retries and template recompilation in watch mode. A failed render never becomes
 a successful partial page; correcting the content allows the next render to
 complete normally.
+
+## Template syntax
+
+Tada recognizes only the `<% %>` (evaluate), `<%= %>` (interpolate without
+escaping), and `<%- %>` (interpolate with HTML escaping) delimiters. ES template
+literal syntax such as `${name}` is literal text everywhere Tada runs Lodash:
+HTML templates, page content, front matter strings, Markdown partials, mapped
+source code files, and config file values. This lets authors write shell
+variables, JavaScript template literals, and Kotlin string templates in prose
+and code without escaping them.

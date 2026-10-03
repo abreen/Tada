@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import _ from 'lodash';
+import { compileTemplate } from '../lodash-template';
 import type MarkdownIt from 'markdown-it';
 import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
 import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
@@ -83,7 +83,7 @@ function renderPartialContent(
   try {
     return {
       resolvedPath,
-      content: _.template(content)(options.templateParams),
+      content: compileTemplate(content)(options.templateParams),
     };
   } catch (err) {
     throw new Error(

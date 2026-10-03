@@ -1,5 +1,5 @@
 import fs from 'fs';
-import _ from 'lodash';
+import { compileTemplate } from './lodash-template';
 import {
   resolveProjectConfigFile,
   resolveSiteConfigFile,
@@ -44,7 +44,7 @@ function renderConfigTemplateString(
   fileName: string,
 ): string {
   try {
-    return _.template(value)(context);
+    return compileTemplate(value)(context);
   } catch (error) {
     throw new Error(
       `${fileName}: Lodash template error in config: ${getTemplateErrorMessage(error)}`,
@@ -61,7 +61,7 @@ function evaluateConfigTemplateExpression(
   let captured: unknown;
 
   try {
-    _.template(`<% __capture(( ${expression} )); %>`)({
+    compileTemplate(`<% __capture(( ${expression} )); %>`)({
       ...context,
       __capture(value: unknown) {
         captured = value;

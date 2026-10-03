@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import _ from 'lodash';
+import { compileTemplate } from './lodash-template';
 import * as sass from 'sass';
 import {
   getPackageDir,
@@ -74,7 +74,7 @@ function renderThemeScss(siteVariables: SiteVariables): string {
     siteVariables.fontOverrides,
   );
 
-  const renderedTemplate = _.template(template)({
+  const renderedTemplate = compileTemplate(template)({
     ...theme,
     tintHue,
     tintAmount,
