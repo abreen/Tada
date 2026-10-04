@@ -42,7 +42,7 @@ including when Java execution is skipped because `javac` is unavailable.
 
 The build renders a `<nav aria-label="Breadcrumb">` containing an ordered
 list. Ancestor links hide their underline by default and show it on hover.
-The unlinked final item displays the current page title in italics and has
+The unlinked final item displays the current page title in bold and has
 `aria-current="page"`. The entire trail is excluded from Pagefind indexing.
 Decorative, accessibility-hidden Material Symbols Outlined `chevron_right`
 icons in `var(--fg2-color)` separate items. The trail is left-aligned, wraps on
