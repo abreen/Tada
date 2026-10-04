@@ -238,7 +238,7 @@ class TestDevBuild:
         assert '--font-size-adjust: cap-height .67' in css
         assert '--mono-font-size-adjust: cap-height .613' in css
         assert 'url("fonts/body-regular.woff2") format(woff2)' in css
-        assert re.search(r'header summary \.site-title\s*\{[^}]*font-weight: 600;', css)
+        assert re.search(r'header summary \.header-title\s*\{[^}]*font-weight: 600;', css)
         assert re.search(r'header \.results ol a \.title\s*\{[^}]*font-weight: 600;', css)
         assert re.search(
             r'header \.results ol li \.excerpt\s*\{[^}]*height: 4\.2em;'

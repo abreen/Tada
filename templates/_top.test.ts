@@ -22,7 +22,7 @@ function renderTop(
       titlePostfix: ' - Test site',
     },
     bannerHtml,
-    page: { title: 'Page', template: 'default' },
+    page: { title: 'Page', titleHtml: 'Page', template: 'default' },
     tadaVersion: '0.0.0',
     isWatchMode: true,
     speculationRulesHrefMatches: '/*',
@@ -54,6 +54,39 @@ describe('_top.html template', () => {
     );
     expect(html).toContain(
       'class="menu-icon-line menu-icon-line-bottom" d="M3 18h18"',
+    );
+  });
+
+  test('stacks the site title above the page title in one hidden title area', () => {
+    const html = renderTop('sans', 'standard');
+
+    expect(html).toMatch(
+      /<span class="header-title" aria-hidden="true">\s*<span class="header-title-reel">\s*<span class="site-title">Test site<\/span>\s*<span class="header-page-title">Page<\/span>\s*<\/span>\s*<\/span>/,
+    );
+  });
+
+  test('renders the formatted page title like the h1', () => {
+    const html = compileTemplate(TOP_TEMPLATE)({
+      site: {
+        defaultFont: 'sans',
+        defaultContrast: 'standard',
+        features: { favicon: false, search: false },
+        title: 'Test site',
+        titlePostfix: ' - Test site',
+      },
+      page: {
+        title: 'Box.java',
+        titleHtml: '<code>Box.java</code>',
+        template: 'code',
+      },
+      tadaVersion: '0.0.0',
+      isWatchMode: true,
+      speculationRulesHrefMatches: '/*',
+      render: () => '',
+    });
+
+    expect(html).toContain(
+      '<span class="header-page-title"><code>Box.java</code></span>',
     );
   });
 
@@ -199,7 +232,7 @@ describe('_top.html template', () => {
       '<span class="logo" aria-hidden="true">A&amp;B</span>',
     );
     expect(html).toContain(
-      '<span class="site-title" aria-hidden="true">Tom &amp; Jerry &lt;Lab&gt;</span>',
+      '<span class="site-title">Tom &amp; Jerry &lt;Lab&gt;</span>',
     );
   });
 });

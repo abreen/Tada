@@ -75,6 +75,14 @@ $movement-easing: cubic-bezier(0.2, 0, 0, 1);
   inline-size: auto;
 }
 
+// The header stays in place. Parts that change between pages, such as the
+// title shown in it, crossfade in step with the page heading.
+::view-transition-group(site-header),
+::view-transition-old(site-header),
+::view-transition-new(site-header) {
+  animation-duration: $duration;
+}
+
 // The site-wide banner does not change between pages. Keep it out of the root
 // slide and pin its named transition layer in place without a crossfade.
 .site-banner {

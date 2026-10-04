@@ -186,7 +186,7 @@ test.describe('responsive header layout', () => {
     const summary = page.locator('header details > summary');
     await expect(summary).toBeVisible();
     await expect(summary.locator('.logo')).toBeVisible();
-    await expect(summary.locator('.site-title')).toBeVisible();
+    await expect(summary.locator('.header-title')).toBeVisible();
 
     const menu = summary.locator('.menu-icon');
     await expect(menu).toBeVisible();
@@ -205,7 +205,7 @@ test.describe('responsive header layout', () => {
     await emulateSearchDisabled(page);
     await page.evaluate(() => window.scrollTo({ top: 700 }));
 
-    const title = page.locator('header .site-title');
+    const title = page.locator('header .header-title');
     const backToTop = page.locator('header a', { hasText: 'Back to top' });
     await expect(backToTop).toBeVisible();
     await expect(title).toBeVisible();

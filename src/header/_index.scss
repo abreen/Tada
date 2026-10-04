@@ -65,7 +65,8 @@ header details summary {
       background: var(--bg2-color);
     }
 
-    &:hover .site-title {
+    &:hover .site-title,
+    &:hover .header-page-title {
       @include link-underline;
     }
   }
@@ -194,18 +195,66 @@ header summary .logo-image {
   object-fit: contain;
 }
 
-header summary .site-title {
+// The site title and page title sit on a reel, one header row each, behind a
+// window one row tall. Scrolling past the page heading rolls the reel up to the
+// page title; without JavaScript, only the site title is shown.
+header summary .header-title {
   flex: 1 1 0;
+  align-self: stretch;
   min-width: 0;
   margin: 0 var(--gap) 0 0;
   overflow: hidden;
-  text-overflow: ellipsis;
 
   // Values above 500 resolve to the supplied bold face when a custom family
   // provides only fixed 400 and 700 weights.
   font-weight: 600;
-  white-space: nowrap;
   pointer-events: none;
+}
+
+// Feather the window's top and bottom edges so a title fades as it rolls out
+:root.js header summary .header-title {
+  -webkit-mask-image: linear-gradient(
+    transparent,
+    #000 25%,
+    #000 75%,
+    transparent
+  );
+  mask-image: linear-gradient(transparent, #000 25%, #000 75%, transparent);
+}
+
+header summary .header-title-reel {
+  display: block;
+}
+
+header summary .header-title.is-page-title .header-title-reel {
+  transform: translateY(calc(-1 * var(--header-collapsed-height)));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  header summary .header-title-reel {
+    transition: transform 300ms cubic-bezier(0.2, 0, 0, 1);
+  }
+}
+
+header summary .site-title,
+header summary .header-page-title {
+  display: block;
+  height: var(--header-collapsed-height);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: var(--header-collapsed-height);
+  white-space: nowrap;
+}
+
+// Code page titles keep their monospace font, without the inline code chip,
+// like the file title heading
+header summary .header-page-title :is(tt, code) {
+  padding: 0;
+  background: none;
+}
+
+:root:not(.js) header summary .header-page-title {
+  display: none;
 }
 
 header > .header-controls {

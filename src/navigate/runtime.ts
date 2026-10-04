@@ -5,6 +5,7 @@ import {
   teardownPerPageComponents,
 } from './lifecycle';
 import { globals } from '../globals';
+import { swapHeaderTitle } from '../header';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
@@ -327,6 +328,9 @@ export async function navigateToUrl(
 
     scrollByIndex.set(historyIndex, window.scrollY);
     scrollByLocation.set(getLocationKey(window), window.scrollY);
+
+    // Measured at the destination scroll position; the transition crossfades it
+    swapHeaderTitle(newDoc);
     return true;
   };
 

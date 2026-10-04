@@ -43,6 +43,12 @@ move to their new layout positions over the same 150ms with the same
 `cubic-bezier(0.2, 0, 0, 1)` curve, so they stay in step when the layout
 changes.
 
+The header keeps its own named `site-header` transition layer, so it does not
+slide with the page. Before that layer's new snapshot is captured, the header
+adopts the destination's page title and shows the title for the destination's
+scroll position without rolling (see [Header Title](header-title.md)); any
+change crossfades over the same 150ms as the page heading.
+
 The footer and appearance-picker group uses its own named `page-bottom`
 transition layer. It does not slide, crossfade, or interpolate its bounds;
 only the incoming snapshot is shown at its destination layout position.

@@ -30,7 +30,9 @@ are in `src/util.ts`.
   with the code body so wide code can be scrolled from the bottom of the viewport
 - **Header navigation**: collapsible header with logo, title, and nav links;
   closes on outside clicks, Escape, and identified focus moves outside the menu,
-  while unknown focus destinations remain open so Safari link clicks complete
+  while unknown focus destinations remain open so Safari link clicks complete;
+  rolls the title from the site title to the page title once the page heading
+  scrolls under the header (see [Header Title](header-title.md))
 - **Page update toast**: floating bottom toast that checks the current page
   for newer validators and offers an in-place refresh
 - **Slides**: page-local presentation mode for Markdown pages with

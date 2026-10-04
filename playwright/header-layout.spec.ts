@@ -20,7 +20,12 @@ async function getHeaderLayout(page: Page) {
       const { left, right, width } = element.getBoundingClientRect();
       return width > 0 ? { left, right, width } : null;
     };
-    const title = header.querySelector<HTMLElement>('summary .site-title')!;
+    const title = header.querySelector<HTMLElement>('summary .header-title')!;
+    const shownTitle = header.querySelector<HTMLElement>(
+      title.classList.contains('is-page-title')
+        ? '.header-page-title'
+        : '.site-title',
+    )!;
     const controls = [
       rect(header.querySelector('.to-top-container a')),
       rect(header.querySelector('.search-controls input')),
@@ -30,7 +35,7 @@ async function getHeaderLayout(page: Page) {
       menu: rect(header.querySelector('summary .menu-icon'))!,
       logo: rect(header.querySelector('summary .logo, summary .logo-image'))!,
       title: rect(title),
-      titleIsTruncated: title.scrollWidth > title.clientWidth,
+      titleIsTruncated: shownTitle.scrollWidth > shownTitle.clientWidth,
       controlsLeft: Math.min(...controls.map(box => box.left)),
       controlsRight: Math.max(...controls.map(box => box.right)),
     };

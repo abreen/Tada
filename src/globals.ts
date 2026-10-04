@@ -11,6 +11,10 @@ export interface Globals {
   createResizeObserver: (
     callback: ResizeObserverCallback,
   ) => Pick<ResizeObserver, 'disconnect' | 'observe'>;
+  createIntersectionObserver: (
+    callback: IntersectionObserverCallback,
+    options?: IntersectionObserverInit,
+  ) => Pick<IntersectionObserver, 'disconnect' | 'observe'>;
   fetch: FetchFunction;
   importModule: ImportModuleFunction;
   isDocumentHidden: (document: Document) => boolean;
@@ -25,6 +29,9 @@ export const globals: Globals = {
   },
   createResizeObserver(callback) {
     return new ResizeObserver(callback);
+  },
+  createIntersectionObserver(callback, options) {
+    return new IntersectionObserver(callback, options);
   },
   fetch(input: RequestInfo | URL, init?: RequestInit) {
     return fetch(input, init);

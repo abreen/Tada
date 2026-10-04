@@ -21,9 +21,11 @@ for that check. Disabled links render as non-clickable UI without an `href`, so
 they do not participate in link validation or reachability.
 
 The collapsed header always keeps the menu control and site logo visible. The
-navigation summary (menu control, logo, and site title) and the trailing
+navigation summary (menu control, logo, and title area) and the trailing
 controls share one CSS grid row: the summary takes a flexible first column and
 the controls take a second column sized to their rendered content. The title
+area shows the site title, or the page title once the page heading has
+scrolled under the header (see [Header Title](header-title.md)). It
 therefore uses exactly the width left by the controls that are currently
 present and visible, the search field above its narrow breakpoint and the
 back-to-top button after scrolling, and truncates with an ellipsis only as

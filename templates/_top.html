@@ -220,7 +220,12 @@
             <path class="menu-icon-line menu-icon-line-bottom" d="M3 18h18" />
           </svg>
           <% if (site.logo) { %><img class="logo-image" src="/<%- encodePublicAssetPath(site.logo) %>" alt="" aria-hidden="true" /><% } else if (site.symbol) { %><span class="logo" aria-hidden="true"><%- site.symbol %></span><% } %>
-          <span class="site-title" aria-hidden="true"><%- site.title %></span>
+          <span class="header-title" aria-hidden="true">
+            <span class="header-title-reel">
+              <span class="site-title"><%- site.title %></span>
+              <span class="header-page-title"><%= page.titleHtml %></span>
+            </span>
+          </span>
         </summary>
         <div class="content">
           <%= render('_nav.html') %>

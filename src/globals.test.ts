@@ -11,6 +11,9 @@ export function createGlobals(overrides: Partial<Globals> = {}): Globals {
     createResizeObserver() {
       return { disconnect() {}, observe() {} };
     },
+    createIntersectionObserver() {
+      return { disconnect() {}, observe() {} };
+    },
     fetch: defaultFetch,
     importModule: async () => ({}),
     isDocumentHidden() {
