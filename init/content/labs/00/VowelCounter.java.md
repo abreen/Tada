@@ -18,7 +18,7 @@ The <dfn>standard in</dfn> (or `stdin`) is one of three streams available to a
 running program. The other two streams are the standard out and standard error.
 
 <figure>
-<svg viewBox="0 50 410 90" xmlns="http://www.w3.org/2000/svg" font-size="14" fill="none" style="margin:1rem auto;display:block;max-width:410px">
+<svg viewBox="15 50 380 90" xmlns="http://www.w3.org/2000/svg" font-size="14" fill="none" style="margin:1rem auto;display:block;max-width:380px">
   <defs>
     <marker id="arrow" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
       <path d="M0,0 L8,4 L0,8 Z" stroke="currentColor" fill="currentColor"></path>
