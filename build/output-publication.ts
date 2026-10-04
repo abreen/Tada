@@ -44,10 +44,16 @@ export function writeOutputFile(
   content: OutputContent,
 ): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  // Older builds may have copied a source's read-only permissions.
+  if (fs.lstatSync(filePath, { throwIfNoEntry: false })?.isFile()) {
+    fs.chmodSync(filePath, 0o644);
+  }
   if (typeof content === 'string' || content instanceof Uint8Array) {
     fs.writeFileSync(filePath, content);
   } else {
     fs.copyFileSync(content.copyFrom, filePath);
+    // Distribution output is writable regardless of the source permissions.
+    fs.chmodSync(filePath, 0o644);
   }
 }
 

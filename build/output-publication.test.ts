@@ -77,6 +77,7 @@ mock.module('fs', () =>
     lstatSync: (file: string) =>
       entries.has(file)
         ? {
+            isFile: () => entries.get(file) !== null && !symlinks.has(file),
             isDirectory: () =>
               entries.get(file) === null && !symlinks.has(file),
             isSymbolicLink: () => symlinks.has(file),
@@ -85,6 +86,7 @@ mock.module('fs', () =>
     mkdirSync(dir: string) {
       mkdir(dir);
     },
+    chmodSync() {},
     writeFileSync(file: string, content: string | Uint8Array) {
       writeFile(file, String(content));
     },
@@ -230,7 +232,9 @@ describe('applyMutations over a symbolic link output', () => {
     put(path.join(dist, 'index.html'), 'outside');
     symlinks.add(path.join(dist, 'index.html'));
 
-    applyMutations(dist, [{ kind: 'write', path: 'index.html', content: 'new' }]);
+    applyMutations(dist, [
+      { kind: 'write', path: 'index.html', content: 'new' },
+    ]);
 
     expect(symlinks.has(path.join(dist, 'index.html'))).toBe(false);
     expect(files()).toEqual({ 'index.html': 'new' });

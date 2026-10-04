@@ -3,9 +3,40 @@
 import json
 import os
 import shutil
+import stat
 
 import pytest
 from conftest import init_site, run_tada, set_site_config
+
+
+@pytest.mark.parametrize('source_dir', ['content', 'public'])
+def test_read_only_assets_produce_writable_rebuildable_outputs(tmp_path, source_dir):
+    site = init_site(tmp_path)
+    source = site / source_dir / 'readonly.txt'
+    output = site / 'dist' / 'readonly.txt'
+    source.write_text('read-only asset')
+    source.chmod(stat.S_IREAD)
+    try:
+        result = run_tada('dev', cwd=str(site))
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert output.stat().st_mode & stat.S_IWRITE
+        assert not source.stat().st_mode & stat.S_IWRITE
+
+        # Also recover outputs copied by earlier Tada versions.
+        output.chmod(stat.S_IREAD)
+        result = run_tada('dev', cwd=str(site))
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert output.read_text() == 'read-only asset'
+        assert output.stat().st_mode & stat.S_IWRITE
+    finally:
+        source.chmod(stat.S_IREAD | stat.S_IWRITE)
+        if output.exists():
+            output.chmod(stat.S_IREAD | stat.S_IWRITE)
+
+    source.unlink()
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not output.exists()
 
 
 def test_every_page_error_is_printed_once_with_a_project_relative_path(tmp_path):

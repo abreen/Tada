@@ -52,6 +52,11 @@ site.dev.yaml: defaultTimeZone "Mars/Olympus" is not supported
 A build renders everything in memory before writing anything. Copied files are
 referenced by path rather than loaded. A build with errors writes nothing.
 
+Copied output files are made readable and writable by their owner (mode `0644`
+on POSIX), even when their sources are read-only. Source permissions are not
+changed. Existing read-only output files from older builds are made writable
+before being overwritten.
+
 When a build succeeds, Tada updates the output directory in place. A full
 build writes every output, deletes every other file and empty directory
 already on disk (except the search index while search is enabled), and so also
