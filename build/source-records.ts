@@ -26,7 +26,7 @@ export interface TadaSourceRecord {
   partialDeps: Set<string>;
   traceDeps: Set<string>;
   internalTargets: Set<string>;
-  generatedOutputPaths: Set<string>;
+  generatedOutputs: Map<string, string>;
   authorKey?: string;
 }
 
@@ -35,13 +35,13 @@ function createDependencyCollector(): {
   partials: Set<string>;
   traceFiles: Set<string>;
   internalTargets: Set<string>;
-  generatedOutputPaths: Set<string>;
+  generatedOutputs: Map<string, string>;
   authorKey: string | undefined;
 } {
   const partials = new Set<string>();
   const traceFiles = new Set<string>();
   const internalTargets = new Set<string>();
-  const generatedOutputPaths = new Set<string>();
+  const generatedOutputs = new Map<string, string>();
   let authorKey: string | undefined;
 
   return {
@@ -49,7 +49,7 @@ function createDependencyCollector(): {
       partials,
       traceFiles,
       internalTargets,
-      generatedOutputPaths,
+      generatedOutputs,
       setAuthorKey(value: string) {
         authorKey = value;
       },
@@ -57,7 +57,7 @@ function createDependencyCollector(): {
     partials,
     traceFiles,
     internalTargets,
-    generatedOutputPaths,
+    generatedOutputs,
     get authorKey() {
       return authorKey;
     },
@@ -73,7 +73,7 @@ function createEmptyContentRecord(filePath: string): TadaSourceRecord {
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
-    generatedOutputPaths: new Set(),
+    generatedOutputs: new Map(),
   };
 }
 
@@ -92,10 +92,8 @@ export function createContentRecord({
   scan,
   assetFiles,
   isWatchMode,
-  outputDir,
   traceCache,
   traceToolAvailability,
-  cachedTraceSourceDir,
   skipLiterateJavaExecution,
 }: {
   filePath: string;
@@ -103,10 +101,8 @@ export function createContentRecord({
   scan: TadaProjectScan;
   assetFiles: string[];
   isWatchMode: boolean;
-  outputDir: string;
   traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
-  cachedTraceSourceDir?: string;
   skipLiterateJavaExecution?: boolean;
 }): TadaSourceRecord {
   const renderKind = scan.sources.get(filePath)?.renderKind ?? 'skip';
@@ -123,7 +119,6 @@ export function createContentRecord({
         ...renderLiterateJavaPageAsset({
           filePath,
           contentDir: scan.contentDir,
-          distDir: outputDir,
           siteVariables,
           assetFiles,
           isWatchMode,
@@ -141,7 +136,6 @@ export function createContentRecord({
         ...renderPlainTextPageAsset({
           filePath,
           contentDir: scan.contentDir,
-          distDir: outputDir,
           siteVariables,
           validInternalTargets: scan.validTargets,
           generatedPageTargets: scan.generatedPageTargets,
@@ -150,7 +144,6 @@ export function createContentRecord({
           isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
-          cachedTraceSourceDir,
           traceCache,
           traceToolAvailability,
         }),
@@ -161,7 +154,6 @@ export function createContentRecord({
         ...renderCodePageAsset({
           filePath,
           contentDir: scan.contentDir,
-          distDir: outputDir,
           siteVariables,
           validInternalTargets: scan.validTargets,
           generatedPageTargets: scan.generatedPageTargets,
@@ -188,12 +180,12 @@ export function createContentRecord({
   return {
     sourcePath: filePath,
     kind: 'content',
-    outputs: collectSourceOutputs(assets, deps.generatedOutputPaths, outputDir),
+    outputs: collectSourceOutputs(assets, deps.generatedOutputs),
     htmlAnalysisByOutputPath: collectSourceHtmlAnalysis(assets),
     partialDeps: deps.partials,
     traceDeps: deps.traceFiles,
     internalTargets: deps.internalTargets,
-    generatedOutputPaths: deps.generatedOutputPaths,
+    generatedOutputs: deps.generatedOutputs,
     authorKey: deps.authorKey,
   };
 }
@@ -211,21 +203,20 @@ export function createPublicRecord(
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
-    generatedOutputPaths: new Set(),
+    generatedOutputs: new Map(),
   };
 }
 
 export function collectSourceOutputs(
   assets: Asset[],
-  generatedOutputPaths: Set<string>,
-  stageDir: string,
+  generatedOutputs: ReadonlyMap<string, string>,
 ): Map<string, string | Buffer> {
   const outputs = new Map<string, string | Buffer>();
   for (const asset of assets) {
     outputs.set(asset.assetPath, asset.content);
   }
-  for (const outputPath of generatedOutputPaths) {
-    outputs.set(outputPath, fs.readFileSync(path.join(stageDir, outputPath)));
+  for (const [outputPath, content] of generatedOutputs) {
+    outputs.set(outputPath, content);
   }
   return outputs;
 }

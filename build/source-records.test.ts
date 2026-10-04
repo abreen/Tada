@@ -101,7 +101,6 @@ describe('createContentRecord', () => {
       scan,
       assetFiles: [],
       isWatchMode: false,
-      outputDir: sitePath('dist'),
     });
 
     expect(record).toEqual({
@@ -112,7 +111,7 @@ describe('createContentRecord', () => {
       partialDeps: new Set(),
       traceDeps: new Set(),
       internalTargets: new Set(),
-      generatedOutputPaths: new Set(),
+      generatedOutputs: new Map(),
     });
   });
 
@@ -129,7 +128,6 @@ describe('createContentRecord', () => {
       scan,
       assetFiles: [],
       isWatchMode: false,
-      outputDir: sitePath('dist'),
     });
 
     expect(record.sourcePath).toBe(filePath);
@@ -139,7 +137,7 @@ describe('createContentRecord', () => {
     expect(record.partialDeps).toEqual(new Set());
     expect(record.traceDeps).toEqual(new Set());
     expect(record.internalTargets).toEqual(new Set());
-    expect(record.generatedOutputPaths).toEqual(new Set());
+    expect(record.generatedOutputs).toEqual(new Map());
     expect(record.authorKey).toBeUndefined();
   });
 });
@@ -161,7 +159,7 @@ describe('createPublicRecord', () => {
       partialDeps: new Set(),
       traceDeps: new Set(),
       internalTargets: new Set(),
-      generatedOutputPaths: new Set(),
+      generatedOutputs: new Map(),
     });
   });
 });

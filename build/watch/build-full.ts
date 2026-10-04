@@ -12,13 +12,14 @@ import {
   makeTempBuildDir,
   populateStaticAssets,
   removeDirIfExists,
+  writeAssets,
 } from './assets';
 import {
   validateConfig,
   validateProjectConfigLinks,
 } from '../build-validation';
 import { buildFailedFromError, buildSucceeded } from './build-result';
-import { buildFailedWithDiagnostics, renderSource } from './build-helpers';
+import { renderSource } from './build-helpers';
 
 export async function buildFull({
   traceCache,
@@ -34,7 +35,8 @@ export async function buildFull({
     const scan = scanProject(siteVariables);
     const configDiagnostics = validateConfig(scan, siteVariables);
     if (configDiagnostics.length > 0) {
-      return buildFailedWithDiagnostics(outputDir, configDiagnostics);
+      removeDirIfExists(outputDir);
+      return { ok: false, diagnostics: configDiagnostics };
     }
 
     compileTemplates(siteVariables);
@@ -50,19 +52,19 @@ export async function buildFull({
         siteVariables,
         scan,
         assetFiles,
-        outputDir,
         traceCache,
         traceOptions,
-        cachedTraceSourceDir: distDir,
       });
       if (record) {
+        writeAssets(outputDir, record.outputs);
         records.set(filePath, record);
       }
     }
 
     const linkDiagnostics = validateProjectConfigLinks(scan.validTargets);
     if (linkDiagnostics.length > 0) {
-      return buildFailedWithDiagnostics(outputDir, linkDiagnostics);
+      removeDirIfExists(outputDir);
+      return { ok: false, diagnostics: linkDiagnostics };
     }
 
     const nextSnapshot = createSnapshot({

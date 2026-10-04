@@ -18,6 +18,21 @@ WEBSOCKET_TIMEOUT_SEC = 15
 POLL_SEC = 0.05
 ANSI_RE = re.compile(r'\x1b\[[0-9;]*m')
 SUCCESS_RE = re.compile(r'^.+! 🎉$', re.MULTILINE)
+TRACE_MANIFEST_RE = re.compile(r'data-trace-manifest="([^"]+)"')
+
+
+def assert_trace_artifacts_exist(dist_dir: Path, html: str, base_path: str = '') -> list[Path]:
+    """Assert each trace manifest a page references exists with its first chunk."""
+    urls = TRACE_MANIFEST_RE.findall(html)
+    assert urls, 'Page does not reference any trace manifests'
+    manifests = []
+    for url in urls:
+        assert url.startswith(f'{base_path}/'), url
+        manifest = dist_dir.joinpath(*url[len(base_path) :].strip('/').split('/'))
+        assert manifest.is_file(), f'Missing trace manifest {url}'
+        assert (manifest.parent / 'chunk-0.json').is_file(), f'Missing first chunk for {url}'
+        manifests.append(manifest)
+    return manifests
 
 
 class WatchProcess:

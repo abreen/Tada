@@ -1,5 +1,6 @@
 import type { BundledLanguage } from 'shiki';
 import type { TadaProjectScan } from './source-model';
+import type { TraceCache } from './build-types';
 
 export type PlainTextLanguage = 'text' | 'txt' | 'plain';
 
@@ -110,7 +111,6 @@ export interface Logger {
 export interface RenderPlainTextOptions {
   filePath: string;
   contentDir: string;
-  distDir: string;
   siteVariables: SiteVariables;
   validInternalTargets: ReadonlySet<string>;
   generatedPageTargets?: ReadonlySet<string>;
@@ -119,17 +119,7 @@ export interface RenderPlainTextOptions {
   isWatchMode: boolean;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
-  cachedTraceSourceDir?: string;
-  traceCache?: Map<
-    string,
-    {
-      manifestUrl: string;
-      artifactId: string;
-      highlightedSources: { file: string; highlightedSource: string }[];
-      totalSteps: number;
-      sourceMtims: Record<string, number>;
-    }
-  >;
+  traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
 }
 
@@ -142,7 +132,6 @@ export interface TraceToolAvailability {
 export interface RenderCodePageOptions {
   filePath: string;
   contentDir: string;
-  distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
   isWatchMode: boolean;
@@ -157,7 +146,6 @@ export interface RenderCodePageOptions {
 export interface RenderLiterateJavaOptions {
   filePath: string;
   contentDir: string;
-  distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
   isWatchMode: boolean;
@@ -180,7 +168,8 @@ export interface RenderDependencyCollector {
   partials?: Set<string>;
   traceFiles?: Set<string>;
   internalTargets?: Set<string>;
-  generatedOutputPaths?: Set<string>;
+  /** Files a page generates besides its own assets, by output path */
+  generatedOutputs?: Map<string, string>;
   setAuthorKey?: (authorKey: string) => void;
 }
 
@@ -297,6 +286,13 @@ export interface TraceSource {
   file: string;
   source: string;
   lineToSteps: Record<number, number[]>;
+}
+
+/** A generated trace manifest or chunk file */
+export interface TraceArtifactFile {
+  /** File name inside the trace's `sha256-*` artifact directory */
+  name: string;
+  content: string;
 }
 
 /** Position and size of a heap object in the precomputed layout. */

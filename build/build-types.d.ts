@@ -1,12 +1,15 @@
 import type {
   HtmlOutputAnalysis,
   SiteVariables,
+  TraceArtifactFile,
   TraceToolAvailability,
 } from './types';
 
+/** A finished trace, keyed in the cache by its traced source files */
 export interface TraceCacheEntry {
-  manifestUrl: string;
   artifactId: string;
+  /** Manifest and chunk files, re-emitted on a cache hit */
+  files: TraceArtifactFile[];
   highlightedSources: { file: string; highlightedSource: string }[];
   totalSteps: number;
   sourceMtims: Record<string, number>;

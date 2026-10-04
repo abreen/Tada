@@ -67,8 +67,10 @@ The build and watch pipelines share the same source-discovery model.
   link targets, and generated route aliases. Incremental updates replace dirty
   entries in a shared source inventory and derive indexes once per update
 - `build/source-records.ts` turns individual content or public sources into
-  source records containing rendered/copied outputs plus dependency metadata
-  such as partial, trace, internal-target, and author relationships
+  source records containing rendered/copied outputs (including generated trace
+  files) plus dependency metadata such as partial, trace, internal-target, and
+  author relationships. Rendering never reads from or writes to the output
+  directory
 
 Production builds use that shared scan-and-record layer during full builds, and
 watch mode reuses the same layer for incremental planning and recompilation.

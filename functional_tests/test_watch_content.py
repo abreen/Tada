@@ -5,7 +5,7 @@ import threading
 import pytest
 import websocket
 from conftest import PACKAGE_DIR, init_site, run_tada, set_site_config
-from watch_helpers import WEBSOCKET_TIMEOUT_SEC, WatchProcess
+from watch_helpers import WEBSOCKET_TIMEOUT_SEC, WatchProcess, assert_trace_artifacts_exist
 
 WATCH_RELOAD_PATH = '/__tada_watch'
 
@@ -15,14 +15,6 @@ def trace_manifest_path(site_dir, trace_name):
         (site_dir / 'dist' / 'labs' / '01' / '_traces' / trace_name).glob('sha256-*/manifest.json')
     )
     assert matches, f'No manifest found for {trace_name}'
-    return matches[0]
-
-
-def trace_chunk_path(site_dir, trace_name, chunk_name='chunk-0.json'):
-    matches = sorted(
-        (site_dir / 'dist' / 'labs' / '01' / '_traces' / trace_name).glob(f'sha256-*/{chunk_name}')
-    )
-    assert matches, f'No {chunk_name} found for {trace_name}'
     return matches[0]
 
 
@@ -588,27 +580,31 @@ class TestWatchTraceRebuildsOnJavaChange:
         finally:
             wp.stop()
 
-    def test_editing_trace_page_preserves_trace_artifacts(self, site_dir):
+    def test_incremental_rebuilds_preserve_cached_trace_artifacts(self, site_dir):
         wp = WatchProcess(site_dir)
         try:
             wp.wait_for_initial_build()
 
             lab_html = site_dir / 'dist' / 'labs' / '01' / 'index.html'
-            assert lab_html.exists()
-            before_lab_mtime = lab_html.stat().st_mtime
+            manifests = assert_trace_artifacts_exist(wp.dist_dir, lab_html.read_text())
+            log_start = len(wp.stdout_log_path.read_text())
 
-            trace_manifest = trace_manifest_path(site_dir, 'TraceDemo')
-            trace_chunk = trace_chunk_path(site_dir, 'TraceDemo')
-            assert trace_manifest.exists()
-            assert trace_chunk.exists()
-
+            # Re-rendering the trace page reuses its cached traces
             page = site_dir / 'content' / 'labs' / '01' / 'index.md'
+            before_lab_mtime = lab_html.stat().st_mtime
             page.write_text(page.read_text() + '\n<!-- keep trace artifacts -->\n')
-
             wp.wait_for_rebuild(lab_html, 'modified', before_mtime=before_lab_mtime)
+            assert assert_trace_artifacts_exist(wp.dist_dir, lab_html.read_text()) == manifests
 
-            assert trace_manifest.exists()
-            assert trace_chunk.exists()
+            # Rebuilding another page leaves the trace page's artifacts alone
+            index_md = site_dir / 'content' / 'index.md'
+            index_html = site_dir / 'dist' / 'index.html'
+            before_index_mtime = index_html.stat().st_mtime
+            index_md.write_text(index_md.read_text() + '\n\nUnrelated edit.\n')
+            wp.wait_for_rebuild(index_html, 'modified', before_mtime=before_index_mtime)
+            assert assert_trace_artifacts_exist(wp.dist_dir, lab_html.read_text()) == manifests
+
+            assert 'Tracing' not in wp.stdout_log_path.read_text()[log_start:]
         finally:
             wp.stop()
 

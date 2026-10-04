@@ -95,7 +95,6 @@ export class ContentRenderer {
           scan,
           assetFiles,
           isWatchMode,
-          outputDir: distDir,
           traceCache: this.traceCache,
           traceToolAvailability: this.traceToolAvailability,
           skipLiterateJavaExecution: !this.traceToolAvailability?.java,
