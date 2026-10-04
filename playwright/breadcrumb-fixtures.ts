@@ -26,9 +26,12 @@ breadcrumbs:
     url: ../../index.html
   - label: Section
     url: ../index.html
+toc: true
 ---
 
 [First detail](./first.html)
+
+## Details
 `,
   );
   for (const [name, title, sibling] of [

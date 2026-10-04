@@ -54,8 +54,24 @@ $movement-easing: cubic-bezier(0.2, 0, 0, 1);
   animation-duration: $duration;
 }
 
-// Breadcrumbs use per-item named rules installed by the navigator. Shared
-// items stay opaque and preserve their position; removed/added suffixes fade.
+// Breadcrumbs: the whole trail is one group, so every item moves together when
+// the layout changes. The default plus-lighter crossfade keeps unchanged items
+// opaque while added or removed items fade. Snapshots keep their natural size
+// so a change in trail width does not stretch the text.
+::view-transition-group(page-breadcrumbs),
+::view-transition-old(page-breadcrumbs),
+::view-transition-new(page-breadcrumbs) {
+  animation-duration: $duration;
+}
+
+::view-transition-group(page-breadcrumbs) {
+  animation-timing-function: $movement-easing;
+}
+
+::view-transition-old(page-breadcrumbs),
+::view-transition-new(page-breadcrumbs) {
+  inline-size: auto;
+}
 
 // The site-wide banner does not change between pages. Keep it out of the root
 // slide and pin its named transition layer in place without a crossfade.

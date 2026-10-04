@@ -5,22 +5,12 @@ import {
   teardownPerPageComponents,
 } from './lifecycle';
 import { globals } from '../globals';
-import {
-  cleanupBreadcrumbTransitionNames,
-  getBreadcrumbItems,
-  prepareBreadcrumbTransitionStyles,
-  setBreadcrumbTransitionNames,
-  sharedBreadcrumbCount,
-} from './breadcrumbs';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
 let currentAbortController: AbortController | null = null;
 let historyIndex = 0;
 let currentPath = '';
-// Unlike the browser URL (which already changes on popstate), this tracks the
-// page whose content is currently displayed, for relative breadcrumb identity.
-let renderedPageUrl = '';
 
 const scrollByIndex = new Map<number, number>();
 const scrollByLocation = new Map<string, number>();
@@ -127,21 +117,29 @@ function dispatchNavigationEvent(
   );
 }
 
-function cleanupViewTransitionNames(document: Document): void {
-  const newH1 = document.querySelector(
-    '.title-and-info h1',
-  ) as HTMLElement | null;
-  const newInfo = document.querySelector(
-    '.title-and-info .info',
-  ) as HTMLElement | null;
+// Heading parts that get their own layer instead of sliding with the page. The
+// breadcrumb trail is one group so every item, including the current one,
+// moves together when the page layout changes.
+const TITLE_TRANSITION_NAMES = [
+  ['nav.breadcrumbs', 'page-breadcrumbs'],
+  ['h1', 'page-title'],
+  ['.info', 'page-info'],
+] as const;
 
-  if (newH1) {
-    newH1.style.viewTransitionName = '';
+function setTitleTransitionNames(titleEl: Element, enabled: boolean): void {
+  for (const [selector, name] of TITLE_TRANSITION_NAMES) {
+    const element = titleEl.querySelector<HTMLElement>(selector);
+    if (element) {
+      element.style.viewTransitionName = enabled ? name : '';
+    }
   }
-  if (newInfo) {
-    newInfo.style.viewTransitionName = '';
+}
+
+function cleanupViewTransitionNames(document: Document): void {
+  const titleEl = document.querySelector('.title-and-info');
+  if (titleEl) {
+    setTitleTransitionNames(titleEl, false);
   }
-  cleanupBreadcrumbTransitionNames(document);
 }
 
 function getLocationKey(window: Window): string {
@@ -177,7 +175,6 @@ export function initNavigation(window: Window): void {
   scrollByLocation.clear();
   window.history.scrollRestoration = 'manual';
   currentPath = window.location.pathname + window.location.search;
-  renderedPageUrl = window.location.href;
   scrollByIndex.set(historyIndex, window.scrollY);
   scrollByLocation.set(getLocationKey(window), window.scrollY);
 }
@@ -311,7 +308,6 @@ export async function navigateToUrl(
     updateHead(document, newDoc);
     mountAppearancePickerForPage(window);
     currentPath = parsed.pathname + parsed.search;
-    renderedPageUrl = parsed.href;
 
     if (pushHistory) {
       historyIndex++;
@@ -343,18 +339,6 @@ export async function navigateToUrl(
     !prefersReducedMotion(window) &&
     typeof transitionDoc.startViewTransition === 'function'
   ) {
-    const oldBreadcrumbItems = getBreadcrumbItems(document, renderedPageUrl);
-    const newBreadcrumbItems = getBreadcrumbItems(newDoc, parsed.href);
-    const sharedCount = sharedBreadcrumbCount(
-      oldBreadcrumbItems,
-      newBreadcrumbItems,
-    );
-    prepareBreadcrumbTransitionStyles(
-      document,
-      oldBreadcrumbItems.length,
-      newBreadcrumbItems.length,
-      sharedCount,
-    );
     const titleEl = document.querySelector('.title-and-info');
     const headerHeight =
       document.querySelector('header')?.getBoundingClientRect().height ?? 0;
@@ -362,20 +346,7 @@ export async function navigateToUrl(
       titleEl != null && titleEl.getBoundingClientRect().top >= headerHeight;
 
     if (titleVisible) {
-      const h1 = titleEl.querySelector('h1') as HTMLElement | null;
-      const info = titleEl.querySelector('.info') as HTMLElement | null;
-      if (h1) {
-        h1.style.viewTransitionName = 'page-title';
-      }
-      if (info) {
-        info.style.viewTransitionName = 'page-info';
-      }
-      setBreadcrumbTransitionNames(
-        document,
-        renderedPageUrl,
-        sharedCount,
-        'leave',
-      );
+      setTitleTransitionNames(titleEl, true);
     }
 
     document.documentElement.classList.add(
@@ -395,20 +366,7 @@ export async function navigateToUrl(
         newTitleEl.getBoundingClientRect().top >= newHeaderHeight;
 
       if (newTitleVisible && newTitleEl) {
-        const h1 = newTitleEl.querySelector('h1') as HTMLElement | null;
-        const info = newTitleEl.querySelector('.info') as HTMLElement | null;
-        if (h1) {
-          h1.style.viewTransitionName = 'page-title';
-        }
-        if (info) {
-          info.style.viewTransitionName = 'page-info';
-        }
-        setBreadcrumbTransitionNames(
-          document,
-          renderedPageUrl,
-          sharedCount,
-          'enter',
-        );
+        setTitleTransitionNames(newTitleEl, true);
       }
     });
 
