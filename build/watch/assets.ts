@@ -1,14 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import { bundle, getBundleNaming } from '../bundle';
-import { copyFonts, DEFAULT_FONT_PRELOAD_FILES } from '../generate-fonts';
+import { copyFonts } from '../generate-fonts';
 import { copyKatexAssets } from '../generate-katex-assets';
 import { generateFavicons } from '../generate-favicon';
 import { generateWebAppManifest } from '../generate-web-app-manifest';
 import { getRuntimeBundledShikiLanguages } from '../site-variables';
 import { getPackageDir, toPosix } from '../util';
 import { initHighlighter } from '../utils/shiki-highlighter';
-import type { SiteVariables } from '../types';
+import { writeOutputFile } from '../output-publication';
+import type { OutputContent, SiteVariables } from '../types';
 
 const RELOAD_CLIENT_PATH = path.resolve(
   getPackageDir(),
@@ -65,39 +66,11 @@ export async function populateStaticAssets(
   }
 }
 
-export function copyExistingBuildAssets(
-  distDir: string,
-  outputDir: string,
-  assetFiles: string[],
-): void {
-  const relPaths = [
-    ...assetFiles,
-    ...DEFAULT_FONT_PRELOAD_FILES.sans,
-    ...DEFAULT_FONT_PRELOAD_FILES.serif,
-  ];
-
-  for (const relPath of relPaths) {
-    const sourcePath = path.join(distDir, relPath);
-    if (!fs.existsSync(sourcePath)) {
-      continue;
-    }
-    const destinationPath = path.join(outputDir, relPath);
-    fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
-    try {
-      fs.linkSync(sourcePath, destinationPath);
-    } catch {
-      fs.copyFileSync(sourcePath, destinationPath);
-    }
-  }
-}
-
 export function writeAssets(
   outputDir: string,
-  assets: Map<string, string | Buffer>,
+  assets: Map<string, OutputContent>,
 ): void {
   for (const [assetPath, content] of assets) {
-    const outputPath = path.join(outputDir, assetPath);
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, content);
+    writeOutputFile(path.join(outputDir, assetPath), content);
   }
 }

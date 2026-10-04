@@ -34,8 +34,9 @@ with metadata and one source entry per traced file. Tada hashes the serialized
 generated manifest and chunk JSON, then writes the files to
 `dist/_traces/{Name}/sha256-{hash}/`. The rendered widget points at the
 hashed `manifest.json` path, so browsers fetch fresh trace data when a rebuild
-produces different trace artifacts. Results are cached for the full primary and
-companion file set and are invalidated when any traced source changes.
+produces different trace artifacts. Results, including the generated files, are
+cached for the full primary and companion file set and are invalidated when any
+traced source changes.
 
 The manifest shape is `{ totalSteps, chunkSize, primaryFile, sources }`, where
 each source entry is `{ file, source, lineToSteps }`. Chunk entries are

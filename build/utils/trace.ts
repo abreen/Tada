@@ -7,11 +7,10 @@ import { toPosix } from './paths';
 import { checkJavac } from './literate-java';
 import {
   buildManifestUrl,
+  buildTraceOutputPath,
   chunkTraceOutput,
   DEFAULT_CHUNK_SIZE,
-  getTraceOutputPaths,
   highlightTraceSource,
-  materializeTraceOutputs,
   renderTraceWidgetHtml,
 } from './trace-core';
 import {
@@ -25,6 +24,7 @@ import type {
   RenderDependencyCollector,
   TraceToolAvailability,
 } from '../types';
+import type { TraceCache, TraceCacheEntry } from '../build-types';
 
 const log = makeLogger(import.meta.url);
 
@@ -33,20 +33,10 @@ export const TRACEABLE_EXTENSIONS = new Set(['.java', '.py']);
 export interface TraceContext {
   filePath: string;
   contentDir: string;
-  distDir: string;
   applyBasePath: (subPath: string) => string;
-  cache: Map<string, TraceResult>;
+  cache: TraceCache;
   toolAvailability?: TraceToolAvailability;
   dependencyCollector?: RenderDependencyCollector;
-  cachedTraceSourceDir?: string;
-}
-
-export interface TraceResult {
-  manifestUrl: string;
-  artifactId: string;
-  highlightedSources: { file: string; highlightedSource: string }[];
-  totalSteps: number;
-  sourceMtims: Record<string, number>;
 }
 
 export function isTraceSourceFile(filePath: string): boolean {
@@ -132,12 +122,10 @@ export function createTraceHelpers(context: TraceContext): {
   const {
     filePath,
     contentDir,
-    distDir,
     applyBasePath,
     cache,
     toolAvailability,
     dependencyCollector,
-    cachedTraceSourceDir,
   } = context;
   const pageDir = path.dirname(filePath);
 
@@ -202,7 +190,7 @@ export function createTraceHelpers(context: TraceContext): {
 
   function cacheIsFresh(
     sources: TraceSourceFile[],
-    cached: TraceResult,
+    cached: TraceCacheEntry,
   ): boolean {
     return sources.every(source => {
       const mtime = fs.statSync(source.absolutePath, {
@@ -229,45 +217,13 @@ export function createTraceHelpers(context: TraceContext): {
 
   function getOrRunTrace(
     sourceFile: string,
-    companionFiles?: string[],
-  ): TraceResult {
-    const sources = resolveTraceSources(sourceFile, companionFiles);
-    for (const source of sources) {
-      dependencyCollector?.traceFiles?.add(source.absolutePath);
-    }
-    const sourceFilePath = sources[0].absolutePath;
-    const traceName = path.parse(sourceFile).name;
-    const relDir = toPosix(path.relative(contentDir, pageDir));
+    sources: TraceSourceFile[],
+    traceName: string,
+  ): TraceCacheEntry {
     const cacheKey = cacheKeyForSources(sources);
-
     const cached = cache.get(cacheKey);
     if (cached && cacheIsFresh(sources, cached)) {
-      const outputPaths = getTraceOutputPaths(
-        relDir,
-        traceName,
-        cached.artifactId,
-        cached.totalSteps,
-      );
-      if (
-        materializeTraceOutputs({
-          outputPaths,
-          targetDistDir: distDir,
-          sourceDistDir: cachedTraceSourceDir || distDir,
-        })
-      ) {
-        for (const outputPath of outputPaths) {
-          dependencyCollector?.generatedOutputPaths?.add(outputPath);
-        }
-        return {
-          ...cached,
-          manifestUrl: buildManifestUrl({
-            relDir,
-            traceName,
-            artifactId: cached.artifactId,
-            applyBasePath,
-          }),
-        };
-      }
+      return cached;
     }
 
     log.info`Tracing ${B`${sourceFile}`}`;
@@ -288,49 +244,26 @@ export function createTraceHelpers(context: TraceContext): {
       fs.rmSync(workspaceDir, { recursive: true, force: true });
     }
 
-    const language = traceLanguageForFile(sourceFilePath);
-    const highlightedSources = sources.map(source => ({
-      file: source.file,
-      highlightedSource: highlightTraceSource(source.source, language),
-    }));
-    const traceOutputDir = path.join(distDir, relDir, '_traces', traceName);
-
-    const traceOutput = chunkTraceOutput(
+    const language = traceLanguageForFile(sources[0].absolutePath);
+    const { manifest, artifactId, files } = chunkTraceOutput(
       output,
-      traceOutputDir,
-      relDir,
       traceName,
       sources[0].file,
       sources.map(source => ({ file: source.file, source: source.source })),
       { chunkSize: DEFAULT_CHUNK_SIZE, ignoreFields },
     );
-    for (const outputPath of traceOutput.outputPaths) {
-      dependencyCollector?.generatedOutputPaths?.add(outputPath);
-    }
-
-    const manifestUrl = buildManifestUrl({
-      relDir,
-      traceName,
-      artifactId: traceOutput.artifactId,
-      applyBasePath,
-    });
-
-    const totalSteps = traceOutput.manifest.totalSteps;
-    const sourceMtims = getSourceMtims(sources);
-    cache.set(cacheKey, {
-      manifestUrl,
-      artifactId: traceOutput.artifactId,
-      highlightedSources,
-      totalSteps,
-      sourceMtims,
-    });
-    return {
-      manifestUrl,
-      artifactId: traceOutput.artifactId,
-      highlightedSources,
-      totalSteps,
-      sourceMtims,
+    const entry: TraceCacheEntry = {
+      artifactId,
+      files,
+      highlightedSources: sources.map(source => ({
+        file: source.file,
+        highlightedSource: highlightTraceSource(source.source, language),
+      })),
+      totalSteps: manifest.totalSteps,
+      sourceMtims: getSourceMtims(sources),
     };
+    cache.set(cacheKey, entry);
+    return entry;
   }
 
   return {
@@ -352,14 +285,24 @@ export function createTraceHelpers(context: TraceContext): {
         });
       }
 
-      const { manifestUrl, highlightedSources, totalSteps } = getOrRunTrace(
-        sourceFile,
-        companionFiles,
-      );
+      const traceName = path.parse(sourceFile).name;
+      const relDir = toPosix(path.relative(contentDir, pageDir));
+      const trace = getOrRunTrace(sourceFile, sources, traceName);
+      for (const file of trace.files) {
+        dependencyCollector?.generatedOutputs?.set(
+          buildTraceOutputPath(relDir, traceName, trace.artifactId, file.name),
+          file.content,
+        );
+      }
       return renderTraceWidgetHtml({
-        highlightedSources,
-        manifestUrl,
-        totalSteps,
+        highlightedSources: trace.highlightedSources,
+        manifestUrl: buildManifestUrl({
+          relDir,
+          traceName,
+          artifactId: trace.artifactId,
+          applyBasePath,
+        }),
+        totalSteps: trace.totalSteps,
       });
     },
   };

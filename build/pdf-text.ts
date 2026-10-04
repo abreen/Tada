@@ -137,7 +137,7 @@ export function buildPdfPageRecords(pageTexts: string[]): PdfExtractResult {
   return { pages, hasExtractedText: pages.length > 0 };
 }
 
-export async function extractPdfPages(
+async function extractPdfPagesUncached(
   pdfPath: string,
 ): Promise<PdfExtractResult> {
   await assertMutoolAvailable();
@@ -181,3 +181,43 @@ export async function extractPdfPages(
     }
   }
 }
+
+interface FileSignature {
+  size: number;
+  mtimeMs: number;
+}
+
+/**
+ * Wraps a PDF text extractor so each PDF is extracted again only after its size
+ * or modification time changes. Concurrent requests for one file share a
+ * single extraction, and failed extractions are not cached.
+ */
+export function createCachedPdfExtractor(
+  extract: (pdfPath: string) => Promise<PdfExtractResult>,
+  stat: (pdfPath: string) => FileSignature,
+): (pdfPath: string) => Promise<PdfExtractResult> {
+  const cache = new Map<
+    string,
+    FileSignature & { result: Promise<PdfExtractResult> }
+  >();
+  return pdfPath => {
+    const { size, mtimeMs } = stat(pdfPath);
+    const cached = cache.get(pdfPath);
+    if (cached && cached.size === size && cached.mtimeMs === mtimeMs) {
+      return cached.result;
+    }
+    const entry = { size, mtimeMs, result: extract(pdfPath) };
+    cache.set(pdfPath, entry);
+    entry.result.catch(() => {
+      if (cache.get(pdfPath) === entry) {
+        cache.delete(pdfPath);
+      }
+    });
+    return entry.result;
+  };
+}
+
+export const extractPdfPages = createCachedPdfExtractor(
+  extractPdfPagesUncached,
+  pdfPath => fs.statSync(pdfPath),
+);

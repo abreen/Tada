@@ -1,21 +1,16 @@
 import type { FileMutation } from '../output-publication';
+import type { OutputContent } from '../types';
 import type { TadaSnapshot } from './snapshot';
 
 type OutputSnapshot = Pick<TadaSnapshot, 'outputs'>;
 
-function outputsEqual(left: string | Buffer, right: string | Buffer): boolean {
-  if (left === right) {
-    return true;
+// Copied files compare by source path; the planner re-renders (and forces a
+// write for) any source whose contents changed.
+function outputsEqual(left: OutputContent, right: OutputContent): boolean {
+  if (typeof left === 'string' || typeof right === 'string') {
+    return left === right;
   }
-  if (typeof left === 'string' && typeof right === 'string') {
-    return false;
-  }
-  return (
-    Buffer.compare(
-      typeof left === 'string' ? Buffer.from(left) : left,
-      typeof right === 'string' ? Buffer.from(right) : right,
-    ) === 0
-  );
+  return left.copyFrom === right.copyFrom;
 }
 
 export function computeMutations(

@@ -1,14 +1,15 @@
-import fs from 'fs';
 import { sourcePaths } from './source-model';
 import path from 'path';
 import { makeLogger } from './log';
 import { getRuntimeBundledShikiLanguages } from './site-variables';
 import { createContentRecord } from './source-records';
+import { writeOutputFile } from './output-publication';
 import { validateConfigLinks } from './validate-config-links';
 import { config, getConfigFileName } from './templates';
 import { initHighlighter } from './utils/shiki-highlighter';
 import { checkTraceToolAvailability } from './utils/trace';
 import type {
+  OutputContent,
   SiteVariables,
   ContentRenderOptions,
   ContentRenderResult,
@@ -27,12 +28,10 @@ function cloneHtmlOutputAnalysis(
 
 function writeRecordOutputs(
   distDir: string,
-  outputs: Map<string, string | Buffer>,
+  outputs: Map<string, OutputContent>,
 ): void {
   for (const [outputPath, content] of outputs) {
-    const outPath = path.join(distDir, outputPath);
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    fs.writeFileSync(outPath, content);
+    writeOutputFile(path.join(distDir, outputPath), content);
   }
 }
 
@@ -52,6 +51,7 @@ export class ContentRenderer {
   processContent({
     distDir,
     assetFiles,
+    isWatchMode,
     scan,
   }: ContentRenderOptions): ContentRenderResult {
     const buildContentFiles = [...sourcePaths(scan, 'content', true)];
@@ -93,7 +93,7 @@ export class ContentRenderer {
           siteVariables: this.siteVariables,
           scan,
           assetFiles,
-          outputDir: distDir,
+          isWatchMode,
           traceCache: this.traceCache,
           traceToolAvailability: this.traceToolAvailability,
           skipLiterateJavaExecution: !this.traceToolAvailability?.java,

@@ -112,7 +112,7 @@ function renderMarkdownPage({
   const [pageAsset] = renderPlainTextPageAsset({
     filePath,
     contentDir,
-    distDir: '/virtual/dist',
+    isWatchMode: false,
     siteVariables,
     validInternalTargets: new Set(),
     assetFiles: [],
@@ -131,7 +131,6 @@ describe('preparePageTemplateHtml', () => {
     const result = preparePageTemplateHtml({
       templateHtml,
       assetFiles: ['app.js', 'styles.css'],
-      distDir: '/virtual/dist',
       siteVariables,
     });
 
@@ -141,9 +140,6 @@ describe('preparePageTemplateHtml', () => {
   });
 
   test('injects head tags after the charset meta tag without inlining CSS', () => {
-    for (const fontPath of DEFAULT_FONT_PRELOAD_FILES.sans) {
-      writeFile(path.join('/virtual/dist', fontPath), 'font');
-    }
     writeFile(
       path.join('/virtual/dist', 'index.bundle.css'),
       ':root{--theme-color:red}',
@@ -154,7 +150,6 @@ describe('preparePageTemplateHtml', () => {
         '<html><head><meta charset="UTF-8" /><title>Page</title></head>' +
         '<body><span class="katex">x</span></body></html>',
       assetFiles: ['index.bundle.js', 'index.bundle.css'],
-      distDir: '/virtual/dist',
       siteVariables,
     });
 
@@ -174,18 +169,30 @@ describe('preparePageTemplateHtml', () => {
     expect(result).not.toContain('--theme-color');
   });
 
-  test('leaves plain html unchanged when there are no assets and no KaTeX markup', () => {
+  test('adds only bundled font preloads without assets or KaTeX markup', () => {
+    // No font files exist in the mocked filesystem: preloads never depend on
+    // what the output directory contains
     const templateHtml =
       '<html><head><meta charset="UTF-8"></head><body><p>Hello</p></body></html>';
 
     const result = preparePageTemplateHtml({
       templateHtml,
       assetFiles: [],
-      distDir: '/virtual/dist',
       siteVariables,
     });
 
-    expect(result).toBe(templateHtml);
+    const preloadTags = DEFAULT_FONT_PRELOAD_FILES.sans
+      .map(
+        fontPath =>
+          `<link rel="preload" href="/${fontPath}" as="font" type="font/woff2" crossorigin>`,
+      )
+      .join('');
+    expect(result).toBe(
+      templateHtml.replace(
+        '<meta charset="UTF-8">',
+        `<meta charset="UTF-8">${preloadTags}`,
+      ),
+    );
   });
 
   test.each([
@@ -214,15 +221,10 @@ describe('preparePageTemplateHtml', () => {
   ])(
     'preloads only the $defaultFont default font pair',
     ({ defaultFont, expected, unexpected }) => {
-      for (const fontPath of [...expected, ...unexpected]) {
-        writeFile(path.join('/virtual/dist', fontPath), 'font');
-      }
-
       const result = preparePageTemplateHtml({
         templateHtml:
           '<html><head><meta charset="UTF-8"></head><body></body></html>',
         assetFiles: [],
-        distDir: '/virtual/dist',
         siteVariables: { ...siteVariables, defaultFont },
       });
 
@@ -236,16 +238,10 @@ describe('preparePageTemplateHtml', () => {
   );
 
   test('preloads custom regular serif faces without preloading styled faces', () => {
-    writeFile(
-      path.join('/virtual/dist', 'courier-prime/CourierPrime-Regular.woff2'),
-      'font',
-    );
-
     const result = preparePageTemplateHtml({
       templateHtml:
         '<html><head><meta charset="UTF-8"></head><body></body></html>',
       assetFiles: [],
-      distDir: '/virtual/dist',
       siteVariables: {
         ...siteVariables,
         defaultFont: 'serif',
@@ -274,15 +270,10 @@ describe('preparePageTemplateHtml', () => {
   });
 
   test('does not preload custom serif faces for a sans default', () => {
-    for (const fontPath of DEFAULT_FONT_PRELOAD_FILES.sans) {
-      writeFile(path.join('/virtual/dist', fontPath), 'font');
-    }
-
     const result = preparePageTemplateHtml({
       templateHtml:
         '<html><head><meta charset="UTF-8"></head><body></body></html>',
       assetFiles: [],
-      distDir: '/virtual/dist',
       siteVariables: {
         ...siteVariables,
         defaultFont: 'sans',
@@ -311,7 +302,7 @@ describe('renderCodePageAsset', () => {
     const [pageAsset] = renderCodePageAsset({
       filePath,
       contentDir,
-      distDir: '/virtual/dist',
+      isWatchMode: false,
       siteVariables,
       assetFiles: ['app.js', 'styles.css'],
       validInternalTargets: new Set(),
@@ -335,7 +326,7 @@ describe('renderCodePageAsset', () => {
     const [pageAsset] = renderCodePageAsset({
       filePath,
       contentDir,
-      distDir: '/virtual/dist',
+      isWatchMode: false,
       siteVariables,
       assetFiles: ['app.js', 'styles.css'],
       validInternalTargets: new Set(),
@@ -695,7 +686,7 @@ describe('renderPlainTextPageAsset', () => {
       renderPlainTextPageAsset({
         filePath,
         contentDir,
-        distDir: '/virtual/dist',
+        isWatchMode: false,
         siteVariables,
         validInternalTargets: new Set(),
         assetFiles: [],
@@ -723,7 +714,7 @@ describe('renderPlainTextPageAsset', () => {
     renderPlainTextPageAsset({
       filePath,
       contentDir,
-      distDir: '/virtual/dist',
+      isWatchMode: false,
       siteVariables,
       validInternalTargets: new Set(['/docs/index.html']),
       assetFiles: [],
@@ -756,7 +747,7 @@ describe('renderPlainTextPageAsset', () => {
       renderPlainTextPageAsset({
         filePath,
         contentDir,
-        distDir: '/virtual/dist',
+        isWatchMode: false,
         siteVariables,
         validInternalTargets: new Set([
           '/docs/topic',

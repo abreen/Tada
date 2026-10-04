@@ -1,5 +1,6 @@
 import type { BundledLanguage } from 'shiki';
 import type { TadaProjectScan } from './source-model';
+import type { TraceCache } from './build-types';
 
 export type PlainTextLanguage = 'text' | 'txt' | 'plain';
 
@@ -73,9 +74,17 @@ export interface HtmlOutputAnalysis {
   outgoingTargets: Set<string>;
 }
 
+/** An output copied unchanged from a source file when it is written */
+export interface CopiedFile {
+  copyFrom: string;
+}
+
+/** Output content: rendered text, or a reference to a file to copy */
+export type OutputContent = string | CopiedFile;
+
 export interface Asset {
   assetPath: string;
-  content: string | Buffer;
+  content: OutputContent;
   htmlAnalysis?: HtmlOutputAnalysis;
 }
 
@@ -83,6 +92,7 @@ export interface Asset {
 export interface ContentRenderOptions {
   distDir: string;
   assetFiles: string[];
+  isWatchMode: boolean;
   scan: TadaProjectScan;
 }
 
@@ -109,25 +119,15 @@ export interface Logger {
 export interface RenderPlainTextOptions {
   filePath: string;
   contentDir: string;
-  distDir: string;
   siteVariables: SiteVariables;
   validInternalTargets: ReadonlySet<string>;
   generatedPageTargets?: ReadonlySet<string>;
   codePageSourceTargets?: ReadonlySet<string>;
   assetFiles: string[];
+  isWatchMode: boolean;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
-  cachedTraceSourceDir?: string;
-  traceCache?: Map<
-    string,
-    {
-      manifestUrl: string;
-      artifactId: string;
-      highlightedSources: { file: string; highlightedSource: string }[];
-      totalSteps: number;
-      sourceMtims: Record<string, number>;
-    }
-  >;
+  traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
 }
 
@@ -140,9 +140,9 @@ export interface TraceToolAvailability {
 export interface RenderCodePageOptions {
   filePath: string;
   contentDir: string;
-  distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
+  isWatchMode: boolean;
   validInternalTargets: ReadonlySet<string>;
   generatedPageTargets?: ReadonlySet<string>;
   codePageSourceTargets?: ReadonlySet<string>;
@@ -154,9 +154,9 @@ export interface RenderCodePageOptions {
 export interface RenderLiterateJavaOptions {
   filePath: string;
   contentDir: string;
-  distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
+  isWatchMode: boolean;
   skipExecution?: boolean;
   validInternalTargets: ReadonlySet<string>;
   generatedPageTargets?: ReadonlySet<string>;
@@ -176,7 +176,8 @@ export interface RenderDependencyCollector {
   partials?: Set<string>;
   traceFiles?: Set<string>;
   internalTargets?: Set<string>;
-  generatedOutputPaths?: Set<string>;
+  /** Files a page generates besides its own assets, by output path */
+  generatedOutputs?: Map<string, string>;
   setAuthorKey?: (authorKey: string) => void;
 }
 
@@ -293,6 +294,13 @@ export interface TraceSource {
   file: string;
   source: string;
   lineToSteps: Record<number, number[]>;
+}
+
+/** A generated trace manifest or chunk file */
+export interface TraceArtifactFile {
+  /** File name inside the trace's `sha256-*` artifact directory */
+  name: string;
+  content: string;
 }
 
 /** Position and size of a heap object in the precomputed layout. */

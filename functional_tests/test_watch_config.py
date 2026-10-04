@@ -11,7 +11,7 @@ from conftest import (
     set_site_config,
     write_structured_file,
 )
-from watch_helpers import WatchProcess
+from watch_helpers import WatchProcess, assert_trace_artifacts_exist
 
 
 class TestWatchConfig:
@@ -93,11 +93,16 @@ class TestWatchConfig:
                 before_html,
             )
             before_mtime = lab_html.stat().st_mtime
+            manifests = assert_trace_artifacts_exist(wp.dist_dir, before_html)
+            log_start = len(wp.stdout_log_path.read_text())
 
             set_site_config(site_dir, {'basePath': '/course'})
             wp.wait_for_rebuild(lab_html, 'modified', before_mtime=before_mtime)
 
             after_html = lab_html.read_text()
+            # The full rebuild reuses cached traces and still writes their files
+            assert 'Tracing' not in wp.stdout_log_path.read_text()[log_start:]
+            assert assert_trace_artifacts_exist(wp.dist_dir, after_html, '/course') == manifests
             assert re.search(
                 r'data-trace-manifest="/course/labs/01/_traces/TraceDemo/sha256-[0-9a-f]{16}/manifest\.json"',
                 after_html,

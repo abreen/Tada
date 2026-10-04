@@ -1,20 +1,10 @@
 import { createContentRecord, createPublicRecord } from '../source-records';
 import type { TadaSourceRecord } from '../source-records';
-import type { CompilerBuildResult } from './snapshot';
-import type { BuildDiagnostic, WatchTraceOptions } from '../build-types';
-import { removeDirIfExists, writeAssets } from './assets';
-
-export function buildFailedWithDiagnostics(
-  outputDir: string,
-  diagnostics: BuildDiagnostic[],
-): CompilerBuildResult {
-  removeDirIfExists(outputDir);
-  return { ok: false, diagnostics };
-}
+import type { WatchTraceOptions } from '../build-types';
 
 type RenderOptions = Omit<
   Parameters<typeof createContentRecord>[0],
-  'traceToolAvailability'
+  'traceToolAvailability' | 'isWatchMode'
 > & { traceOptions: WatchTraceOptions };
 
 export function renderSource({
@@ -26,11 +16,8 @@ export function renderSource({
       ? createPublicRecord(options.filePath, options.scan.publicDir)
       : createContentRecord({
           ...options,
+          isWatchMode: true,
           traceToolAvailability: traceOptions.toolAvailability,
         });
-  if (!record.outputs.size) {
-    return;
-  }
-  writeAssets(options.outputDir, record.outputs);
-  return record;
+  return record.outputs.size ? record : undefined;
 }

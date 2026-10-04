@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import {
   renderCodePageAsset,
@@ -9,6 +8,7 @@ import {
 } from './util';
 import type {
   Asset,
+  OutputContent,
   HtmlOutputAnalysis,
   RenderDependencyCollector,
   SiteVariables,
@@ -21,12 +21,12 @@ import type { TraceCache } from './build-types';
 export interface TadaSourceRecord {
   sourcePath: string;
   kind: 'content' | 'public';
-  outputs: Map<string, string | Buffer>;
+  outputs: Map<string, OutputContent>;
   htmlAnalysisByOutputPath?: Map<string, HtmlOutputAnalysis>;
   partialDeps: Set<string>;
   traceDeps: Set<string>;
   internalTargets: Set<string>;
-  generatedOutputPaths: Set<string>;
+  generatedOutputs: Map<string, string>;
   authorKey?: string;
 }
 
@@ -35,13 +35,13 @@ function createDependencyCollector(): {
   partials: Set<string>;
   traceFiles: Set<string>;
   internalTargets: Set<string>;
-  generatedOutputPaths: Set<string>;
+  generatedOutputs: Map<string, string>;
   authorKey: string | undefined;
 } {
   const partials = new Set<string>();
   const traceFiles = new Set<string>();
   const internalTargets = new Set<string>();
-  const generatedOutputPaths = new Set<string>();
+  const generatedOutputs = new Map<string, string>();
   let authorKey: string | undefined;
 
   return {
@@ -49,7 +49,7 @@ function createDependencyCollector(): {
       partials,
       traceFiles,
       internalTargets,
-      generatedOutputPaths,
+      generatedOutputs,
       setAuthorKey(value: string) {
         authorKey = value;
       },
@@ -57,7 +57,7 @@ function createDependencyCollector(): {
     partials,
     traceFiles,
     internalTargets,
-    generatedOutputPaths,
+    generatedOutputs,
     get authorKey() {
       return authorKey;
     },
@@ -73,7 +73,7 @@ function createEmptyContentRecord(filePath: string): TadaSourceRecord {
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
-    generatedOutputPaths: new Set(),
+    generatedOutputs: new Map(),
   };
 }
 
@@ -81,7 +81,7 @@ function createRawContentAsset(filePath: string, contentDir: string): Asset[] {
   return [
     {
       assetPath: toPosix(path.relative(contentDir, filePath)),
-      content: fs.readFileSync(filePath),
+      content: { copyFrom: filePath },
     },
   ];
 }
@@ -91,20 +91,18 @@ export function createContentRecord({
   siteVariables,
   scan,
   assetFiles,
-  outputDir,
+  isWatchMode,
   traceCache,
   traceToolAvailability,
-  cachedTraceSourceDir,
   skipLiterateJavaExecution,
 }: {
   filePath: string;
   siteVariables: SiteVariables;
   scan: TadaProjectScan;
   assetFiles: string[];
-  outputDir: string;
+  isWatchMode: boolean;
   traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
-  cachedTraceSourceDir?: string;
   skipLiterateJavaExecution?: boolean;
 }): TadaSourceRecord {
   const renderKind = scan.sources.get(filePath)?.renderKind ?? 'skip';
@@ -121,9 +119,9 @@ export function createContentRecord({
         ...renderLiterateJavaPageAsset({
           filePath,
           contentDir: scan.contentDir,
-          distDir: outputDir,
           siteVariables,
           assetFiles,
+          isWatchMode,
           skipExecution: skipLiterateJavaExecution,
           validInternalTargets: scan.validTargets,
           generatedPageTargets: scan.generatedPageTargets,
@@ -138,15 +136,14 @@ export function createContentRecord({
         ...renderPlainTextPageAsset({
           filePath,
           contentDir: scan.contentDir,
-          distDir: outputDir,
           siteVariables,
           validInternalTargets: scan.validTargets,
           generatedPageTargets: scan.generatedPageTargets,
           codePageSourceTargets: scan.codePageSourceTargets,
           assetFiles,
+          isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
-          cachedTraceSourceDir,
           traceCache,
           traceToolAvailability,
         }),
@@ -157,12 +154,12 @@ export function createContentRecord({
         ...renderCodePageAsset({
           filePath,
           contentDir: scan.contentDir,
-          distDir: outputDir,
           siteVariables,
           validInternalTargets: scan.validTargets,
           generatedPageTargets: scan.generatedPageTargets,
           codePageSourceTargets: scan.codePageSourceTargets,
           assetFiles,
+          isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
         }),
@@ -183,12 +180,12 @@ export function createContentRecord({
   return {
     sourcePath: filePath,
     kind: 'content',
-    outputs: collectSourceOutputs(assets, deps.generatedOutputPaths, outputDir),
+    outputs: collectSourceOutputs(assets, deps.generatedOutputs),
     htmlAnalysisByOutputPath: collectSourceHtmlAnalysis(assets),
     partialDeps: deps.partials,
     traceDeps: deps.traceFiles,
     internalTargets: deps.internalTargets,
-    generatedOutputPaths: deps.generatedOutputPaths,
+    generatedOutputs: deps.generatedOutputs,
     authorKey: deps.authorKey,
   };
 }
@@ -201,26 +198,25 @@ export function createPublicRecord(
   return {
     sourcePath: filePath,
     kind: 'public',
-    outputs: new Map([[relPath, fs.readFileSync(filePath)]]),
+    outputs: new Map([[relPath, { copyFrom: filePath }]]),
     htmlAnalysisByOutputPath: new Map(),
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
-    generatedOutputPaths: new Set(),
+    generatedOutputs: new Map(),
   };
 }
 
 export function collectSourceOutputs(
   assets: Asset[],
-  generatedOutputPaths: Set<string>,
-  stageDir: string,
-): Map<string, string | Buffer> {
-  const outputs = new Map<string, string | Buffer>();
+  generatedOutputs: ReadonlyMap<string, string>,
+): Map<string, OutputContent> {
+  const outputs = new Map<string, OutputContent>();
   for (const asset of assets) {
     outputs.set(asset.assetPath, asset.content);
   }
-  for (const outputPath of generatedOutputPaths) {
-    outputs.set(outputPath, fs.readFileSync(path.join(stageDir, outputPath)));
+  for (const [outputPath, content] of generatedOutputs) {
+    outputs.set(outputPath, content);
   }
   return outputs;
 }

@@ -125,29 +125,20 @@ the new path.
 This means watch mode updates `dist/` so the old output disappears and the new
 output appears at its new location.
 
-Output paths can also change between a file and a directory in either
-direction. Publication removes obsolete files and prunes their empty parent
-directories before writing replacements. Unrelated directory contents are never
-removed to make a replacement fit.
+An output path can change between a file and a directory. Tada deletes the old
+output before writing the new one.
 
-There is a known Chokidar polling limitation when the same path rapidly changes
-from a directory to a file and back to a directory: child subscriptions can be
-missed. Restart watch mode if subsequent edits under that recreated directory
-are not detected. Output publication supports both transition directions; it
-cannot compensate for source events the watching backend does not deliver.
-
-After a directory rename, watch mode continues tracking the renamed directory.
-If the rename temporarily breaks links and the next rebuild fails, fixing those
-links recovers the build and files added later under the renamed directory still
-trigger rebuilds.
+Watch mode watches `content/` and `public/` by polling. A known limitation:
+if a directory is replaced by a file and then by a directory again in quick
+succession, edits inside the recreated directory may not be detected. Restart
+watch mode if that happens.
 
 ## Output Path Conflicts
 
-Watch mode rejects any two sources that would produce the same path in `dist/`,
-including collisions between content sources and between content and public
-sources. It reports the source paths and shared output path before publishing
-changes. Removing either conflicting source recovers using the surviving source;
-incremental scans retain every source's output ownership during the conflict.
+Output conflicts stop the build like any other build error (see
+[Build errors](build-pipeline.md#build-errors)). Deleting or renaming either
+conflicting source fixes the conflict, and the next build writes the output
+from the remaining source.
 
 Examples:
 
@@ -155,35 +146,24 @@ Examples:
 - `content/demo.py` conflicts with `content/demo.py.html` when Python is configured
 - `content/Demo.java.md` conflicts with `content/Demo.java` for the raw download
 - `content/about.md` conflicts with `public/about.html`
-- `content/logo.png` conflicts with `public/logo.png`
+- `public/manifest.json` conflicts with the generated web app manifest when
+  favicons are enabled
 
 ## Failure and Recovery
 
-Watch mode does not exit just because a rebuild fails.
+Watch mode keeps running when a build fails. After a build error:
 
-This applies to:
+- nothing in `dist/` changes, and the server keeps serving the last successful
+  output
+- connected browsers are not reloaded
+- the next change rebuilds the files from the failed attempt together with the
+  new change
 
-- invalid config sources
-- missing required config sources
-- page source errors
-- output-path conflicts
-- failures while publishing output files
+After a write failure, the next change triggers a full rebuild. If the initial
+build fails, watch mode keeps watching and starts the server after the first
+successful build.
 
-After a failed rebuild:
-
-- watch mode keeps running
-- the previous successful `dist/` stays available
-- the failed source changes are retried with the next source change
-- fixing the underlying problem triggers another rebuild
-
-Incremental publication stages new files and journals replaced or deleted files.
-If publication fails, it restores those originals and removes newly created
-files and directories. A publication failure discards the compiler snapshot;
-the next source change retries the accumulated failed changes with a full build.
-No success notification or browser reload is sent for the failed publication,
-including a failure during startup. If the filesystem also prevents rollback,
-the error identifies the retained recovery directory containing any unrestored
-originals.
+An error in the file watcher itself ends watch mode.
 
 ## Browser Reload Behavior
 
@@ -200,19 +180,9 @@ rebuilt `dist/` bytes are unchanged.
 
 ## Internal Lifecycle and State
 
-The scheduler receives deduplicated absolute dirty paths and serializes build
-callbacks. Directory notifications reconcile the affected subtree, and a polling
-file subscription that becomes a directory is registered recursively. The Tada compiler owns its committed snapshot and output publication;
-only a successful publication advances that snapshot. Source classification and
-predicted outputs live in one source inventory, with derived producer and target
-indexes. Rendered records and dependency indexes remain separate from predicted
-outputs. Planning uses these values without loading configuration or reading the
-filesystem itself.
-
-Build failures remain recoverable on a subsequent source change. Watcher errors
-and rejected lifecycle callbacks terminate the session after cleanup. The
-internal close operation is idempotent: it clears pending timers and work, closes
-subscriptions, and waits for active compilation/publication to finish without
-sending a subsequent reload. The CLI wrapper closes its HTTP server when the
-scheduler terminates. This does not change signal handling or background search
-indexing behavior.
+The watcher collects changed paths and runs one build at a time. Each build
+rescans `content/` and `public/` to get the current list of sources, then
+re-renders changed sources and the pages that depend on them through partials,
+traces, authors, or internal link targets. Configuration and file contents are
+read by the build, not by the watcher. Closing watch mode waits for the current
+build to finish and does not send a reload.

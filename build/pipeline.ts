@@ -80,7 +80,12 @@ export async function runPipeline(
     );
 
     const { errors, htmlAssetsByPath, htmlAnalysisByPath } =
-      contentRenderer.processContent({ distDir, assetFiles, scan });
+      contentRenderer.processContent({
+        distDir,
+        assetFiles,
+        isWatchMode: false,
+        scan,
+      });
 
     for (const err of errors) {
       log.error`${err.message}`;

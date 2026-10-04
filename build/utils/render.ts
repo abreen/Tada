@@ -56,7 +56,6 @@ import type {
   RenderLiterateJavaOptions,
   RenderCopiedContentOptions,
   RenderDependencyCollector,
-  TraceToolAvailability,
 } from '../types';
 
 const log = makeLogger(import.meta.url);
@@ -79,10 +78,6 @@ const RESERVED_FRONT_MATTER_KEYS: readonly string[] = [
   'downloadName',
   'filePath',
 ];
-
-function isWatchMode(assetFiles: string[]): boolean {
-  return assetFiles.some(f => f.includes('watch-reload-client'));
-}
 
 function renderInlineField(
   md: MarkdownIt,
@@ -204,7 +199,6 @@ function insertAfterCharsetMeta(html: string, tags: string): string {
 export function injectAssetTags(
   html: string,
   assetFiles: string[],
-  distDir: string,
   siteVariables: SiteVariables,
 ): string {
   const jsAssets = assetFiles.filter(f => f.endsWith('.js'));
@@ -225,11 +219,6 @@ export function injectAssetTags(
     .join('');
 
   const fontPreloadTags = getDefaultFontPreloadFiles(siteVariables)
-    .filter(
-      preload =>
-        preload.source === 'public' ||
-        fs.existsSync(path.join(distDir, preload.filePath)),
-    )
     .map(preload => {
       const urlPath =
         preload.source === 'public'
@@ -253,15 +242,13 @@ export function injectKatexStylesheet(html: string): string {
 export function preparePageTemplateHtml({
   templateHtml,
   assetFiles,
-  distDir,
   siteVariables,
 }: {
   templateHtml: string;
   assetFiles: string[];
-  distDir: string;
   siteVariables: SiteVariables;
 }): string {
-  let html = injectAssetTags(templateHtml, assetFiles, distDir, siteVariables);
+  let html = injectAssetTags(templateHtml, assetFiles, siteVariables);
   if (templateHtml.includes('class="katex"')) {
     html = injectKatexStylesheet(html);
   }
@@ -275,15 +262,14 @@ function toContentAssetPath(contentDir: string, filePath: string): string {
 export function renderPlainTextPageAsset({
   filePath,
   contentDir,
-  distDir,
   siteVariables,
   validInternalTargets,
   assetFiles,
+  isWatchMode,
   literateJavaOutputPaths,
   generatedPageTargets,
   codePageSourceTargets,
   dependencyCollector,
-  cachedTraceSourceDir,
   traceCache,
   traceToolAvailability,
 }: RenderPlainTextOptions): Asset[] {
@@ -292,22 +278,14 @@ export function renderPlainTextPageAsset({
   const sourceUrlPath = normalizeOutputPath(`/${subPath}.html`);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
-  const watchMode = isWatchMode(assetFiles);
   const { content, pageVariables, tocItems } = renderPlainTextContent(
     filePath,
     subPath,
     sourceUrlPath,
     siteVariables,
     validInternalTargets,
-    watchMode,
-    {
-      dependencyCollector,
-      traceCache,
-      contentDir,
-      distDir,
-      cachedTraceSourceDir,
-      traceToolAvailability,
-    },
+    isWatchMode,
+    { dependencyCollector, traceCache, contentDir, traceToolAvailability },
   );
 
   pageVariables.template = 'default';
@@ -323,7 +301,7 @@ export function renderPlainTextPageAsset({
     siteVariables,
     content,
     subPath,
-    isWatchMode: watchMode,
+    isWatchMode,
     bannerHtml: renderSiteBanner(siteVariables),
   });
 
@@ -333,12 +311,7 @@ export function renderPlainTextPageAsset({
   ) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: preparePageTemplateHtml({
-      templateHtml,
-      assetFiles,
-      distDir,
-      siteVariables,
-    }),
+    html: preparePageTemplateHtml({ templateHtml, assetFiles, siteVariables }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,
@@ -360,9 +333,9 @@ export function renderPlainTextPageAsset({
 export function renderCodePageAsset({
   filePath,
   contentDir,
-  distDir,
   siteVariables,
   assetFiles,
+  isWatchMode,
   validInternalTargets,
   literateJavaOutputPaths,
   generatedPageTargets,
@@ -409,19 +382,14 @@ export function renderCodePageAsset({
     siteVariables,
     content,
     subPath,
-    isWatchMode: isWatchMode(assetFiles),
+    isWatchMode,
     bannerHtml: renderSiteBanner(siteVariables),
   });
 
   const templateHtml = render('code.html', templateParameters) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: preparePageTemplateHtml({
-      templateHtml,
-      assetFiles,
-      distDir,
-      siteVariables,
-    }),
+    html: preparePageTemplateHtml({ templateHtml, assetFiles, siteVariables }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,
@@ -566,26 +534,14 @@ function renderPlainTextContent(
     dependencyCollector,
     traceCache,
     contentDir,
-    distDir,
-    cachedTraceSourceDir,
     traceToolAvailability,
-  }: {
-    dependencyCollector?: RenderDependencyCollector;
-    traceCache?: Map<
-      string,
-      {
-        manifestUrl: string;
-        artifactId: string;
-        highlightedSources: { file: string; highlightedSource: string }[];
-        totalSteps: number;
-        sourceMtims: Record<string, number>;
-      }
-    >;
-    contentDir?: string;
-    distDir?: string;
-    cachedTraceSourceDir?: string;
-    traceToolAvailability?: TraceToolAvailability;
-  } = {},
+  }: Pick<
+    RenderPlainTextOptions,
+    | 'dependencyCollector'
+    | 'traceCache'
+    | 'contentDir'
+    | 'traceToolAvailability'
+  >,
 ): {
   content: string | null;
   pageVariables: Record<string, unknown>;
@@ -619,16 +575,14 @@ function renderPlainTextContent(
     isWatchMode,
   });
 
-  if (traceCache && contentDir && distDir) {
+  if (traceCache) {
     const helpers = createTraceHelpers({
       filePath,
       contentDir,
-      distDir,
       applyBasePath,
       cache: traceCache,
       toolAvailability: traceToolAvailability,
       dependencyCollector,
-      cachedTraceSourceDir,
     });
     params.renderTrace = helpers.renderTrace;
   }
@@ -666,9 +620,9 @@ function renderPlainTextContent(
 export function renderLiterateJavaPageAsset({
   filePath,
   contentDir,
-  distDir,
   siteVariables,
   assetFiles,
+  isWatchMode,
   skipExecution,
   validInternalTargets,
   literateJavaOutputPaths,
@@ -683,7 +637,6 @@ export function renderLiterateJavaPageAsset({
   log.info`Rendering literate Java page ${B`${name}`}`;
 
   const sourceUrlPath = `/${subPath}.java.html`;
-  const watchMode = isWatchMode(assetFiles);
   const raw = fs.readFileSync(filePath, 'utf-8');
   const { pageVariables: rawPageVariables, content } =
     parseFrontMatterAndContent(raw, '.md');
@@ -694,7 +647,7 @@ export function renderLiterateJavaPageAsset({
     sourceUrlPath,
     siteVariables,
     validInternalTargets,
-    isWatchMode: watchMode,
+    isWatchMode,
     allowSlides: false,
     dependencyCollector,
   });
@@ -703,7 +656,7 @@ export function renderLiterateJavaPageAsset({
     siteVariables,
     content,
     subPath,
-    isWatchMode: watchMode,
+    isWatchMode,
   });
   const md = createMarkdown(siteVariables, {
     filePath,
@@ -819,19 +772,14 @@ export function renderLiterateJavaPageAsset({
     siteVariables,
     content: contentHtml,
     subPath,
-    isWatchMode: watchMode,
+    isWatchMode,
     bannerHtml: renderSiteBanner(siteVariables),
   });
 
   const templateHtml = render('literate.html', templateParameters) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: preparePageTemplateHtml({
-      templateHtml,
-      assetFiles,
-      distDir,
-      siteVariables,
-    }),
+    html: preparePageTemplateHtml({ templateHtml, assetFiles, siteVariables }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,

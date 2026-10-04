@@ -1,4 +1,4 @@
-import type { SiteVariables } from '../types';
+import type { OutputContent, SiteVariables } from '../types';
 import type { BuildDiagnostic, TadaBuildMeta } from '../build-types';
 import type { CommitPlan } from '../output-publication';
 import type { TadaProjectScan } from '../source-model';
@@ -9,10 +9,7 @@ export interface TadaSnapshot {
   assetFiles: string[];
   authorsData: unknown;
   records: ReadonlyMap<string, TadaSourceRecord>;
-  outputs: ReadonlyMap<
-    string,
-    { sourcePath: string; content: string | Buffer }
-  >;
+  outputs: ReadonlyMap<string, { sourcePath: string; content: OutputContent }>;
   fileDependents: ReadonlyMap<string, ReadonlySet<string>>;
   targetDependents: ReadonlyMap<string, ReadonlySet<string>>;
   authorDependents: ReadonlyMap<string, ReadonlySet<string>>;
@@ -27,7 +24,7 @@ type SnapshotInputs = Pick<
 export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
   const outputs = new Map<
     string,
-    { sourcePath: string; content: string | Buffer }
+    { sourcePath: string; content: OutputContent }
   >();
   const fileDependents = new Map<string, Set<string>>();
   const targetDependents = new Map<string, Set<string>>();

@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
 import { renderCodeSegment } from './code';
@@ -7,6 +6,7 @@ import { normalizeOutputPath } from './paths';
 import { computeLayout } from './trace-layout';
 import { filterStep, generateStepSvg } from './trace-svg';
 import type {
+  TraceArtifactFile,
   TraceChunkEntry,
   TraceHeapObject,
   TraceManifest,
@@ -24,14 +24,15 @@ export interface ChunkTraceOutputOptions {
 export interface ChunkTraceOutputResult {
   manifest: TraceManifest;
   artifactId: string;
-  outputPaths: string[];
+  /** `manifest.json` followed by the chunk files */
+  files: TraceArtifactFile[];
 }
 
 function stepOutputEvents(step: TraceStep): TraceOutputEvent[] {
   return step.output ?? [];
 }
 
-function hashTraceFiles(files: { name: string; content: string }[]): string {
+function hashTraceFiles(files: TraceArtifactFile[]): string {
   const hasher = createHash('sha256');
   for (const file of files) {
     hasher.update(file.name, 'utf8');
@@ -46,7 +47,8 @@ function safeSvgIdPart(value: string): string {
   return value.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-function buildTraceOutputPath(
+/** Output path of a trace artifact file, relative to the output directory */
+export function buildTraceOutputPath(
   relDir: string,
   traceName: string,
   artifactId: string,
@@ -147,8 +149,6 @@ export function bridgeConstructorReturnValues(steps: TraceStep[]): TraceStep[] {
 
 export function chunkTraceOutput(
   output: string,
-  traceOutputDir: string,
-  relDir: string,
   traceName: string,
   primaryFile: string,
   sources: { file: string; source: string }[],
@@ -189,7 +189,7 @@ export function chunkTraceOutput(
 
   let chunkEntries: TraceChunkEntry[] = [];
   let chunkIndex = 0;
-  const chunkFiles: { name: string; content: string }[] = [];
+  const chunkFiles: TraceArtifactFile[] = [];
 
   for (const [stepIndex, step] of allSteps.entries()) {
     const svg = generateStepSvg(
@@ -237,21 +237,7 @@ export function chunkTraceOutput(
     content: JSON.stringify(manifest),
   };
   const files = [manifestFile, ...chunkFiles];
-  const artifactId = hashTraceFiles(files);
-  const artifactDir = path.join(traceOutputDir, artifactId);
-
-  fs.mkdirSync(artifactDir, { recursive: true });
-  for (const file of files) {
-    fs.writeFileSync(path.join(artifactDir, file.name), file.content);
-  }
-
-  return {
-    manifest,
-    artifactId,
-    outputPaths: files.map(file =>
-      buildTraceOutputPath(relDir, traceName, artifactId, file.name),
-    ),
-  };
+  return { manifest, artifactId: hashTraceFiles(files), files };
 }
 
 export function highlightTraceSource(
@@ -261,67 +247,6 @@ export function highlightTraceSource(
   return renderCodeSegment(splitLines(source), 1, language, {
     linkLineNumbers: false,
   });
-}
-
-export function getTraceOutputPaths(
-  relDir: string,
-  traceName: string,
-  artifactId: string,
-  totalSteps: number,
-): string[] {
-  const outputPaths = [
-    buildTraceOutputPath(relDir, traceName, artifactId, 'manifest.json'),
-  ];
-  for (
-    let chunkIndex = 0;
-    chunkIndex * DEFAULT_CHUNK_SIZE < totalSteps;
-    chunkIndex++
-  ) {
-    outputPaths.push(
-      buildTraceOutputPath(
-        relDir,
-        traceName,
-        artifactId,
-        `chunk-${chunkIndex}.json`,
-      ),
-    );
-  }
-  return outputPaths;
-}
-
-function linkOrCopyFile(sourcePath: string, targetPath: string): void {
-  try {
-    fs.linkSync(sourcePath, targetPath);
-  } catch {
-    fs.copyFileSync(sourcePath, targetPath);
-  }
-}
-
-export function materializeTraceOutputs({
-  outputPaths,
-  targetDistDir,
-  sourceDistDir,
-}: {
-  outputPaths: string[];
-  targetDistDir: string;
-  sourceDistDir: string;
-}): boolean {
-  for (const relPath of outputPaths) {
-    const targetPath = path.join(targetDistDir, relPath);
-    if (fs.existsSync(targetPath)) {
-      continue;
-    }
-
-    const sourcePath = path.join(sourceDistDir, relPath);
-    if (!fs.existsSync(sourcePath)) {
-      return false;
-    }
-
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    linkOrCopyFile(sourcePath, targetPath);
-  }
-
-  return true;
 }
 
 export function buildManifestUrl({

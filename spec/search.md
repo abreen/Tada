@@ -16,7 +16,9 @@ Linked files copied from `public/` are not added to the search index. Text is
 extracted from each indexed PDF page individually using `mutool`, producing
 per-page search records. If `mutool` is not installed, PDFs are not indexed (a
 warning is logged). If a PDF yields no extractable text, a fallback record
-with just the filename is created.
+with just the filename is created. Extracted text is cached by file size and
+modification time, so rebuilding the index in watch mode runs `mutool` only for
+new or changed PDFs.
 
 The search index is written to a `pagefind/` subdirectory of the output. It is
 excluded from production build manifests

@@ -1,13 +1,16 @@
 # Production Builds
 
-Production builds are versioned. Each build writes to `dist-prod/v{N}/` where N
-is automatically incremented. A build manifest (`tada.manifest.json`) is written
-inside each version directory, recording the schema version, build number, build
-time, and a SHA-256 hash of every output file (excluding the search index
-directory and the manifest itself).
+Production builds are versioned. Each build writes to `dist-prod/v{N}/`, where
+N is one more than the highest existing version. A build manifest
+(`tada.manifest.json`) records the schema version, build number, build time,
+and a SHA-256 hash of every output file (excluding the search index directory
+and the manifest itself).
 
-Version numbers are assigned only to successful builds. If a production build
-fails, it does not publish a new version directory.
+The manifest is written last. A `v{N}` directory counts as a build only if it
+contains `tada.manifest.json`; version numbering, `tada diff`, and
+`tada clean --prod` ignore directories without one. If a production build
+fails, Tada removes its `v{N}` directory. If that removal fails, the leftover
+directory has no manifest, so it is ignored, and the next build replaces it.
 
 Production builds differ from development builds in several ways:
 

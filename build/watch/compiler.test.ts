@@ -8,8 +8,8 @@ function makeTraceCache(paths: string[]): TraceCache {
     paths.map(filePath => [
       filePath,
       {
-        manifestUrl: '/trace/manifest.json',
         artifactId: 'sha256-test',
+        files: [],
         highlightedSources: [
           {
             file: path.basename(filePath),
@@ -73,8 +73,8 @@ describe('invalidateTraceCacheForBatch', () => {
       [
         JSON.stringify([primaryPath, companionPath]),
         {
-          manifestUrl: '/trace/manifest.json',
           artifactId: 'sha256-test',
+          files: [],
           highlightedSources: [
             { file: 'Demo.java', highlightedSource: '<pre>demo</pre>' },
             { file: 'Bag.java', highlightedSource: '<pre>bag</pre>' },
@@ -86,8 +86,8 @@ describe('invalidateTraceCacheForBatch', () => {
       [
         JSON.stringify([otherPath]),
         {
-          manifestUrl: '/trace/other/manifest.json',
           artifactId: 'sha256-other',
+          files: [],
           highlightedSources: [
             { file: 'Other.java', highlightedSource: '<pre>other</pre>' },
           ],
