@@ -43,31 +43,33 @@ $movement-easing: cubic-bezier(0.2, 0, 0, 1);
   }
 }
 
-// Page heading and info: crossfade in place instead of sliding with the page
+// Page heading parts: crossfade in place instead of sliding with the page
 // view-transition-name is set via inline style by the navigator
-// only when .title-and-info is visible in the viewport
-
+// only when .title-and-info is visible in the viewport. All parts share one
+// duration and easing so they move in step when the layout changes; the
+// crossfades inherit the group timing.
+::view-transition-group(page-breadcrumbs),
+::view-transition-old(page-breadcrumbs),
+::view-transition-new(page-breadcrumbs),
+::view-transition-group(page-title),
 ::view-transition-old(page-title),
 ::view-transition-new(page-title),
+::view-transition-group(page-info),
 ::view-transition-old(page-info),
 ::view-transition-new(page-info) {
   animation-duration: $duration;
+}
+
+::view-transition-group(page-breadcrumbs),
+::view-transition-group(page-title),
+::view-transition-group(page-info) {
+  animation-timing-function: $movement-easing;
 }
 
 // Breadcrumbs: the whole trail is one group, so every item moves together when
 // the layout changes. The default plus-lighter crossfade keeps unchanged items
 // opaque while added or removed items fade. Snapshots keep their natural size
 // so a change in trail width does not stretch the text.
-::view-transition-group(page-breadcrumbs),
-::view-transition-old(page-breadcrumbs),
-::view-transition-new(page-breadcrumbs) {
-  animation-duration: $duration;
-}
-
-::view-transition-group(page-breadcrumbs) {
-  animation-timing-function: $movement-easing;
-}
-
 ::view-transition-old(page-breadcrumbs),
 ::view-transition-new(page-breadcrumbs) {
   inline-size: auto;

@@ -100,11 +100,13 @@ type BreadcrumbSnapshot = {
   itemNames: string[];
   left: number;
 };
+type GroupMotion = { duration: number | string; easing: string[] };
 type BreadcrumbTransition = {
   old: BreadcrumbSnapshot;
   next: BreadcrumbSnapshot;
   ready: boolean;
   pseudos: string[];
+  groupMotion: Record<string, GroupMotion>;
 };
 type BreadcrumbTestWindow = Window & {
   breadcrumbTransitions: BreadcrumbTransition[];
@@ -131,6 +133,7 @@ async function trackBreadcrumbTransitions(page: Page) {
         next: snapshot(),
         ready: false,
         pseudos: [],
+        groupMotion: {},
       };
       state.breadcrumbTransitions.push(record);
       const transition = original(async () => {
@@ -142,13 +145,29 @@ async function trackBreadcrumbTransitions(page: Page) {
       transition.ready
         .then(() => {
           record.ready = true;
-          record.pseudos = document.getAnimations().flatMap(animation => {
+          const animations = document.getAnimations();
+          record.pseudos = animations.flatMap(animation => {
             const effect = animation.effect;
             return effect instanceof KeyframeEffect &&
               effect.pseudoElement?.includes('breadcrumb')
               ? [effect.pseudoElement]
               : [];
           });
+          for (const animation of animations) {
+            const effect = animation.effect;
+            const name =
+              effect instanceof KeyframeEffect &&
+              effect.pseudoElement?.match(
+                /^::view-transition-group\((.+)\)$/,
+              )?.[1];
+            if (effect instanceof KeyframeEffect && name) {
+              // CSS animations apply animation-timing-function per keyframe
+              record.groupMotion[name] = {
+                duration: effect.getComputedTiming().duration!,
+                easing: effect.getKeyframes().map(keyframe => keyframe.easing!),
+              };
+            }
+          }
         })
         .catch(() => {});
       return transition;
@@ -207,6 +226,22 @@ test('the whole trail moves as one group when the page layout changes', async ({
   const ascending = await lastBreadcrumbTransition(page);
   expectSingleBreadcrumbGroup(ascending);
   await expectNoBreadcrumbTransitionNames(page);
+});
+
+test('the trail and page heading move with the same timing', async ({
+  page,
+}) => {
+  await page.goto('/breadcrumb-tests/nested/index.html');
+  await trackBreadcrumbTransitions(page);
+  await page.getByRole('link', { name: 'First detail', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'First detail',
+  );
+  const { groupMotion } = await lastBreadcrumbTransition(page);
+  // The trail and heading shift together between layouts; mismatched timing
+  // makes them visibly drift apart mid-transition.
+  expect(groupMotion['page-title']).toEqual(groupMotion['page-breadcrumbs']);
+  expect(groupMotion['page-info']).toEqual(groupMotion['page-breadcrumbs']);
 });
 
 for (const mode of ['reduced motion', 'no view transition API'] as const) {

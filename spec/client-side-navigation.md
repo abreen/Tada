@@ -36,6 +36,13 @@ same duration: outgoing content fades with `ease-in`, and incoming content
 fades with `ease-out`. Forward navigation slides left; back navigation slides
 right.
 
+When the page heading is visible, the breadcrumb trail, `h1`, and page info
+get their own named transition layers (`page-breadcrumbs`, `page-title`, and
+`page-info`) instead of sliding with the page. They crossfade in place and
+move to their new layout positions over the same 150ms with the same
+`cubic-bezier(0.2, 0, 0, 1)` curve, so they stay in step when the layout
+changes.
+
 The footer and appearance-picker group uses its own named `page-bottom`
 transition layer. It does not slide, crossfade, or interpolate its bounds;
 only the incoming snapshot is shown at its destination layout position.
