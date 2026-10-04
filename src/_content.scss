@@ -56,14 +56,16 @@ a.external:not(:has(.external-link-tail))::after {
   padding-top: 32px;
   margin-top: calc(var(--thematic-break-margin) / 2);
   font-size: 0.9em;
-  border-top: 3px solid var(--bg2-color);
 }
 
 .footnotes .title {
   @include user-select(none);
 
-  font-size: larger;
-  font-weight: 700;
+  padding: var(--gap) 0;
+  font-style: italic;
+  color: var(--fg2-color);
+  text-align: center;
+  border-bottom: 1px solid var(--fg2-color);
 }
 
 .footnotes p {

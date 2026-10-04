@@ -144,7 +144,7 @@ superscript numbers, and definitions use the browser's standard ordered-list
 markers so the treatment works with every body font.
 
 The footnote section at the bottom of the page is a `<div class="footnotes">`
-containing a `<p class="title">Footnotes</p>` heading and an `<ol>` list.
+containing a `<p class="title">Footnotes</p>` title (italic, muted, and centered so it does not read as a heading) and an `<ol>` list.
 Each definition retains its backlink and target highlight.
 
 
