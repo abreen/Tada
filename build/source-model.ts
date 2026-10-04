@@ -208,19 +208,34 @@ export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
     .sort();
 }
 
+// Front matter `skip` results, reused while a file's size and modification
+// time are unchanged, so watch rescans read only edited pages.
+const skipCache = new Map<
+  string,
+  { size: number; mtimeMs: number; skip: boolean }
+>();
+
 export function shouldSkipContentFile(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
   if (!(extensionIsMarkdown(ext) || ext === '.html')) {
     return false;
   }
 
+  const { size, mtimeMs } = fs.statSync(filePath);
+  const cached = skipCache.get(filePath);
+  if (cached && cached.size === size && cached.mtimeMs === mtimeMs) {
+    return cached.skip;
+  }
+
   const raw = fs.readFileSync(filePath, 'utf-8');
+  let skip = false;
   try {
-    return parseFrontMatterAndContent(raw, ext).pageVariables?.skip === true;
+    skip = parseFrontMatterAndContent(raw, ext).pageVariables?.skip === true;
   } catch {
     // Not skipped: rendering the page reports the error for this file.
-    return false;
   }
+  skipCache.set(filePath, { size, mtimeMs, skip });
+  return skip;
 }
 
 export function getProcessedExts(codeExtensions: string[]): Set<string> {

@@ -21,24 +21,26 @@ export async function generateSiteAssets(
     isWatchMode,
   }: { mode: 'development' | 'production'; isWatchMode: boolean },
 ): Promise<SiteAssets> {
-  const bundles = await bundle(siteVariables, { mode });
-  if (isWatchMode) {
-    for (const [outputPath, content] of await bundleReloadClient()) {
-      bundles.set(outputPath, content);
-    }
-  }
+  const generateFaviconFiles =
+    isFeatureEnabled(siteVariables, 'favicon') && !siteVariables.favicon;
+  const [bundles, reloadClient, favicons] = await Promise.all([
+    bundle(siteVariables, { mode }),
+    isWatchMode ? bundleReloadClient() : new Map<string, string>(),
+    generateFaviconFiles
+      ? generateFavicons(siteVariables)
+      : new Map<string, string | Uint8Array>(),
+  ]);
+  const bundleFiles = new Map([...bundles, ...reloadClient]);
 
   const outputs = new Map<string, OutputContent>([
-    ...bundles,
+    ...bundleFiles,
     ...getFontOutputs(),
     ...getKatexOutputs(),
+    ...favicons,
   ]);
-  if (isFeatureEnabled(siteVariables, 'favicon') && !siteVariables.favicon) {
-    for (const [outputPath, content] of await generateFavicons(siteVariables)) {
-      outputs.set(outputPath, content);
-    }
+  if (generateFaviconFiles) {
     outputs.set('manifest.json', createWebAppManifest(siteVariables));
   }
 
-  return { assetFiles: [...bundles.keys()], outputs };
+  return { assetFiles: [...bundleFiles.keys()], outputs };
 }

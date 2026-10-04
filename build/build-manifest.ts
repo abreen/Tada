@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { globals, type Globals } from './globals';
-import { toPosix } from './utils/paths';
+import { SEARCH_INDEX_DIR, toPosix } from './utils/paths';
 
-const EXCLUDED_DIRS = new Set(['pagefind']);
+const EXCLUDED_DIRS = new Set([SEARCH_INDEX_DIR]);
 export const MANIFEST_FILE_NAME = 'tada.manifest.json';
 const EXCLUDED_FILES = new Set([MANIFEST_FILE_NAME]);
 

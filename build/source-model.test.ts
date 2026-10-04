@@ -98,7 +98,17 @@ const fsMock = {
       return { isDirectory: () => true, isFile: () => false };
     }
     if (files.has(resolved)) {
-      return { isDirectory: () => false, isFile: () => true };
+      const content = String(files.get(resolved));
+      return {
+        isDirectory: () => false,
+        isFile: () => true,
+        size: content.length,
+        // Changes whenever the content changes, like a real modification time
+        mtimeMs: [...content].reduce(
+          (hash, char) => (hash * 31 + char.charCodeAt(0)) | 0,
+          0,
+        ),
+      };
     }
     throw new Error(`ENOENT: no such file or directory, stat '${resolved}'`);
   },

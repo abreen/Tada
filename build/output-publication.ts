@@ -14,9 +14,12 @@ export interface OutputFile {
   content: OutputContent;
 }
 
-// Windows reports these while another process (an indexer, antivirus, or the
-// dev server) briefly holds a file open.
-const BUSY_ERROR_CODES = new Set(['EBUSY', 'EPERM', 'EACCES']);
+// EBUSY means a file is briefly held open. On Windows, EPERM and EACCES also
+// mean that (an indexer, antivirus, or the dev server holding the file); on
+// other platforms they are permanent permission errors and are not retried.
+const BUSY_ERROR_CODES = new Set(
+  process.platform === 'win32' ? ['EBUSY', 'EPERM', 'EACCES'] : ['EBUSY'],
+);
 const BUSY_RETRY_COUNT = 4;
 const BUSY_RETRY_DELAY_MS = 50;
 
@@ -104,20 +107,25 @@ export function planFullWrite(
   outputs: ReadonlyMap<string, OutputFile>,
   keep: readonly string[] = [],
 ): FileMutation[] {
-  const entries = fs.existsSync(rootDir)
-    ? fs.readdirSync(rootDir, { withFileTypes: true, recursive: true })
-    : [];
   const files: string[] = [];
   const dirs: string[] = [];
-  for (const entry of entries) {
-    const relPath = toPosix(
-      path.relative(rootDir, path.join(entry.parentPath, entry.name)),
-    );
-    if (entry.isDirectory()) {
-      dirs.push(relPath);
-    } else {
-      files.push(relPath);
+  // Walk one level at a time: a recursive listing would follow symbolic links
+  // to directories. A link is listed as a file, so deleting it removes only
+  // the link, never what it points to.
+  const walk = (dir: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      const relPath = toPosix(path.relative(rootDir, fullPath));
+      if (entry.isDirectory()) {
+        dirs.push(relPath);
+        walk(fullPath);
+      } else {
+        files.push(relPath);
+      }
     }
+  };
+  if (fs.existsSync(rootDir)) {
+    walk(rootDir);
   }
   const isKept = (relPath: string) =>
     keep.some(prefix => `${relPath}/`.startsWith(prefix));
@@ -156,21 +164,46 @@ function pruneEmptyDirs(rootDir: string, filePath: string): void {
   }
 }
 
+/** Throws if a path would be reached through a symbolic link below `rootDir`. */
+function createSymlinkGuard(rootDir: string): (target: string) => void {
+  const root = path.resolve(rootDir);
+  const safeDirs = new Set<string>([root]);
+  return target => {
+    const visited: string[] = [];
+    for (
+      let dir = path.dirname(target);
+      !safeDirs.has(dir) && dir.startsWith(root + path.sep);
+      dir = path.dirname(dir)
+    ) {
+      if (fs.lstatSync(dir, { throwIfNoEntry: false })?.isSymbolicLink()) {
+        throw new Error(`Refusing to write through the symbolic link ${dir}`);
+      }
+      visited.push(dir);
+    }
+    for (const dir of visited) {
+      safeDirs.add(dir);
+    }
+  };
+}
+
 /**
  * Applies mutations to the files in `rootDir` in place. Deletes run first,
  * deepest paths first, and remove directories they leave empty, so an output
  * can change between a file and a directory. Nothing is renamed, staged, or
  * rolled back: if a write fails, the error is thrown and earlier writes stay.
+ * Nothing is written or deleted through a symbolic link.
  */
 export function applyMutations(
   rootDir: string,
   mutations: readonly FileMutation[],
 ): void {
+  const assertNotThroughSymlink = createSymlinkGuard(rootDir);
   const deletes = mutations
     .filter(mutation => mutation.kind === 'delete')
     .sort((a, b) => b.path.length - a.path.length);
   for (const mutation of deletes) {
     const target = path.resolve(rootDir, mutation.path);
+    assertNotThroughSymlink(target);
     retryWhileBusy(() => {
       if (fs.lstatSync(target, { throwIfNoEntry: false })?.isDirectory()) {
         fs.rmdirSync(target);
@@ -183,6 +216,7 @@ export function applyMutations(
   for (const mutation of mutations) {
     if (mutation.kind === 'write') {
       const target = path.resolve(rootDir, mutation.path);
+      assertNotThroughSymlink(target);
       retryWhileBusy(() => writeOutputFile(target, mutation.content));
     }
   }

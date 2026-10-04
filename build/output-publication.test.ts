@@ -6,6 +6,7 @@ import type { OutputFile } from './output-publication';
 
 // In-memory filesystem: directories are null, files hold their text.
 const entries = new Map<string, string | null>();
+const symlinks = new Set<string>();
 const busyFailures = new Map<string, number>();
 const root = path.resolve('publication-fixture');
 const dist = path.join(root, 'dist');
@@ -75,7 +76,11 @@ mock.module('fs', () =>
     existsSync: (file: string) => entries.has(file),
     lstatSync: (file: string) =>
       entries.has(file)
-        ? { isDirectory: () => entries.get(file) === null }
+        ? {
+            isDirectory: () =>
+              entries.get(file) === null && !symlinks.has(file),
+            isSymbolicLink: () => symlinks.has(file),
+          }
         : undefined,
     mkdirSync(dir: string) {
       mkdir(dir);
@@ -108,12 +113,10 @@ mock.module('fs', () =>
     },
     readdirSync(dir: string) {
       return [...entries]
-        .filter(([file]) => file.startsWith(dir + path.sep))
+        .filter(([file]) => path.dirname(file) === dir && file !== dir)
         .map(([file, content]) => ({
           name: path.basename(file),
-          parentPath: path.dirname(file),
-          isFile: () => content !== null,
-          isDirectory: () => content === null,
+          isDirectory: () => content === null && !symlinks.has(file),
         }));
     },
   }),
@@ -139,6 +142,7 @@ function outputs(
 
 beforeEach(() => {
   entries.clear();
+  symlinks.clear();
   busyFailures.clear();
   mkdir(dist);
 });
@@ -204,6 +208,22 @@ describe('applyMutations', () => {
   });
 });
 
+describe('applyMutations through symbolic links', () => {
+  test('refuses to write or delete through a symbolically linked directory', () => {
+    mkdir(path.join(dist, 'media'));
+    symlinks.add(path.join(dist, 'media'));
+
+    expect(() =>
+      applyMutations(dist, [
+        { kind: 'write', path: 'media/photo.png', content: 'x' },
+      ]),
+    ).toThrow('symbolic link');
+    expect(() =>
+      applyMutations(dist, [{ kind: 'delete', path: 'media/photo.png' }]),
+    ).toThrow('symbolic link');
+  });
+});
+
 describe('writeOutputFile', () => {
   test('copies referenced files and writes text', () => {
     put(path.join(root, 'public', 'logo.svg'), '<svg/>');
@@ -247,6 +267,18 @@ describe('planFullWrite', () => {
       'pagefind/index.js': 'search',
     });
     expect(dirs()).toEqual(['', 'pagefind', 'pagefind/fragments']);
+  });
+
+  test('lists a symbolic link as a file and never looks inside it', () => {
+    put(path.join(dist, 'index.html'), 'old');
+    mkdir(path.join(dist, 'media'));
+    symlinks.add(path.join(dist, 'media'));
+    put(path.join(dist, 'media', 'precious.txt'), 'outside');
+
+    expect(planFullWrite(dist, outputs({ 'index.html': 'new' }))).toEqual([
+      { kind: 'delete', path: 'media' },
+      { kind: 'write', path: 'index.html', content: 'new' },
+    ]);
   });
 
   test('writes everything into a directory that does not exist yet', () => {

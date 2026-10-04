@@ -111,7 +111,6 @@ describe('createContentRecord', () => {
       partialDeps: new Set(),
       traceDeps: new Set(),
       internalTargets: new Set(),
-      generatedOutputs: new Map(),
     });
   });
 
@@ -138,7 +137,6 @@ describe('createContentRecord', () => {
     expect(record.partialDeps).toEqual(new Set());
     expect(record.traceDeps).toEqual(new Set());
     expect(record.internalTargets).toEqual(new Set());
-    expect(record.generatedOutputs).toEqual(new Map());
     expect(record.authorKey).toBeUndefined();
   });
 });
@@ -159,7 +157,6 @@ describe('createPublicRecord', () => {
       partialDeps: new Set(),
       traceDeps: new Set(),
       internalTargets: new Set(),
-      generatedOutputs: new Map(),
     });
   });
 });

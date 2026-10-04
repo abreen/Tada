@@ -26,7 +26,6 @@ export interface TadaSourceRecord {
   partialDeps: Set<string>;
   traceDeps: Set<string>;
   internalTargets: Set<string>;
-  generatedOutputs: Map<string, string>;
   authorKey?: string;
 }
 
@@ -35,13 +34,13 @@ function createDependencyCollector(): {
   partials: Set<string>;
   traceFiles: Set<string>;
   internalTargets: Set<string>;
-  generatedOutputs: Map<string, string>;
+  traceOutputs: Map<string, string>;
   authorKey: string | undefined;
 } {
   const partials = new Set<string>();
   const traceFiles = new Set<string>();
   const internalTargets = new Set<string>();
-  const generatedOutputs = new Map<string, string>();
+  const traceOutputs = new Map<string, string>();
   let authorKey: string | undefined;
 
   return {
@@ -49,7 +48,7 @@ function createDependencyCollector(): {
       partials,
       traceFiles,
       internalTargets,
-      generatedOutputs,
+      traceOutputs,
       setAuthorKey(value: string) {
         authorKey = value;
       },
@@ -57,7 +56,7 @@ function createDependencyCollector(): {
     partials,
     traceFiles,
     internalTargets,
-    generatedOutputs,
+    traceOutputs,
     get authorKey() {
       return authorKey;
     },
@@ -73,7 +72,6 @@ function createEmptyContentRecord(filePath: string): TadaSourceRecord {
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
-    generatedOutputs: new Map(),
   };
 }
 
@@ -180,12 +178,11 @@ export function createContentRecord({
   return {
     sourcePath: filePath,
     kind: 'content',
-    outputs: collectSourceOutputs(assets, deps.generatedOutputs),
+    outputs: collectSourceOutputs(assets, deps.traceOutputs),
     htmlAnalysisByOutputPath: collectSourceHtmlAnalysis(assets),
     partialDeps: deps.partials,
     traceDeps: deps.traceFiles,
     internalTargets: deps.internalTargets,
-    generatedOutputs: deps.generatedOutputs,
     authorKey: deps.authorKey,
   };
 }
@@ -203,19 +200,18 @@ export function createPublicRecord(
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
-    generatedOutputs: new Map(),
   };
 }
 
 export function collectSourceOutputs(
   assets: Asset[],
-  generatedOutputs: ReadonlyMap<string, string>,
+  traceOutputs: ReadonlyMap<string, string>,
 ): Map<string, OutputContent> {
   const outputs = new Map<string, OutputContent>();
   for (const asset of assets) {
     outputs.set(asset.assetPath, asset.content);
   }
-  for (const [outputPath, content] of generatedOutputs) {
+  for (const [outputPath, content] of traceOutputs) {
     outputs.set(outputPath, content);
   }
   return outputs;

@@ -1,7 +1,10 @@
 """Build errors and in-place output writing (spec/build-pipeline.md)."""
 
 import json
+import os
+import shutil
 
+import pytest
 from conftest import init_site, run_tada, set_site_config
 
 
@@ -135,3 +138,41 @@ def test_malformed_front_matter_is_reported_for_every_page(tmp_path):
     for name in ('one.md', 'two.md'):
         assert result.stdout.count(f'content/{name}: ') == 1
     assert 'tada dev failed: 2 errors' in result.stderr
+
+
+def test_full_build_never_deletes_through_a_symlinked_directory(tmp_path):
+    site = init_site(tmp_path)
+    assert run_tada('dev', cwd=str(site)).returncode == 0
+    outside = tmp_path / 'outside'
+    (outside / 'sub').mkdir(parents=True)
+    precious = outside / 'sub' / 'precious.txt'
+    precious.write_text('keep me')
+    link = site / 'dist' / 'media'
+    try:
+        os.symlink(outside, link, target_is_directory=True)
+    except OSError:
+        pytest.skip('symlinks are not permitted here')
+
+    result = run_tada('dev', cwd=str(site))
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert precious.read_text() == 'keep me'
+    assert not link.exists() and not link.is_symlink()
+
+
+def test_rebuilt_search_index_has_no_stale_files(tmp_path):
+    site = init_site(tmp_path)
+    index_md = site / 'content' / 'index.md'
+    search_dir = site / 'dist' / 'pagefind'
+
+    def search_files():
+        return sorted(p.relative_to(search_dir) for p in search_dir.rglob('*') if p.is_file())
+
+    assert run_tada('dev', cwd=str(site)).returncode == 0
+    index_md.write_text(index_md.read_text() + '\n\nA new paragraph about zebras.\n')
+    assert run_tada('dev', cwd=str(site)).returncode == 0
+    rebuilt = search_files()
+
+    shutil.rmtree(site / 'dist')
+    assert run_tada('dev', cwd=str(site)).returncode == 0
+    assert rebuilt == search_files()

@@ -1,14 +1,26 @@
+import fs from 'fs';
 import path from 'path';
 import { makeLogger } from './log';
 import { collectReachableSiteAssets } from './reachability';
-import { normalizeOutputPath } from './utils/paths';
+import { normalizeOutputPath, SEARCH_INDEX_DIR } from './utils/paths';
+import { isFeatureEnabled } from './features';
+import type { SiteVariables } from './types';
 import type { TadaProjectScan } from './source-model';
 import { assertMutoolAvailable, extractPdfPages } from './pdf-text';
 import type { HtmlOutputAnalysis } from './types';
 
 const log = makeLogger(import.meta.url);
 const PAGEFIND_VERBOSE = process.env.TADA_LOG_LEVEL === 'debug';
-const PAGEFIND_OUTPUT_SUBDIR = 'pagefind';
+
+/**
+ * Output path prefixes a full write leaves alone: the search index, which is
+ * written after the build.
+ */
+export function getKeptOutputPrefixes(siteVariables: SiteVariables): string[] {
+  return isFeatureEnabled(siteVariables, 'search')
+    ? [`${SEARCH_INDEX_DIR}/`]
+    : [];
+}
 
 type PagefindModule = typeof import('pagefind');
 type PagefindIndex = Awaited<
@@ -122,6 +134,16 @@ interface BuildIndexOptions {
   loadPagefind?: () => Promise<PagefindModule>;
   checkMutool?: () => Promise<void>;
   extractPages?: typeof extractPdfPages;
+  clearOutputDir?: (dir: string) => void;
+}
+
+function removeSearchIndex(dir: string): void {
+  fs.rmSync(dir, {
+    recursive: true,
+    force: true,
+    maxRetries: 4,
+    retryDelay: 50,
+  });
 }
 
 async function buildIndex({
@@ -133,6 +155,7 @@ async function buildIndex({
   loadPagefind = getPagefind,
   checkMutool = assertMutoolAvailable,
   extractPages = extractPdfPages,
+  clearOutputDir = removeSearchIndex,
 }: BuildIndexOptions): Promise<void> {
   const pagefind = await loadPagefind();
   const { index, errors: createErrors } = await pagefind.createIndex({
@@ -202,9 +225,10 @@ async function buildIndex({
       }
     }
 
-    const { errors: writeErrors } = await index.writeFiles({
-      outputPath: path.join(distPath, PAGEFIND_OUTPUT_SUBDIR),
-    });
+    // Start from an empty directory so files from earlier indexes don't pile up.
+    const outputPath = path.join(distPath, SEARCH_INDEX_DIR);
+    clearOutputDir(outputPath);
+    const { errors: writeErrors } = await index.writeFiles({ outputPath });
     const writeError = formatPagefindErrors('index.writeFiles()', writeErrors);
     if (writeError) {
       throw new Error(writeError);

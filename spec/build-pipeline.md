@@ -50,11 +50,14 @@ site.dev.yaml: defaultTimeZone "Mars/Olympus" is not supported
 A build renders everything in memory before writing anything. Copied files are
 referenced by path rather than loaded. A build with errors writes nothing.
 
-When a build succeeds, Tada updates the output directory in place: it writes
-new and changed files, deletes files that no longer have a source, and removes
-directories left empty. The output directory itself is never renamed or
-replaced. A full build compares against what is already on disk, so it also
-removes files left over from earlier builds.
+When a build succeeds, Tada updates the output directory in place. A full
+build writes every output, deletes every other file and empty directory
+already on disk (except the search index while search is enabled), and so also
+removes anything left over from earlier builds. An incremental watch build
+writes only new and changed files and deletes outputs that no longer have a
+source. Directories left empty are removed. The output directory itself is
+never renamed or replaced, and nothing is written or deleted through a
+symbolic link inside it.
 
 Writing is not atomic. While files are being written, a request may see a mix
 of old and new files. If writing fails (for example a locked file on Windows,

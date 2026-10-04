@@ -73,10 +73,11 @@ export function createTadaWatchPlan({
       changedSources.add(source);
     }
   }
+  // A directory event may arrive without events for the files inside it.
+  const changedDirPrefixes = [...paths].map(changed => changed + path.sep);
   for (const [source, entry] of scan.sources) {
-    // A directory event may arrive without events for the files inside it.
-    const inChangedDirectory = [...paths].some(changed =>
-      source.startsWith(changed + path.sep),
+    const inChangedDirectory = changedDirPrefixes.some(prefix =>
+      source.startsWith(prefix),
     );
     if (
       inChangedDirectory ||

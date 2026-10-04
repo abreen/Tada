@@ -1,7 +1,8 @@
 import path from 'path';
 import { describe, expect, test } from 'bun:test';
 import type { TraceCache } from '../build-types';
-import { invalidateTraceCacheForBatch } from './compiler';
+import { invalidateTraceCacheForBatch, pruneTraceCache } from './compiler';
+import type { TadaSourceRecord } from '../source-records';
 
 function makeTraceCache(paths: string[]): TraceCache {
   return new Map(
@@ -22,6 +23,22 @@ function makeTraceCache(paths: string[]): TraceCache {
     ]),
   );
 }
+
+describe('pruneTraceCache', () => {
+  test('drops cached traces that no page uses any more', () => {
+    const used = path.resolve('/site/content/labs/Used.java');
+    const unused = path.resolve('/site/content/labs/Unused.java');
+    const cache = makeTraceCache([used, unused]);
+    const page = {
+      sourcePath: path.resolve('/site/content/labs/index.md'),
+      traceDeps: new Set([used]),
+    } as TadaSourceRecord;
+
+    pruneTraceCache(cache, new Map([[page.sourcePath, page]]));
+
+    expect([...cache.keys()]).toEqual([used]);
+  });
+});
 
 describe('invalidateTraceCacheForBatch', () => {
   test('invalidates cache entries for changed trace source paths', () => {

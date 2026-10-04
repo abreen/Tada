@@ -28,7 +28,6 @@ function record(
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
-    generatedOutputs: new Map(),
     ...deps,
   };
 }

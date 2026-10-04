@@ -4,7 +4,8 @@ import { makeLogger } from './log';
 import { config, getConfigFileName } from './templates';
 import { validateConfigLinks } from './validate-config-links';
 import { validateCustomFontOverrides } from './custom-fonts';
-import { getProjectDir, toPosix } from './utils/paths';
+import { getProjectDir, SEARCH_INDEX_DIR, toPosix } from './utils/paths';
+import { isFeatureEnabled } from './features';
 import type { OutputContent, SiteVariables } from './types';
 import type { BuildDiagnostic } from './build-types';
 import type { TadaSourceRecord } from './source-records';
@@ -96,7 +97,7 @@ export function findOutputConflicts(
   generatedOutputs: ReadonlyMap<string, OutputContent>,
   records: ReadonlyMap<string, TadaSourceRecord>,
 ): BuildDiagnostic[] {
-  const searchEnabled = siteVariables.features.search !== false;
+  const searchEnabled = isFeatureEnabled(siteVariables, 'search');
   const messages = new Set<string>();
   // Output path to the project-relative source that writes it (null for Tada).
   const owners = new Map<string, string | null>(
@@ -111,9 +112,12 @@ export function findOutputConflicts(
         );
       } else if (
         searchEnabled &&
-        (outputPath === 'pagefind' || outputPath.startsWith('pagefind/'))
+        (outputPath === SEARCH_INDEX_DIR ||
+          outputPath.startsWith(`${SEARCH_INDEX_DIR}/`))
       ) {
-        messages.add(`${source}: conflicts with the search index in pagefind/`);
+        messages.add(
+          `${source}: conflicts with the search index in ${SEARCH_INDEX_DIR}/`,
+        );
       } else if (!owners.has(outputPath)) {
         owners.set(outputPath, source);
       }

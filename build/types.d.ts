@@ -1,5 +1,4 @@
 import type { BundledLanguage } from 'shiki';
-import type { TadaProjectScan } from './source-model';
 import type { TraceCache } from './build-types';
 
 export type PlainTextLanguage = 'text' | 'txt' | 'plain';
@@ -88,21 +87,6 @@ export interface Asset {
   htmlAnalysis?: HtmlOutputAnalysis;
 }
 
-/** Options for the content rendering pipeline */
-export interface ContentRenderOptions {
-  distDir: string;
-  assetFiles: string[];
-  isWatchMode: boolean;
-  scan: TadaProjectScan;
-}
-
-/** Result from ContentRenderer.processContent() */
-export interface ContentRenderResult {
-  errors: Error[];
-  htmlAssetsByPath: Map<string, string>;
-  htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>;
-}
-
 /** Logger returned by makeLogger() */
 export interface Logger {
   minLogLevel: string;
@@ -177,7 +161,7 @@ export interface RenderDependencyCollector {
   traceFiles?: Set<string>;
   internalTargets?: Set<string>;
   /** Files a page generates besides its own assets, by output path */
-  generatedOutputs?: Map<string, string>;
+  traceOutputs?: Map<string, string>;
   setAuthorKey?: (authorKey: string) => void;
 }
 

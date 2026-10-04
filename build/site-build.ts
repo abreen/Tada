@@ -6,6 +6,7 @@ import { getRuntimeBundledShikiLanguages } from './site-variables';
 import { initHighlighter } from './utils/shiki-highlighter';
 import { generateSiteAssets } from './site-assets';
 import { getPdfSources } from './pagefind';
+import { checkTraceToolAvailability } from './utils/trace';
 import { scanProject, sourcePaths, type TadaProjectScan } from './source-model';
 import {
   createContentRecord,
@@ -217,14 +218,17 @@ export async function buildSite({
   isWatchMode,
   traceCache,
   traceToolAvailability,
+  scan = scanProject(siteVariables),
 }: {
   siteVariables: SiteVariables;
   mode: 'development' | 'production';
   isWatchMode: boolean;
   traceCache: TraceCache;
-  traceToolAvailability: TraceToolAvailability;
+  /** Probed only if omitted and the site has content pages */
+  traceToolAvailability?: TraceToolAvailability;
+  /** A scan the caller already made with the same site variables */
+  scan?: TadaProjectScan;
 }): Promise<SiteBuildResult> {
-  const scan = scanProject(siteVariables);
   const configDiagnostics = validateConfig(scan, siteVariables);
   if (configDiagnostics.length > 0) {
     return { ok: false, diagnostics: configDiagnostics };
@@ -237,6 +241,12 @@ export async function buildSite({
   const pageCount = [...sourcePaths(scan, 'content', true)].length;
   if (pageCount > 0) {
     log.info`Processing ${pageCount} content ${pageCount === 1 ? 'file' : 'files'}`;
+  }
+  if (!traceToolAvailability) {
+    traceToolAvailability = pageCount > 0 ? checkTraceToolAvailability() : {};
+    if (pageCount > 0 && !traceToolAvailability.java) {
+      log.warn`javac was not found; literate Java pages will not include execution output`;
+    }
   }
   const { records, diagnostics } = renderSources(scan.sources.keys(), {
     siteVariables,
