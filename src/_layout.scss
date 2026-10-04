@@ -112,7 +112,10 @@ body.literate main table {
     min-width: 400px;
     margin: 1rem auto;
   }
+}
 
+// Screen only: in print the TOC is hidden, so the content takes the full width
+@media screen and (width >= 900px) {
   :not(.toc-is-active) > .container > .main-content {
     max-width: var(--main-width);
     margin: 0 auto;
@@ -142,7 +145,7 @@ body.literate main table {
   }
 }
 
-@media (width >= 1300px) {
+@media screen and (width >= 1300px) {
   .toc-is-active .main-content {
     max-width: calc(var(--toc-width) + var(--gap) + 960px);
     margin: 0 auto;

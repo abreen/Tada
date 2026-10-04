@@ -16,7 +16,10 @@ This layout accounts for the fixed header, optional site banner, page heading,
 and responsive table of contents. On desktop the TOC sits beside the body and
 remains sticky, with a viewport-based maximum height and internal scrolling.
 On narrow screens the TOC precedes the body on default and literate pages;
-code-page TOCs remain hidden.
+code-page TOCs remain hidden. The two-column desktop layout and the desktop
+maximum content width apply only to screens: printed output hides the TOC and
+gives the page heading and body the full printable width, with no empty TOC
+column or centering margins.
 
 During client-side navigation, the group uses a stationary View Transition
 layer showing only the incoming snapshot. Its appearance controls are

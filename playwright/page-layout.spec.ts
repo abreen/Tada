@@ -84,6 +84,33 @@ for (const site of sites) {
         const main = await page.locator('main.body').boundingBox();
         expect(main!.height).toBeLessThan(500);
       });
+      for (const template of templates) {
+        test(`printing a ${template} page gives the content the full width`, async ({
+          page,
+        }) => {
+          await page.setViewportSize({ width: 1400, height: 1000 });
+          await page.goto(`${site.base}/layout-long${template}`);
+          await page.emulateMedia({ media: 'print' });
+          await expect(page.locator('nav.toc')).toBeHidden();
+          const geometry = await page.locator('main.body').evaluate(main => {
+            const container = main.closest('.container')!;
+            const style = getComputedStyle(container);
+            const box = container.getBoundingClientRect();
+            const mainBox = main.getBoundingClientRect();
+            return {
+              mainLeft: mainBox.left,
+              mainWidth: mainBox.width,
+              contentLeft: box.left + parseFloat(style.paddingLeft),
+              contentWidth:
+                box.width -
+                parseFloat(style.paddingLeft) -
+                parseFloat(style.paddingRight),
+            };
+          });
+          expect(geometry.mainLeft).toBeCloseTo(geometry.contentLeft, 0);
+          expect(geometry.mainWidth).toBeCloseTo(geometry.contentWidth, 0);
+        });
+      }
     });
   }
 }
