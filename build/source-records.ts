@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import {
   renderCodePageAsset,
@@ -9,6 +8,7 @@ import {
 } from './util';
 import type {
   Asset,
+  OutputContent,
   HtmlOutputAnalysis,
   RenderDependencyCollector,
   SiteVariables,
@@ -21,7 +21,7 @@ import type { TraceCache } from './build-types';
 export interface TadaSourceRecord {
   sourcePath: string;
   kind: 'content' | 'public';
-  outputs: Map<string, string | Buffer>;
+  outputs: Map<string, OutputContent>;
   htmlAnalysisByOutputPath?: Map<string, HtmlOutputAnalysis>;
   partialDeps: Set<string>;
   traceDeps: Set<string>;
@@ -81,7 +81,7 @@ function createRawContentAsset(filePath: string, contentDir: string): Asset[] {
   return [
     {
       assetPath: toPosix(path.relative(contentDir, filePath)),
-      content: fs.readFileSync(filePath),
+      content: { copyFrom: filePath },
     },
   ];
 }
@@ -198,7 +198,7 @@ export function createPublicRecord(
   return {
     sourcePath: filePath,
     kind: 'public',
-    outputs: new Map([[relPath, fs.readFileSync(filePath)]]),
+    outputs: new Map([[relPath, { copyFrom: filePath }]]),
     htmlAnalysisByOutputPath: new Map(),
     partialDeps: new Set(),
     traceDeps: new Set(),
@@ -210,8 +210,8 @@ export function createPublicRecord(
 export function collectSourceOutputs(
   assets: Asset[],
   generatedOutputs: ReadonlyMap<string, string>,
-): Map<string, string | Buffer> {
-  const outputs = new Map<string, string | Buffer>();
+): Map<string, OutputContent> {
+  const outputs = new Map<string, OutputContent>();
   for (const asset of assets) {
     outputs.set(asset.assetPath, asset.content);
   }

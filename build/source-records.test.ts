@@ -115,11 +115,10 @@ describe('createContentRecord', () => {
     });
   });
 
-  test('copies raw content assets without invoking page rendering', () => {
+  test('references raw content assets by path without reading them', () => {
     const contentDir = path.resolve('init/public');
     const filePath = path.join(contentDir, 'test.txt');
-    const fileContent = Buffer.from('copied raw asset');
-    mockFs({ [path.resolve(filePath)]: fileContent });
+    mockFs({});
     const scan = makeScan(filePath, 'content-copy', contentDir);
 
     const record = createContentRecord({
@@ -132,7 +131,9 @@ describe('createContentRecord', () => {
 
     expect(record.sourcePath).toBe(filePath);
     expect(record.kind).toBe('content');
-    expect(record.outputs).toEqual(new Map([['test.txt', fileContent]]));
+    expect(record.outputs).toEqual(
+      new Map([['test.txt', { copyFrom: filePath }]]),
+    );
     expect(record.htmlAnalysisByOutputPath).toEqual(new Map());
     expect(record.partialDeps).toEqual(new Set());
     expect(record.traceDeps).toEqual(new Set());
@@ -143,18 +144,17 @@ describe('createContentRecord', () => {
 });
 
 describe('createPublicRecord', () => {
-  test('reads public files into output records', () => {
+  test('references public files by path without reading them', () => {
     const publicDir = path.resolve('init/public');
     const filePath = path.join(publicDir, 'test.txt');
-    const fileContent = Buffer.from('copied public asset');
-    mockFs({ [path.resolve(filePath)]: fileContent });
+    mockFs({});
 
     const record = createPublicRecord(filePath, publicDir);
 
     expect(record).toEqual({
       sourcePath: filePath,
       kind: 'public',
-      outputs: new Map([['test.txt', fileContent]]),
+      outputs: new Map([['test.txt', { copyFrom: filePath }]]),
       htmlAnalysisByOutputPath: new Map(),
       partialDeps: new Set(),
       traceDeps: new Set(),

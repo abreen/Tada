@@ -74,9 +74,17 @@ export interface HtmlOutputAnalysis {
   outgoingTargets: Set<string>;
 }
 
+/** An output copied unchanged from a source file when it is written */
+export interface CopiedFile {
+  copyFrom: string;
+}
+
+/** Output content: rendered text, or a reference to a file to copy */
+export type OutputContent = string | CopiedFile;
+
 export interface Asset {
   assetPath: string;
-  content: string | Buffer;
+  content: OutputContent;
   htmlAnalysis?: HtmlOutputAnalysis;
 }
 

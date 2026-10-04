@@ -1,11 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import { globals, type Globals } from './globals';
+import type { OutputContent } from './types';
 
 export interface WriteFileMutation {
   kind: 'write';
   path: string;
-  content: string | Buffer;
+  content: OutputContent;
 }
 
 export interface DeleteFileMutation {
@@ -39,6 +40,19 @@ const TRANSIENT_RENAME_ERROR_CODES = new Set([
 ]);
 const RENAME_RETRY_DELAY_MS = 25;
 const RENAME_RETRY_COUNT = 8;
+
+/** Writes rendered text, or copies a referenced source file, to `filePath`. */
+export function writeOutputFile(
+  filePath: string,
+  content: OutputContent,
+): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  if (typeof content === 'string') {
+    fs.writeFileSync(filePath, content);
+  } else {
+    fs.copyFileSync(content.copyFrom, filePath);
+  }
+}
 
 function removeDirIfExists(dir: string): void {
   fs.rmSync(dir, { recursive: true, force: true });
@@ -116,7 +130,7 @@ function applyMutations(
     // Index staging paths so file/directory transitions cannot collide in staging.
     for (const [index, mutation] of plan.mutations.entries()) {
       if (mutation.kind === 'write') {
-        fs.writeFileSync(
+        writeOutputFile(
           path.join(transactionRoot, `write-${index}`),
           mutation.content,
         );

@@ -8,7 +8,8 @@ import { generateWebAppManifest } from '../generate-web-app-manifest';
 import { getRuntimeBundledShikiLanguages } from '../site-variables';
 import { getPackageDir, toPosix } from '../util';
 import { initHighlighter } from '../utils/shiki-highlighter';
-import type { SiteVariables } from '../types';
+import { writeOutputFile } from '../output-publication';
+import type { OutputContent, SiteVariables } from '../types';
 
 const RELOAD_CLIENT_PATH = path.resolve(
   getPackageDir(),
@@ -67,11 +68,9 @@ export async function populateStaticAssets(
 
 export function writeAssets(
   outputDir: string,
-  assets: Map<string, string | Buffer>,
+  assets: Map<string, OutputContent>,
 ): void {
   for (const [assetPath, content] of assets) {
-    const outputPath = path.join(outputDir, assetPath);
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, content);
+    writeOutputFile(path.join(outputDir, assetPath), content);
   }
 }

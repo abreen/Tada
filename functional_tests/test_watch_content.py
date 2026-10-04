@@ -149,6 +149,19 @@ class TestWatchAddContent:
         watch.wait_for_rebuild(dist_asset, 'exists')
         assert dist_asset.read_text() == 'test asset content'
 
+    def test_editing_content_asset(self, watch, site_dir):
+        asset = site_dir / 'content' / 'test_asset.txt'
+        dist_asset = site_dir / 'dist' / 'test_asset.txt'
+
+        asset.write_text('initial asset content')
+        watch.wait_for_rebuild(dist_asset, 'exists')
+
+        before_mtime = dist_asset.stat().st_mtime
+        asset.write_text('updated asset content')
+
+        watch.wait_for_rebuild(dist_asset, 'modified', before_mtime=before_mtime)
+        assert dist_asset.read_text() == 'updated asset content'
+
     def test_add_after_folder_rename_error_recovery(self, watch, site_dir):
         docs_dir = site_dir / 'content' / 'docs'
         docs_dir.mkdir()
