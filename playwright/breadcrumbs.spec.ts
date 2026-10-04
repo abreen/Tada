@@ -539,3 +539,44 @@ test('navigating from a scrolled page keeps shared crumbs in place', async ({
   ]);
   expect(transition.old[3].name).toBe('page-breadcrumb-leave-3');
 });
+
+test('history navigation marks a restored stuck trail before the snapshot', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto(LONG_PAGE);
+  await page.mouse.wheel(0, 3000);
+  await expect(breadcrumbNav(page)).toHaveClass(/is-stuck/);
+  await breadcrumbNav(page)
+    .getByRole('link', { name: 'Nested page', exact: true })
+    .click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Nested page',
+  );
+  await page.evaluate(() => {
+    const state = window as Window & { stuckDuringSwap?: boolean | null };
+    state.stuckDuringSwap = null;
+    const original = document.startViewTransition.bind(document);
+    document.startViewTransition = callback =>
+      original(async () => {
+        if (typeof callback === 'function') {
+          await callback();
+        }
+        state.stuckDuringSwap =
+          document
+            .querySelector('nav.breadcrumbs')
+            ?.classList.contains('is-stuck') ?? false;
+      });
+  });
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(
+    'deliberately long',
+  );
+  expect(
+    await page.evaluate(
+      () =>
+        (window as Window & { stuckDuringSwap?: boolean | null })
+          .stuckDuringSwap,
+    ),
+  ).toBe(true);
+});

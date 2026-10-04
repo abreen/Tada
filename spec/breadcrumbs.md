@@ -58,7 +58,9 @@ below the header and the open-menu overlay.
 
 The bar only has a background while it is stuck: the `breadcrumbs` client
 component adds `is-stuck` once the trail reaches its sticky offset and removes
-it when the trail returns to normal flow. While stuck it uses the header's
+it when the trail returns to normal flow. Client navigation also sets the state
+during the content swap, after restoring scroll, so a page restored scrolled
+down shows the stuck bar throughout its view transition. While stuck it uses the header's
 translucent background, backdrop blur, and bottom border (an opaque background
 with high contrast); otherwise the trail is plain text above the heading.
 Bun's CSS bundler cannot parse `scroll-state()` container queries, so the stuck
