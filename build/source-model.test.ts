@@ -120,7 +120,6 @@ let getSourceOutputPaths: typeof import('./source-model').getSourceOutputPaths;
 let getSourceTargetPaths: typeof import('./source-model').getSourceTargetPaths;
 let assertNoOutputPathConflicts: typeof import('./source-model').assertNoOutputPathConflicts;
 let scanProject: typeof import('./source-model').scanProject;
-let updateProjectScan: typeof import('./source-model').updateProjectScan;
 
 beforeAll(async () => {
   ({
@@ -130,7 +129,6 @@ beforeAll(async () => {
     getSourceOutputPaths,
     getSourceTargetPaths,
     scanProject,
-    updateProjectScan,
   } = await import('./source-model'));
 });
 
@@ -168,12 +166,6 @@ beforeEach(() => {
   directories.clear();
   seedProject();
 });
-
-function makeBatch(
-  changes: Array<{ path: string; kind: 'add' | 'change' | 'unlink' }>,
-): ReadonlySet<string> {
-  return new Set(changes.map(change => path.resolve(change.path)));
-}
 
 describe('getSourceOutputPaths', () => {
   const contentDir = '/tmp/site/content';
@@ -408,142 +400,28 @@ describe('scanProject', () => {
   });
 });
 
-describe('updateProjectScan', () => {
-  test('applies add change and unlink updates without mutating the snapshot', () => {
-    const removedContentPath = path.join(projectRoot, 'content', 'markdown.md');
-    const removedPublicPath = path.join(projectRoot, 'public', 'test.txt');
-    const changedCodePath = path.join(
-      projectRoot,
-      'content',
-      'labs',
-      '01',
-      'SearchTreeDemo.java',
-    );
-    const addedContentPath = path.join(
-      projectRoot,
-      'content',
-      'docs',
-      'index.md',
-    );
-    const addedPublicPath = path.join(
-      projectRoot,
-      'public',
-      'assets',
-      'logo.svg',
-    );
-    const snapshot = scanProject(siteVariables);
-
-    files.delete(removedContentPath);
-    files.delete(removedPublicPath);
-    writeFile(addedContentPath, 'title: Docs\n\n# Docs');
-    writeFile(addedPublicPath, '<svg></svg>');
-    writeFile(changedCodePath, 'class SearchTreeDemo { int nodes = 1; }');
-
-    const updated = updateProjectScan(
-      snapshot,
-      makeBatch([
-        { path: removedContentPath, kind: 'unlink' },
-        { path: removedPublicPath, kind: 'unlink' },
-        { path: addedContentPath, kind: 'add' },
-        { path: addedPublicPath, kind: 'add' },
-        { path: changedCodePath, kind: 'change' },
-      ]),
-    );
-
-    expect(snapshot.sources.get(removedContentPath)?.kind === 'content').toBe(
-      true,
-    );
-    expect(snapshot.sources.get(removedPublicPath)?.kind === 'public').toBe(
-      true,
-    );
-    const unchanged = path.join(projectRoot, 'content', 'index.md');
-    expect(updated.sources.get(unchanged)).toBe(
-      snapshot.sources.get(unchanged),
-    );
-    expect(updated).toEqual(scanProject(siteVariables));
-    expect(snapshot.sources.get(removedContentPath)?.outputs).toEqual(
-      new Set(['markdown.html']),
-    );
-    expect(updated.sources.get(removedContentPath)?.kind === 'content').toBe(
-      false,
-    );
-    expect(updated.sources.get(removedPublicPath)?.kind === 'public').toBe(
-      false,
-    );
-    expect(updated.sources.get(addedContentPath)?.kind === 'content').toBe(
-      true,
-    );
-    expect(
-      new Set(sourcePaths(updated, 'content', true)).has(addedContentPath),
-    ).toBe(true);
-    expect(updated.sources.get(addedPublicPath)?.kind === 'public').toBe(true);
-    expect(updated.sources.get(removedContentPath)?.outputs).toBeUndefined();
-    expect(updated.sources.get(removedContentPath)?.targets).toBeUndefined();
-    expect(updated.sources.get(addedContentPath)?.outputs).toEqual(
-      new Set(['docs/index.html']),
-    );
-    expect(updated.sources.get(addedContentPath)?.targets).toEqual(
-      new Set(['/docs/index.html', '/docs/', '/docs']),
-    );
-    expect(updated.sources.get(changedCodePath)?.outputs).toEqual(
-      new Set([
-        'labs/01/SearchTreeDemo.java',
-        'labs/01/SearchTreeDemo.java.html',
-      ]),
-    );
-    expect(updated.sources.get(addedPublicPath)?.targets).toEqual(
-      new Set(['/assets/logo.svg']),
-    );
-    expect(
-      updated.outputProducers.get('markdown.html')?.values().next().value,
-    ).toBeUndefined();
-    expect(
-      updated.outputProducers.get('test.txt')?.values().next().value,
-    ).toBeUndefined();
-    expect(
-      updated.outputProducers.get('docs/index.html')?.values().next().value,
-    ).toBe(addedContentPath);
-    expect(
-      updated.outputProducers.get('assets/logo.svg')?.values().next().value,
-    ).toBe(addedPublicPath);
-    expect(updated.validTargets.has('/docs/index.html')).toBe(true);
-    expect(updated.validTargets.has('/docs/')).toBe(true);
-    expect(updated.validTargets.has('/docs')).toBe(true);
-    expect(updated.validTargets.has('/assets/logo.svg')).toBe(true);
-    expect(updated.validTargets.has('/labs/01/SearchTreeDemo.java')).toBe(true);
-  });
-});
-
 describe('content output conflicts', () => {
-  test('retains every producer across incremental conflict recovery', () => {
+  test('a rescan after removing either conflicting source leaves the survivor', () => {
     const markdown = path.join(projectRoot, 'content', 'about.md');
     const html = path.join(projectRoot, 'content', 'about.html');
     writeFile(markdown, '# Markdown');
-    const original = scanProject(siteVariables);
     writeFile(html, '<p>HTML</p>');
-    const conflict = updateProjectScan(
-      original,
-      makeBatch([{ path: html, kind: 'add' }]),
+    expect(assertNoOutputPathConflicts(scanProject(siteVariables))).toContain(
+      'about.html',
     );
-    expect(assertNoOutputPathConflicts(conflict)).toContain('about.html');
-    expect(assertNoOutputPathConflicts(original)).not.toContain('about.html');
     for (const [removed, survivor] of [
       [markdown, html],
       [html, markdown],
     ]) {
       const content = files.get(removed)!;
       files.delete(removed);
-      const recovered = updateProjectScan(
-        conflict,
-        makeBatch([{ path: removed, kind: 'unlink' }]),
-      );
+      const recovered = scanProject(siteVariables);
       expect(assertNoOutputPathConflicts(recovered)).not.toContain(
         'about.html',
       );
       expect(
         recovered.outputProducers.get('about.html')?.values().next().value,
       ).toBe(survivor);
-      expect(conflict.sources.has(removed)).toBe(true);
       files.set(removed, content);
     }
   });
@@ -572,25 +450,4 @@ test('detects raw copied source conflicts without configured code processing', (
       scanProject({ ...siteVariables, extensionToShikiLanguage: {} }),
     ),
   ).toEqual(['Demo.java']);
-});
-
-test('directory notifications reconcile descendants across file and directory transitions', () => {
-  const item = path.join(projectRoot, 'public', 'item');
-  const child = path.join(item, 'nested', 'child.txt');
-  writeFile(item, 'file');
-  const before = scanProject(siteVariables);
-  files.delete(item);
-  writeFile(child, 'child');
-  const directory = updateProjectScan(before, new Set([item]));
-  expect(directory).toEqual(scanProject(siteVariables));
-  expect(directory.sources.has(item)).toBe(false);
-  expect(directory.sources.has(child)).toBe(true);
-  files.delete(child);
-  directories.delete(path.dirname(child));
-  directories.delete(item);
-  writeFile(item, 'file again');
-  const after = updateProjectScan(directory, new Set([item]));
-  expect(after).toEqual(scanProject(siteVariables));
-  expect(after.sources.has(child)).toBe(false);
-  expect(before.sources.has(item)).toBe(true);
 });

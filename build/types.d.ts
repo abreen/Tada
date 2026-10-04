@@ -79,8 +79,8 @@ export interface CopiedFile {
   copyFrom: string;
 }
 
-/** Output content: rendered text, or a reference to a file to copy */
-export type OutputContent = string | CopiedFile;
+/** Output content: rendered text or bytes, or a reference to a file to copy */
+export type OutputContent = string | Uint8Array | CopiedFile;
 
 export interface Asset {
   assetPath: string;

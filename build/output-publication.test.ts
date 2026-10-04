@@ -2,38 +2,29 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'node:path';
 import { createGlobals } from './globals.test';
 import { createFsModuleMock } from './test-helpers';
-import type { FileMutation } from './output-publication';
+import type { OutputFile } from './output-publication';
 
-// Directories are null; files retain their contents so rollback assertions
-// verify restored data as well as which paths survive.
+// In-memory filesystem: directories are null, files hold their text.
 const entries = new Map<string, string | null>();
-const renameCalls: Array<[string, string]> = [];
-const renameFailures = new Map<string, number>();
+const busyFailures = new Map<string, number>();
 const root = path.resolve('publication-fixture');
 const dist = path.join(root, 'dist');
-let stageNumber = 0;
-let failRestore = false;
-let alternateMkdirSpelling = false;
 
 function fsError(code: string, file: string): never {
   throw Object.assign(new Error(`${code}: ${file}`), { code });
 }
 
-function descendants(dir: string): string[] {
-  return [...entries.keys()].filter(file => file.startsWith(dir + path.sep));
-}
-
-function mkdir(dir: string): string | undefined {
-  if (entries.has(dir)) {
-    if (entries.get(dir) !== null) {
-      fsError('ENOTDIR', dir);
-    }
-    return undefined;
+function mkdir(dir: string): void {
+  if (entries.get(dir) === null) {
+    return;
   }
-  const parent = path.dirname(dir);
-  const first = parent === dir ? undefined : mkdir(parent);
+  if (entries.has(dir)) {
+    fsError('ENOTDIR', dir);
+  }
+  if (path.dirname(dir) !== dir) {
+    mkdir(path.dirname(dir));
+  }
   entries.set(dir, null);
-  return first ?? dir;
 }
 
 function put(file: string, content: string): void {
@@ -41,279 +32,260 @@ function put(file: string, content: string): void {
   entries.set(file, content);
 }
 
-function snapshot() {
-  return [...entries].sort(([a], [b]) => a.localeCompare(b));
+function failWhileBusy(file: string): void {
+  const remaining = busyFailures.get(file) ?? 0;
+  if (remaining > 0) {
+    busyFailures.set(file, remaining - 1);
+    fsError('EBUSY', file);
+  }
 }
 
-function installMocks(): void {
-  mock.module('fs', () =>
-    createFsModuleMock({
-      existsSync: (file: string) => entries.has(file),
-      lstatSync(file: string) {
-        return entries.has(file)
-          ? { isDirectory: () => entries.get(file) === null }
-          : undefined;
-      },
-      mkdirSync(dir: string) {
-        const created = mkdir(dir);
-        return created && alternateMkdirSpelling ? created + path.sep : created;
-      },
-      mkdtempSync(prefix: string) {
-        const dir = `${prefix}${stageNumber++}`;
-        mkdir(dir);
-        return dir;
-      },
-      writeFileSync(file: string, content: string | Buffer) {
-        if (entries.get(path.dirname(file)) !== null) {
-          fsError('ENOENT', file);
-        }
-        entries.set(file, content.toString());
-      },
-      renameSync(source: string, target: string) {
-        renameCalls.push([source, target]);
-        if (failRestore && path.basename(source) === 'backup-0') {
-          throw new Error('restore unavailable');
-        }
-        const key = `${source}->${target}`;
-        const failures = renameFailures.get(key) ?? 0;
-        if (failures > 0) {
-          renameFailures.set(key, failures - 1);
-          fsError('EPERM', source);
-        }
-        if (
-          !entries.has(source) ||
-          entries.get(path.dirname(target)) !== null
-        ) {
-          fsError('ENOENT', source);
-        }
-        for (const file of [source, ...descendants(source)]) {
-          entries.set(target + file.slice(source.length), entries.get(file)!);
-          entries.delete(file);
-        }
-      },
-      rmdirSync(dir: string) {
-        if (!entries.has(dir)) {
-          fsError('ENOENT', dir);
-        }
-        if (entries.get(dir) !== null) {
-          fsError('ENOTDIR', dir);
-        }
-        if (descendants(dir).length) {
-          fsError('ENOTEMPTY', dir);
-        }
-        entries.delete(dir);
-      },
-      rmSync(file: string, options: { recursive?: boolean }) {
-        if (entries.get(file) === null && !options.recursive) {
-          fsError('EISDIR', file);
-        }
-        for (const child of descendants(file)) {
-          entries.delete(child);
-        }
-        entries.delete(file);
-      },
-    }),
+function writeFile(file: string, content: string): void {
+  failWhileBusy(file);
+  if (entries.get(file) === null) {
+    fsError('EISDIR', file);
+  }
+  if (entries.get(path.dirname(file)) !== null) {
+    fsError('ENOENT', file);
+  }
+  entries.set(file, content);
+}
+
+function files(): Record<string, string> {
+  return Object.fromEntries(
+    [...entries]
+      .filter(([file, content]) => content !== null && file.startsWith(dist))
+      .map(([file, content]) => [
+        path.relative(dist, file).split(path.sep).join('/'),
+        content,
+      ])
+      .sort(),
   );
-  mock.module('./globals', () => ({
-    globals: createGlobals({
-      now: () => 1234567890,
-      pid: () => 42,
-      sleepSync: () => {},
-    }),
-  }));
 }
 
-installMocks();
-const { applyCommitPlan } = await import('./output-publication');
+function dirs(): string[] {
+  return [...entries]
+    .filter(([dir, content]) => content === null && dir.startsWith(dist))
+    .map(([dir]) => path.relative(dist, dir).split(path.sep).join('/'))
+    .sort();
+}
+
+mock.module('fs', () =>
+  createFsModuleMock({
+    existsSync: (file: string) => entries.has(file),
+    mkdirSync(dir: string) {
+      mkdir(dir);
+    },
+    writeFileSync(file: string, content: string | Uint8Array) {
+      writeFile(file, String(content));
+    },
+    copyFileSync(source: string, target: string) {
+      const content = entries.get(source);
+      if (typeof content !== 'string') {
+        fsError('ENOENT', source);
+      }
+      writeFile(target, content);
+    },
+    rmSync(file: string) {
+      failWhileBusy(file);
+      if (entries.get(file) === null) {
+        fsError('EISDIR', file);
+      }
+      entries.delete(file);
+    },
+    rmdirSync(dir: string) {
+      if (entries.get(dir) !== null) {
+        fsError('ENOTDIR', dir);
+      }
+      if ([...entries.keys()].some(file => file.startsWith(dir + path.sep))) {
+        fsError('ENOTEMPTY', dir);
+      }
+      entries.delete(dir);
+    },
+    readdirSync(dir: string) {
+      return [...entries]
+        .filter(([file]) => file.startsWith(dir + path.sep))
+        .map(([file, content]) => ({
+          name: path.basename(file),
+          parentPath: path.dirname(file),
+          isFile: () => content !== null,
+        }));
+    },
+  }),
+);
+mock.module('./globals', () => ({
+  globals: createGlobals({ sleepSync: () => {} }),
+}));
+
+const { applyMutations, computeMutations, planFullWrite, writeOutputFile } =
+  await import('./output-publication');
+
+function outputs(
+  values: Record<string, OutputFile['content']>,
+  sourcePath = '/source',
+): Map<string, OutputFile> {
+  return new Map(
+    Object.entries(values).map(([outputPath, content]) => [
+      outputPath,
+      { sourcePath, content },
+    ]),
+  );
+}
 
 beforeEach(() => {
   entries.clear();
-  renameCalls.length = 0;
-  renameFailures.clear();
-  stageNumber = 0;
-  failRestore = false;
-  alternateMkdirSpelling = false;
-  mkdir(root);
-  installMocks();
+  busyFailures.clear();
+  mkdir(dist);
 });
 
-describe('applyCommitPlan', () => {
-  test('replace-root retries a transient staged-directory EPERM during publish', () => {
-    const staged = path.join(root, 'staged');
-    mkdir(staged);
-    renameFailures.set(`${staged}->${dist}`, 1);
-    applyCommitPlan({
-      kind: 'replace-root',
-      stagedPath: staged,
-      targetPath: dist,
-    });
-    expect(
-      renameCalls.filter(([from, to]) => from === staged && to === dist),
-    ).toHaveLength(2);
-    expect(entries.has(dist)).toBe(true);
-    expect(entries.has(staged)).toBe(false);
+describe('applyMutations', () => {
+  test('writes new and changed files and deletes removed ones in place', () => {
+    put(path.join(dist, 'keep.html'), 'old');
+    put(path.join(dist, 'gone', 'page.html'), 'gone');
+
+    applyMutations(dist, [
+      { kind: 'write', path: 'keep.html', content: 'new' },
+      { kind: 'write', path: 'docs/index.html', content: 'docs' },
+      { kind: 'delete', path: 'gone/page.html' },
+    ]);
+
+    expect(files()).toEqual({ 'docs/index.html': 'docs', 'keep.html': 'new' });
+    expect(dirs()).toEqual(['', 'docs']);
   });
 
-  test('replace-root restores the previous target after a failed publish', () => {
-    const staged = path.join(root, 'staged');
-    mkdir(staged);
-    put(path.join(dist, 'index.html'), 'original');
-    renameFailures.set(`${staged}->${dist}`, 99);
+  test('replaces a file with a directory and a directory with a file', () => {
+    put(path.join(dist, 'notes'), 'file');
+    put(path.join(dist, 'about', 'index.html'), 'nested');
+
+    applyMutations(dist, [
+      { kind: 'write', path: 'notes/index.html', content: 'nested' },
+      { kind: 'write', path: 'about', content: 'file' },
+      { kind: 'delete', path: 'notes' },
+      { kind: 'delete', path: 'about/index.html' },
+    ]);
+
+    expect(files()).toEqual({ about: 'file', 'notes/index.html': 'nested' });
+  });
+
+  test('leaves unrelated files in a directory it cannot remove', () => {
+    put(path.join(dist, 'docs', 'old.html'), 'old');
+    put(path.join(dist, 'docs', 'unrelated.txt'), 'kept');
+
+    applyMutations(dist, [{ kind: 'delete', path: 'docs/old.html' }]);
+
+    expect(files()).toEqual({ 'docs/unrelated.txt': 'kept' });
+  });
+
+  test('retries a file that is briefly busy', () => {
+    busyFailures.set(path.join(dist, 'page.html'), 2);
+
+    applyMutations(dist, [
+      { kind: 'write', path: 'page.html', content: 'written' },
+    ]);
+
+    expect(files()).toEqual({ 'page.html': 'written' });
+  });
+
+  test('throws when a file stays busy, keeping earlier writes', () => {
+    busyFailures.set(path.join(dist, 'b.html'), 100);
+
     expect(() =>
-      applyCommitPlan({
-        kind: 'replace-root',
-        stagedPath: staged,
-        targetPath: dist,
-      }),
-    ).toThrow('EPERM');
-    expect(entries.get(path.join(dist, 'index.html'))).toBe('original');
-    expect(entries.has(staged)).toBe(true);
-    expect(entries.has(`${dist}.bak-42-1234567890`)).toBe(false);
+      applyMutations(dist, [
+        { kind: 'write', path: 'a.html', content: 'a' },
+        { kind: 'write', path: 'b.html', content: 'b' },
+      ]),
+    ).toThrow('EBUSY');
+    expect(files()).toEqual({ 'a.html': 'a' });
   });
+});
 
-  test.each(['write', 'delete', 'parent', 'transition', 'recovery'] as const)(
-    'incremental publication restores previous output after %s failure',
-    failure => {
-      put(path.join(dist, 'a.txt'), 'original');
-      put(path.join(dist, 'old', 'deleted.txt'), 'deleted original');
-      put(path.join(dist, 'z.txt', 'keep'), 'directory original');
-      put(path.join(dist, 'blocked'), 'parent original');
-      const before = snapshot();
-      const mutations: FileMutation[] = [
-        { kind: 'write', path: 'a.txt', content: 'changed' },
-        { kind: 'delete', path: 'old/deleted.txt' },
-        { kind: 'write', path: 'new/nested/file.txt', content: 'new' },
-        { kind: 'write', path: 'new/nested/deeper/file.txt', content: 'deep' },
-        ...(failure === 'transition'
-          ? [
-              { kind: 'delete' as const, path: 'blocked' },
-              {
-                kind: 'write' as const,
-                path: 'blocked/child',
-                content: 'child',
-              },
-            ]
-          : []),
-        failure === 'parent'
-          ? { kind: 'write', path: 'blocked/child', content: 'fail' }
-          : {
-              kind: failure === 'delete' ? 'delete' : 'write',
-              path: 'z.txt',
-              content: 'fail',
-            },
-      ];
-      failRestore = failure === 'recovery';
-      const publish = () =>
-        applyCommitPlan({ kind: 'apply-mutations', rootDir: dist, mutations });
-      if (failRestore) {
-        expect(publish).toThrow(AggregateError);
-        expect(entries.get(path.join(dist, '.watch-stage-0', 'backup-0'))).toBe(
-          'original',
-        );
-        expect(entries.get(path.join(dist, 'old', 'deleted.txt'))).toBe(
-          'deleted original',
-        );
-        expect(entries.get(path.join(dist, 'z.txt', 'keep'))).toBe(
-          'directory original',
-        );
-        return;
-      }
-      expect(publish).toThrow(
-        failure === 'parent'
-          ? 'ENOTDIR'
-          : 'Cannot publish file mutation over directory',
-      );
-      expect(snapshot()).toEqual(before);
-      applyCommitPlan({
-        kind: 'apply-mutations',
-        rootDir: dist,
-        mutations: mutations.slice(0, 3),
-      });
-      expect(entries.get(path.join(dist, 'a.txt'))).toBe('changed');
-      expect(entries.get(path.join(dist, 'new', 'nested', 'file.txt'))).toBe(
-        'new',
-      );
-      expect(entries.has(path.join(dist, 'old'))).toBe(false);
-      expect(
-        [...entries.keys()].some(file => file.includes('.watch-stage-')),
-      ).toBe(false);
-    },
-  );
+describe('writeOutputFile', () => {
+  test('copies referenced files and writes text', () => {
+    put(path.join(root, 'public', 'logo.svg'), '<svg/>');
 
-  test('publication ignores equivalent mkdir return spelling during rollback and retry', () => {
-    mkdir(path.join(dist, 'blocked'));
-    const before = snapshot();
-    alternateMkdirSpelling = true;
-    const write: FileMutation = {
-      kind: 'write',
-      path: 'new/nested/file.txt',
-      content: 'published',
-    };
-    expect(() =>
-      applyCommitPlan({
-        kind: 'apply-mutations',
-        rootDir: dist,
-        mutations: [write, { kind: 'write', path: 'blocked', content: 'fail' }],
-      }),
-    ).toThrow('Cannot publish file mutation over directory');
-    expect(snapshot()).toEqual(before);
-    applyCommitPlan({
-      kind: 'apply-mutations',
-      rootDir: dist,
-      mutations: [write],
+    writeOutputFile(path.join(dist, 'img', 'logo.svg'), {
+      copyFrom: path.join(root, 'public', 'logo.svg'),
     });
-    expect(entries.get(path.join(dist, 'new', 'nested', 'file.txt'))).toBe(
-      'published',
-    );
+    writeOutputFile(path.join(dist, 'index.html'), 'home');
+
+    expect(files()).toEqual({ 'img/logo.svg': '<svg/>', 'index.html': 'home' });
+  });
+});
+
+describe('planFullWrite', () => {
+  test('writes every output and deletes other files except kept prefixes', () => {
+    put(path.join(dist, 'index.html'), 'old');
+    put(path.join(dist, 'stale.html'), 'stale');
+    put(path.join(dist, 'pagefind', 'index.js'), 'search');
+
     expect(
-      [...entries.keys()].some(file => file.includes('.watch-stage-')),
-    ).toBe(false);
+      planFullWrite(dist, outputs({ 'index.html': 'new' }), ['pagefind/']),
+    ).toEqual([
+      { kind: 'delete', path: 'stale.html' },
+      { kind: 'write', path: 'index.html', content: 'new' },
+    ]);
+  });
+
+  test('writes everything into a directory that does not exist yet', () => {
+    expect(
+      planFullWrite(path.join(root, 'v1'), outputs({ 'a.html': 'a' })),
+    ).toEqual([{ kind: 'write', path: 'a.html', content: 'a' }]);
   });
 });
 
-test('publishes a directory-to-file transition regardless of mutation order', () => {
-  put(path.join(dist, 'item', 'nested', 'child.txt'), 'old');
-  applyCommitPlan({
-    kind: 'apply-mutations',
-    rootDir: dist,
-    mutations: [
-      { kind: 'write', path: 'item', content: 'new' },
-      { kind: 'delete', path: 'item/nested/child.txt' },
-    ],
+describe('computeMutations', () => {
+  test('equal output text needs no write unless the source was rebuilt', () => {
+    const same = outputs({ output: 'same' });
+    expect(computeMutations(same, outputs({ output: 'same' }))).toEqual([]);
+    expect(
+      computeMutations(same, outputs({ output: 'same' }), new Set(['/source'])),
+    ).toEqual([{ kind: 'write', path: 'output', content: 'same' }]);
   });
-  expect(entries.get(path.join(dist, 'item'))).toBe('new');
-  expect(entries.has(path.join(dist, 'item', 'nested'))).toBe(false);
-});
 
-test('publishes a file-to-directory transition regardless of mutation order', () => {
-  put(path.join(dist, 'item'), 'old');
-  applyCommitPlan({
-    kind: 'apply-mutations',
-    rootDir: dist,
-    mutations: [
-      { kind: 'write', path: 'item/nested/child.txt', content: 'new' },
-      { kind: 'delete', path: 'item' },
-    ],
+  test('copied outputs are rewritten only when their source path changes or is rebuilt', () => {
+    const copy = { copyFrom: '/site/public/logo.png' };
+    const moved = { copyFrom: '/site/content/logo.png' };
+    expect(
+      computeMutations(
+        outputs({ output: copy }),
+        outputs({ output: { ...copy } }),
+      ),
+    ).toEqual([]);
+    expect(
+      computeMutations(
+        outputs({ output: copy }),
+        outputs({ output: copy }),
+        new Set(['/source']),
+      ),
+    ).toEqual([{ kind: 'write', path: 'output', content: copy }]);
+    expect(
+      computeMutations(outputs({ output: copy }), outputs({ output: moved })),
+    ).toEqual([{ kind: 'write', path: 'output', content: moved }]);
   });
-  expect(entries.get(path.join(dist, 'item', 'nested', 'child.txt'))).toBe(
-    'new',
-  );
-});
 
-test('restores deleted nested directories after a later publication failure', () => {
-  put(path.join(dist, 'item', 'nested', 'child.txt'), 'old');
-  put(path.join(dist, 'blocked', 'keep.txt'), 'unrelated');
-  const before = snapshot();
-  expect(() =>
-    applyCommitPlan({
-      kind: 'apply-mutations',
-      rootDir: dist,
-      mutations: [
-        { kind: 'write', path: 'item', content: 'new' },
-        { kind: 'delete', path: 'item/nested/child.txt' },
-        { kind: 'write', path: 'blocked', content: 'fail' },
-      ],
-    }),
-  ).toThrow('Cannot publish file mutation over directory');
-  expect(snapshot()).toEqual(before);
+  test('bytes compare by value', () => {
+    expect(
+      computeMutations(
+        outputs({ output: new Uint8Array([1, 2]) }),
+        outputs({ output: new Uint8Array([1, 2]) }),
+      ),
+    ).toEqual([]);
+    expect(
+      computeMutations(
+        outputs({ output: new Uint8Array([1, 2]) }),
+        outputs({ output: new Uint8Array([1, 3]) }),
+      ),
+    ).toEqual([
+      { kind: 'write', path: 'output', content: new Uint8Array([1, 3]) },
+    ]);
+  });
+
+  test('removed and new outputs produce deletes and writes', () => {
+    expect(computeMutations(outputs({ output: 'before' }), new Map())).toEqual([
+      { kind: 'delete', path: 'output' },
+    ]);
+    expect(computeMutations(new Map(), outputs({ output: 'new' }))).toEqual([
+      { kind: 'write', path: 'output', content: 'new' },
+    ]);
+  });
 });

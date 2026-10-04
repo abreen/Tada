@@ -3,6 +3,7 @@ import { B } from '../colors';
 import { makeLogger, printFlair } from '../log';
 import { startServer } from '../serve';
 import { WatchPagefindRunner } from '../pagefind';
+import { printDiagnostics } from '../build-validation';
 import type { WatchLifecycleEvent } from './types';
 import type { TadaBuildMeta } from '../build-types';
 import {
@@ -90,6 +91,7 @@ export class TadaWatchRuntime {
             this.distDir,
             event.meta.htmlAssetsByPath,
             event.meta.htmlAnalysisByPath,
+            event.meta.pdfSourceByOutputPath,
           );
           setImmediate(() => this.pagefindRunner!.run());
         } else {
@@ -99,9 +101,7 @@ export class TadaWatchRuntime {
         return;
       }
       case 'build-failed':
-        for (const diagnostic of event.diagnostics) {
-          log.error`${diagnostic.message}`;
-        }
+        printDiagnostics(event.diagnostics);
         return;
       case 'watching':
         log.info`Watching for changes...`;

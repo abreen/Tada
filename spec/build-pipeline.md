@@ -1,16 +1,20 @@
 # Build Pipeline
 
-A build runs in five phases:
+A build runs in five phases. The first three happen in memory; nothing is
+written until all of them succeed.
 
-1. **Setup**: compile templates and initialize the syntax highlighter
-2. **Bundle and assets** (parallel): bundle CSS and JavaScript with filenames
-   containing the Tada package version, copy fonts, generate favicons and the
-   web manifest (if enabled)
-3. **Copy**: copy static files from `public/` and non-page assets from
-   `content/` into the output directory
-4. **Render**: process Markdown, HTML, and code pages into HTML output
-5. **Post-build**: run search indexing (if enabled); generate the build
-   manifest (production only)
+1. **Setup**: validate configuration, compile templates, and initialize the
+   syntax highlighter
+2. **Generate**: bundle CSS and JavaScript with filenames containing the Tada
+   package version, compile the KaTeX stylesheet, generate favicons and the web
+   manifest (if enabled), and reference the bundled fonts
+3. **Render**: turn every source into outputs: Markdown, HTML, and code pages
+   become HTML, and other files in `content/` and `public/` are referenced for
+   copying
+4. **Write**: update the output directory in place (see
+   [Writing output](#writing-output))
+5. **Post-build**: run search indexing (if enabled); write the build manifest
+   (production only)
 
 Development builds write to `dist/`. Production builds write to a versioned
 subdirectory under `dist-prod/` (see [Production Builds](production-builds.md)).
@@ -60,20 +64,19 @@ rebuilds everything on the next change.
 
 ## Shared Build Internals
 
-The build and watch pipelines share the same source-discovery model.
+`tada dev`, `tada prod`, and watch mode share one build core.
 
 - `build/source-model.ts` scans `content/` and `public/`, classifies which
   content files are processed, and records output ownership, valid internal
-  link targets, and generated route aliases. Incremental updates replace dirty
-  entries in a shared source inventory and derive indexes once per update
+  link targets, and generated route aliases. Watch mode rescans on every build
 - `build/source-records.ts` turns individual content or public sources into
   source records containing rendered/copied outputs (including generated trace
   files) plus dependency metadata such as partial, trace, internal-target, and
   author relationships. Rendering never reads from or writes to the output
   directory
-
-Production builds use that shared scan-and-record layer during full builds, and
-watch mode reuses the same layer for incremental planning and recompilation.
-
-Both modes use the shared output publisher in `build/output-publication.ts`.
-Shared validation and source-record helpers do not depend on watch scheduling.
+- `build/site-assets.ts` produces the files Tada generates itself
+- `build/site-build.ts` renders every source, validates the result, and
+  assembles a snapshot of all outputs. Watch mode keeps that snapshot to
+  re-render only what changed
+- `build/output-publication.ts` writes a snapshot's outputs into the output
+  directory in place

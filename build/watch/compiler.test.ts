@@ -104,35 +104,45 @@ describe('invalidateTraceCacheForBatch', () => {
   });
 });
 
+function emptySnapshot() {
+  return import('../site-build').then(({ createSnapshot }) =>
+    createSnapshot({
+      siteVariables: {} as import('../types').SiteVariables,
+      assetFiles: [],
+      authorsData: undefined,
+      records: new Map(),
+      scan: {
+        sources: new Map(),
+      } as unknown as import('../source-model').TadaProjectScan,
+    }),
+  );
+}
+
 for (const failureAt of [1, 2]) {
-  test(`publication failure at build ${failureAt} clears the committed snapshot`, async () => {
+  test(`write failure at build ${failureAt} clears the committed snapshot`, async () => {
     const { createBuildSession } = await import('./compiler');
-    const state = {} as import('./snapshot').TadaSnapshot;
+    const state = await emptySnapshot();
     const snapshots: (typeof state | undefined)[] = [];
-    let publications = 0;
+    let writes = 0;
     const build = createBuildSession(
       async snapshot => {
         snapshots.push(snapshot);
-        return {
-          ok: true,
-          snapshot: state,
-          meta: {} as import('../build-types').TadaBuildMeta,
-          commit: {
-            kind: 'apply-mutations',
-            rootDir: '/output',
-            mutations: [],
-          },
-        };
+        return { ok: true, snapshot: state, full: false };
       },
       () => {
-        if (++publications === failureAt) {
-          throw new Error('disk publication failed');
+        if (++writes === failureAt) {
+          throw new Error('disk write failed');
         }
       },
     );
     for (let i = 0; i <= failureAt; i++) {
       const result = await build(i ? new Set(['/source']) : undefined);
       expect(result.ok).toBe(i + 1 !== failureAt);
+      if (!result.ok) {
+        expect(result.diagnostics).toEqual([
+          { message: 'Failed to write output: disk write failed' },
+        ]);
+      }
     }
     expect(snapshots[failureAt]).toBeUndefined();
     if (failureAt === 2) {
@@ -141,31 +151,26 @@ for (const failureAt of [1, 2]) {
   });
 }
 
-test('compilation failure retains the last committed snapshot without publishing', async () => {
+test('compilation failure retains the last committed snapshot without writing', async () => {
   const { createBuildSession } = await import('./compiler');
-  const state = {} as import('./snapshot').TadaSnapshot;
+  const state = await emptySnapshot();
   const snapshots: (typeof state | undefined)[] = [];
-  let publications = 0;
+  let writes = 0;
   const build = createBuildSession(
     async snapshot => {
       snapshots.push(snapshot);
       if (snapshots.length === 2) {
         return { ok: false, diagnostics: [{ message: 'compile failed' }] };
       }
-      return {
-        ok: true,
-        snapshot: state,
-        meta: {} as import('../build-types').TadaBuildMeta,
-        commit: { kind: 'apply-mutations', rootDir: '/output', mutations: [] },
-      };
+      return { ok: true, snapshot: state, full: false };
     },
     () => {
-      publications++;
+      writes++;
     },
   );
   await build();
   expect((await build(new Set(['/source']))).ok).toBe(false);
   await build(new Set(['/source']));
   expect(snapshots).toEqual([undefined, state, state]);
-  expect(publications).toBe(2);
+  expect(writes).toBe(2);
 });

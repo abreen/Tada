@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import { createApplyBasePath } from './util';
 import { FAVICON_SIZES } from './generate-favicon';
 import type { SiteVariables } from './types';
@@ -57,13 +55,7 @@ function createManifest(siteVariables: SiteVariables): WebAppManifest {
   };
 }
 
-export function generateWebAppManifest(
-  siteVariables: SiteVariables,
-  distDir: string,
-): void {
-  const manifest = createManifest(siteVariables);
-  fs.writeFileSync(
-    path.join(distDir, 'manifest.json'),
-    JSON.stringify(manifest),
-  );
+/** The web app manifest (`manifest.json`) for generated favicons */
+export function createWebAppManifest(siteVariables: SiteVariables): string {
+  return JSON.stringify(createManifest(siteVariables));
 }

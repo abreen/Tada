@@ -1,5 +1,6 @@
 import type { ChokidarOptions } from 'chokidar';
 import type { BuildDiagnostic } from '../build-types';
+import type { TadaSnapshot } from '../site-build';
 
 export interface WatchTarget {
   path: string;
@@ -37,3 +38,15 @@ export interface WatchHandle {
   done: Promise<void>;
   close(): Promise<void>;
 }
+
+/** The result of compiling one watch build, before it is written */
+export type CompileOutcome =
+  | {
+      ok: true;
+      snapshot: TadaSnapshot;
+      /** Full builds are written against the files on disk */
+      full: boolean;
+      /** Sources whose outputs are rewritten even if they look unchanged */
+      forceSourcePaths?: ReadonlySet<string>;
+    }
+  | { ok: false; diagnostics: BuildDiagnostic[] };

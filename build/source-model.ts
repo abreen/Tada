@@ -201,45 +201,6 @@ export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
   return indexSources(roots, sources);
 }
 
-export function updateProjectScan(
-  snapshot: TadaProjectScan,
-  paths: ReadonlySet<string>,
-): TadaProjectScan {
-  const sources = new Map(snapshot.sources);
-  for (const sourcePath of paths) {
-    const kind = sourcePath.startsWith(`${snapshot.contentDir}${path.sep}`)
-      ? 'content'
-      : sourcePath.startsWith(`${snapshot.publicDir}${path.sep}`)
-        ? 'public'
-        : undefined;
-    if (!kind) {
-      continue;
-    }
-    sources.delete(sourcePath);
-    const stat = fs.existsSync(sourcePath)
-      ? fs.statSync(sourcePath)
-      : undefined;
-    const isFile = stat?.isFile();
-    if (!snapshot.sources.has(sourcePath) || !isFile) {
-      // Directory notifications reconcile descendants without relying on child events.
-      for (const existing of sources.keys()) {
-        if (existing.startsWith(sourcePath + path.sep)) {
-          sources.delete(existing);
-        }
-      }
-    }
-    const files = isFile
-      ? [sourcePath]
-      : stat?.isDirectory()
-        ? walkFiles(sourcePath)
-        : [];
-    for (const filePath of files) {
-      sources.set(filePath, createSourceEntry(snapshot, filePath, kind));
-    }
-  }
-  return indexSources(snapshot, sources);
-}
-
 export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
   return [...scan.outputProducers]
     .filter(([, producers]) => producers.size > 1)
