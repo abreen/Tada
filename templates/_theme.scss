@@ -33,8 +33,10 @@
 
   // Main background color (the color of the page background)
   --bg-color: hsl(var(--tint-hue) calc(5% * var(--tint-amount)) 97%);
+
+  // Same saturation as --bg-color, so frosting doesn't add color to the page
   --bg-color-translucent: hsl(
-    var(--tint-hue) calc(30% * var(--tint-amount)) 95% / 66%
+    var(--tint-hue) calc(5% * var(--tint-amount)) 95% / 66%
   );
 
   // Secondary background color (lighter)
@@ -117,7 +119,7 @@
     --link-color-hover: <%= linkColorHoverDark %>;
     --bg-color: hsl(var(--tint-hue) calc(3% * var(--tint-amount)) 5%);
     --bg-color-translucent: hsl(
-      var(--tint-hue) calc(15% * var(--tint-amount)) 10% / 66%
+      var(--tint-hue) calc(3% * var(--tint-amount)) 10% / 66%
     );
     --bg2-color: hsl(var(--tint-hue) calc(12% * var(--tint-amount)) 12%);
     --bg2-color-translucent: hsl(

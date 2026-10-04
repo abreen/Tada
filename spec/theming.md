@@ -20,6 +20,14 @@ Theme values are compiled into CSS variables at build time and applied
 site-wide. Text colors for both light and dark modes are derived automatically
 to ensure readability against the chosen theme color.
 
+## Translucent background
+
+The frosted site header and the navigation wash use a translucent primary
+background at 66% opacity. In standard contrast it shares the primary
+background's hue and saturation, so the header frosts the page without adding
+color, while sitting slightly darker in light mode (95% vs. 97% lightness) and
+slightly lighter in dark mode (10% vs. 5%) for a subtle tonal separation.
+
 ## Link color
 
 Links use a dedicated `--link-color` CSS variable that is derived from the
