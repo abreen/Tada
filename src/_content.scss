@@ -370,7 +370,9 @@ dfn {
   align-self: start;
   min-width: 0;
   height: var(--breadcrumbs-height);
-  margin: 0 calc(-1 * var(--gap)) calc(var(--gap) / 2);
+
+  // The bar is taller than one line; pull the heading back up against the text.
+  margin: 0 calc(-1 * var(--gap)) calc((1lh - var(--breadcrumbs-height)) / 2);
 
   ol {
     box-sizing: border-box;
@@ -403,6 +405,7 @@ dfn {
   // before any ancestor does.
   li:last-child {
     flex: 1 1 0;
+    max-width: max-content;
   }
 
   a,

@@ -590,3 +590,27 @@ test('history navigation shows a restored stuck bar in the incoming snapshot', a
     ),
   ).toBe(true);
 });
+
+test('trail items are only as wide as their content when the trail fits', async ({
+  page,
+}) => {
+  // View transitions scale each item's snapshot to its box, so a box wider
+  // than its text makes items balloon when they change role during navigation.
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto('/breadcrumb-tests/nested/index.html');
+  const widths = await breadcrumbNav(page)
+    .getByRole('listitem')
+    .evaluateAll(items =>
+      items.map(item => {
+        const range = document.createRange();
+        range.selectNodeContents(item);
+        return {
+          box: item.getBoundingClientRect().width,
+          content: range.getBoundingClientRect().width,
+        };
+      }),
+    );
+  for (const { box, content } of widths) {
+    expect(box).toBeLessThanOrEqual(content + 1);
+  }
+});
