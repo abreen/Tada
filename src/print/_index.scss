@@ -31,12 +31,6 @@
     position: static;
   }
 
-  .breadcrumbs ol {
-    background: none !important;
-    border-bottom: none !important;
-    backdrop-filter: none !important;
-  }
-
   main a:not(.heading-anchor, .footnote-ref, .line-number) {
     @include link-underline;
   }

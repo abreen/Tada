@@ -12,10 +12,13 @@ html {
   scroll-padding-top: calc(var(--header-collapsed-height) + var(--gap));
 }
 
-html:has(.main-content > nav.breadcrumbs) {
-  scroll-padding-top: calc(
-    var(--header-collapsed-height) + var(--breadcrumbs-height) + var(--gap)
-  );
+// Only a sticky trail covers content (see `.breadcrumbs` in `_content.scss`).
+@supports (container-type: scroll-state) {
+  html:has(.main-content > nav.breadcrumbs) {
+    scroll-padding-top: calc(
+      var(--header-collapsed-height) + var(--breadcrumbs-height) + var(--gap)
+    );
+  }
 }
 
 body {
@@ -149,11 +152,13 @@ body.literate main table {
     max-height: calc(100vh - var(--header-collapsed-height) - var(--gap));
   }
 
-  body.toc-is-active .main-content:has(> nav.breadcrumbs) > nav.toc {
-    top: calc(var(--header-collapsed-height) + var(--breadcrumbs-height));
-    max-height: calc(
-      100vh - var(--header-collapsed-height) - var(--breadcrumbs-height)
-    );
+  @supports (container-type: scroll-state) {
+    body.toc-is-active .main-content:has(> nav.breadcrumbs) > nav.toc {
+      top: calc(var(--header-collapsed-height) + var(--breadcrumbs-height));
+      max-height: calc(
+        100vh - var(--header-collapsed-height) - var(--breadcrumbs-height)
+      );
+    }
   }
 }
 

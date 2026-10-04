@@ -181,12 +181,8 @@
     <% } %>
   <style>
     /* Inline because Bun's CSS bundler cannot parse scroll-state() queries */
-    @supports (container-type: scroll-state) {
-      .breadcrumbs { container-type: scroll-state; }
-      :root:not(.js) .breadcrumbs ol { background: none; border-bottom-color: transparent; backdrop-filter: none; }
-      @container scroll-state(stuck: top) {
-        :root .breadcrumbs ol, :root:not(.js) .breadcrumbs ol { background: var(--breadcrumbs-stuck-background); border-bottom-color: var(--bg2-color); backdrop-filter: var(--backdrop-filter); }
-      }
+    @container scroll-state(stuck: top) {
+      .breadcrumbs ol { background: var(--breadcrumbs-stuck-background); border-bottom-color: var(--bg2-color); backdrop-filter: var(--backdrop-filter); }
     }
   </style>
   <script>document.head.appendChild(document.createElement('style')).textContent='.time-zone-label[hidden],select.time-zone[hidden]{display:revert}'</script>

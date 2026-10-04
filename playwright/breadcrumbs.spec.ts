@@ -407,6 +407,10 @@ for (const javaScriptEnabled of [true, false]) {
           );
       // Chromium supports scroll-state queries, so this holds without script.
       await expect.poll(isTransparent).toBe(true);
+      await page.goto(`${LONG_PAGE}#target`);
+      await expect.poll(isTransparent).toBe(false);
+      await page.evaluate(() => window.scrollTo({ top: 0 }));
+      await expect.poll(isTransparent).toBe(true);
       await page.mouse.wheel(0, 3000);
       await expect.poll(isTransparent).toBe(false);
       await page.mouse.wheel(0, -3000);
@@ -540,13 +544,15 @@ test('navigating from a scrolled page keeps shared crumbs in place', async ({
   expect(transition.old[3].name).toBe('page-breadcrumb-leave-3');
 });
 
-test('history navigation marks a restored stuck trail before the snapshot', async ({
+test('history navigation shows a restored stuck bar in the incoming snapshot', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 700 });
   await page.goto(LONG_PAGE);
   await page.mouse.wheel(0, 3000);
-  await expect(breadcrumbNav(page)).toHaveClass(/is-stuck/);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(2000);
   await breadcrumbNav(page)
     .getByRole('link', { name: 'Nested page', exact: true })
     .click();
@@ -557,16 +563,20 @@ test('history navigation marks a restored stuck trail before the snapshot', asyn
     const state = window as Window & { stuckDuringSwap?: boolean | null };
     state.stuckDuringSwap = null;
     const original = document.startViewTransition.bind(document);
-    document.startViewTransition = callback =>
-      original(async () => {
-        if (typeof callback === 'function') {
-          await callback();
-        }
-        state.stuckDuringSwap =
-          document
-            .querySelector('nav.breadcrumbs')
-            ?.classList.contains('is-stuck') ?? false;
-      });
+    document.startViewTransition = callback => {
+      const transition = original(callback);
+      // The incoming snapshot is captured in the same rendering update that
+      // resolves `ready`, after scroll-state queries see the restored scroll.
+      transition.ready
+        .then(() => {
+          const bar = document.querySelector('nav.breadcrumbs ol');
+          state.stuckDuringSwap =
+            bar != null &&
+            getComputedStyle(bar).backgroundColor !== 'rgba(0, 0, 0, 0)';
+        })
+        .catch(() => {});
+      return transition;
+    };
   });
   await page.goBack();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
@@ -579,20 +589,4 @@ test('history navigation marks a restored stuck trail before the snapshot', asyn
           .stuckDuringSwap,
     ),
   ).toBe(true);
-});
-
-test('marks the trail stuck only while it is pinned below the header', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 700 });
-  await page.goto(LONG_PAGE);
-  const nav = breadcrumbNav(page);
-  await expect(nav).not.toHaveClass(/is-stuck/);
-  await page.mouse.wheel(0, 3000);
-  await expect(nav).toHaveClass(/is-stuck/);
-  await page.mouse.wheel(0, -3000);
-  await expect(nav).not.toHaveClass(/is-stuck/);
-  await page.setViewportSize({ width: 1280, height: 400 });
-  await page.evaluate(() => window.scrollTo({ top: 2000 }));
-  await expect(nav).toHaveClass(/is-stuck/);
 });

@@ -1,6 +1,5 @@
 import mountTableOfContents from '../toc';
 import mountAnchor from '../anchor';
-import mountBreadcrumbs from '../breadcrumbs';
 import mountQuestion from '../question';
 import mountTimeZone from '../timezone';
 import mountCode from '../code';
@@ -16,7 +15,6 @@ const PER_PAGE_COMPONENTS: Record<
 > = {
   toc: mountTableOfContents,
   anchor: mountAnchor,
-  breadcrumbs: mountBreadcrumbs,
   question: mountQuestion,
   timeZone: mountTimeZone,
   code: mountCode,

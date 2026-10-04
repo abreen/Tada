@@ -365,9 +365,6 @@ dfn {
 }
 
 .breadcrumbs {
-  position: sticky;
-  top: var(--header-collapsed-height);
-  z-index: 20;
   display: flex;
   grid-area: crumbs;
   align-self: start;
@@ -429,23 +426,23 @@ dfn {
   }
 }
 
-// The trail only looks like a bar while stuck below the header. Browsers with
-// scroll-state queries use the inline rule in `templates/_top.html`, which Bun's
-// CSS bundler cannot parse; others rely on the script's class. Without either,
-// the bar stays opaque so pinned text stays legible.
-.breadcrumbs {
-  --breadcrumbs-stuck-background: var(--bg-color-translucent);
-}
+// The trail only sticks below the header in browsers with scroll-state
+// container queries, which show the bar background only while it is stuck.
+// Bun's CSS bundler cannot parse scroll-state() queries, so that rule is inline
+// in `templates/_top.html`. Other browsers keep the trail in normal flow.
+@supports (container-type: scroll-state) {
+  .breadcrumbs {
+    position: sticky;
+    top: var(--header-collapsed-height);
+    z-index: 20;
+    container-type: scroll-state;
 
-:root[data-contrast-preference='high'] .breadcrumbs {
-  --breadcrumbs-stuck-background: var(--bg-color);
-}
+    --breadcrumbs-stuck-background: var(--bg-color-translucent);
+  }
 
-.breadcrumbs.is-stuck ol,
-:root:not(.js) .breadcrumbs ol {
-  background: var(--breadcrumbs-stuck-background);
-  border-bottom-color: var(--bg2-color);
-  backdrop-filter: var(--backdrop-filter);
+  :root[data-contrast-preference='high'] .breadcrumbs {
+    --breadcrumbs-stuck-background: var(--bg-color);
+  }
 }
 
 img {

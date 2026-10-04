@@ -5,7 +5,6 @@ import {
   teardownPerPageComponents,
 } from './lifecycle';
 import { globals } from '../globals';
-import { syncBreadcrumbStuckState } from '../breadcrumbs';
 import {
   cleanupBreadcrumbTransitionNames,
   getBreadcrumbItems,
@@ -347,10 +346,6 @@ export async function navigateToUrl(
     } else {
       window.scrollTo({ top: 0 });
     }
-
-    // Per-page components mount after the transition; mark a restored stuck
-    // trail now so the incoming snapshot shows its bar background.
-    syncBreadcrumbStuckState(window);
 
     scrollByIndex.set(historyIndex, window.scrollY);
     scrollByLocation.set(getLocationKey(window), window.scrollY);
