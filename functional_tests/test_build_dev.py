@@ -79,7 +79,7 @@ class TestDevBuild:
             css,
         )
 
-    def test_draws_every_icon_with_one_rounded_stroke_width(self, built_dev_site):
+    def test_draws_every_icon_with_shared_rounded_stroke_width(self, built_dev_site):
         dist = built_dev_site / 'dist'
         css = ''.join(file.read_text() for file in dist.glob('*.css'))
         js = ''.join(file.read_text() for file in dist.glob('index.bundle.tada-*.js'))
@@ -87,7 +87,9 @@ class TestDevBuild:
 
         stroke_widths = re.findall(r'stroke-width=\\?["\']([^"\'\\]+)', css + js + html)
         assert stroke_widths
-        assert set(stroke_widths) == {'1.65'}
+        # The contrast-standard stripes (1.25) and compact alert outlines (1)
+        # are the only exceptions to the shared width.
+        assert set(stroke_widths) == {'1.65', '1.25', '1'}
         assert '0 -960 960 960' not in css
         assert '--icon-tada' not in css
 
@@ -99,6 +101,7 @@ class TestDevBuild:
             size = re.search(r"width='(\d+)'", svg)[1]
             assert f"height='{size}'" in svg
             assert f"viewBox='0 0 {size} {size}'" in svg
+            assert "stroke-width='1.65'" in svg
             assert "stroke-linecap='round'" in svg
             assert "stroke-linejoin='round'" in svg
 
