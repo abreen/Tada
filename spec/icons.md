@@ -9,7 +9,9 @@ SVG's viewBox matches its rendered pixel size (a 20px icon uses
 Icons never scale with font size. The `contrast-standard` stripes are the one
 exception to the stroke width: they use 1.25px so the striped half reads
 lighter than the solid half of `contrast-high`, which is a single filled path
-with no stroke.
+with no stroke. `info-compact` and `warning-compact` draw a filled glyph with
+no stroke inside a 1px circle or triangle outline, while the full-size `info`
+and `warning` are outlined glyphs with no enclosing shape.
 
 ## Mask icons
 
