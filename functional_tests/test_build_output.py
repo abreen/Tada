@@ -87,3 +87,51 @@ def test_prod_version_without_a_manifest_is_ignored_and_replaced(tmp_path):
     manifest = json.loads((leftover / 'tada.manifest.json').read_text())
     assert manifest['build'] == 2
     assert (leftover / 'index.html').is_file()
+
+
+def test_output_that_is_both_a_file_and_a_directory_stops_the_build(tmp_path):
+    site = init_site(tmp_path)
+    (site / 'public' / 'foo').write_text('a file')
+    (site / 'content' / 'foo').mkdir()
+    (site / 'content' / 'foo' / 'bar.png').write_bytes(b'png')
+
+    result = run_tada('dev', cwd=str(site))
+
+    assert result.returncode == 1
+    assert result.stdout.count('foo is both a file and a directory') == 1
+    assert 'content/foo/bar.png, public/foo' in result.stdout
+    assert not (site / 'dist').exists()
+
+
+def test_source_named_like_the_search_index_directory_stops_the_build(tmp_path):
+    site = init_site(tmp_path)
+    (site / 'public' / 'pagefind').write_text('a file')
+
+    result = run_tada('dev', cwd=str(site))
+
+    assert result.returncode == 1
+    assert 'public/pagefind: conflicts with the search index in pagefind/' in result.stdout
+
+
+def test_full_build_replaces_a_stale_empty_directory(tmp_path):
+    site = init_site(tmp_path)
+    (site / 'dist' / 'about.html' / 'empty').mkdir(parents=True)
+    (site / 'content' / 'about.md').write_text('---\ntitle: About\n---\n\nAbout.\n')
+
+    result = run_tada('dev', cwd=str(site))
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (site / 'dist' / 'about.html').is_file()
+
+
+def test_malformed_front_matter_is_reported_for_every_page(tmp_path):
+    site = init_site(tmp_path)
+    for name in ('one.md', 'two.md'):
+        (site / 'content' / name).write_text('---\ntitle: Unclosed\n\nBody\n')
+
+    result = run_tada('dev', cwd=str(site))
+
+    assert result.returncode == 1
+    for name in ('one.md', 'two.md'):
+        assert result.stdout.count(f'content/{name}: ') == 1
+    assert 'tada dev failed: 2 errors' in result.stderr

@@ -73,6 +73,10 @@ function dirs(): string[] {
 mock.module('fs', () =>
   createFsModuleMock({
     existsSync: (file: string) => entries.has(file),
+    lstatSync: (file: string) =>
+      entries.has(file)
+        ? { isDirectory: () => entries.get(file) === null }
+        : undefined,
     mkdirSync(dir: string) {
       mkdir(dir);
     },
@@ -109,6 +113,7 @@ mock.module('fs', () =>
           name: path.basename(file),
           parentPath: path.dirname(file),
           isFile: () => content !== null,
+          isDirectory: () => content === null,
         }));
     },
   }),
@@ -224,6 +229,24 @@ describe('planFullWrite', () => {
       { kind: 'delete', path: 'stale.html' },
       { kind: 'write', path: 'index.html', content: 'new' },
     ]);
+  });
+
+  test('removes stale empty directories, including one in the way of an output', () => {
+    mkdir(path.join(dist, 'about.html', 'empty'));
+    mkdir(path.join(dist, 'unused'));
+    put(path.join(dist, 'pagefind', 'index.js'), 'search');
+    mkdir(path.join(dist, 'pagefind', 'fragments'));
+
+    const mutations = planFullWrite(dist, outputs({ 'about.html': 'about' }), [
+      'pagefind/',
+    ]);
+    applyMutations(dist, mutations);
+
+    expect(files()).toEqual({
+      'about.html': 'about',
+      'pagefind/index.js': 'search',
+    });
+    expect(dirs()).toEqual(['', 'pagefind', 'pagefind/fragments']);
   });
 
   test('writes everything into a directory that does not exist yet', () => {

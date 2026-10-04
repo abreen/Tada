@@ -215,8 +215,12 @@ export function shouldSkipContentFile(filePath: string): boolean {
   }
 
   const raw = fs.readFileSync(filePath, 'utf-8');
-  const { pageVariables } = parseFrontMatterAndContent(raw, ext);
-  return pageVariables?.skip === true;
+  try {
+    return parseFrontMatterAndContent(raw, ext).pageVariables?.skip === true;
+  } catch {
+    // Not skipped: rendering the page reports the error for this file.
+    return false;
+  }
 }
 
 export function getProcessedExts(codeExtensions: string[]): Set<string> {

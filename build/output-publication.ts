@@ -94,35 +94,45 @@ export function computeMutations(
   return mutations;
 }
 
-/** Relative POSIX paths of the files under `rootDir`, except under `keep`. */
-function listOutputFiles(
-  rootDir: string,
-  keep: readonly string[] = [],
-): string[] {
-  if (!fs.existsSync(rootDir)) {
-    return [];
-  }
-  return fs
-    .readdirSync(rootDir, { withFileTypes: true, recursive: true })
-    .filter(entry => entry.isFile())
-    .map(entry =>
-      toPosix(path.relative(rootDir, path.join(entry.parentPath, entry.name))),
-    )
-    .filter(outputPath => !keep.some(prefix => outputPath.startsWith(prefix)));
-}
-
 /**
  * Mutations that make `rootDir` hold exactly `outputs`: every output is
- * written, and every other file is deleted except those under `keep`.
+ * written, and every other file and empty directory is deleted except those
+ * under `keep`.
  */
 export function planFullWrite(
   rootDir: string,
   outputs: ReadonlyMap<string, OutputFile>,
   keep: readonly string[] = [],
 ): FileMutation[] {
-  const deletes: FileMutation[] = listOutputFiles(rootDir, keep)
-    .filter(outputPath => !outputs.has(outputPath))
-    .map(outputPath => ({ kind: 'delete', path: outputPath }));
+  const entries = fs.existsSync(rootDir)
+    ? fs.readdirSync(rootDir, { withFileTypes: true, recursive: true })
+    : [];
+  const files: string[] = [];
+  const dirs: string[] = [];
+  for (const entry of entries) {
+    const relPath = toPosix(
+      path.relative(rootDir, path.join(entry.parentPath, entry.name)),
+    );
+    if (entry.isDirectory()) {
+      dirs.push(relPath);
+    } else {
+      files.push(relPath);
+    }
+  }
+  const isKept = (relPath: string) =>
+    keep.some(prefix => `${relPath}/`.startsWith(prefix));
+  const dirsWithFiles = new Set<string>();
+  for (const file of files) {
+    const segments = file.split('/');
+    for (let i = 1; i < segments.length; i++) {
+      dirsWithFiles.add(segments.slice(0, i).join('/'));
+    }
+  }
+
+  const deletes: FileMutation[] = [
+    ...files.filter(file => !isKept(file) && !outputs.has(file)),
+    ...dirs.filter(dir => !isKept(dir) && !dirsWithFiles.has(dir)),
+  ].map(relPath => ({ kind: 'delete', path: relPath }));
   const writes: FileMutation[] = [...outputs].map(([outputPath, output]) => ({
     kind: 'write',
     path: outputPath,
@@ -161,7 +171,13 @@ export function applyMutations(
     .sort((a, b) => b.path.length - a.path.length);
   for (const mutation of deletes) {
     const target = path.resolve(rootDir, mutation.path);
-    retryWhileBusy(() => fs.rmSync(target, { force: true }));
+    retryWhileBusy(() => {
+      if (fs.lstatSync(target, { throwIfNoEntry: false })?.isDirectory()) {
+        fs.rmdirSync(target);
+      } else {
+        fs.rmSync(target, { force: true });
+      }
+    });
     pruneEmptyDirs(rootDir, target);
   }
   for (const mutation of mutations) {
