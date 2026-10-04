@@ -387,7 +387,7 @@ for (const javaScriptEnabled of [true, false]) {
     }
   });
 
-  test(`the bar background ${javaScriptEnabled ? 'appears only while stuck' : 'stays on'} with JavaScript ${js}`, async ({
+  test(`the bar background appears only while stuck with JavaScript ${js}`, async ({
     browser,
   }) => {
     const context = await browser.newContext({
@@ -405,12 +405,12 @@ for (const javaScriptEnabled of [true, false]) {
             element =>
               getComputedStyle(element).backgroundColor === 'rgba(0, 0, 0, 0)',
           );
-      // Without JavaScript the stuck state is unknown, so the bar stays opaque.
-      await expect.poll(isTransparent).toBe(javaScriptEnabled);
+      // Chromium supports scroll-state queries, so this holds without script.
+      await expect.poll(isTransparent).toBe(true);
       await page.mouse.wheel(0, 3000);
       await expect.poll(isTransparent).toBe(false);
       await page.mouse.wheel(0, -3000);
-      await expect.poll(isTransparent).toBe(javaScriptEnabled);
+      await expect.poll(isTransparent).toBe(true);
       if (javaScriptEnabled) {
         await nav
           .getByRole('link', { name: 'Nested page', exact: true })

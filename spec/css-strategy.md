@@ -3,7 +3,8 @@
 Every page loads one stylesheet, `index.bundle.*.css`, through a normal,
 render-blocking `<link rel="stylesheet">` in its `<head>`. None of it is
 inlined into pages; the page template only carries a few small inline rules
-for JavaScript and `<noscript>` fallbacks.
+for JavaScript and `<noscript>` fallbacks, plus the breadcrumb scroll-state
+rule, which Bun's CSS bundler cannot parse.
 
 The stylesheet is render-blocking on purpose: a page never paints without its
 complete styling, so there is no flash of unstyled content, and styling works

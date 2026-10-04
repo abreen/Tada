@@ -429,18 +429,23 @@ dfn {
   }
 }
 
-// The trail only looks like a bar while the script reports it stuck below the
-// header. Without JavaScript the bar stays opaque so pinned text stays legible.
-.breadcrumbs.is-stuck ol,
-:root:not(.js) .breadcrumbs ol {
-  background: var(--bg-color-translucent);
-  border-bottom-color: var(--bg2-color);
-  backdrop-filter: var(--backdrop-filter);
+// The trail only looks like a bar while stuck below the header. Browsers with
+// scroll-state queries use the inline rule in `templates/_top.html`, which Bun's
+// CSS bundler cannot parse; others rely on the script's class. Without either,
+// the bar stays opaque so pinned text stays legible.
+.breadcrumbs {
+  --breadcrumbs-stuck-background: var(--bg-color-translucent);
 }
 
-:root[data-contrast-preference='high'] .breadcrumbs.is-stuck ol,
-:root[data-contrast-preference='high']:not(.js) .breadcrumbs ol {
-  background: var(--bg-color);
+:root[data-contrast-preference='high'] .breadcrumbs {
+  --breadcrumbs-stuck-background: var(--bg-color);
+}
+
+.breadcrumbs.is-stuck ol,
+:root:not(.js) .breadcrumbs ol {
+  background: var(--breadcrumbs-stuck-background);
+  border-bottom-color: var(--bg2-color);
+  backdrop-filter: var(--backdrop-filter);
 }
 
 img {

@@ -56,16 +56,18 @@ the page. The bar has a fixed one-line height (`--breadcrumbs-height`), spans
 the content column including its side gutters, and sits above page content but
 below the header and the open-menu overlay.
 
-The bar only has a background while it is stuck: the `breadcrumbs` client
-component adds `is-stuck` once the trail reaches its sticky offset and removes
-it when the trail returns to normal flow. Client navigation also sets the state
-during the content swap, after restoring scroll, so a page restored scrolled
-down shows the stuck bar throughout its view transition. While stuck it uses the header's
-translucent background, backdrop blur, and bottom border (an opaque background
-with high contrast); otherwise the trail is plain text above the heading.
-Bun's CSS bundler cannot parse `scroll-state()` container queries, so the stuck
-state is detected from script. With JavaScript disabled, the bar background is
-always shown so pinned text never overlaps page content.
+The bar only has a background while it is stuck. While stuck it uses the
+header's translucent background, backdrop blur, and bottom border (an opaque
+background with high contrast); otherwise the trail is plain text above the
+heading. Browsers that support CSS scroll-state container queries detect the
+stuck state in CSS, with or without JavaScript. That rule is an inline `<style>`
+in the page head because Bun's CSS bundler cannot parse `scroll-state()`
+queries. In other browsers the `breadcrumbs` client component adds `is-stuck`
+once the trail reaches its sticky offset and removes it when the trail returns
+to normal flow. Client navigation also sets the class during the content swap,
+after restoring scroll, so a page restored scrolled down shows the stuck bar
+throughout its view transition. Without JavaScript or scroll-state support, the
+bar background is always shown so pinned text never overlaps page content.
 
 The trail never wraps. The current title takes only the space the ancestors
 leave and truncates with an ellipsis first; ancestors truncate only when they
