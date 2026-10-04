@@ -51,7 +51,10 @@ export function writeOutputFile(
   }
 }
 
-function outputsEqual(left: OutputContent, right: OutputContent): boolean {
+export function sameOutputContent(
+  left: OutputContent,
+  right: OutputContent,
+): boolean {
   if (typeof left === 'string' || typeof right === 'string') {
     return left === right;
   }
@@ -84,7 +87,7 @@ export function computeMutations(
       mutations.push({ kind: 'delete', path: outputPath });
     } else if (
       !before ||
-      !outputsEqual(before.content, after.content) ||
+      !sameOutputContent(before.content, after.content) ||
       forceSourcePaths.has(after.sourcePath)
     ) {
       mutations.push({

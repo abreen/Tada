@@ -176,3 +176,18 @@ def test_rebuilt_search_index_has_no_stale_files(tmp_path):
     shutil.rmtree(site / 'dist')
     assert run_tada('dev', cwd=str(site)).returncode == 0
     assert rebuilt == search_files()
+
+
+def test_search_index_replaces_a_stale_pagefind_file(tmp_path):
+    site = init_site(tmp_path)
+    set_site_config(site, {'features': {'search': False}})
+    (site / 'public' / 'pagefind').write_text('a file')
+    assert run_tada('dev', cwd=str(site)).returncode == 0
+    assert (site / 'dist' / 'pagefind').is_file()
+
+    (site / 'public' / 'pagefind').unlink()
+    set_site_config(site, {'features': {'search': True}})
+    result = run_tada('dev', cwd=str(site))
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (site / 'dist' / 'pagefind').is_dir()

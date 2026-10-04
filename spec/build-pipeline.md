@@ -31,7 +31,9 @@ A build stops when any of these happen. The rules are the same for
 2. **Output conflict.** Two sources would write the same output path. Sources
    are files in `content/` and `public/`, plus the files Tada generates: CSS and
    JavaScript bundles, bundled fonts, `katex/`, `pagefind/`, favicons and
-   `manifest.json`, and `_traces/`.
+   `manifest.json`, and `_traces/`. A path also conflicts when one source
+   writes it as a file and another needs it as a directory. Pages that trace
+   the same files may share identical trace files.
 3. **Page error.** A page can't be rendered: invalid or reserved front matter,
    a template, Markdown, or partial error, a broken internal link (in page
    content, `nav`, `authors`, or `parent`), or a failed compile or trace.
