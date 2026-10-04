@@ -1,47 +1,19 @@
 import { describe, expect, test } from 'bun:test';
-import { JSDOM } from 'jsdom';
-import mount from './index';
+import { isTrailStuck } from './index';
 
-function create(top: number) {
-  const dom = new JSDOM(
-    '<body><nav class="breadcrumbs" style="top: 45px"><ol></ol></nav></body>',
-  );
-  const trail = dom.window.document.querySelector('nav')!;
-  const position = { top };
-  trail.getBoundingClientRect = () =>
-    ({ top: position.top, height: 36 }) as DOMRect;
-  return { window: dom.window, trail, position };
-}
-
-describe('breadcrumbs', () => {
-  test('marks the trail stuck only when it reaches its sticky offset', () => {
-    const { window, trail, position } = create(57);
-    mount(window as unknown as Window);
-    expect(trail.classList.contains('is-stuck')).toBe(false);
-
-    position.top = 45;
-    window.dispatchEvent(new window.Event('scroll'));
-    expect(trail.classList.contains('is-stuck')).toBe(true);
-
-    position.top = 57;
-    window.dispatchEvent(new window.Event('scroll'));
-    expect(trail.classList.contains('is-stuck')).toBe(false);
+describe('isTrailStuck', () => {
+  test('is stuck at or above its sticky offset', () => {
+    expect(isTrailStuck(45, { top: 45, height: 36 })).toBe(true);
+    expect(isTrailStuck(45, { top: 45.4, height: 36 })).toBe(true);
   });
 
-  test('cleanup stops tracking and clears the class', () => {
-    const { window, trail, position } = create(45);
-    const cleanup = mount(window as unknown as Window);
-    expect(trail.classList.contains('is-stuck')).toBe(true);
-
-    cleanup?.();
-    expect(trail.classList.contains('is-stuck')).toBe(false);
-    position.top = 45;
-    window.dispatchEvent(new window.Event('scroll'));
-    expect(trail.classList.contains('is-stuck')).toBe(false);
+  test('is not stuck below its sticky offset', () => {
+    expect(isTrailStuck(45, { top: 57, height: 36 })).toBe(false);
+    expect(isTrailStuck(45, { top: 45.6, height: 36 })).toBe(false);
   });
 
-  test('does nothing on pages without a trail', () => {
-    const window = new JSDOM('<body></body>').window as unknown as Window;
-    expect(mount(window)).toBeUndefined();
+  test('is not stuck when hidden or without a sticky offset', () => {
+    expect(isTrailStuck(45, { top: 0, height: 0 })).toBe(false);
+    expect(isTrailStuck(Number.NaN, { top: 0, height: 36 })).toBe(false);
   });
 });

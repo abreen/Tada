@@ -580,3 +580,19 @@ test('history navigation marks a restored stuck trail before the snapshot', asyn
     ),
   ).toBe(true);
 });
+
+test('marks the trail stuck only while it is pinned below the header', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto(LONG_PAGE);
+  const nav = breadcrumbNav(page);
+  await expect(nav).not.toHaveClass(/is-stuck/);
+  await page.mouse.wheel(0, 3000);
+  await expect(nav).toHaveClass(/is-stuck/);
+  await page.mouse.wheel(0, -3000);
+  await expect(nav).not.toHaveClass(/is-stuck/);
+  await page.setViewportSize({ width: 1280, height: 400 });
+  await page.evaluate(() => window.scrollTo({ top: 2000 }));
+  await expect(nav).toHaveClass(/is-stuck/);
+});
