@@ -263,7 +263,7 @@ jobs:
           .defaultContrast = "standard" |
           .themeColor = "hsl(335 70% 55%)" |
           .tintHue = 146 |
-          .tintAmount = 66 |
+          .tintAmount = 100 |
           .vars.testCoveragePercent = ($pct | tonumber) |
           .vars.testCoverageUrl = "/coverage/index.html"
         ' example/site.prod.yaml
