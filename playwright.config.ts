@@ -23,6 +23,11 @@ export default defineConfig({
       use: { browserName: 'webkit' },
     },
     {
+      name: 'webkit-header-layout',
+      testMatch: '**/header-layout.spec.ts',
+      use: { browserName: 'webkit' },
+    },
+    {
       name: 'webkit-font-loading',
       testMatch: '**/font-loading.spec.ts',
       use: { browserName: 'webkit' },

@@ -21,12 +21,16 @@ for that check. Disabled links render as non-clickable UI without an `href`, so
 they do not participate in link validation or reachability.
 
 The collapsed header always keeps the menu control and site logo visible. The
-site title uses the remaining width and truncates with an ellipsis only as
-needed. Space on the trailing edge is reserved only for controls that are
-currently present and visible: the search field above its narrow breakpoint,
-and the back-to-top button after scrolling. This lets the back-to-top button
-progressively shorten, and only when it consumes the remaining room replace,
-the title.
+navigation summary (menu control, logo, and site title) and the trailing
+controls share one CSS grid row: the summary takes a flexible first column and
+the controls take a second column sized to their rendered content. The title
+therefore uses exactly the width left by the controls that are currently
+present and visible, the search field above its narrow breakpoint and the
+back-to-top button after scrolling, and truncates with an ellipsis only as
+needed. No control widths are hard-coded, so fonts, labels, and text sizes
+cannot make the title overlap the controls or leave unused space before them.
+The controls always keep their full width. The open navigation spans the full
+header width beneath both columns.
 
 Opening and closing the header morphs one inline SVG between the menu and close
 states: its top and bottom strokes shorten, move, and rotate into two halves of

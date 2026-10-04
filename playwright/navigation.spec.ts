@@ -137,13 +137,12 @@ test.describe('search control', () => {
     await page.goto('/index.html');
 
     const alignedEdges = await page.evaluate(() => ({
-      details: document.querySelector('header details')!.getBoundingClientRect()
-        .right,
+      header: document.querySelector('header')!.getBoundingClientRect().right,
       search: document
         .querySelector('input[name="quick-search"]')!
         .getBoundingClientRect().right,
     }));
-    expect(alignedEdges.search).toBeLessThan(alignedEdges.details);
+    expect(alignedEdges.search).toBeLessThan(alignedEdges.header);
 
     await page.setViewportSize({ width: 400, height: 800 });
     expect(await page.locator('.search-controls').boundingBox()).toBeNull();
