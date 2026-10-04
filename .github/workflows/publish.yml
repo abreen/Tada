@@ -261,6 +261,9 @@ jobs:
         yq --yaml-output --in-place --arg pct '${{ steps.coverage.outputs.percent }}' '
           .defaultFont = "sans" |
           .defaultContrast = "standard" |
+          .themeColor = "hsl(335 70% 55%)" |
+          .tintHue = 146 |
+          .tintAmount = 66 |
           .vars.testCoveragePercent = ($pct | tonumber) |
           .vars.testCoverageUrl = "/coverage/index.html"
         ' example/site.prod.yaml
