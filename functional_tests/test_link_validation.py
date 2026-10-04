@@ -29,15 +29,16 @@ class TestBrokenNavLink:
         assert '/nonexistent.html' in result.stdout
 
 
-class TestBrokenParentLink:
-    """A broken parent link in front matter fails the build."""
+class TestBrokenBreadcrumbLink:
+    """A broken breadcrumb link in front matter fails the build."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
 
         (site / 'content' / 'page.md').write_text(
-            '---\ntitle: Page\nparent: /nonexistent.html\nparentLabel: Missing\n---\n\nContent.\n'
+            '---\ntitle: Page\nbreadcrumbs:\n  - label: Missing\n'
+            '    url: /nonexistent.html\n---\n\nContent.\n'
         )
 
         yield site
@@ -45,7 +46,7 @@ class TestBrokenParentLink:
     def test_build_fails(self, site_dir):
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode != 0
-        assert 'parent' in result.stdout.lower()
+        assert 'breadcrumb' in result.stdout.lower()
         assert '/nonexistent.html' in result.stdout
 
 
@@ -226,7 +227,7 @@ class TestNavAuthoredTargets:
 
 
 class TestDirectoryConfigLinks:
-    @pytest.mark.parametrize('kind', ['nav', 'parent'])
+    @pytest.mark.parametrize('kind', ['nav', 'breadcrumb'])
     @pytest.mark.parametrize('href', ['/', '/docs/', '/docs', '/my%20notes/?view=full#intro'])
     def test_directory_alias_requires_explicit_index(self, tmp_path, kind, href):
         site = init_site(tmp_path, bare=True)
@@ -241,7 +242,8 @@ class TestDirectoryConfigLinks:
             )
         else:
             (site / 'content' / 'page.md').write_text(
-                f'---\ntitle: Page\nparent: "{href}"\nparentLabel: Section\n---\n\nPage.\n'
+                '---\ntitle: Page\nbreadcrumbs:\n  - label: Section\n'
+                f'    url: "{href}"\n---\n\nPage.\n'
             )
         result = run_tada('dev', cwd=str(site))
         output = result.stdout + result.stderr
@@ -249,14 +251,14 @@ class TestDirectoryConfigLinks:
         assert 'directory link must reference index.html explicitly' in output
         assert ('nav.yaml' if kind == 'nav' else 'page.md') in output
 
-    def test_explicit_relative_parent_index_with_suffix_builds(self, tmp_path):
+    def test_explicit_relative_breadcrumb_index_with_suffix_builds(self, tmp_path):
         site = init_site(tmp_path, bare=True)
         folder = site / 'content' / 'my notes'
         folder.mkdir()
         (folder / 'index.md').write_text('---\ntitle: Section\n---\n\nSection.\n')
         (site / 'content' / 'page.md').write_text(
-            '---\ntitle: Page\nparent: my%20notes/index.html?view=full#intro\n'
-            'parentLabel: Section\n---\n\nPage.\n'
+            '---\ntitle: Page\nbreadcrumbs:\n  - label: Section\n'
+            '    url: my%20notes/index.html?view=full#intro\n---\n\nPage.\n'
         )
         result = run_tada('dev', cwd=str(site))
         assert result.returncode == 0, result.stdout + result.stderr

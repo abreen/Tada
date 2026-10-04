@@ -1,10 +1,11 @@
 import json
+import os
 import shutil
 import threading
 
 import pytest
 import websocket
-from conftest import PACKAGE_DIR, init_site, run_tada, set_site_config
+from conftest import PACKAGE_DIR, init_site, make_fake_failing_command, run_tada, set_site_config
 from watch_helpers import WEBSOCKET_TIMEOUT_SEC, WatchProcess, assert_trace_artifacts_exist
 
 WATCH_RELOAD_PATH = '/__tada_watch'
@@ -734,5 +735,45 @@ def test_incremental_outputs_match_fresh_watch_build(site_dir):
         wp.wait_for_initial_build()
         assert source_outputs() == incremental
         assert not (site_dir / 'dist' / 'chapter.html').exists()
+    finally:
+        wp.stop()
+
+
+@pytest.mark.parametrize('page_type', ['markdown', 'literate_without_java'])
+def test_removing_later_breadcrumb_target_invalidates_page(
+    site_dir, tmp_path, monkeypatch, page_type
+):
+    content = site_dir / 'content'
+    target = content / 'section.md'
+    target.write_text('---\ntitle: Section\n---\n\nSection.\n')
+    front_matter = (
+        '---\ntitle: Child\nbreadcrumbs:\n'
+        '  - label: Home\n    url: /index.html\n'
+        '  - label: Section\n    url: /section.html\n---\n\n'
+    )
+    if page_type == 'markdown':
+        source = content / 'child.md'
+        source.write_text(front_matter + 'Child.\n')
+        output = site_dir / 'dist' / 'child.html'
+    else:
+        source = content / 'Child.java.md'
+        source.write_text(front_matter + '```java\npublic class Child {}\n```\n')
+        output = site_dir / 'dist' / 'Child.java.html'
+        fake_dir = tmp_path / 'fake_bin'
+        fake_dir.mkdir()
+        make_fake_failing_command(fake_dir, 'javac')
+        monkeypatch.setenv('PATH', str(fake_dir) + os.pathsep + os.environ.get('PATH', ''))
+    wp = WatchProcess(site_dir)
+    try:
+        wp.wait_for_initial_build()
+        assert output.is_file()
+        target.unlink()
+        wp.wait_for_error()
+        log = wp.stdout_log_path.read_text()
+        assert 'breadcrumb entry 2' in log
+        assert '/section.html' in log
+        assert wp.proc.poll() is None
+        target.write_text('---\ntitle: Section\n---\n\nRestored.\n')
+        wp.wait_for_successful_rebuild()
     finally:
         wp.stop()

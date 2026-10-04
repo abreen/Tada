@@ -27,8 +27,8 @@ stdin: "hello, world!\n"
 Front matter on literate pages is prepared exactly like front matter on other
 pages (see [Front Matter](front-matter.md)): string values are Lodash-processed
 with the site template context, `title` and `description` support inline
-Markdown, `author` is resolved against the authors config, and `parent` is
-validated as a [breadcrumb](breadcrumbs.md) link whether or not Java execution
+Markdown, `author` is resolved against the authors config, and every `breadcrumbs`
+URL is validated and tracked as a [breadcrumb](breadcrumbs.md) dependency whether or not Java execution
 runs. `slides: true` is not supported on literate pages and fails the build.
 
 Literate pages support [Markdown partials](partials.md) with the including

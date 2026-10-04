@@ -1,4 +1,5 @@
 import path from 'path';
+import type { BreadcrumbEntry } from './types';
 import { encodeAuthoredUrl } from './template-globals';
 import { normalizeOutputPath } from './utils/paths';
 
@@ -208,47 +209,86 @@ function splitHref(href: string): { pathname: string; suffix: string } {
   return { pathname: match ? match[1] : href, suffix: match ? match[2] : '' };
 }
 
-export function validateParentLink(
-  parent: unknown,
+export function validateBreadcrumbs(
+  breadcrumbs: unknown,
   filePath: string,
   validTargets: ReadonlySet<string>,
   sourceUrlPath: string,
-): string | null {
-  if (typeof parent === 'string' && splitHref(parent).pathname === '') {
-    return `${filePath}: broken parent link: "${parent}"`;
+): asserts breadcrumbs is BreadcrumbEntry[] | undefined {
+  if (breadcrumbs === undefined) {
+    return;
   }
+  if (!Array.isArray(breadcrumbs)) {
+    throw new Error(`${filePath}: breadcrumbs must be a list`);
+  }
+  breadcrumbs.forEach((entry: unknown, index) => {
+    const context = `${filePath}: breadcrumb entry ${index + 1}`;
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new Error(`${context} must be an object with label and url fields`);
+    }
+    const { label, url } = entry as Record<string, unknown>;
+    for (const [field, value] of Object.entries({ label, url })) {
+      if (typeof value !== 'string' || !value.trim()) {
+        throw new Error(`${context}: ${field} must be a nonempty string`);
+      }
+    }
+    const error = validateBreadcrumbLink(
+      url as string,
+      filePath,
+      validTargets,
+      sourceUrlPath,
+      index + 1,
+    );
+    if (error) {
+      throw new Error(error);
+    }
+  });
+}
 
-  const resolvedTarget = resolveParentLinkTarget(parent, sourceUrlPath);
+export function validateBreadcrumbLink(
+  url: string,
+  filePath: string,
+  validTargets: ReadonlySet<string>,
+  sourceUrlPath: string,
+  entryNumber = 1,
+): string | null {
+  const context = `${filePath}: breadcrumb entry ${entryNumber}`;
+  const resolvedTarget = resolveBreadcrumbLinkTarget(url, sourceUrlPath);
   if (!resolvedTarget) {
-    return null;
+    return `${context}: broken breadcrumb link: "${url}" (must be an internal site link with a pathname)`;
   }
 
   const directoryError = validateDirectoryLink(
-    parent as string,
+    url,
     resolvedTarget,
     validTargets,
-    `${filePath}: parent link`,
+    context,
   );
   if (directoryError) {
     return directoryError;
   }
 
   if (!validTargets.has(resolvedTarget)) {
-    return `${filePath}: broken parent link: "${parent}"`;
+    return `${context}: broken breadcrumb link: "${url}"`;
   }
 
   return null;
 }
 
-export function resolveParentLinkTarget(
-  parent: unknown,
+export function resolveBreadcrumbLinkTarget(
+  url: string,
   sourceUrlPath: string,
 ): string | null {
-  if (!parent || typeof parent !== 'string') {
+  // Breadcrumbs always point into this site. Backslashes also have special
+  // URL semantics in browsers, so they cannot be used as path separators.
+  if (
+    /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url) ||
+    url.startsWith('//') ||
+    url.includes('\\')
+  ) {
     return null;
   }
-
-  const { pathname } = splitHref(parent);
+  const { pathname } = splitHref(url);
   if (!pathname) {
     return null;
   }

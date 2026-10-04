@@ -383,7 +383,7 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `description` | Meta description for the page |
 | `toc` | Set to `true` to show a table of contents |
 | `slides` | Set to `true` on Markdown pages to treat top-level `---` as slide separators and add presentation controls |
-| `parent` & `parentLabel` | URL and label for a breadcrumb link displayed above the title |
+| `breadcrumbs` | Ordered ancestor links with `label` and `url`; the page title completes the trail |
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
 
 You may also add arbitrary fields in a page's front matter, and access them

@@ -6,16 +6,18 @@ theme compilation, Tada validates and URL-encodes each SVG as a CSS mask
 variable, allowing the glyph to inherit `currentcolor` from its component.
 
 `build/material-symbols.ts` is the single source of truth for the shared
-Material Symbols Outlined configuration and the semantic icon registry. All
-registered glyphs use FILL 0, weight 200, and grade 200. Each semantic entry also
-declares an optical size of 20, 24, or 40, matching both its canonical SVG
+Material Symbols Outlined configuration and the semantic icon registry.
+Registered glyphs use FILL 0, weight 200, and grade 200 by default. The breadcrumb
+separator is an explicit exception: the selected 24px `chevron_right` uses
+FILL 0, weight 400, and grade 0, recorded on its registry entry. Each semantic
+entry also declares an optical size of 20, 24, or 40, matching both its canonical SVG
 variant and its rendered CSS dimensions.
 
 The registry maps the Tada footer mark to the 24px `celebration`; standard and
 high contrast to the 20px `contrast_rtl_off` and `contrast`; full and compact
 informational alerts to the 40px and 20px `info` variants; full and compact
-warnings to the 40px and 20px `warning` variants; parent links to 20px
-`south_east`; search to 20px `search`; external links to 20px `open_in_new`;
+warnings to the 40px and 20px `warning` variants; breadcrumb separators to 24px
+`chevron_right`; search to 20px `search`; external links to 20px `open_in_new`;
 slide-heading presentation controls to 24px `smart_display`. The animated header
 menu is a bespoke inline SVG rather than a Material Symbol.
 

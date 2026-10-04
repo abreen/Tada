@@ -11,7 +11,7 @@ function canonicalSvg(size: 20 | 24 | 40): string {
 }
 
 describe('Material Symbols', () => {
-  test('uses one shared outlined unfilled configuration', () => {
+  test('uses shared outlined defaults with a breadcrumb separator exception', () => {
     expect(MATERIAL_SYMBOL_CONFIG).toEqual({
       family: 'Material Symbols Outlined',
       fill: 0,
@@ -53,10 +53,12 @@ describe('Material Symbols', () => {
         symbol: 'warning',
         opticalSize: 20,
       },
-      parent: {
-        cssVariable: '--icon-parent',
-        symbol: 'south_east',
-        opticalSize: 20,
+      breadcrumbSeparator: {
+        cssVariable: '--icon-breadcrumb-separator',
+        symbol: 'chevron_right',
+        opticalSize: 24,
+        weight: 400,
+        grade: 0,
       },
       search: {
         cssVariable: '--icon-search',
@@ -95,7 +97,7 @@ describe('Material Symbols', () => {
       path.join('/tada', 'assets/material-symbols/info_20px.svg'),
       path.join('/tada', 'assets/material-symbols/warning_40px.svg'),
       path.join('/tada', 'assets/material-symbols/warning_20px.svg'),
-      path.join('/tada', 'assets/material-symbols/south_east_20px.svg'),
+      path.join('/tada', 'assets/material-symbols/chevron_right_24px.svg'),
       path.join('/tada', 'assets/material-symbols/search_20px.svg'),
       path.join('/tada', 'assets/material-symbols/open_in_new_20px.svg'),
       path.join('/tada', 'assets/material-symbols/smart_display_24px.svg'),
@@ -115,7 +117,9 @@ describe('Material Symbols', () => {
     expect(variables).toContain(
       '--icon-warning-compact: url("data:image/svg+xml,',
     );
-    expect(variables).toContain('--icon-parent: url("data:image/svg+xml,');
+    expect(variables).toContain(
+      '--icon-breadcrumb-separator: url("data:image/svg+xml,',
+    );
     expect(variables).toContain('--icon-search: url("data:image/svg+xml,');
     expect(variables).toContain(
       '--icon-external-link: url("data:image/svg+xml,',

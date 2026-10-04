@@ -48,10 +48,13 @@ export const MATERIAL_SYMBOLS = Object.freeze({
     symbol: 'warning',
     opticalSize: 20,
   }),
-  parent: Object.freeze({
-    cssVariable: '--icon-parent',
-    symbol: 'south_east',
-    opticalSize: 20,
+  breadcrumbSeparator: Object.freeze({
+    cssVariable: '--icon-breadcrumb-separator',
+    symbol: 'chevron_right',
+    opticalSize: 24,
+    // The authored selection differs from the shared weight/grade defaults.
+    weight: 400,
+    grade: 0,
   }),
   search: Object.freeze({
     cssVariable: '--icon-search',

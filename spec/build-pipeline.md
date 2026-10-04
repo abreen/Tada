@@ -36,7 +36,7 @@ A build stops when any of these happen. The rules are the same for
    the same files may share identical trace files.
 3. **Page error.** A page can't be rendered: invalid or reserved front matter,
    a template, Markdown, or partial error, a broken internal link (in page
-   content, `nav`, `authors`, or `parent`), or a failed compile or trace.
+   content, `nav`, `authors`, or `breadcrumbs`), or a failed compile or trace.
 
 Tada prints every error it finds, each once, as one line that starts with the
 project-relative path of the file at fault:

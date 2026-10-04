@@ -149,31 +149,48 @@ def _env_without_javac(tmp_path):
 class TestLiterateJavaFrontMatter:
     """Literate Java pages prepare front matter the same way as other pages."""
 
-    def test_broken_parent_fails_build(self, site_dir):
-        _write_literate_page(site_dir, 'title: Pair\nparent: /does-not-exist.html\n')
-        result = run_tada('dev', cwd=str(site_dir))
-        assert result.returncode != 0
-        assert 'Pair.java.md: broken parent link: "/does-not-exist.html"' in (
-            result.stdout + result.stderr
+    @pytest.mark.parametrize('skip_java', [False, True])
+    def test_broken_breadcrumb_fails_build(self, site_dir, tmp_path, skip_java):
+        _write_literate_page(
+            site_dir,
+            'title: Pair\nbreadcrumbs:\n  - label: Home\n    url: /index.html\n'
+            '  - label: Missing\n    url: /does-not-exist.html\n',
         )
-
-    def test_broken_parent_fails_build_without_javac(self, site_dir, tmp_path):
-        _write_literate_page(site_dir, 'title: Pair\nparent: /does-not-exist.html\n')
-        result = run_tada('dev', cwd=str(site_dir), env=_env_without_javac(tmp_path))
+        result = run_tada(
+            'dev',
+            cwd=str(site_dir),
+            env=_env_without_javac(tmp_path) if skip_java else None,
+        )
         output = result.stdout + result.stderr
-        assert 'javac was not found' in output
+        if skip_java:
+            assert 'javac was not found' in output
         assert result.returncode != 0
-        assert 'Pair.java.md: broken parent link: "/does-not-exist.html"' in output
+        assert 'Pair.java.md: breadcrumb entry 2: broken breadcrumb link' in output
+        assert '/does-not-exist.html' in output
 
-    def test_valid_parent_renders_breadcrumb(self, site_dir):
-        _write_literate_page(site_dir, 'title: Pair\nparent: ./index.html\nparentLabel: Home\n')
-        result = run_tada('dev', cwd=str(site_dir))
+    @pytest.mark.parametrize('skip_java', [False, True])
+    def test_valid_breadcrumb_renders_breadcrumb(self, site_dir, tmp_path, skip_java):
+        lectures = site_dir / 'content' / 'lectures'
+        lectures.mkdir()
+        (lectures / 'index.md').write_text('---\ntitle: Lectures\n---\n\nListing.\n')
+        _write_literate_page(
+            site_dir,
+            'title: Pair\nbreadcrumbs:\n  - label: Home\n    url: /index.html\n'
+            '  - label: Lectures\n    url: ./lectures/index.html\n',
+        )
+        result = run_tada(
+            'dev',
+            cwd=str(site_dir),
+            env=_env_without_javac(tmp_path) if skip_java else None,
+        )
         assert result.returncode == 0, result.stdout + result.stderr
         html = (site_dir / 'dist' / 'Pair.java.html').read_text()
-        breadcrumb = re.search(r'<a\b([^>]*\bclass="breadcrumb"[^>]*)>([^<]*)</a>', html)
-        assert breadcrumb, 'missing breadcrumb link'
-        assert 'href="./index.html"' in breadcrumb[1]
-        assert breadcrumb[2] == 'Home'
+        breadcrumb = re.search(r'<nav class="breadcrumbs"[^>]*>(.*?)</nav>', html, re.S)
+        assert breadcrumb, 'missing breadcrumb navigation'
+        assert 'href="/index.html"' in breadcrumb[1]
+        assert 'href="./lectures/index.html"' in breadcrumb[1]
+        assert breadcrumb[1].index('>Home</a>') < breadcrumb[1].index('>Lectures</a>')
+        assert '<span aria-current="page">Pair</span>' in breadcrumb[1]
 
     def test_description_with_quotes_produces_valid_meta(self, site_dir):
         _write_literate_page(site_dir, 'title: Pair\ndescription: She said "hi" to *Pair*\n')

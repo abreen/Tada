@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import path from 'path';
 import { installCustomFontFixtures } from './custom-font-fixtures';
 import { installPageLayoutFixtures } from './page-layout-fixtures';
+import { installBreadcrumbFixtures } from './breadcrumb-fixtures';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
@@ -294,6 +295,7 @@ writeFileSync(
 );
 
 installPageLayoutFixtures(siteDir);
+installBreadcrumbFixtures(siteDir);
 
 await runTada(['dev'], siteDir);
 await runTada(['serve', '--port', '8081'], siteDir);

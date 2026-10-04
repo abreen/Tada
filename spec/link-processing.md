@@ -67,7 +67,8 @@ This validation covers:
 - `avatar` paths in the authors config (these paths must be root-relative)
 - Root-relative `url` values in the authors config; absolute author URLs are
   allowed and are not checked against build targets
-- `parent` breadcrumb links in front matter
+- Every `url` in the front matter `breadcrumbs` list (internal links only;
+  relative paths resolve from the declaring page)
 
 Hrefs are percent-decoded before being matched against the set of known output
 paths, which means a link to a file with a space in its name works when written

@@ -1,6 +1,7 @@
 ---
-parentLabel: Lectures
-parent: /lectures/index.html
+breadcrumbs:
+  - label: Lectures
+    url: /lectures/index.html
 title: Lecture 2
 description: An example lecture page demonstrating partials.
 author: alex

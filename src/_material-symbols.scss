@@ -22,3 +22,10 @@
   --material-symbol-icon: var(--icon-contrast-high);
   --material-symbol-icon-size: var(--icon-contrast-high-size);
 }
+
+.material-symbol-icon-breadcrumb-separator {
+  --material-symbol-icon: var(--icon-breadcrumb-separator);
+  --material-symbol-icon-size: var(--icon-breadcrumb-separator-size);
+
+  color: var(--fg2-color);
+}

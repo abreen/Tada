@@ -2,6 +2,11 @@ $shift: 8px;
 $duration: 150ms;
 $movement-easing: cubic-bezier(0.2, 0, 0, 1);
 
+:root {
+  --page-transition-duration: #{$duration};
+  --page-transition-movement-easing: #{$movement-easing};
+}
+
 @keyframes page-fade-out {
   to {
     opacity: 0;
@@ -45,11 +50,12 @@ $movement-easing: cubic-bezier(0.2, 0, 0, 1);
 ::view-transition-old(page-title),
 ::view-transition-new(page-title),
 ::view-transition-old(page-info),
-::view-transition-new(page-info),
-::view-transition-old(page-breadcrumb),
-::view-transition-new(page-breadcrumb) {
+::view-transition-new(page-info) {
   animation-duration: $duration;
 }
+
+// Breadcrumbs use per-item named rules installed by the navigator. Shared
+// items stay opaque and preserve their position; removed/added suffixes fade.
 
 // The site-wide banner does not change between pages. Keep it out of the root
 // slide and pin its named transition layer in place without a crossfade.

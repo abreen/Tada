@@ -1,6 +1,7 @@
 ---
-parent: /labs/index.html
-parentLabel: Labs
+breadcrumbs:
+  - label: Labs
+    url: /labs/index.html
 title: Lab 0
 author: alex
 description: An example lab page for <%= site.title %>.

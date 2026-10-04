@@ -1,6 +1,9 @@
 ---
-parent: /labs/00/index.html
-parentLabel: Lab 0
+breadcrumbs:
+  - label: Labs
+    url: /labs/index.html
+  - label: Lab 0
+    url: /labs/00/index.html
 title: Counting vowels
 author: alex
 description: An example of a literate Java program that takes predefined input.

@@ -3,7 +3,7 @@ import {
   validateNavLinks,
   validateAuthorLinks,
   validateConfigLinks,
-  validateParentLink,
+  validateBreadcrumbLink,
 } from './validate-config-links';
 
 describe('validateNavLinks', () => {
@@ -358,11 +358,11 @@ describe('validateConfigLinks', () => {
   });
 });
 
-describe('validateParentLink', () => {
-  test('returns null for valid parent link', () => {
+describe('validateBreadcrumbLink', () => {
+  test('returns null for valid breadcrumb link', () => {
     const validTargets = new Set(['/lectures/index.html']);
     expect(
-      validateParentLink(
+      validateBreadcrumbLink(
         '/lectures/index.html',
         'test.md',
         validTargets,
@@ -371,10 +371,10 @@ describe('validateParentLink', () => {
     ).toBeNull();
   });
 
-  test('resolves relative parent links from the declaring page', () => {
+  test('resolves relative breadcrumb links from the declaring page', () => {
     const validTargets = new Set(['/docs/index.html']);
     expect(
-      validateParentLink(
+      validateBreadcrumbLink(
         '../index.html',
         'content/docs/topic/page.md',
         validTargets,
@@ -383,10 +383,10 @@ describe('validateParentLink', () => {
     ).toBeNull();
   });
 
-  test('ignores query strings and fragments when validating parent links', () => {
+  test('ignores query strings and fragments when validating breadcrumb links', () => {
     const validTargets = new Set(['/docs/index.html']);
     expect(
-      validateParentLink(
+      validateBreadcrumbLink(
         '../index.html?view=full#overview',
         'content/docs/topic/page.md',
         validTargets,
@@ -395,9 +395,9 @@ describe('validateParentLink', () => {
     ).toBeNull();
   });
 
-  test('rejects parent links without a pathname', () => {
+  test('rejects breadcrumb links without a pathname', () => {
     const validTargets = new Set(['/docs/topic', '/docs/topic/index.html']);
-    const error = validateParentLink(
+    const error = validateBreadcrumbLink(
       '?view=full#overview',
       'content/docs/topic/index.md',
       validTargets,
@@ -408,9 +408,9 @@ describe('validateParentLink', () => {
     expect(error).toContain('content/docs/topic/index.md');
   });
 
-  test('returns error for broken parent link', () => {
+  test('returns error for broken breadcrumb link', () => {
     const validTargets = new Set<string>();
-    const error = validateParentLink(
+    const error = validateBreadcrumbLink(
       '/missing/index.html',
       'content/page.md',
       validTargets,
@@ -419,19 +419,13 @@ describe('validateParentLink', () => {
     expect(error).not.toBeNull();
     expect(error).toContain('/missing/index.html');
     expect(error).toContain('content/page.md');
-    expect(error).toContain('parent');
+    expect(error).toContain('breadcrumb');
   });
 
-  test('returns null when parent is undefined', () => {
-    expect(
-      validateParentLink(undefined, 'test.md', new Set(), '/index.html'),
-    ).toBeNull();
-  });
-
-  test('normalizes parent path before checking', () => {
+  test('normalizes breadcrumb path before checking', () => {
     const validTargets = new Set(['/docs/index.html']);
     expect(
-      validateParentLink(
+      validateBreadcrumbLink(
         '/docs/../docs/index.html',
         'test.md',
         validTargets,
@@ -440,10 +434,10 @@ describe('validateParentLink', () => {
     ).toBeNull();
   });
 
-  test('normalizes relative parent paths before checking', () => {
+  test('normalizes relative breadcrumb paths before checking', () => {
     const validTargets = new Set(['/docs/index.html']);
     expect(
-      validateParentLink(
+      validateBreadcrumbLink(
         '../guides/../index.html',
         'content/docs/topic/page.md',
         validTargets,
@@ -479,9 +473,9 @@ describe('directory configuration links', () => {
   );
 
   test.each(['/', '/docs/', '../', '/my%20notes/?view=full#intro'])(
-    'rejects parent directory alias %s with an explicit-index diagnostic',
+    'rejects breadcrumb directory alias %s with an explicit-index diagnostic',
     href => {
-      const error = validateParentLink(
+      const error = validateBreadcrumbLink(
         href,
         'page.md',
         validTargets,
@@ -490,8 +484,44 @@ describe('directory configuration links', () => {
       expect(error).toContain(
         'directory link must reference index.html explicitly',
       );
-      expect(error).toContain('parent');
+      expect(error).toContain('breadcrumb');
       expect(error).toContain(href);
     },
   );
+});
+
+describe('breadcrumb URL rules', () => {
+  test.each([
+    'https://example.com/index.html',
+    '//example.com/index.html',
+    'mailto:hello@example.com',
+    'javascript:alert(1)',
+    '\\docs\\index.html',
+    '#intro',
+    '?view=full',
+  ])('rejects non-site URL %s', url => {
+    expect(
+      validateBreadcrumbLink(
+        url,
+        'content/page.md',
+        new Set(),
+        '/page.html',
+        2,
+      ),
+    ).toContain('breadcrumb entry 2');
+  });
+
+  test.each([
+    '/my%20notes/index.html?q=a%20b#intro',
+    '/my notes/index.html?q=<Notes>"#intro',
+  ])('validates encoded and unencoded paths with suffixes: %s', url => {
+    expect(
+      validateBreadcrumbLink(
+        url,
+        'content/page.md',
+        new Set(['/my notes/index.html']),
+        '/page.html',
+      ),
+    ).toBeNull();
+  });
 });

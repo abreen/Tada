@@ -1,6 +1,12 @@
 import type { BundledLanguage } from 'shiki';
 import type { TraceCache } from './build-types';
 
+/** An explicitly authored ancestor in a page's breadcrumb trail. */
+export interface BreadcrumbEntry {
+  label: string;
+  url: string;
+}
+
 export type PlainTextLanguage = 'text' | 'txt' | 'plain';
 
 export interface SerifFontTuning {

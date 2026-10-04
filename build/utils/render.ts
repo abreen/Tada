@@ -15,8 +15,8 @@ import {
   getSupportedConfigFileNamesText,
 } from '../config-files';
 import {
-  resolveParentLinkTarget,
-  validateParentLink,
+  resolveBreadcrumbLinkTarget,
+  validateBreadcrumbs,
 } from '../validate-config-links';
 import {
   extractJavaMethodToc,
@@ -66,8 +66,8 @@ export { stripHtmlComments } from './html-comments';
 
 const REQUIRED_FRONT_MATTER_FIELDS = ['title'];
 
-// Page variables that renderers assign themselves. Front matter that sets one
-// would be overwritten or, for `template`, select a nonexistent template.
+// Internal page variables and retired front matter keys. Internal values would
+// be overwritten or, for `template`, select a nonexistent template.
 const RESERVED_FRONT_MATTER_KEYS: readonly string[] = [
   'template',
   'titleHtml',
@@ -77,6 +77,8 @@ const RESERVED_FRONT_MATTER_KEYS: readonly string[] = [
   'codeFilePath',
   'downloadName',
   'filePath',
+  'parent',
+  'parentLabel',
 ];
 
 function renderInlineField(
@@ -456,7 +458,7 @@ interface PreparePageVariablesInput {
  * Turns parsed front matter into page variables. Shared by every renderer
  * whose source has front matter, so each one applies the same rules:
  * Lodash processing of string values, inline Markdown for the title and
- * description, required fields, author lookup, and parent link validation.
+ * description, required fields, author lookup, and breadcrumb validation.
  */
 function preparePageVariables({
   rawPageVariables,
@@ -484,12 +486,29 @@ function preparePageVariables({
     subPath,
     isWatchMode,
   });
+  const templateString = (value: unknown): unknown =>
+    typeof value === 'string' ? compileTemplate(value)(siteOnlyParams) : value;
   const pageVariables: Record<string, unknown> = Object.fromEntries(
-    Object.entries(rawPageVariables).map(([k, v]) => [
-      k,
-      typeof v === 'string' ? compileTemplate(v)(siteOnlyParams) : v,
+    Object.entries(rawPageVariables).map(([key, value]) => [
+      key,
+      templateString(value),
     ]),
   );
+  if (Array.isArray(pageVariables.breadcrumbs)) {
+    pageVariables.breadcrumbs = pageVariables.breadcrumbs.map(
+      (entry: unknown) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+          return entry;
+        }
+        const breadcrumb = entry as Record<string, unknown>;
+        return {
+          ...breadcrumb,
+          label: templateString(breadcrumb.label),
+          url: templateString(breadcrumb.url),
+        };
+      },
+    );
+  }
 
   // Render title and description as inline Markdown
   const frontMatterMd = createMarkdown(siteVariables, {
@@ -502,21 +521,21 @@ function preparePageVariables({
   validateFrontMatter(pageVariables, filePath);
   resolveAuthor(pageVariables, filePath, dependencyCollector);
 
-  const parentError = validateParentLink(
-    pageVariables.parent,
+  const breadcrumbs = pageVariables.breadcrumbs;
+  validateBreadcrumbs(
+    breadcrumbs,
     filePath,
     validInternalTargets,
     sourceUrlPath,
   );
-  if (parentError) {
-    throw new Error(parentError);
-  }
-  const resolvedParentTarget = resolveParentLinkTarget(
-    pageVariables.parent,
-    sourceUrlPath,
-  );
-  if (resolvedParentTarget) {
-    dependencyCollector?.internalTargets?.add(resolvedParentTarget);
+  for (const entry of breadcrumbs ?? []) {
+    const resolvedTarget = resolveBreadcrumbLinkTarget(
+      entry.url,
+      sourceUrlPath,
+    );
+    if (resolvedTarget) {
+      dependencyCollector?.internalTargets?.add(resolvedTarget);
+    }
   }
 
   return pageVariables;

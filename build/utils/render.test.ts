@@ -6,6 +6,7 @@ import type { SiteVariables } from '../types';
 import { initHighlighter } from './shiki-highlighter';
 
 const files = new Map<string, string>();
+let renderedPageVariables: Record<string, unknown> = {};
 let mockedCodeHtml = '<div class="code-body">rendered code</div>';
 
 function resolvePath(filePath: string): string {
@@ -44,6 +45,7 @@ mock.module('../templates', () => ({
     return '/virtual/project';
   },
   render(_fileName: string, params?: Record<string, unknown>) {
+    renderedPageVariables = params?.page as Record<string, unknown>;
     const content = typeof params?.content === 'string' ? params.content : '';
     return `<html><head><meta charset="UTF-8"></head><body>${content}</body></html>`;
   },
@@ -67,11 +69,16 @@ mock.module('./code', () => ({
 let preparePageTemplateHtml: typeof import('./render').preparePageTemplateHtml;
 let renderCodePageAsset: typeof import('./render').renderCodePageAsset;
 let renderPlainTextPageAsset: typeof import('./render').renderPlainTextPageAsset;
+let renderLiterateJavaPageAsset: typeof import('./render').renderLiterateJavaPageAsset;
 
 beforeAll(async () => {
   await initHighlighter(['text']);
-  ({ preparePageTemplateHtml, renderCodePageAsset, renderPlainTextPageAsset } =
-    await import('./render'));
+  ({
+    preparePageTemplateHtml,
+    renderCodePageAsset,
+    renderPlainTextPageAsset,
+    renderLiterateJavaPageAsset,
+  } = await import('./render'));
 });
 
 beforeEach(() => {
@@ -97,10 +104,12 @@ function renderMarkdownPage({
   relativePath = 'page.md',
   source,
   dependencyCollector,
+  validInternalTargets = new Set<string>(),
 }: {
   contentDir: string;
   relativePath?: string;
   source: string;
+  validInternalTargets?: ReadonlySet<string>;
   dependencyCollector?: {
     partials?: Set<string>;
     internalTargets?: Set<string>;
@@ -114,7 +123,7 @@ function renderMarkdownPage({
     contentDir,
     isWatchMode: false,
     siteVariables,
-    validInternalTargets: new Set(),
+    validInternalTargets,
     assetFiles: [],
     literateJavaOutputPaths: new Set(),
     dependencyCollector,
@@ -695,15 +704,18 @@ describe('renderPlainTextPageAsset', () => {
     ).toThrow('slides mode is only supported on Markdown pages');
   });
 
-  test('tracks relative breadcrumb parents from the declaring page', () => {
+  test('tracks multiple relative breadcrumbs from the declaring page', () => {
     const contentDir = '/virtual/content';
     const filePath = path.join(contentDir, 'docs', 'topic', 'page.html');
     writeFile(
       filePath,
       [
         'title: Child page',
-        'parent: ../index.html?view=full#overview',
-        'parentLabel: Docs',
+        'breadcrumbs:',
+        '  - label: Docs',
+        '    url: ../index.html?view=full#overview',
+        '  - label: Home',
+        '    url: /index.html',
         '',
         '<p>Hello</p>',
       ].join('\n'),
@@ -716,7 +728,7 @@ describe('renderPlainTextPageAsset', () => {
       contentDir,
       isWatchMode: false,
       siteVariables,
-      validInternalTargets: new Set(['/docs/index.html']),
+      validInternalTargets: new Set(['/docs/index.html', '/index.html']),
       assetFiles: [],
       literateJavaOutputPaths: new Set(),
       dependencyCollector,
@@ -724,18 +736,20 @@ describe('renderPlainTextPageAsset', () => {
 
     expect([...dependencyCollector.internalTargets]).toEqual([
       '/docs/index.html',
+      '/index.html',
     ]);
   });
 
-  test('rejects breadcrumb parents without a pathname', () => {
+  test('rejects breadcrumbs without a pathname', () => {
     const contentDir = '/virtual/content';
     const filePath = path.join(contentDir, 'docs', 'topic', 'index.html');
     writeFile(
       filePath,
       [
         'title: Topic index',
-        'parent: ?view=full#overview',
-        'parentLabel: Topic',
+        'breadcrumbs:',
+        '  - label: Topic',
+        '    url: ?view=full#overview',
         '',
         '<p>Hello</p>',
       ].join('\n'),
@@ -758,8 +772,134 @@ describe('renderPlainTextPageAsset', () => {
         literateJavaOutputPaths: new Set(),
         dependencyCollector,
       }),
-    ).toThrow('broken parent link');
+    ).toThrow('broken breadcrumb link');
 
     expect([...dependencyCollector.internalTargets]).toEqual([]);
   });
+});
+
+describe('breadcrumb front matter', () => {
+  test.each([
+    ['breadcrumbs: null', 'breadcrumbs must be a list'],
+    ['breadcrumbs: Docs', 'breadcrumbs must be a list'],
+    ['breadcrumbs: {}', 'breadcrumbs must be a list'],
+    [
+      'breadcrumbs: [{label: "<%= \'\' %>", url: /index.html}]',
+      'breadcrumb entry 1',
+    ],
+    ['breadcrumbs: [{label: Docs, url: "<%= \'\' %>"}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [null]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [Docs]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [[]]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{label: Docs}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{url: /index.html}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{label: "", url: /index.html}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{label: "  ", url: /index.html}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{label: 42, url: /index.html}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{label: Docs, url: false}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{label: Docs, url: ""}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{label: Docs, url: "  "}]', 'breadcrumb entry 1'],
+    [
+      'breadcrumbs: [{label: Docs, url: /index.html}, {}]',
+      'breadcrumb entry 2',
+    ],
+  ])('rejects malformed %s', (frontMatter, diagnostic) => {
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        source: `---\ntitle: Page\n${frontMatter}\n---\n\nContent.`,
+        validInternalTargets: new Set(['/index.html']),
+      }),
+    ).toThrow(diagnostic);
+  });
+
+  test.each(['parent', 'parentLabel'])(
+    'rejects legacy %s even when empty',
+    key => {
+      expect(() =>
+        renderMarkdownPage({
+          contentDir: '/virtual/content',
+          source: `---\ntitle: Page\n${key}:\n---\n\nContent.`,
+        }),
+      ).toThrow(`front matter key "${key}" is reserved`);
+    },
+  );
+
+  test.each(['', 'breadcrumbs: []\n'])(
+    'accepts absent or empty breadcrumbs: %s',
+    frontMatter => {
+      expect(() =>
+        renderMarkdownPage({
+          contentDir: '/virtual/content',
+          source: `---\ntitle: Page\n${frontMatter}---\n\nContent.`,
+        }),
+      ).not.toThrow();
+    },
+  );
+});
+
+test('processes nested breadcrumb labels and URLs with the front matter context before validation', () => {
+  const dependencyCollector = { internalTargets: new Set<string>() };
+  renderMarkdownPage({
+    contentDir: '/virtual/content',
+    source: `---
+title: Counting **vowels** & <em>letters</em>
+breadcrumbs:
+  - label: "<%= site.title %> & <Notes>"
+    url: "<%= '/docs/index.html' %>?view=full#overview"
+  - label: "<%= _.capitalize('home') %>"
+    url: "<%= '/index.html' %>"
+---
+
+Content.`,
+    validInternalTargets: new Set(['/docs/index.html', '/index.html']),
+    dependencyCollector,
+  });
+  expect(renderedPageVariables.breadcrumbs).toEqual([
+    { label: 'Course & <Notes>', url: '/docs/index.html?view=full#overview' },
+    { label: 'Home', url: '/index.html' },
+  ]);
+  expect(renderedPageVariables.title).toBe('Counting vowels & letters');
+  expect([...dependencyCollector.internalTargets]).toEqual([
+    '/docs/index.html',
+    '/index.html',
+  ]);
+});
+
+test('collects every literate Java breadcrumb dependency when execution is unavailable', () => {
+  const contentDir = '/virtual/content';
+  const filePath = path.join(contentDir, 'labs', '00', 'Pair.java.md');
+  writeFile(
+    filePath,
+    `---
+title: Pair
+breadcrumbs:
+  - label: Labs
+    url: ../index.html?view=full#intro
+  - label: Lab 0
+    url: ./index.html
+---
+
+\`\`\`java
+public class Pair {}
+\`\`\`
+`,
+  );
+  const dependencyCollector = { internalTargets: new Set<string>() };
+  renderLiterateJavaPageAsset({
+    filePath,
+    contentDir,
+    isWatchMode: true,
+    skipExecution: true,
+    siteVariables,
+    validInternalTargets: new Set(['/labs/index.html', '/labs/00/index.html']),
+    assetFiles: [],
+    literateJavaOutputPaths: new Set(),
+    dependencyCollector,
+  });
+  expect([...dependencyCollector.internalTargets]).toEqual([
+    '/labs/index.html',
+    '/labs/00/index.html',
+  ]);
 });

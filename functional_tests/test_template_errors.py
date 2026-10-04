@@ -71,6 +71,8 @@ class TestReservedFrontMatterKeys:
             'codeFilePath',
             'downloadName',
             'filePath',
+            'parent',
+            'parentLabel',
         ],
     )
     def test_reserved_key_fails_markdown_page(self, site_dir, key):
@@ -91,13 +93,14 @@ class TestReservedFrontMatterKeys:
             ('Exam.java.md', '```java\npublic class Exam {}\n```\n'),
         ],
     )
-    def test_reserved_key_fails_other_page_types(self, site_dir, file_name, body):
+    @pytest.mark.parametrize('key', ['template', 'parent', 'parentLabel'])
+    def test_reserved_key_fails_other_page_types(self, site_dir, file_name, body, key):
         (site_dir / 'content' / file_name).write_text(
-            f'---\ntitle: Exam\ntemplate: midterm\n---\n\n{body}'
+            f'---\ntitle: Exam\n{key}: midterm\n---\n\n{body}'
         )
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode != 0
-        assert f'content/{file_name}: front matter key "template" is reserved' in (
+        assert f'content/{file_name}: front matter key "{key}" is reserved' in (
             result.stdout + result.stderr
         )
 

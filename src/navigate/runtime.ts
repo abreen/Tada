@@ -5,12 +5,22 @@ import {
   teardownPerPageComponents,
 } from './lifecycle';
 import { globals } from '../globals';
+import {
+  cleanupBreadcrumbTransitionNames,
+  getBreadcrumbItems,
+  prepareBreadcrumbTransitionStyles,
+  setBreadcrumbTransitionNames,
+  sharedBreadcrumbCount,
+} from './breadcrumbs';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
 let currentAbortController: AbortController | null = null;
 let historyIndex = 0;
 let currentPath = '';
+// Unlike the browser URL (which already changes on popstate), this tracks the
+// page whose content is currently displayed, for relative breadcrumb identity.
+let renderedPageUrl = '';
 
 const scrollByIndex = new Map<number, number>();
 const scrollByLocation = new Map<string, number>();
@@ -124,9 +134,6 @@ function cleanupViewTransitionNames(document: Document): void {
   const newInfo = document.querySelector(
     '.title-and-info .info',
   ) as HTMLElement | null;
-  const newBreadcrumb = document.querySelector(
-    '.title-and-info a.breadcrumb',
-  ) as HTMLElement | null;
 
   if (newH1) {
     newH1.style.viewTransitionName = '';
@@ -134,9 +141,7 @@ function cleanupViewTransitionNames(document: Document): void {
   if (newInfo) {
     newInfo.style.viewTransitionName = '';
   }
-  if (newBreadcrumb) {
-    newBreadcrumb.style.viewTransitionName = '';
-  }
+  cleanupBreadcrumbTransitionNames(document);
 }
 
 function getLocationKey(window: Window): string {
@@ -172,6 +177,7 @@ export function initNavigation(window: Window): void {
   scrollByLocation.clear();
   window.history.scrollRestoration = 'manual';
   currentPath = window.location.pathname + window.location.search;
+  renderedPageUrl = window.location.href;
   scrollByIndex.set(historyIndex, window.scrollY);
   scrollByLocation.set(getLocationKey(window), window.scrollY);
 }
@@ -305,6 +311,7 @@ export async function navigateToUrl(
     updateHead(document, newDoc);
     mountAppearancePickerForPage(window);
     currentPath = parsed.pathname + parsed.search;
+    renderedPageUrl = parsed.href;
 
     if (pushHistory) {
       historyIndex++;
@@ -336,6 +343,18 @@ export async function navigateToUrl(
     !prefersReducedMotion(window) &&
     typeof transitionDoc.startViewTransition === 'function'
   ) {
+    const oldBreadcrumbItems = getBreadcrumbItems(document, renderedPageUrl);
+    const newBreadcrumbItems = getBreadcrumbItems(newDoc, parsed.href);
+    const sharedCount = sharedBreadcrumbCount(
+      oldBreadcrumbItems,
+      newBreadcrumbItems,
+    );
+    prepareBreadcrumbTransitionStyles(
+      document,
+      oldBreadcrumbItems.length,
+      newBreadcrumbItems.length,
+      sharedCount,
+    );
     const titleEl = document.querySelector('.title-and-info');
     const headerHeight =
       document.querySelector('header')?.getBoundingClientRect().height ?? 0;
@@ -345,18 +364,18 @@ export async function navigateToUrl(
     if (titleVisible) {
       const h1 = titleEl.querySelector('h1') as HTMLElement | null;
       const info = titleEl.querySelector('.info') as HTMLElement | null;
-      const breadcrumb = titleEl.querySelector(
-        'a.breadcrumb',
-      ) as HTMLElement | null;
       if (h1) {
         h1.style.viewTransitionName = 'page-title';
       }
       if (info) {
         info.style.viewTransitionName = 'page-info';
       }
-      if (breadcrumb) {
-        breadcrumb.style.viewTransitionName = 'page-breadcrumb';
-      }
+      setBreadcrumbTransitionNames(
+        document,
+        renderedPageUrl,
+        sharedCount,
+        'leave',
+      );
     }
 
     document.documentElement.classList.add(
@@ -378,18 +397,18 @@ export async function navigateToUrl(
       if (newTitleVisible && newTitleEl) {
         const h1 = newTitleEl.querySelector('h1') as HTMLElement | null;
         const info = newTitleEl.querySelector('.info') as HTMLElement | null;
-        const breadcrumb = newTitleEl.querySelector(
-          'a.breadcrumb',
-        ) as HTMLElement | null;
         if (h1) {
           h1.style.viewTransitionName = 'page-title';
         }
         if (info) {
           info.style.viewTransitionName = 'page-info';
         }
-        if (breadcrumb) {
-          breadcrumb.style.viewTransitionName = 'page-breadcrumb';
-        }
+        setBreadcrumbTransitionNames(
+          document,
+          renderedPageUrl,
+          sharedCount,
+          'enter',
+        );
       }
     });
 

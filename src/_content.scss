@@ -364,18 +364,34 @@ dfn {
   color: var(--theme-color-text);
 }
 
-a.breadcrumb {
-  @include user-select(none);
-  @include subdued-link;
+.breadcrumbs {
+  ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25em;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
 
-  &::after {
-    display: inline-block;
-    width: var(--icon-parent-size);
-    height: var(--icon-parent-size);
-    vertical-align: middle;
-    content: '';
+  li {
+    display: flex;
+    gap: 0.25em;
+    align-items: center;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 
-    @include contained-mask(var(--icon-parent));
+  a {
+    @include subdued-link;
+  }
+
+  [aria-current='page'] {
+    font-style: italic;
+  }
+
+  .material-symbol-icon {
+    flex-shrink: 0;
   }
 }
 
