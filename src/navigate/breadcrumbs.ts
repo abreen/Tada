@@ -51,6 +51,23 @@ export function getBreadcrumbItems(
   });
 }
 
+export function isBreadcrumbTrailVisible(
+  document: Document,
+  window: Window,
+): boolean {
+  const trail = document.querySelector('nav.breadcrumbs');
+  if (!trail) {
+    return false;
+  }
+  const rect = trail.getBoundingClientRect();
+  return (
+    rect.width > 0 &&
+    rect.height > 0 &&
+    rect.bottom > 0 &&
+    rect.top < window.innerHeight
+  );
+}
+
 export function setBreadcrumbTransitionNames(
   document: Document,
   pageUrl: string,

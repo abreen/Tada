@@ -339,3 +339,203 @@ for (const mode of ['reduced motion', 'no view transition API'] as const) {
     ).toBe(true);
   });
 }
+
+const LONG_PAGE = '/breadcrumb-tests/nested/long.html';
+
+function breadcrumbNav(page: Page) {
+  return page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
+}
+
+async function headerBottom(page: Page) {
+  return (await page.locator('header').boundingBox())!.height;
+}
+
+for (const javaScriptEnabled of [true, false]) {
+  const js = javaScriptEnabled ? 'enabled' : 'disabled';
+
+  test(`trail sticks below the header when scrolled with JavaScript ${js}`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      javaScriptEnabled,
+      viewport: { width: 1280, height: 700 },
+    });
+    const page = await context.newPage();
+    try {
+      await page.goto(LONG_PAGE);
+      const nav = breadcrumbNav(page);
+      const initialTop = (await nav.boundingBox())!.y;
+      await page.mouse.wheel(0, 3000);
+      await expect
+        .poll(() => page.evaluate(() => window.scrollY))
+        .toBeGreaterThan(2000);
+      const box = (await nav.boundingBox())!;
+      const top = await headerBottom(page);
+      expect(box.y).toBeLessThanOrEqual(initialTop);
+      expect(Math.abs(box.y - top)).toBeLessThan(4);
+      await expect(
+        page.getByRole('heading', { level: 1 }),
+      ).not.toBeInViewport();
+      await expect(nav.locator('[aria-current="page"]')).toBeInViewport();
+      await nav.getByRole('link', { name: 'Nested page', exact: true }).click();
+      await expect(page).toHaveURL(/breadcrumb-tests\/nested\/index\.html$/);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        'Nested page',
+      );
+    } finally {
+      await context.close();
+    }
+  });
+
+  test(`the bar background ${javaScriptEnabled ? 'appears only while stuck' : 'stays on'} with JavaScript ${js}`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      javaScriptEnabled,
+      viewport: { width: 1280, height: 700 },
+    });
+    const page = await context.newPage();
+    try {
+      await page.goto(LONG_PAGE);
+      const nav = breadcrumbNav(page);
+      const isTransparent = () =>
+        nav
+          .locator('ol')
+          .evaluate(
+            element =>
+              getComputedStyle(element).backgroundColor === 'rgba(0, 0, 0, 0)',
+          );
+      // Without JavaScript the stuck state is unknown, so the bar stays opaque.
+      await expect.poll(isTransparent).toBe(javaScriptEnabled);
+      await page.mouse.wheel(0, 3000);
+      await expect.poll(isTransparent).toBe(false);
+      await page.mouse.wheel(0, -3000);
+      await expect.poll(isTransparent).toBe(javaScriptEnabled);
+      if (javaScriptEnabled) {
+        await nav
+          .getByRole('link', { name: 'Nested page', exact: true })
+          .click();
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+          'Nested page',
+        );
+        await page.goBack();
+        await expect(page.getByRole('heading', { level: 1 })).toContainText(
+          'deliberately long',
+        );
+        await page.evaluate(() => window.scrollTo({ top: 0 }));
+        await expect.poll(isTransparent).toBe(true);
+        await page.mouse.wheel(0, 3000);
+        await expect.poll(isTransparent).toBe(false);
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test(`fragment targets land below the stuck trail with JavaScript ${js}`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      javaScriptEnabled,
+      viewport: { width: 1280, height: 700 },
+    });
+    const page = await context.newPage();
+    try {
+      await page.goto(`${LONG_PAGE}#target`);
+      const target = page.getByRole('heading', { name: 'Target' });
+      await expect(target).toBeInViewport();
+      const navBox = (await breadcrumbNav(page).boundingBox())!;
+      const targetBox = (await target.boundingBox())!;
+      expect(targetBox.y).toBeGreaterThanOrEqual(navBox.y + navBox.height);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test(`long trails stay on one line on narrow screens with JavaScript ${js}`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      javaScriptEnabled,
+      viewport: { width: 360, height: 700 },
+    });
+    const page = await context.newPage();
+    try {
+      await page.goto(LONG_PAGE);
+      const nav = breadcrumbNav(page);
+      const tops = await nav
+        .getByRole('listitem')
+        .evaluateAll(items =>
+          items.map(item => Math.round(item.getBoundingClientRect().top)),
+        );
+      expect(new Set(tops).size).toBe(1);
+      const navBox = (await nav.boundingBox())!;
+      const current = (await nav
+        .locator('[aria-current="page"]')
+        .boundingBox())!;
+      expect(current.width).toBeGreaterThan(0);
+      expect(current.x + current.width).toBeLessThanOrEqual(
+        navBox.x + navBox.width + 1,
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      const truncated = await nav
+        .locator('a, [aria-current="page"]')
+        .evaluateAll(items =>
+          items.map(item => {
+            const range = document.createRange();
+            range.selectNodeContents(item);
+            return (
+              range.getBoundingClientRect().width >
+              item.getBoundingClientRect().width + 0.01
+            );
+          }),
+        );
+      expect(truncated).toEqual([false, false, false, true]);
+    } finally {
+      await context.close();
+    }
+  });
+}
+
+test('the sticky table of contents starts below the stuck trail', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto(LONG_PAGE);
+  await page.mouse.wheel(0, 3000);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(2000);
+  const navBox = (await breadcrumbNav(page).boundingBox())!;
+  const tocBox = (await page.locator('nav.toc').boundingBox())!;
+  expect(tocBox.y).toBeGreaterThanOrEqual(navBox.y + navBox.height - 1);
+});
+
+test('navigating from a scrolled page keeps shared crumbs in place', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto(LONG_PAGE);
+  await page.mouse.wheel(0, 3000);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(2000);
+  await trackBreadcrumbTransitions(page);
+  await breadcrumbNav(page)
+    .getByRole('link', { name: 'Nested page', exact: true })
+    .click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Nested page',
+  );
+  const transition = await lastBreadcrumbTransition(page);
+  expect(transition.old.slice(0, 3).map(item => item.name)).toEqual([
+    'page-breadcrumb-shared-0',
+    'page-breadcrumb-shared-1',
+    'page-breadcrumb-shared-2',
+  ]);
+  expect(transition.old[3].name).toBe('page-breadcrumb-leave-3');
+});

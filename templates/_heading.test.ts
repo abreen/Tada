@@ -90,10 +90,41 @@ describe('breadcrumb trail', () => {
       html.indexOf('aria-current="page"'),
     );
     expect(html).toContain(
-      '<span aria-current="page">Counting &amp; &lt;vowels&gt;</span>',
+      '<span aria-current="page" title="Counting &amp; &lt;vowels&gt;">Counting &amp; &lt;vowels&gt;</span>',
     );
     expect(html.match(/aria-hidden="true"/g)).toHaveLength(2);
     expect(html).toContain('>Counting &amp; <em>vowels</em></h1>');
+  });
+
+  test('renders the trail before the heading block so it can stick', () => {
+    const html = renderHeading({
+      page: {
+        breadcrumbs: [{ label: 'Labs', url: '/labs/index.html' }],
+        title: 'Title',
+        titleHtml: 'Title',
+      },
+    });
+    const nav = html.indexOf('<nav class="breadcrumbs"');
+    const navEnd = html.indexOf('</nav>');
+    const heading = html.indexOf('<div class="title-and-info"');
+    expect(nav).toBeGreaterThanOrEqual(0);
+    expect(navEnd).toBeLessThan(heading);
+  });
+
+  test('labels each truncatable item with its full text', () => {
+    const html = renderHeading({
+      page: {
+        breadcrumbs: [{ label: 'Labs & "notes"', url: '/labs/index.html' }],
+        title: 'Counting & <vowels>',
+        titleHtml: 'Counting &amp; <em>vowels</em>',
+      },
+    });
+    expect(html).toContain(
+      '<a href="/labs/index.html" title="Labs &amp; &quot;notes&quot;">',
+    );
+    expect(html).toContain(
+      '<span aria-current="page" title="Counting &amp; &lt;vowels&gt;">',
+    );
   });
 
   test.each([{ breadcrumbs: undefined }, { breadcrumbs: [] }])(

@@ -2,6 +2,7 @@
 
 :root {
   --toc-width: 260px;
+  --breadcrumbs-height: 2.25rem;
 }
 
 html {
@@ -9,6 +10,12 @@ html {
   margin: 0;
   overflow-y: auto;
   scroll-padding-top: calc(var(--header-collapsed-height) + var(--gap));
+}
+
+html:has(.main-content > nav.breadcrumbs) {
+  scroll-padding-top: calc(
+    var(--header-collapsed-height) + var(--breadcrumbs-height) + var(--gap)
+  );
 }
 
 body {
@@ -29,8 +36,8 @@ body > .container {
 .main-content {
   display: grid;
   flex: 1;
-  grid-template-areas: 'heading' 'toc' 'body';
-  grid-template-rows: auto auto 1fr;
+  grid-template-areas: 'crumbs' 'heading' 'toc' 'body';
+  grid-template-rows: auto auto auto 1fr;
   width: 100%;
 }
 
@@ -120,6 +127,7 @@ body.literate main table {
 
   .toc-is-active .main-content {
     grid-template:
+      'crumbs crumbs' auto
       'heading heading' auto
       'toc body' 1fr / var(--toc-width) minmax(0, 1fr);
     gap: 0 var(--gap);
@@ -139,6 +147,13 @@ body.literate main table {
   body.code.toc-is-active nav.toc {
     top: calc(var(--header-collapsed-height) + var(--gap));
     max-height: calc(100vh - var(--header-collapsed-height) - var(--gap));
+  }
+
+  body.toc-is-active .main-content:has(> nav.breadcrumbs) > nav.toc {
+    top: calc(var(--header-collapsed-height) + var(--breadcrumbs-height));
+    max-height: calc(
+      100vh - var(--header-collapsed-height) - var(--breadcrumbs-height)
+    );
   }
 }
 

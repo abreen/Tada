@@ -31,6 +31,28 @@ breadcrumbs:
 [First detail](./first.html)
 `,
   );
+  writeFileSync(
+    path.join(nestedDir, 'long.md'),
+    `---
+title: A deliberately long current page title that cannot fit on a phone
+toc: true
+breadcrumbs:
+  - label: Home
+    url: ../../index.html
+  - label: Section
+    url: ../index.html
+  - label: Nested page
+    url: ./index.html
+---
+
+## Introduction
+
+${'Paragraph.\n\n'.repeat(60)}## Target
+
+Target paragraph.
+
+${'Paragraph.\n\n'.repeat(60)}`,
+  );
   for (const [name, title, sibling] of [
     ['first', 'First detail', 'second'],
     ['second', 'Second detail', 'first'],

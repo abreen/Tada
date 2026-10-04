@@ -8,6 +8,7 @@ import { globals } from '../globals';
 import {
   cleanupBreadcrumbTransitionNames,
   getBreadcrumbItems,
+  isBreadcrumbTrailVisible,
   prepareBreadcrumbTransitionStyles,
   setBreadcrumbTransitionNames,
   sharedBreadcrumbCount,
@@ -142,6 +143,23 @@ function cleanupViewTransitionNames(document: Document): void {
     newInfo.style.viewTransitionName = '';
   }
   cleanupBreadcrumbTransitionNames(document);
+}
+
+/** The page heading block, if it is not covered by the header or the trail */
+function getVisibleTitle(document: Document): Element | null {
+  const titleEl = document.querySelector('.title-and-info');
+  if (!titleEl) {
+    return null;
+  }
+  const headerBottom =
+    document.querySelector('header')?.getBoundingClientRect().height ?? 0;
+  const trailBottom =
+    document.querySelector('nav.breadcrumbs')?.getBoundingClientRect().bottom ??
+    0;
+  return titleEl.getBoundingClientRect().top >=
+    Math.max(headerBottom, trailBottom)
+    ? titleEl
+    : null;
 }
 
 function getLocationKey(window: Window): string {
@@ -355,13 +373,8 @@ export async function navigateToUrl(
       newBreadcrumbItems.length,
       sharedCount,
     );
-    const titleEl = document.querySelector('.title-and-info');
-    const headerHeight =
-      document.querySelector('header')?.getBoundingClientRect().height ?? 0;
-    const titleVisible =
-      titleEl != null && titleEl.getBoundingClientRect().top >= headerHeight;
-
-    if (titleVisible) {
+    const titleEl = getVisibleTitle(document);
+    if (titleEl) {
       const h1 = titleEl.querySelector('h1') as HTMLElement | null;
       const info = titleEl.querySelector('.info') as HTMLElement | null;
       if (h1) {
@@ -370,6 +383,10 @@ export async function navigateToUrl(
       if (info) {
         info.style.viewTransitionName = 'page-info';
       }
+    }
+    // The trail sticks below the header, so it stays visible after the title
+    // scrolls away; shared items can then stay in place while scrolled.
+    if (isBreadcrumbTrailVisible(document, window)) {
       setBreadcrumbTransitionNames(
         document,
         renderedPageUrl,
@@ -387,14 +404,8 @@ export async function navigateToUrl(
         return;
       }
 
-      const newTitleEl = document.querySelector('.title-and-info');
-      const newHeaderHeight =
-        document.querySelector('header')?.getBoundingClientRect().height ?? 0;
-      const newTitleVisible =
-        newTitleEl != null &&
-        newTitleEl.getBoundingClientRect().top >= newHeaderHeight;
-
-      if (newTitleVisible && newTitleEl) {
+      const newTitleEl = getVisibleTitle(document);
+      if (newTitleEl) {
         const h1 = newTitleEl.querySelector('h1') as HTMLElement | null;
         const info = newTitleEl.querySelector('.info') as HTMLElement | null;
         if (h1) {
@@ -403,6 +414,8 @@ export async function navigateToUrl(
         if (info) {
           info.style.viewTransitionName = 'page-info';
         }
+      }
+      if (isBreadcrumbTrailVisible(document, window)) {
         setBreadcrumbTransitionNames(
           document,
           renderedPageUrl,

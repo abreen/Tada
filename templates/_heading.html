@@ -1,20 +1,20 @@
+<% if (page.breadcrumbs && page.breadcrumbs.length) { %>
+<nav class="breadcrumbs" aria-label="Breadcrumb" data-pagefind-ignore>
+  <ol>
+    <% page.breadcrumbs.forEach((entry, index) => { %>
+    <li>
+      <% if (index > 0) { %><span class="material-symbol-icon material-symbol-icon-breadcrumb-separator" aria-hidden="true"></span><% } %>
+      <a href="<%- encodeAuthoredUrl(entry.url) %>" title="<%- entry.label %>"><%- entry.label %></a>
+    </li>
+    <% }); %>
+    <li>
+      <span class="material-symbol-icon material-symbol-icon-breadcrumb-separator" aria-hidden="true"></span>
+      <span aria-current="page" title="<%- page.title %>"><%- page.title %></span>
+    </li>
+  </ol>
+</nav>
+<% } %>
 <div class="title-and-info" data-pagefind-body>
-  <% if (page.breadcrumbs && page.breadcrumbs.length) { %>
-  <nav class="breadcrumbs" aria-label="Breadcrumb" data-pagefind-ignore>
-    <ol>
-      <% page.breadcrumbs.forEach((entry, index) => { %>
-      <li>
-        <% if (index > 0) { %><span class="material-symbol-icon material-symbol-icon-breadcrumb-separator" aria-hidden="true"></span><% } %>
-        <a href="<%- encodeAuthoredUrl(entry.url) %>"><%- entry.label %></a>
-      </li>
-      <% }); %>
-      <li>
-        <span class="material-symbol-icon material-symbol-icon-breadcrumb-separator" aria-hidden="true"></span>
-        <span aria-current="page"><%- page.title %></span>
-      </li>
-    </ol>
-  </nav>
-  <% } %>
   <h1 data-pagefind-weight="10" data-pagefind-meta="title_html[data-title-html]" data-title-html="<%- page.titleHtml %>"><%= page.titleHtml %></h1>
 
   <div class="info" data-pagefind-ignore>

@@ -60,14 +60,17 @@ function getTocElements(
   );
 }
 
-/* Calculate how much to offset scroll calculations based on floating header */
+/* Calculate how much to offset scroll calculations based on floating header
+ * and the sticky breadcrumb trail below it */
 function getHeaderOffset(doc: Document) {
   const element = doc.querySelector('header details summary');
-  if (!element) {
-    return 0;
+  const headerOffset = element ? element.getBoundingClientRect().height : 0;
+  const trail = doc.querySelector('nav.breadcrumbs');
+  if (!trail) {
+    return headerOffset;
   }
 
-  return element.getBoundingClientRect().height;
+  return Math.max(headerOffset, trail.getBoundingClientRect().bottom);
 }
 
 function getViewportActivationPoint(win: Window, doc: Document) {

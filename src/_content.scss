@@ -365,21 +365,55 @@ dfn {
 }
 
 .breadcrumbs {
+  position: sticky;
+  top: var(--header-collapsed-height);
+  z-index: 20;
+  display: flex;
+  grid-area: crumbs;
+  align-self: start;
+  min-width: 0;
+  height: var(--breadcrumbs-height);
+  margin: 0 calc(-1 * var(--gap)) calc(var(--gap) / 2);
+
   ol {
+    box-sizing: border-box;
     display: flex;
-    flex-wrap: wrap;
+    flex: 1;
+    flex-wrap: nowrap;
     gap: 0.25em;
-    padding: 0;
+    align-items: center;
+    min-width: 0;
+    padding: 0 var(--gap);
     margin: 0;
+    overflow: hidden;
     list-style: none;
+    border-bottom: 1px solid transparent;
   }
 
+  // Items keep room for their separator and a truncated label.
   li {
     display: flex;
     gap: 0.25em;
     align-items: center;
-    min-width: 0;
-    overflow-wrap: anywhere;
+    min-width: 1.5em;
+  }
+
+  li + li {
+    min-width: calc(var(--icon-breadcrumb-separator-size) + 1.75em);
+  }
+
+  // The current title takes only the space ancestors leave, so it truncates
+  // before any ancestor does.
+  li:last-child {
+    flex: 1 1 0;
+  }
+
+  a,
+  [aria-current='page'] {
+    min-width: 1.5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   a {
@@ -393,6 +427,20 @@ dfn {
   .material-symbol-icon {
     flex-shrink: 0;
   }
+}
+
+// The trail only looks like a bar while the script reports it stuck below the
+// header. Without JavaScript the bar stays opaque so pinned text stays legible.
+.breadcrumbs.is-stuck ol,
+:root:not(.js) .breadcrumbs ol {
+  background: var(--bg-color-translucent);
+  border-bottom-color: var(--bg2-color);
+  backdrop-filter: var(--backdrop-filter);
+}
+
+:root[data-contrast-preference='high'] .breadcrumbs.is-stuck ol,
+:root[data-contrast-preference='high']:not(.js) .breadcrumbs ol {
+  background: var(--bg-color);
 }
 
 img {
