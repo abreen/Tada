@@ -374,6 +374,25 @@ public class Demo {
     expect(html).toContain('trace-last" disabled tabindex="-1"');
   });
 
+  test('rendered widget draws control icons at their rendered size', () => {
+    const html = renderTraceWidgetHtml({
+      highlightedSources: [
+        { file: 'Test.java', highlightedSource: '<pre>class Test {}</pre>' },
+      ],
+      manifestUrl: '/_traces/Test/manifest.json',
+      totalSteps: 3,
+    });
+    const icons = html.match(/<svg\b[^>]*>/g) ?? [];
+
+    expect(icons).toHaveLength(4);
+    for (const icon of icons) {
+      expect(icon).toContain("width='16'");
+      expect(icon).toContain("height='16'");
+      expect(icon).toContain("viewBox='0 0 16 16'");
+      expect(icon).toContain("stroke-width='1.65'");
+    }
+  });
+
   test('rendered widget includes one source panel per traced file', () => {
     const html = renderTraceWidgetHtml({
       highlightedSources: [

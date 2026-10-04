@@ -277,11 +277,11 @@ export function renderTraceWidgetHtml({
   manifestUrl?: string;
   totalSteps?: number;
 }): string {
-  const svgAttrs = `aria-hidden='true' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'`;
-  const iconFirst = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='6' x2='2' y2='18'/><polyline points='10 6 4 12 10 18'/><line x1='4' y1='12' x2='22' y2='12'/></svg>`;
-  const iconPrev = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><polyline points='10 6 4 12 10 18'/><line x1='4' y1='12' x2='22' y2='12'/></svg>`;
-  const iconNext = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/></svg>`;
-  const iconLast = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><line x1='2' y1='12' x2='20' y2='12'/><polyline points='14 6 20 12 14 18'/><line x1='22' y1='6' x2='22' y2='18'/></svg>`;
+  const svgAttrs = `aria-hidden='true' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='currentColor' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'`;
+  const iconFirst = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><path d='M1.25 4v8M8.25 4l-4 4 4 4M4.25 8h10.5'/></svg>`;
+  const iconPrev = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><path d='M6.25 4l-4 4 4 4M2.25 8h11.5'/></svg>`;
+  const iconNext = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><path d='M2.25 8h11.5M9.75 4l4 4-4 4'/></svg>`;
+  const iconLast = `<svg xmlns='http://www.w3.org/2000/svg' ${svgAttrs}><path d='M1.25 8h10.5M7.75 4l4 4-4 4M14.75 4v8'/></svg>`;
   const disabled = totalSteps === undefined;
   const counterContent = disabled ? '--' : `1/${totalSteps}`;
   const counterStyle = disabled

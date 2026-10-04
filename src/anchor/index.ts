@@ -4,7 +4,7 @@ function getElements(parent: HTMLElement): HTMLHeadingElement[] {
 
 function createPresentIcon(window: Window): HTMLSpanElement {
   const icon = window.document.createElement('span');
-  icon.className = 'material-symbol-icon material-symbol-icon-heading-present';
+  icon.className = 'mask-icon mask-icon-heading-present';
   icon.setAttribute('aria-hidden', 'true');
   return icon;
 }

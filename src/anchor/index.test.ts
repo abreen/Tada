@@ -17,7 +17,7 @@ describe('anchor', () => {
     expect(link).not.toBeNull();
     expect(link.getAttribute('href')).toBe('#intro');
     expect(link.textContent).toBe('Introduction');
-    expect(link.querySelector('.material-symbol-icon')).toBeNull();
+    expect(link.querySelector('.mask-icon')).toBeNull();
   });
 
   test('sets title on anchor link', () => {
@@ -73,16 +73,14 @@ describe('anchor', () => {
     ) as HTMLButtonElement;
 
     expect(link.getAttribute('href')).toBe('#topic');
-    expect(link.querySelector('.material-symbol-icon')).toBeNull();
+    expect(link.querySelector('.mask-icon')).toBeNull();
     expect(button).not.toBeNull();
     expect(button.classList.contains('icon-button')).toBe(false);
     expect(button.disabled).toBe(false);
     expect(button.type).toBe('button');
     expect(button.getAttribute('aria-label')).toBe('Present from this slide');
     expect(button.getAttribute('title')).toBe('Present from this slide');
-    expect(
-      button.querySelector('.material-symbol-icon-heading-present'),
-    ).not.toBeNull();
+    expect(button.querySelector('.mask-icon-heading-present')).not.toBeNull();
     expect(button.querySelector('svg')).toBeNull();
   });
 

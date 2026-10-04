@@ -237,16 +237,5 @@ footer {
     &:active {
       color: var(--link-active-color);
     }
-
-    &::after {
-      display: inline-block;
-      width: var(--icon-tada-size);
-      height: var(--icon-tada-size);
-      margin-left: 0.2em;
-      vertical-align: middle;
-      content: '';
-
-      @include contained-mask(var(--icon-tada));
-    }
   }
 }

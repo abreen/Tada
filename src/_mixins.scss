@@ -48,3 +48,11 @@
   -webkit-mask-size: contain;
   mask-size: contain;
 }
+
+// Every icon is drawn in a viewBox matching its rendered pixel size, so this
+// one stroke width renders identically on every icon.
+$icon-stroke-width: 1.65;
+
+@function icon-svg($size, $body) {
+  @return url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='#{$size}' height='#{$size}' viewBox='0 0 #{$size} #{$size}' fill='none' stroke='black' stroke-width='#{$icon-stroke-width}' stroke-linecap='round' stroke-linejoin='round'>#{$body}</svg>");
+}

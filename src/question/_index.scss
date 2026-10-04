@@ -129,10 +129,10 @@
 
 .question-multiple-choice {
   --question-correct-color: hsl(142deg 58% 36%);
-  --question-correct-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='none' stroke='black' stroke-width='1.5'/><path d='M7 12.5 10.5 16 17 8.5' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --question-correct-icon: var(--icon-question-correct);
   --question-incorrect-color: hsl(0deg 72% 48%);
-  --question-incorrect-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 7 17 17 M17 7 7 17' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round'/></svg>");
-  --question-result-icon-size: 1.35em;
+  --question-incorrect-icon: var(--icon-question-incorrect);
+  --question-result-icon-size: var(--icon-question-correct-size);
 }
 
 @media (prefers-color-scheme: dark) {

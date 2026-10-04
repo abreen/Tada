@@ -24,8 +24,8 @@ describe('_appearance-picker.html template', () => {
     expect(html).toContain('data-font-preference-value="serif"');
     expect(html).toContain('data-contrast-preference-value="standard"');
     expect(html).toContain('data-contrast-preference-value="high"');
-    expect(html).toContain('material-symbol-icon-contrast-standard');
-    expect(html).toContain('material-symbol-icon-contrast-high');
+    expect(html).toContain('mask-icon-contrast-standard');
+    expect(html).toContain('mask-icon-contrast-high');
     expect(html).not.toContain('contrast-preview');
     expect(html).toContain('data-pagefind-ignore');
     expect(html).not.toContain(' hidden');

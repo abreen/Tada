@@ -12,7 +12,6 @@ import type { PluginBuilder } from 'bun';
 import type { SiteVariables } from './types';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import pkg from '../package.json' with { type: 'json' };
-import { renderMaterialSymbolVariables } from './material-symbols';
 import {
   getSerifFontStack,
   getSerifMonoFontStack,
@@ -63,7 +62,6 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const traceLineActiveHue = formatCssNumber(deriveTraceLineActiveHue(tintHue));
   const bgTraceLineActive = `hsl(${traceLineActiveHue}deg 100% 86%)`;
   const bgTraceLineActiveDark = `hsl(${traceLineActiveHue}deg 90% 18%)`;
-  const materialSymbolVariables = renderMaterialSymbolVariables();
   const customFontFaces = renderCustomFontFaceScss(siteVariables.fontOverrides);
   const customFontTuning = renderCustomFontTuningScss(
     siteVariables.fontOverrides,
@@ -90,8 +88,7 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   });
   const rendered = renderedTemplate
     .replace('/* TADA_CUSTOM_FONT_FACES */', customFontFaces)
-    .replace('/* TADA_CUSTOM_FONT_TUNING */', customFontTuning)
-    .replace('/* TADA_MATERIAL_SYMBOL_VARIABLES */', materialSymbolVariables);
+    .replace('/* TADA_CUSTOM_FONT_TUNING */', customFontTuning);
 
   return rendered;
 }

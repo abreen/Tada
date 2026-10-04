@@ -44,8 +44,7 @@ The build renders a `<nav aria-label="Breadcrumb">` containing an ordered
 list. Ancestor links hide their underline by default and show it on hover.
 The unlinked final item displays the current page title in bold and has
 `aria-current="page"`. The entire trail is excluded from Pagefind indexing.
-Decorative, accessibility-hidden Material Symbols Outlined `chevron_right`
-icons in `var(--fg2-color)` separate items. The trail is left-aligned, wraps on
+Decorative, accessibility-hidden chevron [icons](icons.md) in `var(--fg2-color)` separate items. The trail is left-aligned, wraps on
 narrow screens, and works with JavaScript disabled.
 
 When view transitions are available and reduced motion is not requested, client
