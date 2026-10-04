@@ -2,6 +2,7 @@ dist
 dist-prod
 example
 .DS_Store
+.claude
 
 # Java
 .mtj.tmp/
