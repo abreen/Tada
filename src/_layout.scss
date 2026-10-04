@@ -152,14 +152,16 @@ body.literate main table {
 .info {
   @include user-select(none);
 
-  display: grid;
-  grid-template-columns: 1fr auto;
+  // Flex instead of a `1fr auto` grid: WebKit keeps the auto column's width
+  // after the font changes, which wraps the author avatar onto its own line.
+  display: flex;
   align-items: baseline;
+  justify-content: space-between;
   font-size: var(--font-size-smaller);
   color: var(--fg2-color);
 
   @media (width < 450px) {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   aside.author {

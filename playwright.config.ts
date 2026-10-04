@@ -18,6 +18,11 @@ export default defineConfig({
       use: { browserName: 'webkit' },
     },
     {
+      name: 'webkit-author-byline',
+      testMatch: '**/author-byline.spec.ts',
+      use: { browserName: 'webkit' },
+    },
+    {
       name: 'webkit-font-loading',
       testMatch: '**/font-loading.spec.ts',
       use: { browserName: 'webkit' },
