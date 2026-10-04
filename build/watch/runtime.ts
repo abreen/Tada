@@ -3,6 +3,7 @@ import { B } from '../colors';
 import { makeLogger, printFlair } from '../log';
 import { startServer } from '../serve';
 import { WatchPagefindRunner } from '../pagefind';
+import { isFeatureEnabled } from '../features';
 import { printDiagnostics } from '../build-validation';
 import type { WatchLifecycleEvent } from './types';
 import type { TadaBuildMeta } from '../build-types';
@@ -21,13 +22,11 @@ export class TadaWatchRuntime {
   private distDir: string;
   private server: Bun.Server<undefined> | null;
   private pagefindRunner: WatchPagefindRunner | undefined;
-  private pagefindSiteVariablesKey: string | undefined;
 
   constructor({ httpPort, distDir }: { httpPort?: number; distDir: string }) {
     this.httpPort = httpPort;
     this.distDir = distDir;
     this.server = null;
-    this.pagefindSiteVariablesKey = undefined;
   }
 
   private broadcast(message: string): void {
@@ -78,25 +77,17 @@ export class TadaWatchRuntime {
         if (event.paths) {
           this.broadcast(WATCH_RELOAD_MESSAGE_RELOAD);
         }
-        if (event.meta.siteVariables.features.search !== false) {
-          const siteVariablesKey = JSON.stringify(event.meta.siteVariables);
-          if (
-            !this.pagefindRunner ||
-            this.pagefindSiteVariablesKey !== siteVariablesKey
-          ) {
-            this.pagefindRunner = new WatchPagefindRunner();
-            this.pagefindSiteVariablesKey = siteVariablesKey;
-          }
-          this.pagefindRunner.update(
+        if (isFeatureEnabled(event.meta.siteVariables, 'search')) {
+          // One indexer for the whole session runs one index at a time, so
+          // two runs never clear and write pagefind/ concurrently.
+          const runner = (this.pagefindRunner ??= new WatchPagefindRunner());
+          runner.update(
             this.distDir,
             event.meta.htmlAssetsByPath,
             event.meta.htmlAnalysisByPath,
             event.meta.pdfSourceByOutputPath,
           );
-          setImmediate(() => this.pagefindRunner!.run());
-        } else {
-          this.pagefindRunner = undefined;
-          this.pagefindSiteVariablesKey = undefined;
+          setImmediate(() => runner.run());
         }
         return;
       }
