@@ -48,39 +48,24 @@ Decorative, accessibility-hidden Material Symbols Outlined `chevron_right`
 icons in `var(--fg2-color)` separate items. The trail is left-aligned and works
 with JavaScript disabled.
 
-The trail renders before, and outside, the `.title-and-info` heading block as
-the first row of the page grid. It is a sticky bar: it scrolls with the page
-until it reaches the fixed site header, then stays pinned directly below it, so
-the current title and ancestor links remain visible and clickable anywhere on
-the page. The bar has a fixed one-line height (`--breadcrumbs-height`), spans
-the content column including its side gutters, and sits above page content but
-below the header and the open-menu overlay.
+The trail appears above the page heading. In browsers that support CSS
+scroll-state container queries, it scrolls with the page until it reaches the
+fixed site header, then stays pinned directly below it, so the current title and
+ancestor links remain visible and clickable anywhere on the page. This works with
+JavaScript disabled. While pinned, the trail looks like a second header bar with
+the header's translucent background, blur, and bottom border (an opaque
+background with high contrast). Before it is pinned, it has no background. The
+pinned bar spans the content column and stays below the header and the open
+menu. In other browsers the trail scrolls away with the page.
 
-The bar only has a background while it is stuck. While stuck it uses the
-header's translucent background, backdrop blur, and bottom border (an opaque
-background with high contrast); otherwise the trail is plain text above the
-heading. Browsers that support CSS scroll-state container queries detect the
-stuck state in CSS, with or without JavaScript. That rule is an inline `<style>`
-in the page head because Bun's CSS bundler cannot parse `scroll-state()`
-queries. In other browsers the `breadcrumbs` client component adds `is-stuck`
-once the trail reaches its sticky offset and removes it when the trail returns
-to normal flow. Client navigation also sets the class during the content swap,
-after restoring scroll, so a page restored scrolled down shows the stuck bar
-throughout its view transition. Without JavaScript or scroll-state support, the
-bar background is always shown so pinned text never overlaps page content.
+The trail is always one line. The current title shrinks first and truncates
+with an ellipsis; ancestors truncate only when they alone do not fit. The
+current item and every separator stay visible on narrow screens, and the page
+never scrolls horizontally. Hovering any item shows its full text.
 
-The trail never wraps. The current title takes only the space the ancestors
-leave and truncates with an ellipsis first; ancestors truncate only when they
-alone do not fit. Every item keeps a minimum width, so the current item and
-each separator stay visible on narrow screens without horizontal page
-scrolling. Links and the current item carry a `title` attribute with their full
-text.
-
-On pages with a trail, the document `scroll-padding-top` includes the bar's
-height so fragment targets land below it, and the desktop sticky table of
-contents starts below it. TOC active-section tracking measures from the bar's
-bottom edge. In print the trail renders in normal flow without the bar styling,
-and it is hidden during slide presentation.
+When the trail is pinned, links to headings on the page land below it, and the
+desktop table of contents starts below it. In print the trail is not pinned and
+has no bar styling, and it is hidden during slide presentation.
 
 When view transitions are available and reduced motion is not requested, client
 navigation preserves the shared prefix of the old and new trails. Items match
@@ -91,11 +76,11 @@ link can become the italic current title when navigating up the trail.
 
 Shared items remain opaque and stay in place when their layout is unchanged,
 moving smoothly if truncation changes their position. Removed items and their
-separators fade out, and new items fade in.
-Items receive their own transition whenever the trail is visible, which
-includes when it is stuck below the header on a scrolled page; if a matching
-item is visible on just one side, it fades in or out. The page title and info
-only receive their own transitions when the heading is not covered by the
-header or the trail. Temporary names and transition rules are cleared after
-navigation or when a new navigation interrupts it. Without the API, or with reduced motion enabled, navigation
-swaps the content immediately.
+separators fade out, and new items fade in. Items transition whenever the trail
+is visible, including when it is pinned on a scrolled page; if a matching item
+is visible on just one side, it fades in or out. The page title and info only
+transition when the heading is not covered by the header or the trail. A page
+restored scrolled down shows the pinned bar throughout its transition.
+Temporary names and transition rules are cleared after navigation or when a new
+navigation interrupts it. Without the API, or with reduced motion enabled,
+navigation swaps the content immediately.
