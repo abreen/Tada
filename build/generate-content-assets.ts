@@ -52,6 +52,7 @@ export class ContentRenderer {
   processContent({
     distDir,
     assetFiles,
+    isWatchMode,
     scan,
   }: ContentRenderOptions): ContentRenderResult {
     const buildContentFiles = [...sourcePaths(scan, 'content', true)];
@@ -93,6 +94,7 @@ export class ContentRenderer {
           siteVariables: this.siteVariables,
           scan,
           assetFiles,
+          isWatchMode,
           outputDir: distDir,
           traceCache: this.traceCache,
           traceToolAvailability: this.traceToolAvailability,

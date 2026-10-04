@@ -80,10 +80,6 @@ const RESERVED_FRONT_MATTER_KEYS: readonly string[] = [
   'filePath',
 ];
 
-function isWatchMode(assetFiles: string[]): boolean {
-  return assetFiles.some(f => f.includes('watch-reload-client'));
-}
-
 function renderInlineField(
   md: MarkdownIt,
   vars: Record<string, unknown>,
@@ -279,6 +275,7 @@ export function renderPlainTextPageAsset({
   siteVariables,
   validInternalTargets,
   assetFiles,
+  isWatchMode,
   literateJavaOutputPaths,
   generatedPageTargets,
   codePageSourceTargets,
@@ -292,14 +289,13 @@ export function renderPlainTextPageAsset({
   const sourceUrlPath = normalizeOutputPath(`/${subPath}.html`);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
-  const watchMode = isWatchMode(assetFiles);
   const { content, pageVariables, tocItems } = renderPlainTextContent(
     filePath,
     subPath,
     sourceUrlPath,
     siteVariables,
     validInternalTargets,
-    watchMode,
+    isWatchMode,
     {
       dependencyCollector,
       traceCache,
@@ -323,7 +319,7 @@ export function renderPlainTextPageAsset({
     siteVariables,
     content,
     subPath,
-    isWatchMode: watchMode,
+    isWatchMode,
     bannerHtml: renderSiteBanner(siteVariables),
   });
 
@@ -363,6 +359,7 @@ export function renderCodePageAsset({
   distDir,
   siteVariables,
   assetFiles,
+  isWatchMode,
   validInternalTargets,
   literateJavaOutputPaths,
   generatedPageTargets,
@@ -409,7 +406,7 @@ export function renderCodePageAsset({
     siteVariables,
     content,
     subPath,
-    isWatchMode: isWatchMode(assetFiles),
+    isWatchMode,
     bannerHtml: renderSiteBanner(siteVariables),
   });
 
@@ -669,6 +666,7 @@ export function renderLiterateJavaPageAsset({
   distDir,
   siteVariables,
   assetFiles,
+  isWatchMode,
   skipExecution,
   validInternalTargets,
   literateJavaOutputPaths,
@@ -683,7 +681,6 @@ export function renderLiterateJavaPageAsset({
   log.info`Rendering literate Java page ${B`${name}`}`;
 
   const sourceUrlPath = `/${subPath}.java.html`;
-  const watchMode = isWatchMode(assetFiles);
   const raw = fs.readFileSync(filePath, 'utf-8');
   const { pageVariables: rawPageVariables, content } =
     parseFrontMatterAndContent(raw, '.md');
@@ -694,7 +691,7 @@ export function renderLiterateJavaPageAsset({
     sourceUrlPath,
     siteVariables,
     validInternalTargets,
-    isWatchMode: watchMode,
+    isWatchMode,
     allowSlides: false,
     dependencyCollector,
   });
@@ -703,7 +700,7 @@ export function renderLiterateJavaPageAsset({
     siteVariables,
     content,
     subPath,
-    isWatchMode: watchMode,
+    isWatchMode,
   });
   const md = createMarkdown(siteVariables, {
     filePath,
@@ -819,7 +816,7 @@ export function renderLiterateJavaPageAsset({
     siteVariables,
     content: contentHtml,
     subPath,
-    isWatchMode: watchMode,
+    isWatchMode,
     bannerHtml: renderSiteBanner(siteVariables),
   });
 

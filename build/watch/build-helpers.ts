@@ -14,7 +14,7 @@ export function buildFailedWithDiagnostics(
 
 type RenderOptions = Omit<
   Parameters<typeof createContentRecord>[0],
-  'traceToolAvailability'
+  'traceToolAvailability' | 'isWatchMode'
 > & { traceOptions: WatchTraceOptions };
 
 export function renderSource({
@@ -26,6 +26,7 @@ export function renderSource({
       ? createPublicRecord(options.filePath, options.scan.publicDir)
       : createContentRecord({
           ...options,
+          isWatchMode: true,
           traceToolAvailability: traceOptions.toolAvailability,
         });
   if (!record.outputs.size) {

@@ -83,6 +83,7 @@ export interface Asset {
 export interface ContentRenderOptions {
   distDir: string;
   assetFiles: string[];
+  isWatchMode: boolean;
   scan: TadaProjectScan;
 }
 
@@ -115,6 +116,7 @@ export interface RenderPlainTextOptions {
   generatedPageTargets?: ReadonlySet<string>;
   codePageSourceTargets?: ReadonlySet<string>;
   assetFiles: string[];
+  isWatchMode: boolean;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
   cachedTraceSourceDir?: string;
@@ -143,6 +145,7 @@ export interface RenderCodePageOptions {
   distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
+  isWatchMode: boolean;
   validInternalTargets: ReadonlySet<string>;
   generatedPageTargets?: ReadonlySet<string>;
   codePageSourceTargets?: ReadonlySet<string>;
@@ -157,6 +160,7 @@ export interface RenderLiterateJavaOptions {
   distDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
+  isWatchMode: boolean;
   skipExecution?: boolean;
   validInternalTargets: ReadonlySet<string>;
   generatedPageTargets?: ReadonlySet<string>;

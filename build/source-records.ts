@@ -91,6 +91,7 @@ export function createContentRecord({
   siteVariables,
   scan,
   assetFiles,
+  isWatchMode,
   outputDir,
   traceCache,
   traceToolAvailability,
@@ -101,6 +102,7 @@ export function createContentRecord({
   siteVariables: SiteVariables;
   scan: TadaProjectScan;
   assetFiles: string[];
+  isWatchMode: boolean;
   outputDir: string;
   traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
@@ -124,6 +126,7 @@ export function createContentRecord({
           distDir: outputDir,
           siteVariables,
           assetFiles,
+          isWatchMode,
           skipExecution: skipLiterateJavaExecution,
           validInternalTargets: scan.validTargets,
           generatedPageTargets: scan.generatedPageTargets,
@@ -144,6 +147,7 @@ export function createContentRecord({
           generatedPageTargets: scan.generatedPageTargets,
           codePageSourceTargets: scan.codePageSourceTargets,
           assetFiles,
+          isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
           cachedTraceSourceDir,
@@ -163,6 +167,7 @@ export function createContentRecord({
           generatedPageTargets: scan.generatedPageTargets,
           codePageSourceTargets: scan.codePageSourceTargets,
           assetFiles,
+          isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
         }),

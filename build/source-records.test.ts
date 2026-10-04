@@ -100,6 +100,7 @@ describe('createContentRecord', () => {
       siteVariables,
       scan,
       assetFiles: [],
+      isWatchMode: false,
       outputDir: sitePath('dist'),
     });
 
@@ -127,6 +128,7 @@ describe('createContentRecord', () => {
       siteVariables,
       scan,
       assetFiles: [],
+      isWatchMode: false,
       outputDir: sitePath('dist'),
     });
 
