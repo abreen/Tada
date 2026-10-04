@@ -44,7 +44,10 @@ class TestBreadcrumbs:
             assert '>Home &amp; &lt;Notes&gt;</a>' in nav[1]
             assert '>Course lectures</a>' in nav[1]
             assert nav[1].index('>Home &amp;') < nav[1].index('>Course lectures')
-            assert '<span aria-current="page">First Lecture &amp; Notes</span>' in nav[1]
+            assert (
+                '<span aria-current="page" title="First Lecture &amp; Notes">'
+                'First Lecture &amp; Notes</span>'
+            ) in nav[1]
             assert nav[1].count('aria-hidden="true"') == 2
             assert '<strong>Lecture</strong>' in html
         pages_without_trails = [

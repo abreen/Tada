@@ -190,7 +190,7 @@ class TestLiterateJavaFrontMatter:
         assert 'href="/index.html"' in breadcrumb[1]
         assert 'href="./lectures/index.html"' in breadcrumb[1]
         assert breadcrumb[1].index('>Home</a>') < breadcrumb[1].index('>Lectures</a>')
-        assert '<span aria-current="page">Pair</span>' in breadcrumb[1]
+        assert '<span aria-current="page" title="Pair">Pair</span>' in breadcrumb[1]
 
     def test_description_with_quotes_produces_valid_meta(self, site_dir):
         _write_literate_page(site_dir, 'title: Pair\ndescription: She said "hi" to *Pair*\n')
