@@ -46,6 +46,26 @@ beforeEach(() => {
 
 afterEach(() => restore());
 
+describe('template lookup', () => {
+  test('fails loudly for an unknown template name', () => {
+    expect(() => render('midterm.html', {})).toThrow(
+      'Render error in midterm.html: Error: Unknown template "midterm.html"',
+    );
+  });
+
+  test('fails loudly for an unknown nested template', () => {
+    templateSources['_outer.html'] = "<%= render('_missing.html') %>";
+    try {
+      compileTemplates(site, true);
+      expect(() => render('_outer.html', {})).toThrow(
+        'Unknown template "_missing.html"',
+      );
+    } finally {
+      delete templateSources['_outer.html'];
+    }
+  });
+});
+
 describe('template render failures', () => {
   test('throws and identifies a top-level error on every attempt', () => {
     for (let attempt = 0; attempt < 3; attempt++) {

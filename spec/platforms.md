@@ -46,7 +46,9 @@ sets like `validTargets` store raw filesystem-derived paths (for example,
 `/my notes.md`), so code that looks up an incoming href against one of these
 sets must first decode the href. `build/utils/final-html.ts` follows this
 convention when it validates rendered links and records normalized outgoing
-targets for reachability. Filenames may contain spaces, non-ASCII characters,
+targets for reachability. Because it reads attributes as written in the HTML,
+it first decodes HTML character references (for example, `R&amp;D.html` is
+`R&D.html`) and then percent-decodes the path. Filenames may contain spaces, non-ASCII characters,
 or other URL-unsafe characters; they are written to `dist/` with the raw
 filename and referenced in HTML with a percent-encoded form.
 

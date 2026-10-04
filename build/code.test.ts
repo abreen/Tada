@@ -1,6 +1,9 @@
-import { describe, expect, test, beforeAll } from 'bun:test';
+import { describe, expect, mock, test, beforeAll } from 'bun:test';
+import { createGlobals } from './globals.test';
 import { initHighlighter } from './utils/shiki-highlighter';
+import { htmlToPlainText } from './utils/plain-text';
 import {
+  renderCodeSegment,
   renderCodeWithComments,
   extractJavaMethodToc,
   rewriteProseLinks,
@@ -8,7 +11,7 @@ import {
 import type { SiteVariables } from './types';
 
 beforeAll(async () => {
-  await initHighlighter(['java', 'text']);
+  await initHighlighter(['java', 'python', 'text']);
 });
 
 describe('extractJavaMethodToc', () => {
@@ -439,5 +442,120 @@ describe('rewriteProseLinks', () => {
     expect(result[0]).toBe(
       '/// See [rect](https://example.edu/lectures/01/rect.py.html)',
     );
+  });
+});
+
+function codeCells(html: string): string[] {
+  return Array.from(
+    html.matchAll(/<code class="shiki language-[^"]+">(.*?)<\/code><\/span>/g),
+    match => match[1],
+  );
+}
+
+function textOf(cellHtml: string): string {
+  return htmlToPlainText(cellHtml);
+}
+
+function countOf(text: string, search: string): number {
+  return text.split(search).length - 1;
+}
+
+describe('renderCodeSegment', () => {
+  test.each([
+    [
+      'Java block comment',
+      'java',
+      [
+        'int a = 1; /* start',
+        '   middle <b> & "q"',
+        '',
+        '   end */ int b = 2;',
+      ],
+    ],
+    [
+      'Java text block',
+      'java',
+      ['String s = """', '    Hello, <world> & friends', '', '    """;'],
+    ],
+    [
+      'Python triple-quoted string',
+      'python',
+      ['def f():', '    """Docstring', '', '    with <tags> & more', '    """'],
+    ],
+  ])('renders one balanced row per line of a %s', (_, lang, lines) => {
+    const html = renderCodeSegment(lines, 1, lang);
+    const cells = codeCells(html);
+
+    expect(html.startsWith('<pre>')).toBe(true);
+    expect(countOf(html, '<span class="code-row">')).toBe(lines.length);
+    expect(cells).toHaveLength(lines.length);
+    cells.forEach((cell, i) => {
+      expect(cell.startsWith('<span class="line">')).toBe(true);
+      expect(countOf(cell, '<span')).toBe(countOf(cell, '</span>'));
+      expect(textOf(cell)).toBe(lines[i] || ' ');
+      expect(html).toContain(`id="L${i + 1}" href="#L${i + 1}">${i + 1}</a>`);
+    });
+  });
+
+  test('keeps comment styling on every line of a block comment', () => {
+    const cells = codeCells(
+      renderCodeSegment(['/* one', '   two', '   three */'], 1, 'java'),
+    );
+
+    expect(cells).toHaveLength(3);
+    for (const cell of cells) {
+      expect(cell).toContain(
+        'style="--shiki-light:var(--fg2-color);--shiki-dark:var(--fg2-color)"',
+      );
+    }
+  });
+
+  test('renders empty lines with a non-breaking space', () => {
+    const cells = codeCells(renderCodeSegment(['', 'int a;', ''], 1, 'java'));
+
+    expect(cells[0]).toBe('<span class="line"></span>&nbsp;');
+    expect(cells[2]).toBe('<span class="line"></span>&nbsp;');
+  });
+
+  test('renders plain line numbers when line links are disabled', () => {
+    const html = renderCodeSegment(['x = 1', 'y = 2'], 5, 'python', {
+      linkLineNumbers: false,
+    });
+
+    expect(html).toContain(
+      '<span class="code-row"><span class="line-number" data-pagefind-ignore data-line="5">5</span><code class="shiki language-python">',
+    );
+    expect(html).toContain('data-line="6">6</span>');
+    expect(html).not.toContain('<a class="line-number"');
+  });
+
+  test('renders no rows for an empty segment', () => {
+    expect(renderCodeSegment([], 1, 'python')).toBe('<pre></pre>');
+  });
+
+  test('drops carriage returns from CRLF sources', () => {
+    const lines = ['class A {\r', '  int x;\r', '}\r'];
+    const html = renderCodeSegment(lines, 1, 'java');
+
+    expect(html).not.toContain('\r');
+    expect(codeCells(html).map(textOf)).toEqual(['class A {', '  int x;', '}']);
+  });
+
+  test('falls back to escaped plain lines when highlighting fails', () => {
+    let output = '';
+    mock.module('./globals', () => ({
+      globals: createGlobals({
+        stdoutWrite(chunk) {
+          output += chunk;
+        },
+      }),
+    }));
+
+    const html = renderCodeSegment(['a < b && c', ''], 3, 'not-a-language');
+
+    expect(output).toContain('Failed to highlight code block');
+    expect(codeCells(html)).toEqual(['a &lt; b &amp;&amp; c', '']);
+    expect(html).toContain('id="L3" href="#L3"');
+    expect(html).toContain('id="L4" href="#L4"');
   });
 });

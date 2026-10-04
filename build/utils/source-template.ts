@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import { compileTemplate } from '../lodash-template';
 import type { SiteVariables } from '../types';
 
 /**
@@ -17,7 +17,7 @@ export function applySourceTemplate(
   const params = { vars: siteVariables.vars || {}, site: siteVariables };
 
   try {
-    return _.template(source)(params);
+    return compileTemplate(source)(params);
   } catch (err: unknown) {
     throw new Error(
       `${filePath}: Lodash template error in source code: ${(err as Error).message}`,

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import _ from 'lodash';
+import { compileTemplate } from '../build/lodash-template';
 import { encodeAuthoredUrl } from '../build/template-globals';
 import AUTHOR_TEMPLATE from './_author.html' with { type: 'text' };
 
@@ -53,5 +54,25 @@ describe('_author.html template', () => {
 
     expect(html).toContain('href="https://example.com/people/Jane%2FDoe.html"');
     expect(html).not.toContain('Jane%252FDoe');
+  });
+
+  test('escapes the author name in text and alt attributes', () => {
+    const html = compileTemplate(AUTHOR_TEMPLATE)({
+      page: {
+        author: {
+          name: 'Ann "Annie" <O&N>',
+          url: 'https://example.com/ann.html',
+          avatar: '/avatars/ann.png',
+        },
+      },
+      encodeAuthoredUrl,
+    });
+
+    expect(html).toContain(
+      '<span class="text">Ann &quot;Annie&quot; &lt;O&amp;N&gt;</span>',
+    );
+    expect(html).toContain(
+      'alt="Picture of Ann &quot;Annie&quot; &lt;O&amp;N&gt;"',
+    );
   });
 });

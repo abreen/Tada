@@ -78,3 +78,14 @@ export function highlightCode(code: string, lang: string): string {
     defaultColor: false,
   });
 }
+
+export function highlightCodeToHast(
+  code: string,
+  lang: string,
+): ReturnType<HighlighterGeneric<BundledLanguage, BundledTheme>['codeToHast']> {
+  return getHighlighter().codeToHast(code, {
+    lang,
+    themes: SHIKI_THEMES,
+    defaultColor: false,
+  });
+}

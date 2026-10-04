@@ -3,13 +3,13 @@
   <% if (page.author.url) { %>
   <a href="<%- encodeAuthoredUrl(page.author.url) %>">
   <% } %>
-  <span class="text"><%= page.author.name %></span>
+  <span class="text"><%- page.author.name %></span>
   <% if (page.author.avatar) { %>
   <img
     width="32"
     height="32"
     src="<%- encodeAuthoredUrl(page.author.avatar) %>"
-    alt="Picture of <%= page.author.name %>"
+    alt="Picture of <%- page.author.name %>"
     class="avatar"
   />
   <% } else { %>

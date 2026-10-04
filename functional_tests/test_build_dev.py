@@ -2,7 +2,14 @@ import re
 import shutil
 
 import pytest
-from conftest import PACKAGE_DIR, run_tada, set_site_config
+from conftest import (
+    PACKAGE_DIR,
+    assert_charset_declared_first,
+    parse_head_metadata,
+    run_tada,
+    set_site_config,
+    straight_quotes,
+)
 
 SOURCE_SERIF_REGULAR = (
     PACKAGE_DIR / 'fonts' / 'source-serif-4' / 'woff2' / 'SourceSerif4-VariableFont_opsz,wght.woff2'
@@ -76,14 +83,21 @@ class TestDevBuild:
         dist = built_dev_site / 'dist'
         assert list(dist.glob('index.bundle.tada-*.js'))
 
-    def test_produces_critical_css(self, built_dev_site):
+    def test_produces_a_single_css_bundle(self, built_dev_site):
         dist = built_dev_site / 'dist'
-        assert list(dist.glob('critical.bundle.tada-*.css'))
+        names = [f.name for f in dist.glob('*.bundle.tada-*.css')]
+        assert len(names) == 1
+        assert names[0].startswith('index.bundle.tada-')
 
-    def test_inlines_critical_css_in_html(self, built_dev_site):
-        index = built_dev_site / 'dist' / 'index.html'
-        html = index.read_text()
-        assert '<style>' in html
+    def test_links_stylesheet_without_inlining_css(self, built_dev_site):
+        html = (built_dev_site / 'dist' / 'index.html').read_text()
+        link = re.search(r'<link\b[^>]*href="/index\.bundle\.tada-[^"]+\.css"[^>]*>', html)
+        assert link, 'Missing stylesheet link'
+        assert 'rel="stylesheet"' in link[0]
+        assert '--theme-color:' not in html
+
+    def test_declares_charset_first_in_head(self, built_dev_site):
+        assert_charset_declared_first(built_dev_site / 'dist')
 
     def test_produces_font_files(self, built_dev_site):
         dist = built_dev_site / 'dist'
@@ -368,6 +382,29 @@ class TestDevBuildDefaultContent:
         html = page.read_text()
         # _pr1.md uses <%= page.title %> which should resolve to "Lecture 2"
         assert 'Lecture 2' in html
+
+
+class TestPageMetadataText:
+    """Plain-text title and description values survive into <title> and <meta>."""
+
+    def test_title_and_description_keep_full_text(self, site_dir):
+        (site_dir / 'content' / 'index.md').write_text(
+            '---\n'
+            "title: 'Width is 5\" <b>bold</b> & more'\n"
+            "description: 'Uses `a < b` and 6\" rulers'\n"
+            '---\n\nBody.\n'
+        )
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, result.stdout + result.stderr
+
+        html = (site_dir / 'dist' / 'index.html').read_text()
+        head = parse_head_metadata(html)
+        title = 'Width is 5" bold & more'
+        assert straight_quotes(head.title).startswith(f'{title} - ')
+        assert straight_quotes(head.meta['og:title']) == title
+        assert straight_quotes(head.meta['description']) == 'Uses a < b and 6" rulers'
+        assert sorted(head.meta_attrs['og:title']) == ['content', 'property']
+        assert sorted(head.meta_attrs['description']) == ['content', 'name']
 
 
 class TestDevBuildErrors:

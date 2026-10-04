@@ -1,10 +1,12 @@
 import json
 import os
+import re
 import signal
 import socket
 import stat
 import subprocess
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -70,6 +72,52 @@ def init_site(tmp_path, *, bare=True, extra_args=None):
     site = tmp_path / 'testsite'
     assert site.is_dir()
     return site
+
+
+class _HeadMetadataParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.title = None
+        self.meta = {}
+        self.meta_attrs = {}
+        self._in_title = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'title':
+            self._in_title = True
+            self.title = ''
+        elif tag == 'meta':
+            attr_map = dict(attrs)
+            key = attr_map.get('name') or attr_map.get('property')
+            if key is not None and key not in self.meta:
+                self.meta[key] = attr_map.get('content')
+                self.meta_attrs[key] = [name for name, _ in attrs]
+
+    def handle_endtag(self, tag):
+        if tag == 'title':
+            self._in_title = False
+
+    def handle_data(self, data):
+        if self._in_title:
+            self.title += data
+
+
+def parse_head_metadata(html):
+    """Parse a page's <title> text and its <meta name/property> tags.
+
+    Returns a parser with `title` (entity-decoded text), `meta` (key to
+    decoded content), and `meta_attrs` (key to the attribute names found on
+    that tag, so tests can detect content that broke out of its attribute).
+    """
+    parser = _HeadMetadataParser()
+    parser.feed(html)
+    parser.close()
+    return parser
+
+
+def straight_quotes(text):
+    """Undo typographer curly double quotes so tests can compare plain text."""
+    return text.replace('\u201c', '"').replace('\u201d', '"')
 
 
 def load_structured_file(file_path):
@@ -224,3 +272,24 @@ def built_prod_site(site_dir):
     result = run_tada('prod', cwd=str(site_dir))
     assert result.returncode == 0, f'prod build failed: {result.stderr}'
     yield site_dir
+
+
+# Browsers only prescan the first 1024 bytes of a document for its encoding
+CHARSET_PRESCAN_BYTES = 1024
+
+
+def assert_charset_declared_first(dist_dir):
+    """Assert every generated page starts <head> with <meta charset> inside the
+    browser's encoding prescan window."""
+    pages = [
+        page
+        for page in dist_dir.rglob('*.html')
+        if 'pagefind' not in page.relative_to(dist_dir).parts
+    ]
+    assert pages, f'No HTML pages found in {dist_dir}'
+    for page in pages:
+        prescan = page.read_bytes()[:CHARSET_PRESCAN_BYTES]
+        assert re.search(rb'<head[^>]*>\s*<meta charset="UTF-8"', prescan), (
+            f'{page} does not declare its charset first in <head> within '
+            f'{CHARSET_PRESCAN_BYTES} bytes'
+        )

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import _ from 'lodash';
+import { compileTemplate } from './lodash-template';
 import {
   PROJECT_CONFIG_NAMES,
   getProjectConfigBaseName,
@@ -64,7 +64,10 @@ export function render(
 
   renderStack.push(fileName);
   try {
-    return _.template(templates[fileName])(params ?? undefined);
+    if (!Object.hasOwn(templates, fileName)) {
+      throw new Error(`Unknown template "${fileName}"`);
+    }
+    return compileTemplate(templates[fileName])(params ?? undefined);
   } catch (err) {
     if (errorStack == null) {
       errorStack = renderStack.slice();

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import _ from 'lodash';
+import { compileTemplate } from '../build/lodash-template';
 import { encodeAuthoredUrl } from '../build/template-globals';
 import HEADING_TEMPLATE from './_heading.html' with { type: 'text' };
 
@@ -44,5 +45,19 @@ describe('_heading.html template', () => {
 
     expect(html).toContain('href="/docs/a%2Fb.html?label=hello%20world"');
     expect(html).not.toContain('a%252Fb');
+  });
+
+  test('escapes the breadcrumb label but keeps the title HTML', () => {
+    const html = compileTemplate(HEADING_TEMPLATE)({
+      page: {
+        parent: '/docs/index.html',
+        parentLabel: 'Docs & <Notes>',
+        titleHtml: 'Width is 5&quot; <b>bold</b>',
+      },
+      encodeAuthoredUrl,
+    });
+
+    expect(html).toContain('data-pagefind-ignore>Docs &amp; &lt;Notes&gt;</a>');
+    expect(html).toContain('>Width is 5&quot; <b>bold</b></h1>');
   });
 });

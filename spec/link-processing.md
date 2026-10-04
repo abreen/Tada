@@ -3,6 +3,14 @@
 Link processing in Tada is split between Markdown rendering and a final HTML
 pass over each generated page.
 
+The final pass (`build/utils/final-html.ts`) streams each page through Bun's
+`HTMLRewriter`. It edits only the `href`, `src`, and `data-tada-page` attributes
+it rewrites and leaves the rest of the markup, including the doctype, exactly as
+rendered. Character references in attribute values (such as `&amp;`) are
+decoded before links are resolved and re-encoded when an attribute is
+rewritten. Links inside `<noscript>` and `<template>` are processed like any other
+links, so they also get the base path and link validation.
+
 
 ## Base path rewriting
 

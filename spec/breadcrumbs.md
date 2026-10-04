@@ -13,7 +13,9 @@ This provides a simple one-level "back to" navigation, not a full breadcrumb
 trail.
 
 The `parent` URL is validated against the set of known pages at build time. A
-broken parent link fails the build.
+broken parent link fails the build. This applies to every page with front
+matter, including literate Java pages, even when Java execution is skipped
+because `javac` is unavailable.
 
 Directory-only links, including `/`, must reference `index.html` explicitly
 (for example, `/docs/index.html` instead of `/docs/`). If the corresponding

@@ -112,7 +112,7 @@ class TestSiteBanner:
 
         assert result.returncode == 0, f'dev build failed: {result.stderr}'
         html = index_html.read_text()
-        assert '<aside class="site-banner alert" data-pagefind-ignore="">' in html
+        assert '<aside class="site-banner alert" data-pagefind-ignore' in html
         assert '<p class="title">Note</p>' not in html
         assert '<strong>Scheduled maintenance</strong>' in html
         assert '<ul class="styled-list">' in html

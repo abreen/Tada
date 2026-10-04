@@ -7,11 +7,18 @@ exist. The command prompts for:
 - Logo symbol (1 to 5 uppercase characters, digits, hyphens, or spaces)
 - Theme color (any CSS color format)
 - Background tint hue (0 to 360 degrees) and amount (0 to 100%)
-- Default time zone (IANA identifier)
+- Default time zone (one of the zones in `src/timezone/timezones.json`)
 - Production base URL and base path
 
 Default answers are provided for all prompts. Non-interactive mode skips prompts
 and uses defaults or values provided as arguments.
+
+The time zone must be one of the zones listed in `src/timezone/timezones.json`,
+the same list that builds accept for `defaultTimeZone`. The prompt re-asks and
+the `--default-time-zone` flag fails for any other value. The default is the
+system time zone when it is in that list; otherwise init uses `UTC` and prints a
+one-line note such as
+`System time zone Europe/Berlin is not supported; using UTC`.
 
 A bare mode creates a minimal site with just a single home page and an empty
 public directory. The normal mode copies starter content, navigation, and author

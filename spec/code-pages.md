@@ -51,7 +51,9 @@ code page is rendered and before the downloadable copy is written. Template
 holes use the same `<%= %>`, `<% %>`, and `<%- %>` delimiters as the rest of
 Tada and have access to `vars` and `site`. This lets authors interpolate site
 configuration values directly into their source code, for example a course name
-embedded in a header comment.
+embedded in a header comment. ES template literal syntax such as `${HOME}` is
+literal text, so shell, JavaScript, and Kotlin sources that use it render and
+download unchanged.
 
 Substitution runs before Java prose link rewriting, so an interpolated value
 may contain a Markdown link that is then rewritten to a full URL as usual.
