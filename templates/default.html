@@ -3,18 +3,19 @@
 <div class="main-content">
   <%= render('_heading.html') %>
   <main class="body" data-pagefind-body>
-    <% if (page.slides) { %>
-    <div class="slides-header" data-pagefind-ignore>
-      <button type="button" data-slides-present disabled>Present</button>
-      <label>
-        <input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked disabled>
-        Full screen
-      </label>
+    <div class="page-content">
+      <% if (page.slides) { %>
+      <div class="slides-header" data-pagefind-ignore>
+        <button type="button" data-slides-present disabled>Present</button>
+        <label>
+          <input id="slides-fullscreen" type="checkbox" data-slides-fullscreen checked disabled>
+          Full screen
+        </label>
+      </div>
+      <% } %>
+      <%= content %>
     </div>
-    <% } %>
-    <%= content %>
-    <%= render('_footer.html') %>
-    <%= render('_appearance-picker.html') %>
+    <%= render('_page-bottom.html') %>
   </main>
   <% if (page.toc && page.tocHtml) { %>
   <nav class="toc"><%= page.tocHtml %></nav>

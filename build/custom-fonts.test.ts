@@ -178,8 +178,9 @@ describe('custom font configuration', () => {
     expect(scss).toContain('--mono-line-height: 1.45;');
     expect(scss).toContain('--font-size-adjust: cap-height 0.67;');
     expect(scss).toContain('--mono-font-size-adjust: cap-height 0.6131;');
+    expect(scss).toContain('main.body .page-bottom');
     expect(scss).toContain(
-      'main.body > :is(footer, .appearance-pickers, .slides-header, .file-header)',
+      'main.body > .page-content > :is(.slides-header, .file-header)',
     );
     expect(scss).toContain('line-height: var(--line-height);');
   });

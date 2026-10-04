@@ -8,6 +8,7 @@ import {
 } from 'fs';
 import path from 'path';
 import { installCustomFontFixtures } from './custom-font-fixtures';
+import { installPageLayoutFixtures } from './page-layout-fixtures';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
@@ -62,10 +63,15 @@ const configPath = path.join(siteDir, 'site.dev.yaml');
 const config = readFileSync(configPath, 'utf-8')
   .replace('basePath: /', 'basePath: /custom')
   .replace('defaultFont: sans', 'defaultFont: serif')
-  .replace('defaultContrast: standard', 'defaultContrast: high');
+  .replace('defaultContrast: standard', 'defaultContrast: high')
+  .replace(
+    'extensionToShikiLanguage: \n  {}',
+    'extensionToShikiLanguage:\n  py: python',
+  )
+  .replace('shikiLanguages: \n  []', 'shikiLanguages:\n  - python');
 writeFileSync(
   configPath,
-  `${config}${installCustomFontFixtures(repoDir, siteDir)}\nlogo: logo.svg\n`,
+  `${config}${installCustomFontFixtures(repoDir, siteDir)}\nlogo: logo.svg\nbanner: Layout test banner\n`,
 );
 writeFileSync(
   path.join(siteDir, 'content', 'index.md'),
@@ -84,6 +90,8 @@ writeFileSync(
   path.join(siteDir, 'content', 'next.md'),
   '---\ntitle: Next\n---\n\n[Home](/index.html)\n\n`code`\n',
 );
+
+installPageLayoutFixtures(siteDir);
 
 await runTada(['dev']);
 const distDir = path.join(siteDir, 'dist');

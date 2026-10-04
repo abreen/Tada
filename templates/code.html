@@ -2,28 +2,29 @@
 
 <div class="main-content">
   <main class="body" data-pagefind-body>
-    <div class="file-header">
-      <h1 class="file-title" data-pagefind-weight="10" data-pagefind-meta="title_html[data-title-html]" data-title-html="<%- page.titleHtml %>"><%= page.titleHtml %></h1>
-      <%= render('_download.html') %>
+    <div class="page-content">
+      <div class="file-header">
+        <h1 class="file-title" data-pagefind-weight="10" data-pagefind-meta="title_html[data-title-html]" data-title-html="<%- page.titleHtml %>"><%= page.titleHtml %></h1>
+        <%= render('_download.html') %>
+      </div>
+      <div class="code-body">
+        <%= content %>
+      </div>
+      <div class="code-scrollbar" aria-hidden="true">
+        <div></div>
+      </div>
+      <% if (page.tocItems && page.tocItems.length > 0) { %>
+      <div class="code-search-index" aria-hidden="true" inert>
+        <% page.tocItems.forEach(function(item) { %>
+        <section>
+          <h2 id="L<%- item.line %>"><%- item.name %></h2>
+          <p><%- item.label %> defined at line <%- item.line %>.</p>
+        </section>
+        <% }); %>
+      </div>
+      <% } %>
     </div>
-    <div class="code-body">
-      <%= content %>
-    </div>
-    <div class="code-scrollbar" aria-hidden="true">
-      <div></div>
-    </div>
-    <% if (page.tocItems && page.tocItems.length > 0) { %>
-    <div class="code-search-index" aria-hidden="true" inert>
-      <% page.tocItems.forEach(function(item) { %>
-      <section>
-        <h2 id="L<%- item.line %>"><%- item.name %></h2>
-        <p><%- item.label %> defined at line <%- item.line %>.</p>
-      </section>
-      <% }); %>
-    </div>
-    <% } %>
-    <%= render('_footer.html') %>
-    <%= render('_appearance-picker.html') %>
+    <%= render('_page-bottom.html') %>
   </main>
   <% if (page.tocHtml) { %>
   <nav class="toc"><%= page.tocHtml %></nav>

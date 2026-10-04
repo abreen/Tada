@@ -17,11 +17,13 @@
   }
 
   header,
-  footer {
+  footer,
+  .page-bottom {
     display: none !important;
   }
 
   body > .container {
+    min-height: 0;
     margin-top: 0;
   }
 

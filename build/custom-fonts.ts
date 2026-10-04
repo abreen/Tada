@@ -163,7 +163,7 @@ export function renderCustomFontTuningScss(
     serifTuning?.lineHeight !== undefined
   ) {
     rules.push(
-      `  ${rootSelector} main.body > :is(footer, .appearance-pickers, .slides-header, .file-header) {\n    font-size: var(--font-size);\n    line-height: var(--line-height);\n  }`,
+      `  ${rootSelector} main.body .page-bottom, ${rootSelector} main.body > .page-content > :is(.slides-header, .file-header) {\n    font-size: var(--font-size);\n    line-height: var(--line-height);\n  }`,
     );
   }
 

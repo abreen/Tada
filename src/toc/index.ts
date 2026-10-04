@@ -45,7 +45,7 @@ function getHeadingsAndAlerts(
 ): (HTMLHeadingElement | HTMLDivElement)[] {
   return Array.from(
     parent.querySelectorAll(
-      '.body h1, .body h2, .body h3, .body h4, .body h5, .body h6, .body > div.alert, .body section > div.alert',
+      '.body h1, .body h2, .body h3, .body h4, .body h5, .body h6, :is(.body, .page-content) > div.alert, .body section > div.alert',
     ),
   );
 }
@@ -55,7 +55,7 @@ function getTocElements(
 ): (HTMLHeadingElement | HTMLDivElement | HTMLHRElement)[] {
   return Array.from(
     parent.querySelectorAll(
-      '.body h1, .body h2, .body h3, .body h4, .body h5, .body h6, .body > div.alert, .body section > div.alert, .body > hr',
+      '.body h1, .body h2, .body h3, .body h4, .body h5, .body h6, :is(.body, .page-content) > div.alert, .body section > div.alert, :is(.body, .page-content) > hr',
     ),
   );
 }

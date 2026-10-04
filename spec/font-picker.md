@@ -97,3 +97,8 @@ output.
 The font stacks and their OpenType feature settings are separate CSS custom
 properties. Inter retains its existing feature settings, while the system serif
 and monospaced stacks use normal feature settings.
+
+The appearance row and optional attribution footer share the
+[page-bottom group](page-layout.md). On short pages this group sits at the
+bottom of the viewport with space above it; on long pages it follows the
+content in normal flow.

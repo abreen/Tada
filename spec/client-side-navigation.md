@@ -36,6 +36,14 @@ same duration: outgoing content fades with `ease-in`, and incoming content
 fades with `ease-out`. Forward navigation slides left; back navigation slides
 right.
 
+The footer and appearance-picker group uses its own named `page-bottom`
+transition layer. It does not slide, crossfade, or interpolate its bounds;
+only the incoming snapshot is shown at its destination layout position.
+Appearance pickers mount synchronously during the content swap, before the
+browser captures that snapshot, so enabled states and visitor preferences
+do not flash back to the build-time defaults. Other per-page components mount
+after the transition finishes.
+
 Persistent components (header, search, back-to-top, navigate) mount
 once at startup. The page update toast also stays mounted and resets its
 tracking state when navigation completes, adopting validators from the successful

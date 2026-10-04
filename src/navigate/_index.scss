@@ -68,6 +68,26 @@ $movement-easing: cubic-bezier(0.2, 0, 0, 1);
   mix-blend-mode: normal;
 }
 
+// The footer and appearance controls get their own stationary layer. Show only
+// the incoming snapshot so disabled defaults and stale hover states cannot blend.
+.page-bottom {
+  view-transition-name: page-bottom;
+}
+
+::view-transition-group(page-bottom),
+::view-transition-old(page-bottom),
+::view-transition-new(page-bottom) {
+  animation: none;
+}
+
+::view-transition-old(page-bottom) {
+  display: none;
+}
+
+::view-transition-new(page-bottom) {
+  mix-blend-mode: normal;
+}
+
 // Forward navigation: old content slides left, new content slides in from right
 .nav-forward::view-transition-old(root) {
   animation:

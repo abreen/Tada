@@ -1,5 +1,9 @@
 import { getResponseValidators, type ResponseValidators } from '../validators';
-import { mountPerPageComponents, teardownPerPageComponents } from './lifecycle';
+import {
+  mountAppearancePickerForPage,
+  mountPerPageComponents,
+  teardownPerPageComponents,
+} from './lifecycle';
 import { globals } from '../globals';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
@@ -299,6 +303,7 @@ export async function navigateToUrl(
     teardownPerPageComponents();
     swapContent(document, newDoc);
     updateHead(document, newDoc);
+    mountAppearancePickerForPage(window);
     currentPath = parsed.pathname + parsed.search;
 
     if (pushHistory) {

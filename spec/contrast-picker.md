@@ -48,3 +48,8 @@ is rendered at build time in its final layout position with both switches
 disabled; mounting enables and synchronizes them. With JavaScript disabled it
 remains visible but inert and the complete page uses the configured contrast.
 The row is excluded from Pagefind indexing and printing.
+
+The appearance row and optional attribution footer share the
+[page-bottom group](page-layout.md). On short pages this group sits at the
+bottom of the viewport with space above it; on long pages it follows the
+content in normal flow.

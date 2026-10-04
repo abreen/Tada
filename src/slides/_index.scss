@@ -93,6 +93,7 @@ body.is-presenting [data-slides-annotation-layer] {
 body.is-presenting header,
 body.is-presenting .title-and-info,
 body.is-presenting nav.toc,
+body.is-presenting .page-bottom,
 body.is-presenting footer,
 body.is-presenting .appearance-pickers,
 body.is-presenting .slides-header,
@@ -175,5 +176,9 @@ body.is-presenting .slide:has(> .trace-widget) > .trace-widget {
 
 body.is-presenting .slide:has(> .trace-widget) > .trace-widget > .trace-body {
   height: 100%;
+  min-height: 0;
+}
+
+body.is-presenting > .container {
   min-height: 0;
 }

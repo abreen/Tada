@@ -21,15 +21,31 @@ const PER_PAGE_COMPONENTS: Record<
   trace: mountTrace,
   slides: mountSlides,
   print: mountPrint,
-  appearancePicker: mountAppearancePicker,
 };
 
 let cleanups: (() => void)[] = [];
+let appearancePickerMounted = false;
+
+// Navigation calls this during the swap so the new transition snapshot shows
+// enabled switches with the visitor's preferences, rather than build defaults.
+export function mountAppearancePickerForPage(window: Window): void {
+  if (appearancePickerMounted) {
+    return;
+  }
+  appearancePickerMounted = true;
+  try {
+    cleanups.push(mountAppearancePicker(window));
+  } catch (err) {
+    if (__IS_DEV__) {
+      console.error('Failed to mount appearancePicker component:', String(err));
+    }
+  }
+}
 
 export async function mountPerPageComponents(
   window: Window,
 ): Promise<() => void> {
-  cleanups = [];
+  mountAppearancePickerForPage(window);
 
   const entries = Object.entries(PER_PAGE_COMPONENTS);
 
@@ -66,4 +82,5 @@ export function teardownPerPageComponents(): void {
     }
   }
   cleanups = [];
+  appearancePickerMounted = false;
 }

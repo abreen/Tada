@@ -3,12 +3,13 @@
 <div class="main-content">
   <%= render('_heading.html') %>
   <main class="body" data-pagefind-body>
-    <div class="file-header">
-      <code><%- page.downloadName %></code><%= render('_download.html') %>
+    <div class="page-content">
+      <div class="file-header">
+        <code><%- page.downloadName %></code><%= render('_download.html') %>
+      </div>
+      <%= content %>
     </div>
-    <%= content %>
-    <%= render('_footer.html') %>
-    <%= render('_appearance-picker.html') %>
+    <%= render('_page-bottom.html') %>
   </main>
   <% if (page.toc && page.tocHtml) { %>
   <nav class="toc"><%= page.tocHtml %></nav>

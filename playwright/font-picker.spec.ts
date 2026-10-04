@@ -73,7 +73,7 @@ test.describe('font sizing', () => {
     });
     const nestedListItemSizes = await page.evaluate(() => {
       const groceryList = Array.from(
-        document.querySelectorAll('main.body > ul.styled-list'),
+        document.querySelectorAll('main.body > .page-content > ul.styled-list'),
       ).find(element => element.textContent?.includes('Milk'));
       return Array.from(
         groceryList?.querySelectorAll('.styled-list-item') ?? [],
