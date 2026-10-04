@@ -134,16 +134,13 @@ interface BuildIndexOptions {
   loadPagefind?: () => Promise<PagefindModule>;
   checkMutool?: () => Promise<void>;
   extractPages?: typeof extractPdfPages;
-  clearOutputDir?: (dir: string) => void;
+  prepareOutputDir?: (dir: string) => void;
 }
 
-function removeSearchIndex(dir: string): void {
-  fs.rmSync(dir, {
-    recursive: true,
-    force: true,
-    maxRetries: 4,
-    retryDelay: 50,
-  });
+function prepareSearchIndexDir(dir: string): void {
+  if (fs.lstatSync(dir, { throwIfNoEntry: false })?.isFile()) {
+    fs.unlinkSync(dir);
+  }
 }
 
 async function buildIndex({
@@ -155,7 +152,7 @@ async function buildIndex({
   loadPagefind = getPagefind,
   checkMutool = assertMutoolAvailable,
   extractPages = extractPdfPages,
-  clearOutputDir = removeSearchIndex,
+  prepareOutputDir = prepareSearchIndexDir,
 }: BuildIndexOptions): Promise<void> {
   const pagefind = await loadPagefind();
   const { index, errors: createErrors } = await pagefind.createIndex({
@@ -225,9 +222,9 @@ async function buildIndex({
       }
     }
 
-    // Start from an empty directory so files from earlier indexes don't pile up.
+    // Keep older hashed files available to browsers using the previous index.
     const outputPath = path.join(distPath, SEARCH_INDEX_DIR);
-    clearOutputDir(outputPath);
+    prepareOutputDir(outputPath);
     const { errors: writeErrors } = await index.writeFiles({ outputPath });
     const writeError = formatPagefindErrors('index.writeFiles()', writeErrors);
     if (writeError) {

@@ -49,7 +49,7 @@ test('one search indexer serves every build, even after a site config change', a
   });
   await new Promise(resolve => setImmediate(resolve));
 
-  // A second indexer could clear pagefind/ while the first is still writing.
+  // A second indexer could overwrite files while the first is still writing.
   expect(runners).toEqual([{ runs: 2 }]);
   runtime.close();
 });

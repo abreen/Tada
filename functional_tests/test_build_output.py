@@ -210,7 +210,7 @@ def test_full_build_never_writes_through_a_symlinked_output_file(tmp_path):
     assert index.is_file() and not index.is_symlink()
 
 
-def test_rebuilt_search_index_has_no_stale_files(tmp_path):
+def test_rebuilt_search_index_preserves_previous_index_files(tmp_path):
     site = init_site(tmp_path)
     index_md = site / 'content' / 'index.md'
     search_dir = site / 'dist' / 'pagefind'
@@ -219,13 +219,17 @@ def test_rebuilt_search_index_has_no_stale_files(tmp_path):
         return sorted(p.relative_to(search_dir) for p in search_dir.rglob('*') if p.is_file())
 
     assert run_tada('dev', cwd=str(site)).returncode == 0
+    previous = search_files()
+    previous_entry = (search_dir / 'pagefind-entry.json').read_bytes()
     index_md.write_text(index_md.read_text() + '\n\nA new paragraph about zebras.\n')
     assert run_tada('dev', cwd=str(site)).returncode == 0
     rebuilt = search_files()
+    assert set(previous) <= set(rebuilt)
+    assert (search_dir / 'pagefind-entry.json').read_bytes() != previous_entry
 
     shutil.rmtree(site / 'dist')
     assert run_tada('dev', cwd=str(site)).returncode == 0
-    assert rebuilt == search_files()
+    assert set(search_files()) < set(rebuilt)
 
 
 def test_search_index_replaces_a_stale_pagefind_file(tmp_path):

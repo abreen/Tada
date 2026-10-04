@@ -20,8 +20,11 @@ with just the filename is created. Extracted text is cached by file size and
 modification time, so rebuilding the index in watch mode runs `mutool` only for
 new or changed PDFs.
 
-The search index is written to a `pagefind/` subdirectory of the output, and
-each new index replaces the previous one. It is
+The search index is written over the existing `pagefind/` subdirectory without
+clearing it first. Older hashed files remain available to browsers using the
+previous index. If `pagefind` is a file rather than a directory, that blocking
+file is removed before writing the index. Watch-mode server startup and reloads do not wait for background
+indexing. The search index is
 excluded from production build manifests
 (see [Production Builds](production-builds.md)).
 

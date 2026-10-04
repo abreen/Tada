@@ -79,7 +79,7 @@ export class TadaWatchRuntime {
         }
         if (isFeatureEnabled(event.meta.siteVariables, 'search')) {
           // One indexer for the whole session runs one index at a time, so
-          // two runs never clear and write pagefind/ concurrently.
+          // two runs never write pagefind/ concurrently.
           const runner = (this.pagefindRunner ??= new WatchPagefindRunner());
           runner.update(
             this.distDir,
