@@ -6,7 +6,10 @@ third-party icon sets.
 Every icon uses one stroke width, 1.65px, with round caps and round joins. Each
 SVG's viewBox matches its rendered pixel size (a 20px icon uses
 `viewBox="0 0 20 20"`), so the stroke renders at exactly 1.65px everywhere.
-Icons never scale with font size.
+Icons never scale with font size. The `contrast-standard` stripes are the one
+exception to the stroke width: they use 1.25px so the striped half reads
+lighter than the solid half of `contrast-high`, which is a single filled path
+with no stroke.
 
 ## Mask icons
 

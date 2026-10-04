@@ -17,15 +17,21 @@
     20,
     "<circle cx='8.5' cy='8.5' r='5'/><path d='m12 12 4.5 4.5'/>"
   );
+
+  // Thinner stripes keep the striped half lighter than the solid one. Stripe
+  // ends sit on the outline so their caps blend into it.
   @include define-icon(
     'contrast-standard',
     20,
-    "<path d='M5.75 2.75 14 11l-6 6-6-6 6-6'/><path d='M2 11h12l-6 6z' fill='black'/><path d='M17.25 13.25l1.05 2.27a1.15 1.15 0 1 1-2.1 0z' fill='black'/>"
+    "<circle cx='10' cy='10' r='7'/><path d='M5.333 4.783v10.435M7.167 3.599v12.802M9 3.072v13.856' stroke-width='1.25'/>"
   );
+
+  // One filled path: the outline's outer edge minus the right of its
+  // inner edge, so the solid half and the outline share no seam.
   @include define-icon(
     'contrast-high',
     20,
-    "<path d='M7.75 2.75 16 11l-6 6-6-6 6-6'/>"
+    "<path d='M10 2.175a7.825 7.825 0 1 1 0 15.65 7.825 7.825 0 1 1 0-15.65zM9.825 3.827A6.175 6.175 0 1 1 9.825 16.173z' fill='black' fill-rule='evenodd' stroke='none'/>"
   );
   @include define-icon(
     'info',
