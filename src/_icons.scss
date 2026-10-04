@@ -20,12 +20,12 @@
   @include define-icon(
     'contrast-standard',
     20,
-    "<path d='M7.29 3.54a7 7 0 0 1 9.17 9.17m-3.75 3.75a7 7 0 0 1-9.17-9.17m-.29-4.04 13.5 13.5'/><path d='M10 17v-3.25L3.54 7.29A7 7 0 0 0 10 17z' fill='black'/>"
+    "<path d='M5.75 2.75 14 11l-6 6-6-6 6-6'/><path d='M2 11h12l-6 6z' fill='black'/><path d='M17.25 13.25l1.05 2.27a1.15 1.15 0 1 1-2.1 0z' fill='black'/>"
   );
   @include define-icon(
     'contrast-high',
     20,
-    "<circle cx='10' cy='10' r='7'/><path d='M10 3a7 7 0 0 0 0 14z' fill='black'/>"
+    "<path d='M7.75 2.75 16 11l-6 6-6-6 6-6'/>"
   );
   @include define-icon(
     'info',

@@ -37,8 +37,8 @@ effective default removes the key. This lets an explicit standard selection
 override a system preference for more contrast. A guarded inline script
 applies the stored or system-derived preference before paint.
 
-The standard endpoint shows a half-filled circle crossed by a slash and the
-high endpoint shows a half-filled circle. Both are hand-drawn SVG masks
+The standard endpoint shows a tipped paint bucket full of paint with a drip
+beside it, and the high endpoint shows the same bucket empty. Both are hand-drawn SVG masks
 rendered in the switch's current text color; see [Icons](icons.md).
 
 The contrast and font switches mount and synchronize together after initial
