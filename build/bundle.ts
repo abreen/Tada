@@ -52,12 +52,12 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const templatePath = path.join(getPackageDir(), 'templates/_theme.scss');
   const template = fs.readFileSync(templatePath, 'utf-8');
   const theme = deriveTheme(siteVariables.themeColor);
-  const tintHue = siteVariables.tintHue ?? 20;
+  const tintHue = siteVariables.tintHue ?? 33;
   const tintAmount = siteVariables.tintAmount ?? 100;
 
   const linkHue = formatCssNumber(deriveLinkHue(tintHue));
-  const linkColor = `hsl(${linkHue}deg 44.4% 49.4%)`;
-  const linkColorHover = `hsl(${linkHue}deg 34% 60%)`;
+  const linkColor = `hsl(${linkHue}deg 66% 38%)`;
+  const linkColorHover = `hsl(${linkHue}deg 56% 49%)`;
   const linkColorDark = `hsl(${linkHue}deg 50% 72%)`;
   const linkColorHoverDark = `hsl(${linkHue}deg 40% 80%)`;
   const traceLineActiveHue = formatCssNumber(deriveTraceLineActiveHue(tintHue));

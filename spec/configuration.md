@@ -68,7 +68,7 @@ Generated development and production site configs explicitly include
 - **titlePostfix**: appended to page titles in `<title>` (derived from title)
 - **banner**: Markdown rendered in a bordered box above every page; see
   [Site banner](banner.md)
-- **tintHue**: background tint hue, 0 to 360 degrees (default: 20).
+- **tintHue**: background tint hue, 0 to 360 degrees (default: 33).
   `tada init --tint-hue` accepts an integer with an optional `deg` suffix and
   writes a numeric value to both generated site configurations.
 - **tintAmount**: background tint intensity, 0 to 100% (default: 100)

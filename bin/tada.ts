@@ -90,7 +90,7 @@ const INIT_QUESTIONS: Record<string, InitQuestion> = {
   },
   tintHue: {
     prompt: 'Background tint hue (0-360)',
-    defaultValue: '20',
+    defaultValue: '33',
     validate: validateHue,
   },
   tintAmount: {

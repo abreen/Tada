@@ -104,8 +104,8 @@ describe('deriveLinkHue', () => {
     expect(deriveLinkHue(212)).toBe(212);
   });
 
-  test('default tint (20) lands in the blue range', () => {
-    const h = deriveLinkHue(20);
+  test('default tint (33) lands in the blue range', () => {
+    const h = deriveLinkHue(33);
     expect(h).toBeGreaterThanOrEqual(200);
     expect(h).toBeLessThanOrEqual(260);
   });
@@ -140,7 +140,7 @@ describe('deriveTraceLineActiveHue', () => {
   });
 
   test('default tint lands in the yellow range', () => {
-    const h = deriveTraceLineActiveHue(20);
+    const h = deriveTraceLineActiveHue(33);
     expect(h).toBeGreaterThanOrEqual(45);
     expect(h).toBeLessThanOrEqual(55);
   });
