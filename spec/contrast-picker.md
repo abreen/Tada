@@ -37,10 +37,9 @@ effective default removes the key. This lets an explicit standard selection
 override a system preference for more contrast. A guarded inline script
 applies the stored or system-derived preference before paint.
 
-The standard endpoint uses the Material Symbols Outlined `contrast_rtl_off`
-glyph and the high endpoint uses `contrast`. Both are vendored SVG masks
-rendered in the switch's current text color. Their shared icon configuration
-and build pipeline are described in [Material Symbols](material-symbols.md).
+The standard endpoint shows a half-filled circle crossed by a slash and the
+high endpoint shows a half-filled circle. Both are hand-drawn SVG masks
+rendered in the switch's current text color; see [Icons](icons.md).
 
 The contrast and font switches mount and synchronize together after initial
 load and client-side navigation. Their preferences remain independent. The row

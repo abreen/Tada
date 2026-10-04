@@ -17,7 +17,6 @@
     "build/",
     "src/",
     "templates/",
-    "assets/",
     "fonts/",
     "init/",
     "schema/",

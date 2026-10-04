@@ -148,7 +148,7 @@ test.describe('search control', () => {
     expect(await page.locator('.search-controls').boundingBox()).toBeNull();
   });
 
-  test('gives the Material search symbol enough space at its intended scale', async ({
+  test('gives the search icon enough space at its intended scale', async ({
     page,
   }) => {
     await page.goto('/index.html');

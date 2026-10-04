@@ -1,0 +1,105 @@
+@use 'mixins' as *;
+
+@mixin define-icon($name, $size, $body) {
+  --icon-#{$name}: #{icon-svg($size, $body)};
+  --icon-#{$name}-size: #{$size}px;
+}
+
+// Mask icons (color-agnostic, painted via background-color: currentColor)
+:root {
+  @include define-icon(
+    'external-link',
+    20,
+    "<path d='M9 4H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3M10 10l6-6M12 4h4v4'/>"
+  );
+  @include define-icon(
+    'search',
+    20,
+    "<circle cx='8.5' cy='8.5' r='5'/><path d='m12 12 4.5 4.5'/>"
+  );
+  @include define-icon(
+    'contrast-standard',
+    20,
+    "<path d='M7.29 3.54a7 7 0 0 1 9.17 9.17m-3.75 3.75a7 7 0 0 1-9.17-9.17m-.29-4.04 13.5 13.5'/><path d='M10 17v-3.25L3.54 7.29A7 7 0 0 0 10 17z' fill='black'/>"
+  );
+  @include define-icon(
+    'contrast-high',
+    20,
+    "<circle cx='10' cy='10' r='7'/><path d='M10 3a7 7 0 0 0 0 14z' fill='black'/>"
+  );
+  @include define-icon(
+    'info',
+    40,
+    "<circle cx='20' cy='20' r='15'/><path d='M20 18.5v8M20 13h.01'/>"
+  );
+  @include define-icon(
+    'info-compact',
+    20,
+    "<circle cx='10' cy='10' r='7'/><path d='M10 9.5v4M10 6.5h.01'/>"
+  );
+  @include define-icon(
+    'warning',
+    40,
+    "<path d='M20 6.5 4.5 33.5h31zM20 15v7m0 5.5h.01'/>"
+  );
+  @include define-icon(
+    'warning-compact',
+    20,
+    "<path d='M10 3.25 2.25 16.75h15.5zM10 7.5V11m0 2.75h.01'/>"
+  );
+  @include define-icon(
+    'breadcrumb-separator',
+    24,
+    "<path d='m9.25 6.5 5.5 5.5-5.5 5.5'/>"
+  );
+  @include define-icon(
+    'heading-present',
+    24,
+    "<rect x='3.25' y='5.25' width='17.5' height='13.5' rx='2.25'/><path d='M10.25 9.25v5.5L14.75 12z' fill='black'/>"
+  );
+  @include define-icon(
+    'check',
+    18,
+    "<path d='M3.75 9.375 7.5 12.75l6.75-7.5'/>"
+  );
+  @include define-icon(
+    'question-correct',
+    22,
+    "<circle cx='11' cy='11' r='9'/><path d='m6.5 11.5 3.25 3 5.75-6.5'/>"
+  );
+  @include define-icon(
+    'question-incorrect',
+    22,
+    "<path d='m6.5 6.5 9 9m0-9-9 9'/>"
+  );
+}
+
+.mask-icon {
+  display: block;
+  width: var(--mask-icon-size);
+  height: var(--mask-icon-size);
+
+  @include contained-mask(var(--mask-icon));
+}
+
+.mask-icon-heading-present {
+  --mask-icon: var(--icon-heading-present);
+  --mask-icon-size: var(--icon-heading-present-size);
+}
+
+.mask-icon-contrast-standard {
+  --mask-icon: var(--icon-contrast-standard);
+  --mask-icon-size: var(--icon-contrast-standard-size);
+}
+
+.mask-icon-contrast-high {
+  --mask-icon: var(--icon-contrast-high);
+  --mask-icon-size: var(--icon-contrast-high-size);
+}
+
+.mask-icon-breadcrumb-separator {
+  --mask-icon: var(--icon-breadcrumb-separator);
+  --mask-icon-size: var(--icon-breadcrumb-separator-size);
+
+  color: var(--fg2-color);
+}

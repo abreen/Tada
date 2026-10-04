@@ -79,6 +79,29 @@ class TestDevBuild:
             css,
         )
 
+    def test_draws_every_icon_with_one_rounded_stroke_width(self, built_dev_site):
+        dist = built_dev_site / 'dist'
+        css = ''.join(file.read_text() for file in dist.glob('*.css'))
+        js = ''.join(file.read_text() for file in dist.glob('index.bundle.tada-*.js'))
+        html = (dist / 'index.html').read_text()
+
+        stroke_widths = re.findall(r'stroke-width=\\?["\']([^"\'\\]+)', css + js + html)
+        assert stroke_widths
+        assert set(stroke_widths) == {'1.65'}
+        assert '0 -960 960 960' not in css
+        assert '--icon-tada' not in css
+
+        mask_icons = re.findall(r"<svg xmlns='http://www\.w3\.org/2000/svg'[^>]*>", css)
+        assert len(mask_icons) >= 13
+        for svg in mask_icons:
+            if 'stroke=' not in svg:
+                continue
+            size = re.search(r"width='(\d+)'", svg)[1]
+            assert f"height='{size}'" in svg
+            assert f"viewBox='0 0 {size} {size}'" in svg
+            assert "stroke-linecap='round'" in svg
+            assert "stroke-linejoin='round'" in svg
+
     def test_produces_js_bundle(self, built_dev_site):
         dist = built_dev_site / 'dist'
         assert list(dist.glob('index.bundle.tada-*.js'))

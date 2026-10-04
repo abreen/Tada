@@ -79,11 +79,6 @@
   --mono-border-radius: 0.375em;
   --mono-padding: 0.12em 0.25em;
 
-  // SVG icons
-  // Mask icons (color-agnostic, painted via background-color: currentColor)
-  --icon-check: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'><path d='M5 12.5 10 17 19 7' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>");
-  /* TADA_MATERIAL_SYMBOL_VARIABLES */
-
   color-scheme: light dark;
 }
 

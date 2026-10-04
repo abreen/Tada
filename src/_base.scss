@@ -220,8 +220,8 @@ input[type='checkbox'] {
 
   &::after {
     display: block;
-    width: 1.1em;
-    height: 1.1em;
+    width: var(--icon-check-size);
+    height: var(--icon-check-size);
     content: '';
     background-color: currentcolor;
     opacity: 0;
