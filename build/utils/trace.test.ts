@@ -302,14 +302,14 @@ public class Demo {
       ['/site/content/shared/index.md', 'Main.java', 'shared'],
       ['/site/content/labs/01/index.md', '../../shared/Main.java', 'labs/01'],
     ]) {
-      const generatedOutputs = new Map<string, string>();
+      const traceOutputs = new Map<string, string>();
       const helpers = createTraceHelpers({
         filePath: page,
         contentDir: '/site/content',
         applyBasePath: value => value,
         cache,
         toolAvailability: { java: true, python: true },
-        dependencyCollector: { generatedOutputs },
+        dependencyCollector: { traceOutputs },
       });
 
       const html = helpers.renderTrace(sourceFile);
@@ -318,7 +318,7 @@ public class Demo {
       expect(html).toContain(
         `data-trace-manifest="/${artifactDir}/manifest.json"`,
       );
-      expect(generatedOutputs).toEqual(
+      expect(traceOutputs).toEqual(
         new Map([
           [`${artifactDir}/manifest.json`, '{"totalSteps":1}'],
           [`${artifactDir}/chunk-0.json`, '[]'],

@@ -1,10 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { getPackageDir } from './utils/paths';
-import { makeLogger } from './log';
-import type { SiteVariables } from './types';
+import type { CopiedFile, SiteVariables } from './types';
 
-const log = makeLogger(import.meta.url);
 const FONTS_DIR = path.join(getPackageDir(), 'fonts');
 
 export const DEFAULT_FONT_PRELOAD_FILES = {
@@ -49,26 +47,21 @@ export function getDefaultFontPreloadFiles(
   ];
 }
 
-export function copyFonts(distDir: string): void {
-  log.info`Copying fonts`;
-
+/** Bundled browser fonts, as copy references keyed by output path */
+export function getFontOutputs(): Map<string, CopiedFile> {
+  const outputs = new Map<string, CopiedFile>();
   for (const family of fs.readdirSync(FONTS_DIR)) {
     const woff2Dir = path.join(FONTS_DIR, family, 'woff2');
     if (!fs.existsSync(woff2Dir) || !fs.statSync(woff2Dir).isDirectory()) {
       continue;
     }
-
-    const outFamilyDir = path.join(distDir, family);
-    fs.mkdirSync(outFamilyDir, { recursive: true });
-
     for (const file of fs.readdirSync(woff2Dir)) {
       if (file.endsWith('.woff2')) {
-        fs.copyFileSync(
-          path.join(woff2Dir, file),
-          path.join(outFamilyDir, file),
-        );
-        log.debug`Copied ${family}/${file}`;
+        outputs.set(`${family}/${file}`, {
+          copyFrom: path.join(woff2Dir, file),
+        });
       }
     }
   }
+  return outputs;
 }

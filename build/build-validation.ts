@@ -1,12 +1,15 @@
 import path from 'path';
 import { validateBranding } from './branding';
-import { B } from './colors';
 import { makeLogger } from './log';
 import { config, getConfigFileName } from './templates';
 import { validateConfigLinks } from './validate-config-links';
 import { validateCustomFontOverrides } from './custom-fonts';
-import type { SiteVariables } from './types';
+import { getProjectDir, SEARCH_INDEX_DIR, toPosix } from './utils/paths';
+import { sameOutputContent } from './output-publication';
+import { isFeatureEnabled } from './features';
+import type { OutputContent, SiteVariables } from './types';
 import type { BuildDiagnostic } from './build-types';
+import type { TadaSourceRecord } from './source-records';
 import {
   assertNoOutputPathConflicts,
   sourcePaths,
@@ -15,46 +18,150 @@ import {
 
 const log = makeLogger(import.meta.url);
 
-export function diagnosticsFromMessages(messages: string[]): BuildDiagnostic[] {
+/** Thrown after a build's errors have been printed */
+export class BuildFailedError extends Error {}
+
+function diagnosticsFromMessages(messages: string[]): BuildDiagnostic[] {
   return messages.map(message => ({ message }));
+}
+
+export function diagnosticFromError(error: unknown): BuildDiagnostic {
+  return { message: error instanceof Error ? error.message : String(error) };
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Shows absolute paths inside the project as project-relative POSIX paths. */
+function formatDiagnostic(
+  message: string,
+  projectDir: string = getProjectDir(),
+): string {
+  const pattern = new RegExp(
+    `${escapeRegExp(projectDir + path.sep)}([^\\s:,"()]*)`,
+    'g',
+  );
+  return message.replace(pattern, (_, relPath: string) => toPosix(relPath));
+}
+
+/** Prints each diagnostic once, as one line. */
+export function printDiagnostics(
+  diagnostics: readonly BuildDiagnostic[],
+): void {
+  for (const diagnostic of diagnostics) {
+    log.error`${formatDiagnostic(diagnostic.message)}`;
+  }
+}
+
+function projectRelative(scan: TadaProjectScan, sourcePath: string): string {
+  return toPosix(path.relative(path.dirname(scan.contentDir), sourcePath));
 }
 
 export function validateConfig(
   scan: TadaProjectScan,
   siteVariables: SiteVariables,
 ): BuildDiagnostic[] {
-  const diagnostics = diagnosticsFromMessages(
-    validateCustomFontOverrides({
+  const publicFiles = new Set(sourcePaths(scan, 'public'));
+  const diagnostics = diagnosticsFromMessages([
+    ...validateCustomFontOverrides({
       fontOverrides: siteVariables.fontOverrides,
       publicDir: scan.publicDir,
-      publicFiles: new Set(sourcePaths(scan, 'public')),
+      publicFiles,
     }),
-  );
-  diagnostics.push(
-    ...diagnosticsFromMessages(
-      validateBranding(siteVariables, {
-        publicDir: scan.publicDir,
-        publicFiles: new Set(sourcePaths(scan, 'public')),
-      }),
-    ),
-  );
-  const conflicts = assertNoOutputPathConflicts(scan);
-  if (conflicts.length === 0) {
-    return diagnostics;
-  }
-  for (const relPath of conflicts) {
-    const sources = [...scan.outputProducers.get(relPath)!]
-      .map(sourcePath =>
-        path.relative(path.dirname(scan.contentDir), sourcePath),
-      )
+    ...validateBranding(siteVariables, {
+      publicDir: scan.publicDir,
+      publicFiles,
+    }),
+  ]);
+  for (const outputPath of assertNoOutputPathConflicts(scan)) {
+    const sources = [...scan.outputProducers.get(outputPath)!]
+      .map(sourcePath => projectRelative(scan, sourcePath))
       .sort();
-    log.error`${sources.join(' conflicts with ')}: same output path ${B`${relPath}`}`;
+    const verb = sources.length === 2 ? 'both write' : 'all write';
+    diagnostics.push({
+      message: `${sources.join(', ')}: ${verb} ${outputPath}`,
+    });
   }
-  const noun = conflicts.length === 1 ? 'file' : 'files';
-  diagnostics.push({
-    message: `${conflicts.length} output ${noun} ${conflicts.length === 1 ? 'has' : 'have'} multiple sources with the same path`,
-  });
   return diagnostics;
+}
+
+/**
+ * Output conflicts that can only be found after rendering: a source writing a
+ * file Tada generates, a file in the search index directory, or a path that
+ * would have to be both a file and a directory. Two sources writing the same
+ * path are found earlier by validateConfig.
+ */
+export function findOutputConflicts(
+  scan: TadaProjectScan,
+  siteVariables: SiteVariables,
+  generatedOutputs: ReadonlyMap<string, OutputContent>,
+  records: ReadonlyMap<string, TadaSourceRecord>,
+): BuildDiagnostic[] {
+  const searchEnabled = isFeatureEnabled(siteVariables, 'search');
+  const messages = new Set<string>();
+  // Output path to the project-relative source that writes it (null for Tada)
+  // and the content it writes.
+  const owners = new Map<
+    string,
+    { source: string | null; content: OutputContent }
+  >(
+    [...generatedOutputs].map(([outputPath, content]) => [
+      outputPath,
+      { source: null, content },
+    ]),
+  );
+  for (const record of records.values()) {
+    const source = projectRelative(scan, record.sourcePath);
+    for (const [outputPath, content] of record.outputs) {
+      const existing = owners.get(outputPath);
+      if (existing?.source === null) {
+        messages.add(
+          `${source}: conflicts with ${outputPath} generated by Tada`,
+        );
+      } else if (
+        searchEnabled &&
+        (outputPath === SEARCH_INDEX_DIR ||
+          outputPath.startsWith(`${SEARCH_INDEX_DIR}/`))
+      ) {
+        messages.add(
+          `${source}: conflicts with the search index in ${SEARCH_INDEX_DIR}/`,
+        );
+      } else if (!existing) {
+        owners.set(outputPath, { source, content });
+      } else if (
+        existing.source !== source &&
+        !sameOutputContent(existing.content, content)
+      ) {
+        // Pages that trace the same files share identical trace outputs.
+        messages.add(
+          `${[existing.source, source].sort().join(', ')}: both write ${outputPath}`,
+        );
+      }
+    }
+  }
+  for (const [outputPath, { source: owner }] of owners) {
+    const segments = outputPath.split('/');
+    for (let i = 1; i < segments.length; i++) {
+      const ancestor = segments.slice(0, i).join('/');
+      if (!owners.has(ancestor)) {
+        continue;
+      }
+      const ancestorOwner = owners.get(ancestor)!.source;
+      if (ancestorOwner === null) {
+        messages.add(`${owner}: conflicts with ${ancestor} generated by Tada`);
+      } else if (owner === null) {
+        messages.add(
+          `${ancestorOwner}: conflicts with ${ancestor}/ generated by Tada`,
+        );
+      } else {
+        messages.add(
+          `${[ancestorOwner, owner].sort().join(', ')}: ${ancestor} is both a file and a directory`,
+        );
+      }
+    }
+  }
+  return diagnosticsFromMessages([...messages]);
 }
 
 export function validateProjectConfigLinks(

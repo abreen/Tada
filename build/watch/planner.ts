@@ -1,5 +1,6 @@
-import type { TadaProjectScan } from '../source-model';
-import type { TadaSnapshot } from './snapshot';
+import path from 'path';
+import type { SourceEntry, TadaProjectScan } from '../source-model';
+import type { TadaSnapshot } from '../site-build';
 
 export interface TadaIncrementalWatchPlan {
   kind: 'incremental';
@@ -9,6 +10,20 @@ export interface TadaIncrementalWatchPlan {
 }
 
 type TadaWatchPlan = { kind: 'full' } | TadaIncrementalWatchPlan;
+
+function sameItems(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  return a.size === b.size && [...a].every(item => b.has(item));
+}
+
+function sameSourceEntry(a: SourceEntry, b: SourceEntry | undefined): boolean {
+  return (
+    b !== undefined &&
+    a.kind === b.kind &&
+    a.renderKind === b.renderKind &&
+    sameItems(a.outputs, b.outputs) &&
+    sameItems(a.targets, b.targets)
+  );
+}
 
 export function diffAuthorKeys(previous: unknown, next: unknown): Set<string> {
   const asMap = (value: unknown): Record<string, unknown> =>
@@ -58,8 +73,16 @@ export function createTadaWatchPlan({
       changedSources.add(source);
     }
   }
+  // A directory event may arrive without events for the files inside it.
+  const changedDirPrefixes = [...paths].map(changed => changed + path.sep);
   for (const [source, entry] of scan.sources) {
-    if (entry !== snapshot.scan.sources.get(source)) {
+    const inChangedDirectory = changedDirPrefixes.some(prefix =>
+      source.startsWith(prefix),
+    );
+    if (
+      inChangedDirectory ||
+      !sameSourceEntry(entry, snapshot.scan.sources.get(source))
+    ) {
       changedSources.add(source);
     }
   }

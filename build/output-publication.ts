@@ -1,258 +1,232 @@
 import fs from 'fs';
 import path from 'path';
-import { globals, type Globals } from './globals';
+import { globals } from './globals';
+import { toPosix } from './utils/paths';
 import type { OutputContent } from './types';
 
-export interface WriteFileMutation {
-  kind: 'write';
-  path: string;
+type FileMutation =
+  | { kind: 'write'; path: string; content: OutputContent }
+  | { kind: 'delete'; path: string };
+
+/** An output file and the source that produced it */
+export interface OutputFile {
+  sourcePath: string;
   content: OutputContent;
 }
 
-export interface DeleteFileMutation {
-  kind: 'delete';
-  path: string;
+// EBUSY means a file is briefly held open. On Windows, EPERM and EACCES also
+// mean that (an indexer, antivirus, or the dev server holding the file); on
+// other platforms they are permanent permission errors and are not retried.
+const BUSY_ERROR_CODES = new Set(
+  process.platform === 'win32' ? ['EBUSY', 'EPERM', 'EACCES'] : ['EBUSY'],
+);
+const BUSY_RETRY_COUNT = 4;
+const BUSY_RETRY_DELAY_MS = 50;
+
+function retryWhileBusy(action: () => void): void {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      action();
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (attempt >= BUSY_RETRY_COUNT || !code || !BUSY_ERROR_CODES.has(code)) {
+        throw error;
+      }
+      globals.sleepSync(BUSY_RETRY_DELAY_MS);
+    }
+  }
 }
 
-export type FileMutation = WriteFileMutation | DeleteFileMutation;
-
-export interface ReplaceRootCommitPlan {
-  kind: 'replace-root';
-  stagedPath: string;
-  targetPath: string;
-}
-
-export interface ApplyMutationsCommitPlan {
-  kind: 'apply-mutations';
-  rootDir: string;
-  mutations: FileMutation[];
-}
-
-export type CommitPlan = ReplaceRootCommitPlan | ApplyMutationsCommitPlan;
-
-type CommitPlanGlobals = Pick<Globals, 'now' | 'pid' | 'sleepSync'>;
-
-const TRANSIENT_RENAME_ERROR_CODES = new Set([
-  'EACCES',
-  'EBUSY',
-  'ENOTEMPTY',
-  'EPERM',
-]);
-const RENAME_RETRY_DELAY_MS = 25;
-const RENAME_RETRY_COUNT = 8;
-
-/** Writes rendered text, or copies a referenced source file, to `filePath`. */
+/** Writes rendered text or bytes, or copies a referenced source file. */
 export function writeOutputFile(
   filePath: string,
   content: OutputContent,
 ): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  if (typeof content === 'string') {
+  if (typeof content === 'string' || content instanceof Uint8Array) {
     fs.writeFileSync(filePath, content);
   } else {
     fs.copyFileSync(content.copyFrom, filePath);
   }
 }
 
-function removeDirIfExists(dir: string): void {
-  fs.rmSync(dir, { recursive: true, force: true });
+export function sameOutputContent(
+  left: OutputContent,
+  right: OutputContent,
+): boolean {
+  if (typeof left === 'string' || typeof right === 'string') {
+    return left === right;
+  }
+  if (left instanceof Uint8Array || right instanceof Uint8Array) {
+    return (
+      left instanceof Uint8Array &&
+      right instanceof Uint8Array &&
+      Buffer.compare(left, right) === 0
+    );
+  }
+  // Copied files compare by source path; a source whose contents changed is
+  // always rebuilt, which forces a write.
+  return left.copyFrom === right.copyFrom;
 }
 
-function ensureParentDir(filePath: string): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-}
-
-function isTransientRenameError(
-  error: unknown,
-  sourcePath: string,
-): error is NodeJS.ErrnoException {
-  const code = (error as NodeJS.ErrnoException | undefined)?.code;
-  return (
-    typeof code === 'string' &&
-    TRANSIENT_RENAME_ERROR_CODES.has(code) &&
-    fs.existsSync(sourcePath)
-  );
-}
-
-function renameWithRetry(
-  sourcePath: string,
-  targetPath: string,
-  globals: CommitPlanGlobals,
-): void {
-  for (let attempt = 0; attempt <= RENAME_RETRY_COUNT; attempt++) {
-    try {
-      fs.renameSync(sourcePath, targetPath);
-      return;
-    } catch (error) {
-      if (
-        attempt === RENAME_RETRY_COUNT ||
-        !isTransientRenameError(error, sourcePath)
-      ) {
-        throw error;
-      }
-      globals.sleepSync(RENAME_RETRY_DELAY_MS);
+/**
+ * Mutations from one build's outputs to the next. Outputs from a source in
+ * `forceSourcePaths` are rewritten even when they look unchanged.
+ */
+export function computeMutations(
+  previous: ReadonlyMap<string, OutputFile>,
+  next: ReadonlyMap<string, OutputFile>,
+  forceSourcePaths: ReadonlySet<string> = new Set(),
+): FileMutation[] {
+  const mutations: FileMutation[] = [];
+  for (const outputPath of new Set([...previous.keys(), ...next.keys()])) {
+    const before = previous.get(outputPath);
+    const after = next.get(outputPath);
+    if (!after) {
+      mutations.push({ kind: 'delete', path: outputPath });
+    } else if (
+      !before ||
+      !sameOutputContent(before.content, after.content) ||
+      forceSourcePaths.has(after.sourcePath)
+    ) {
+      mutations.push({
+        kind: 'write',
+        path: outputPath,
+        content: after.content,
+      });
     }
   }
+  return mutations;
+}
+
+/**
+ * Mutations that make `rootDir` hold exactly `outputs`: every output is
+ * written, and every other file and empty directory is deleted except those
+ * under `keep`.
+ */
+export function planFullWrite(
+  rootDir: string,
+  outputs: ReadonlyMap<string, OutputFile>,
+  keep: readonly string[] = [],
+): FileMutation[] {
+  const files: string[] = [];
+  const dirs: string[] = [];
+  // Walk one level at a time: a recursive listing would follow symbolic links
+  // to directories. A link is listed as a file, so deleting it removes only
+  // the link, never what it points to.
+  const walk = (dir: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      const relPath = toPosix(path.relative(rootDir, fullPath));
+      if (entry.isDirectory()) {
+        dirs.push(relPath);
+        walk(fullPath);
+      } else {
+        files.push(relPath);
+      }
+    }
+  };
+  if (fs.existsSync(rootDir)) {
+    walk(rootDir);
+  }
+  const isKept = (relPath: string) =>
+    keep.some(prefix => `${relPath}/`.startsWith(prefix));
+  const dirsWithFiles = new Set<string>();
+  for (const file of files) {
+    const segments = file.split('/');
+    for (let i = 1; i < segments.length; i++) {
+      dirsWithFiles.add(segments.slice(0, i).join('/'));
+    }
+  }
+
+  const deletes: FileMutation[] = [
+    ...files.filter(file => !isKept(file) && !outputs.has(file)),
+    ...dirs.filter(dir => !isKept(dir) && !dirsWithFiles.has(dir)),
+  ].map(relPath => ({ kind: 'delete', path: relPath }));
+  const writes: FileMutation[] = [...outputs].map(([outputPath, output]) => ({
+    kind: 'write',
+    path: outputPath,
+    content: output.content,
+  }));
+  return [...deletes, ...writes];
 }
 
 function pruneEmptyDirs(rootDir: string, filePath: string): void {
-  let currentDir = path.dirname(filePath);
   const root = path.resolve(rootDir);
-  while (currentDir !== root) {
+  for (
+    let dir = path.dirname(filePath);
+    dir !== root;
+    dir = path.dirname(dir)
+  ) {
     try {
-      fs.rmdirSync(currentDir);
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code === 'ENOTEMPTY' || code === 'ENOENT') {
-        break;
-      }
-      throw err;
+      fs.rmdirSync(dir);
+    } catch {
+      return;
     }
-    currentDir = path.dirname(currentDir);
   }
 }
 
-interface MutationJournalEntry {
-  targetPath: string;
-  backupPath?: string;
+/** Throws if a path would be reached through a symbolic link below `rootDir`. */
+function createSymlinkGuard(rootDir: string): (target: string) => void {
+  const root = path.resolve(rootDir);
+  const safeDirs = new Set<string>([root]);
+  return target => {
+    const visited: string[] = [];
+    for (
+      let dir = path.dirname(target);
+      !safeDirs.has(dir) && dir.startsWith(root + path.sep);
+      dir = path.dirname(dir)
+    ) {
+      if (fs.lstatSync(dir, { throwIfNoEntry: false })?.isSymbolicLink()) {
+        throw new Error(`Refusing to write through the symbolic link ${dir}`);
+      }
+      visited.push(dir);
+    }
+    for (const dir of visited) {
+      safeDirs.add(dir);
+    }
+  };
 }
 
-function applyMutations(
-  plan: ApplyMutationsCommitPlan,
-  globals: CommitPlanGlobals,
+/**
+ * Applies mutations to the files in `rootDir` in place. Deletes run first,
+ * deepest paths first, and remove directories they leave empty, so an output
+ * can change between a file and a directory. Nothing is renamed, staged, or
+ * rolled back: if a write fails, the error is thrown and earlier writes stay.
+ * Nothing is written or deleted through a symbolic link.
+ */
+export function applyMutations(
+  rootDir: string,
+  mutations: readonly FileMutation[],
 ): void {
-  const transactionRoot = fs.mkdtempSync(
-    path.join(plan.rootDir, '.watch-stage-'),
-  );
-  const journal: MutationJournalEntry[] = [];
-  const createdDirs: string[] = [];
-  try {
-    // Index staging paths so file/directory transitions cannot collide in staging.
-    for (const [index, mutation] of plan.mutations.entries()) {
-      if (mutation.kind === 'write') {
-        writeOutputFile(
-          path.join(transactionRoot, `write-${index}`),
-          mutation.content,
-        );
-      }
-    }
-
-    // Keep original indexes so staging and rollback use the same backup paths.
-    const ordered = [...plan.mutations.entries()].sort(([, a], [, b]) => {
-      if (a.kind !== b.kind) {
-        return a.kind === 'delete' ? -1 : 1;
-      }
-      return a.kind === 'delete' ? b.path.length - a.path.length : 0;
-    });
-    for (const [index, mutation] of ordered) {
-      const targetPath = path.resolve(plan.rootDir, mutation.path);
-      const existing = fs.lstatSync(targetPath, { throwIfNoEntry: false });
-      if (existing?.isDirectory()) {
-        throw new Error(
-          `Cannot publish file mutation over directory: ${targetPath}`,
-        );
-      }
-      const backupPath = existing
-        ? path.join(transactionRoot, `backup-${index}`)
-        : undefined;
-      if (backupPath) {
-        renameWithRetry(targetPath, backupPath, globals);
-      }
-      journal.push({ targetPath, backupPath });
-      if (mutation.kind === 'delete') {
-        pruneEmptyDirs(plan.rootDir, targetPath);
+  const assertNotThroughSymlink = createSymlinkGuard(rootDir);
+  const deletes = mutations
+    .filter(mutation => mutation.kind === 'delete')
+    .sort((a, b) => b.path.length - a.path.length);
+  for (const mutation of deletes) {
+    const target = path.resolve(rootDir, mutation.path);
+    assertNotThroughSymlink(target);
+    retryWhileBusy(() => {
+      if (fs.lstatSync(target, { throwIfNoEntry: false })?.isDirectory()) {
+        fs.rmdirSync(target);
       } else {
-        // Track missing parents without relying on mkdir's returned path spelling.
-        let dir = path.dirname(targetPath);
-        while (!fs.existsSync(dir)) {
-          createdDirs.push(dir);
-          const parent = path.dirname(dir);
-          if (parent === dir) {
-            break;
-          }
-          dir = parent;
-        }
-        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-        renameWithRetry(
-          path.join(transactionRoot, `write-${index}`),
-          targetPath,
-          globals,
-        );
+        fs.rmSync(target, { force: true });
       }
-    }
-  } catch (publicationError) {
-    const rollbackErrors: unknown[] = [];
-    const removeCreatedDirs = () => {
-      for (const dir of [...new Set(createdDirs)].sort(
-        (a, b) => b.length - a.length,
-      )) {
-        try {
-          fs.rmdirSync(dir);
-        } catch (error) {
-          const code = (error as NodeJS.ErrnoException).code;
-          if (code !== 'ENOENT' && code !== 'ENOTEMPTY' && code !== 'ENOTDIR') {
-            rollbackErrors.push(error);
-          }
+    });
+    pruneEmptyDirs(rootDir, target);
+  }
+  for (const mutation of mutations) {
+    if (mutation.kind === 'write') {
+      const target = path.resolve(rootDir, mutation.path);
+      assertNotThroughSymlink(target);
+      retryWhileBusy(() => {
+        // Replace a link at the target itself; writing would follow it
+        if (fs.lstatSync(target, { throwIfNoEntry: false })?.isSymbolicLink()) {
+          fs.rmSync(target, { force: true });
         }
-      }
-    };
-    for (const entry of journal.toReversed()) {
-      try {
-        removeCreatedDirs();
-        fs.rmSync(entry.targetPath, { force: true });
-        if (entry.backupPath) {
-          ensureParentDir(entry.targetPath);
-          renameWithRetry(entry.backupPath, entry.targetPath, globals);
-        }
-      } catch (error) {
-        rollbackErrors.push(error);
-      }
+        writeOutputFile(target, mutation.content);
+      });
     }
-    removeCreatedDirs();
-    if (rollbackErrors.length > 0) {
-      // Keep any unrestored originals available for manual recovery.
-      throw new AggregateError(
-        [publicationError, ...rollbackErrors],
-        `Failed to publish and restore output; recovery files remain in ${transactionRoot}`,
-        { cause: publicationError },
-      );
-    }
-    removeDirIfExists(transactionRoot);
-    throw publicationError;
   }
-  removeDirIfExists(transactionRoot);
-}
-
-function replaceRoot(
-  plan: ReplaceRootCommitPlan,
-  globals: CommitPlanGlobals,
-): void {
-  const { targetPath, stagedPath } = plan;
-  const backupDir = `${targetPath}.bak-${globals.pid()}-${globals.now()}`;
-  const targetExists = fs.existsSync(targetPath);
-
-  try {
-    if (targetExists) {
-      renameWithRetry(targetPath, backupDir, globals);
-    }
-    renameWithRetry(stagedPath, targetPath, globals);
-    if (targetExists) {
-      removeDirIfExists(backupDir);
-    }
-  } catch (err) {
-    if (!fs.existsSync(targetPath) && fs.existsSync(backupDir)) {
-      renameWithRetry(backupDir, targetPath, globals);
-    }
-    throw err;
-  }
-}
-
-export function applyCommitPlan(plan: CommitPlan): void {
-  const runtimeGlobals: CommitPlanGlobals = globals;
-  if (plan.kind === 'replace-root') {
-    replaceRoot(plan, runtimeGlobals);
-    return;
-  }
-
-  applyMutations(plan, runtimeGlobals);
 }

@@ -2,7 +2,7 @@ import path from 'path';
 import { expect, test } from 'bun:test';
 import { createTadaWatchPlan, diffAuthorKeys } from './planner';
 import { indexSources, type SourceEntry } from '../source-model';
-import { createSnapshot, type TadaSnapshot } from './snapshot';
+import { createSnapshot, type TadaSnapshot } from '../site-build';
 import type { TadaSourceRecord } from '../source-records';
 
 const root = path.resolve('planner-site');
@@ -28,7 +28,6 @@ function record(
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
-    generatedOutputs: new Map(),
     ...deps,
   };
 }

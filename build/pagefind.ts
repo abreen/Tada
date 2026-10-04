@@ -1,17 +1,26 @@
+import fs from 'fs';
 import path from 'path';
 import { makeLogger } from './log';
 import { collectReachableSiteAssets } from './reachability';
-import {
-  getContentDir,
-  getFilesByExtensions,
-  normalizeOutputPath,
-} from './util';
+import { normalizeOutputPath, SEARCH_INDEX_DIR } from './utils/paths';
+import { isFeatureEnabled } from './features';
+import type { SiteVariables } from './types';
+import type { TadaProjectScan } from './source-model';
 import { assertMutoolAvailable, extractPdfPages } from './pdf-text';
 import type { HtmlOutputAnalysis } from './types';
 
 const log = makeLogger(import.meta.url);
 const PAGEFIND_VERBOSE = process.env.TADA_LOG_LEVEL === 'debug';
-const PAGEFIND_OUTPUT_SUBDIR = 'pagefind';
+
+/**
+ * Output path prefixes a full write leaves alone: the search index, which is
+ * written after the build.
+ */
+export function getKeptOutputPrefixes(siteVariables: SiteVariables): string[] {
+  return isFeatureEnabled(siteVariables, 'search')
+    ? [`${SEARCH_INDEX_DIR}/`]
+    : [];
+}
 
 type PagefindModule = typeof import('pagefind');
 type PagefindIndex = Awaited<
@@ -71,16 +80,21 @@ async function addPdfRecord(
   }
 }
 
-function getPdfSourceByOutputPath(): Map<string, string> {
-  const contentDir = getContentDir();
-  const pdfFiles: string[] = getFilesByExtensions(contentDir, ['pdf']);
-
-  return new Map(
-    pdfFiles.map((filePath: string) => {
-      const relPath = path.relative(contentDir, filePath);
-      return [normalizeOutputPath(`/${relPath}`), filePath] as const;
-    }),
-  );
+/** PDFs copied from `content/`, keyed by their root-relative output path */
+export function getPdfSources(scan: TadaProjectScan): Map<string, string> {
+  const pdfSources = new Map<string, string>();
+  for (const [filePath, entry] of scan.sources) {
+    if (
+      entry.renderKind !== 'content-copy' ||
+      path.extname(filePath).toLowerCase() !== '.pdf'
+    ) {
+      continue;
+    }
+    for (const outputPath of entry.outputs) {
+      pdfSources.set(normalizeOutputPath(`/${outputPath}`), filePath);
+    }
+  }
+  return pdfSources;
 }
 
 interface IndexTargets {
@@ -120,6 +134,16 @@ interface BuildIndexOptions {
   loadPagefind?: () => Promise<PagefindModule>;
   checkMutool?: () => Promise<void>;
   extractPages?: typeof extractPdfPages;
+  clearOutputDir?: (dir: string) => void;
+}
+
+function removeSearchIndex(dir: string): void {
+  fs.rmSync(dir, {
+    recursive: true,
+    force: true,
+    maxRetries: 4,
+    retryDelay: 50,
+  });
 }
 
 async function buildIndex({
@@ -131,6 +155,7 @@ async function buildIndex({
   loadPagefind = getPagefind,
   checkMutool = assertMutoolAvailable,
   extractPages = extractPdfPages,
+  clearOutputDir = removeSearchIndex,
 }: BuildIndexOptions): Promise<void> {
   const pagefind = await loadPagefind();
   const { index, errors: createErrors } = await pagefind.createIndex({
@@ -200,9 +225,10 @@ async function buildIndex({
       }
     }
 
-    const { errors: writeErrors } = await index.writeFiles({
-      outputPath: path.join(distPath, PAGEFIND_OUTPUT_SUBDIR),
-    });
+    // Start from an empty directory so files from earlier indexes don't pile up.
+    const outputPath = path.join(distPath, SEARCH_INDEX_DIR);
+    clearOutputDir(outputPath);
+    const { errors: writeErrors } = await index.writeFiles({ outputPath });
     const writeError = formatPagefindErrors('index.writeFiles()', writeErrors);
     if (writeError) {
       throw new Error(writeError);
@@ -216,14 +242,15 @@ interface RunPagefindOptions {
   distPath: string;
   htmlAssetsByPath: Map<string, string>;
   htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>;
+  pdfSourceByOutputPath: Map<string, string>;
 }
 
 export async function runPagefind({
   distPath,
   htmlAssetsByPath,
   htmlAnalysisByPath,
+  pdfSourceByOutputPath,
 }: RunPagefindOptions): Promise<void> {
-  const pdfSourceByOutputPath = getPdfSourceByOutputPath();
   const start = Date.now();
 
   log.debug`Finding reachable pages for search index`;
@@ -258,6 +285,7 @@ export class WatchPagefindRunner {
   private distPath: string | null;
   private htmlCacheByAssetPath: Map<string, string>;
   private htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>;
+  private pdfSourceByOutputPath: Map<string, string>;
 
   constructor() {
     this.watchRunInProgress = false;
@@ -265,16 +293,19 @@ export class WatchPagefindRunner {
     this.distPath = null;
     this.htmlCacheByAssetPath = new Map();
     this.htmlAnalysisByPath = new Map();
+    this.pdfSourceByOutputPath = new Map();
   }
 
   update(
     distPath: string,
     htmlAssetsByPath: Map<string, string>,
     htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>,
+    pdfSourceByOutputPath: Map<string, string>,
   ): void {
     this.distPath = distPath;
     this.htmlCacheByAssetPath = htmlAssetsByPath;
     this.htmlAnalysisByPath = htmlAnalysisByPath;
+    this.pdfSourceByOutputPath = pdfSourceByOutputPath;
   }
 
   run(): void {
@@ -289,7 +320,7 @@ export class WatchPagefindRunner {
     const distPath = this.distPath!;
     const htmlAssetsByPath = new Map(this.htmlCacheByAssetPath);
     const htmlAnalysisByPath = new Map(this.htmlAnalysisByPath);
-    const pdfSourceByOutputPath = getPdfSourceByOutputPath();
+    const pdfSourceByOutputPath = this.pdfSourceByOutputPath;
     const start = Date.now();
 
     log.debug`Preparing search index background snapshot`;

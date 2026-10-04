@@ -1,10 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { globals, type Globals } from './globals';
-import { toPosix } from './utils/paths';
+import { SEARCH_INDEX_DIR, toPosix } from './utils/paths';
 
-const EXCLUDED_DIRS = new Set(['pagefind']);
-const EXCLUDED_FILES = new Set(['tada.manifest.json']);
+const EXCLUDED_DIRS = new Set([SEARCH_INDEX_DIR]);
+export const MANIFEST_FILE_NAME = 'tada.manifest.json';
+const EXCLUDED_FILES = new Set([MANIFEST_FILE_NAME]);
 
 type ManifestGlobals = Pick<
   Globals,
@@ -109,7 +110,11 @@ export function getVersions(prodBaseDir: string): number[] {
       continue;
     }
     const match = entry.name.match(/^v(\d+)$/);
-    if (match) {
+    // A version exists only once its manifest, written last, is in place.
+    if (
+      match &&
+      fs.existsSync(path.join(prodBaseDir, entry.name, MANIFEST_FILE_NAME))
+    ) {
       versions.push(parseInt(match[1], 10));
     }
   }

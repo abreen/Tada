@@ -2,6 +2,9 @@ import path from 'path';
 import { globals } from '../globals';
 import type { SiteVariables } from '../types';
 
+/** The search index directory inside the output directory */
+export const SEARCH_INDEX_DIR = 'pagefind';
+
 export function getPackageDir(): string {
   return path.resolve(import.meta.dir, '..', '..');
 }

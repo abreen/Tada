@@ -281,7 +281,7 @@ class TestDevBuild:
         assert result.returncode != 0
         assert (
             'fontOverrides.serif.regular "fonts/missing.woff2" does not exist in public/'
-        ) in result.stderr
+        ) in result.stdout + result.stderr
 
     def test_rejects_malformed_custom_fonts(self, site_dir):
         fonts_dir = site_dir / 'public' / 'fonts'
@@ -301,7 +301,7 @@ class TestDevBuild:
         assert result.returncode != 0
         assert (
             'fontOverrides.serif.regular "fonts/malformed.woff2" is not a valid WOFF2 font'
-        ) in result.stderr
+        ) in result.stdout + result.stderr
 
     def test_rejects_unsupported_custom_font_features(self, site_dir):
         fonts_dir = site_dir / 'public' / 'fonts'
@@ -328,7 +328,7 @@ class TestDevBuild:
         assert (
             'fontOverrides.serifMono.features "ss02" is not supported by '
             'fontOverrides.serifMono.regular'
-        ) in result.stderr
+        ) in result.stdout + result.stderr
 
 
 class TestDevBuildDefaultContent:
@@ -427,7 +427,7 @@ class TestDevBuildErrors:
 
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode == 1
-        assert 'same path' in result.stderr
+        assert 'content/about.md, public/about.html: both write about.html' in result.stdout
         assert index_html.read_text() == before_html
         assert not (site_dir / 'dist' / 'about.html').exists()
 

@@ -1,35 +1,37 @@
 import fs from 'fs';
 import path from 'path';
 import * as sass from 'sass';
-import { makeLogger } from './log';
+import type { OutputContent } from './types';
 
-const log = makeLogger(import.meta.url);
+let katexCss: string | undefined;
 
-export function copyKatexAssets(distDir: string): void {
-  log.info`Copying KaTeX assets`;
-
-  const outDir = path.join(distDir, 'katex');
-  const outFontsDir = path.join(outDir, 'fonts');
-  fs.mkdirSync(outFontsDir, { recursive: true });
-
+function compileKatexCss(): string {
   // Compile KaTeX SCSS with woff2-only font references
   const katexScssDir = path.dirname(
     require.resolve('katex/src/styles/katex.scss'),
   );
-  const result = sass.compileString(
+  return sass.compileString(
     `@use 'katex' with ($use-woff2: true, $use-woff: false, $use-ttf: false, $font-folder: 'fonts');`,
     { loadPaths: [katexScssDir], style: 'compressed' },
-  );
-  fs.writeFileSync(path.join(outDir, 'katex.min.css'), result.css);
+  ).css;
+}
 
-  // Copy woff2 fonts
-  const katexDistDir = path.dirname(
-    require.resolve('katex/dist/katex.min.css'),
+/** The KaTeX stylesheet and its woff2 fonts, keyed by output path */
+export function getKatexOutputs(): Map<string, OutputContent> {
+  katexCss ??= compileKatexCss();
+  const outputs = new Map<string, OutputContent>([
+    ['katex/katex.min.css', katexCss],
+  ]);
+  const fontsDir = path.join(
+    path.dirname(require.resolve('katex/dist/katex.min.css')),
+    'fonts',
   );
-  const fontsDir = path.join(katexDistDir, 'fonts');
   for (const file of fs.readdirSync(fontsDir)) {
     if (file.endsWith('.woff2')) {
-      fs.copyFileSync(path.join(fontsDir, file), path.join(outFontsDir, file));
+      outputs.set(`katex/fonts/${file}`, {
+        copyFrom: path.join(fontsDir, file),
+      });
     }
   }
+  return outputs;
 }

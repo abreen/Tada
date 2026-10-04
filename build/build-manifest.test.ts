@@ -380,16 +380,29 @@ describe('walkAndHash', () => {
   });
 });
 
+function addVersion(name: string): void {
+  ensureDirectory(path.join(rootDir, name));
+  writeFile(path.join(rootDir, name, 'tada.manifest.json'), '{}');
+}
+
 describe('getVersions', () => {
   test('returns sorted version numbers', () => {
-    ensureDirectory(path.join(rootDir, 'v3'));
-    ensureDirectory(path.join(rootDir, 'v1'));
-    ensureDirectory(path.join(rootDir, 'v2'));
+    addVersion('v3');
+    addVersion('v1');
+    addVersion('v2');
     expect(getVersions(rootDir)).toEqual([1, 2, 3]);
   });
 
+  test('ignores version directories without a manifest', () => {
+    addVersion('v1');
+    ensureDirectory(path.join(rootDir, 'v2'));
+    writeFile(path.join(rootDir, 'v2', 'index.html'), 'partial');
+    expect(getVersions(rootDir)).toEqual([1]);
+    expect(getNextVersion(rootDir)).toBe(2);
+  });
+
   test('ignores non-version entries', () => {
-    ensureDirectory(path.join(rootDir, 'v1'));
+    addVersion('v1');
     ensureDirectory(path.join(rootDir, 'other'));
     ensureDirectory(path.join(rootDir, 'v2x'));
     writeFile(path.join(rootDir, 'some-file.json'), '{}');
@@ -415,8 +428,8 @@ describe('getNextVersion', () => {
   });
 
   test('returns highest version + 1', () => {
-    ensureDirectory(path.join(rootDir, 'v1'));
-    ensureDirectory(path.join(rootDir, 'v3'));
+    addVersion('v1');
+    addVersion('v3');
     expect(getNextVersion(rootDir)).toBe(4);
   });
 });

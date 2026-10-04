@@ -2,7 +2,6 @@ import type {
   HtmlOutputAnalysis,
   SiteVariables,
   TraceArtifactFile,
-  TraceToolAvailability,
 } from './types';
 
 /** A finished trace, keyed in the cache by its traced source files */
@@ -20,11 +19,8 @@ export type TraceCache = Map<string, TraceCacheEntry>;
 export interface TadaBuildMeta {
   htmlAssetsByPath: Map<string, string>;
   htmlAnalysisByPath: Map<string, HtmlOutputAnalysis>;
+  pdfSourceByOutputPath: Map<string, string>;
   siteVariables: SiteVariables;
-}
-
-export interface WatchTraceOptions {
-  toolAvailability: TraceToolAvailability;
 }
 
 export interface BuildDiagnostic {

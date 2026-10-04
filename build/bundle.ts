@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { compileTemplate } from './lodash-template';
 import * as sass from 'sass';
-import { getPackageDir, getDistDir, toPosix } from './utils/paths';
+import { getPackageDir, toPosix } from './utils/paths';
 import {
   deriveTheme,
   deriveLinkHue,
@@ -34,7 +34,7 @@ interface CoverageGlobal {
   __tadaCoverage?: CoverageHooks;
 }
 
-export function getBundleNaming(): string {
+function getBundleNaming(): string {
   const version = pkg.version.replace(/[^a-zA-Z0-9.-]/g, '-');
   return `[name].bundle.tada-${version}.[ext]`;
 }
@@ -146,23 +146,40 @@ function getCoverageBundlePlugin(): BunBuildPlugin | null {
   );
 }
 
-export async function bundle(
-  siteVariables: SiteVariables,
-  { mode = 'development', distDir }: { mode?: string; distDir?: string } = {},
-): Promise<string[]> {
-  const packageDir = getPackageDir();
-  const resolvedDistDir = distDir ?? getDistDir();
-  const isDev = mode === 'development';
+async function buildToMemory(
+  options: Parameters<typeof Bun.build>[0],
+): Promise<Map<string, string>> {
+  const result = await Bun.build(options);
+  if (!result.success) {
+    const messages = result.logs
+      .filter(log => log.level === 'error')
+      .map(log => log.message || String(log));
+    throw new Error(`Bundle failed:\n${messages.join('\n')}`);
+  }
+  const outputs = new Map<string, string>();
+  for (const output of result.outputs) {
+    outputs.set(
+      path.posix.normalize(toPosix(output.path)),
+      await output.text(),
+    );
+  }
+  return outputs;
+}
 
+/** Bundles Tada's client CSS and JavaScript, keyed by output path */
+export function bundle(
+  siteVariables: SiteVariables,
+  { mode = 'development' }: { mode?: string } = {},
+): Promise<Map<string, string>> {
+  const isDev = mode === 'development';
   const plugins = [createScssPlugin(renderThemeScss(siteVariables))];
   const coverageBundlePlugin = getCoverageBundlePlugin();
   if (coverageBundlePlugin) {
     plugins.push(coverageBundlePlugin);
   }
 
-  const result = await Bun.build({
-    entrypoints: [path.resolve(packageDir, 'src/index.ts')],
-    outdir: resolvedDistDir,
+  return buildToMemory({
+    entrypoints: [path.resolve(getPackageDir(), 'src/index.ts')],
     naming: getBundleNaming(),
     minify: mode === 'production',
     sourcemap: isDev ? 'inline' : 'none',
@@ -170,18 +187,17 @@ export async function bundle(
     external: ['*.woff2'],
     plugins,
   });
+}
 
-  if (!result.success) {
-    const messages = result.logs
-      .filter(log => log.level === 'error')
-      .map(log => log.message || String(log));
-    throw new Error(`Bundle failed:\n${messages.join('\n')}`);
-  }
-
-  // Return the output filenames for asset tag injection
-  return result.outputs.map(output =>
-    toPosix(path.relative(resolvedDistDir, output.path)),
-  );
+/** Bundles the watch-mode reload client, keyed by output path */
+export function bundleReloadClient(): Promise<Map<string, string>> {
+  return buildToMemory({
+    entrypoints: [
+      path.resolve(getPackageDir(), 'build/watch-reload-client.ts'),
+    ],
+    naming: getBundleNaming(),
+    sourcemap: 'inline',
+  });
 }
 
 export { renderThemeScss };

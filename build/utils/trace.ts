@@ -289,7 +289,7 @@ export function createTraceHelpers(context: TraceContext): {
       const relDir = toPosix(path.relative(contentDir, pageDir));
       const trace = getOrRunTrace(sourceFile, sources, traceName);
       for (const file of trace.files) {
-        dependencyCollector?.generatedOutputs?.set(
+        dependencyCollector?.traceOutputs?.set(
           buildTraceOutputPath(relDir, traceName, trace.artifactId, file.name),
           file.content,
         );

@@ -17,7 +17,8 @@ def test_content_output_conflict_rejects_full_build(tmp_path, mode, names):
         (site / 'content' / name).write_text('---\ntitle: Conflict\n---\n\nConflict body\n')
     result = run_tada(mode, cwd=str(site))
     assert result.returncode == 1
-    assert 'same path' in result.stderr
+    # Each conflict is reported once, naming both sources
+    assert result.stdout.count('both write') == 1
     assert names[0] in result.stdout and names[1] in result.stdout
     assert not (site / 'dist' / 'index.html').exists()
 

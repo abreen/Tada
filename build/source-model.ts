@@ -201,45 +201,6 @@ export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
   return indexSources(roots, sources);
 }
 
-export function updateProjectScan(
-  snapshot: TadaProjectScan,
-  paths: ReadonlySet<string>,
-): TadaProjectScan {
-  const sources = new Map(snapshot.sources);
-  for (const sourcePath of paths) {
-    const kind = sourcePath.startsWith(`${snapshot.contentDir}${path.sep}`)
-      ? 'content'
-      : sourcePath.startsWith(`${snapshot.publicDir}${path.sep}`)
-        ? 'public'
-        : undefined;
-    if (!kind) {
-      continue;
-    }
-    sources.delete(sourcePath);
-    const stat = fs.existsSync(sourcePath)
-      ? fs.statSync(sourcePath)
-      : undefined;
-    const isFile = stat?.isFile();
-    if (!snapshot.sources.has(sourcePath) || !isFile) {
-      // Directory notifications reconcile descendants without relying on child events.
-      for (const existing of sources.keys()) {
-        if (existing.startsWith(sourcePath + path.sep)) {
-          sources.delete(existing);
-        }
-      }
-    }
-    const files = isFile
-      ? [sourcePath]
-      : stat?.isDirectory()
-        ? walkFiles(sourcePath)
-        : [];
-    for (const filePath of files) {
-      sources.set(filePath, createSourceEntry(snapshot, filePath, kind));
-    }
-  }
-  return indexSources(snapshot, sources);
-}
-
 export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
   return [...scan.outputProducers]
     .filter(([, producers]) => producers.size > 1)
@@ -247,15 +208,34 @@ export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
     .sort();
 }
 
+// Front matter `skip` results, reused while a file's size and modification
+// time are unchanged, so watch rescans read only edited pages.
+const skipCache = new Map<
+  string,
+  { size: number; mtimeMs: number; skip: boolean }
+>();
+
 export function shouldSkipContentFile(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
   if (!(extensionIsMarkdown(ext) || ext === '.html')) {
     return false;
   }
 
+  const { size, mtimeMs } = fs.statSync(filePath);
+  const cached = skipCache.get(filePath);
+  if (cached && cached.size === size && cached.mtimeMs === mtimeMs) {
+    return cached.skip;
+  }
+
   const raw = fs.readFileSync(filePath, 'utf-8');
-  const { pageVariables } = parseFrontMatterAndContent(raw, ext);
-  return pageVariables?.skip === true;
+  let skip = false;
+  try {
+    skip = parseFrontMatterAndContent(raw, ext).pageVariables?.skip === true;
+  } catch {
+    // Not skipped: rendering the page reports the error for this file.
+  }
+  skipCache.set(filePath, { size, mtimeMs, skip });
+  return skip;
 }
 
 export function getProcessedExts(codeExtensions: string[]): Set<string> {

@@ -31,6 +31,8 @@ the build source pipeline:
   output ownership, valid link targets, and processed content classification
 - `build/source-records.ts` for rendering or copying one source into concrete
   outputs plus dependency metadata consumed by builds and watch snapshots
+- `build/site-build.ts` for the build core shared by `tada dev`, `tada prod`,
+  and watch mode
 
 Writing build output to disk lives in `build/output-publication.ts`. The
 watcher engine only schedules builds and owns its subscriptions and timers.

@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import * as fontkit from 'fontkit';
 import sharp from 'sharp';
@@ -108,10 +107,11 @@ function createFaviconSvg(
 </svg>`;
 }
 
+/** Generated favicon files, keyed by output path */
 export async function generateFavicons(
   siteVariables: SiteVariables,
-  distDir: string,
-): Promise<void> {
+): Promise<Map<string, string | Uint8Array>> {
+  const outputs = new Map<string, string | Uint8Array>();
   const color = siteVariables.faviconColor!;
   const symbol = siteVariables.faviconSymbol!;
   const fontWeight = siteVariables.faviconFontWeight || 700;
@@ -132,7 +132,7 @@ export async function generateFavicons(
     font,
     fontWeight,
   );
-  fs.writeFileSync(path.join(distDir, `${filenameBase}.svg`), svgMarkup);
+  outputs.set(`${filenameBase}.svg`, svgMarkup);
 
   const pngBuffers = await Promise.all(
     FAVICON_SIZES.map(async size => {
@@ -145,7 +145,7 @@ export async function generateFavicons(
         fontWeight,
       );
       const buf = await sharp(Buffer.from(svgForSize)).png().toBuffer();
-      fs.writeFileSync(path.join(distDir, `${filenameBase}-${size}.png`), buf);
+      outputs.set(`${filenameBase}-${size}.png`, buf);
       return { size, buf };
     }),
   );
@@ -156,5 +156,6 @@ export async function generateFavicons(
       .sort((a, b) => a.size - b.size)
       .map(x => x.buf),
   );
-  fs.writeFileSync(path.join(distDir, `${filenameBase}.ico`), icoBuffer);
+  outputs.set(`${filenameBase}.ico`, icoBuffer);
+  return outputs;
 }

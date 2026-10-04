@@ -85,9 +85,11 @@ describe('PagefindPlugin', () => {
       customRecords: [],
       outputPath: null,
     };
+    const cleared: string[] = [];
 
     await buildIndex({
       distPath: '/tmp/dist',
+      clearOutputDir: dir => cleared.push(dir),
       htmlAssetsByPath: new Map([
         ['index.html', '<html><body>Home</body></html>'],
         ['about/index.html', '<html><body>About</body></html>'],
@@ -133,14 +135,18 @@ describe('PagefindPlugin', () => {
     // OS-native separators. Construct the expectation the same way so the
     // test matches on both POSIX and Windows.
     expect(calls.outputPath).toBe(path.join('/tmp/dist', 'pagefind'));
+    // Earlier index files are removed before the new index is written.
+    expect(cleared).toEqual([path.join('/tmp/dist', 'pagefind')]);
     expect(calls.deleted).toBe(1);
   });
 
   test('buildIndex prepends filename to page 1 content for searchability', async () => {
     const calls: FakePagefindCalls = { htmlFiles: [], customRecords: [] };
+    const cleared: string[] = [];
 
     await buildIndex({
       distPath: '/tmp/dist',
+      clearOutputDir: dir => cleared.push(dir),
       htmlAssetsByPath: new Map(),
       reachableHtmlPaths: [],
       reachablePdfPaths: ['/docs/lecture1.pdf'],
@@ -177,8 +183,10 @@ describe('PagefindPlugin', () => {
   test('buildIndex falls back to a single PDF record when text extraction is empty', async () => {
     const calls: FakePagefindCalls = { customRecords: [] };
 
+    const cleared: string[] = [];
     await buildIndex({
       distPath: '/tmp/dist',
+      clearOutputDir: dir => cleared.push(dir),
       htmlAssetsByPath: new Map(),
       reachableHtmlPaths: [],
       reachablePdfPaths: ['/docs/guide.pdf'],
