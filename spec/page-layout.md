@@ -12,10 +12,10 @@ The page retains 2rem of bottom padding and at least 6em of separation between
 content and the group. On long pages, the group follows the content in normal
 flow and scrolls with the page.
 
-This layout accounts for the fixed header, optional site banner, sticky
-breadcrumb trail, page heading, and responsive table of contents. On desktop the
-TOC sits beside the body and remains sticky, with a viewport-based maximum
-height and internal scrolling.
+This layout accounts for the fixed header, optional site banner, breadcrumb
+trail, page heading, and responsive table of contents. On desktop the TOC sits
+beside the body and remains sticky, with a viewport-based maximum height and
+internal scrolling.
 On narrow screens the TOC precedes the body on default and literate pages;
 code-page TOCs remain hidden.
 

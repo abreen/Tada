@@ -59,12 +59,14 @@ pinned bar spans the content column and stays below the header and the open
 menu. In other browsers the trail scrolls away with the page.
 
 The trail is always one line. The current title shrinks first and truncates
-with an ellipsis; ancestors truncate only when they alone do not fit. The
-current item and every separator stay visible on narrow screens, and the page
-never scrolls horizontally. Hovering any item shows its full text.
+with an ellipsis; ancestors truncate only when they alone do not fit. Every
+item keeps room for a few characters, so on narrow screens a trail of typical
+length still shows the current item, while a very long trail is clipped at its
+end. The page never scrolls horizontally. Hovering any item shows its full
+text.
 
-When the trail is pinned, links to headings on the page land below it, and the
-desktop table of contents starts below it. In print the trail is not pinned and
+Where the trail can be pinned, links to headings on the page land below it, and
+the desktop table of contents starts below it. In print the trail is not pinned and
 has no bar styling, and it is hidden during slide presentation.
 
 When view transitions are available and reduced motion is not requested, client
@@ -80,7 +82,6 @@ separators fade out, and new items fade in. Items transition whenever the trail
 is visible, including when it is pinned on a scrolled page; if a matching item
 is visible on just one side, it fades in or out. The page title and info only
 transition when the heading is not covered by the header or the trail. A page
-restored scrolled down shows the pinned bar throughout its transition.
-Temporary names and transition rules are cleared after navigation or when a new
-navigation interrupts it. Without the API, or with reduced motion enabled,
-navigation swaps the content immediately.
+restored scrolled down shows the pinned bar throughout its transition. Without
+the API, or with reduced motion enabled, navigation swaps the content
+immediately.
