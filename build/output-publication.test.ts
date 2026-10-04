@@ -101,6 +101,7 @@ mock.module('fs', () =>
         fsError('EISDIR', file);
       }
       entries.delete(file);
+      symlinks.delete(file);
     },
     rmdirSync(dir: string) {
       if (entries.get(dir) !== null) {
@@ -221,6 +222,18 @@ describe('applyMutations through symbolic links', () => {
     expect(() =>
       applyMutations(dist, [{ kind: 'delete', path: 'media/photo.png' }]),
     ).toThrow('symbolic link');
+  });
+});
+
+describe('applyMutations over a symbolic link output', () => {
+  test('replaces a link at the output path instead of writing through it', () => {
+    put(path.join(dist, 'index.html'), 'outside');
+    symlinks.add(path.join(dist, 'index.html'));
+
+    applyMutations(dist, [{ kind: 'write', path: 'index.html', content: 'new' }]);
+
+    expect(symlinks.has(path.join(dist, 'index.html'))).toBe(false);
+    expect(files()).toEqual({ 'index.html': 'new' });
   });
 });
 

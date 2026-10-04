@@ -220,7 +220,13 @@ export function applyMutations(
     if (mutation.kind === 'write') {
       const target = path.resolve(rootDir, mutation.path);
       assertNotThroughSymlink(target);
-      retryWhileBusy(() => writeOutputFile(target, mutation.content));
+      retryWhileBusy(() => {
+        // Replace a link at the target itself; writing would follow it
+        if (fs.lstatSync(target, { throwIfNoEntry: false })?.isSymbolicLink()) {
+          fs.rmSync(target, { force: true });
+        }
+        writeOutputFile(target, mutation.content);
+      });
     }
   }
 }

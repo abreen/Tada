@@ -160,6 +160,25 @@ def test_full_build_never_deletes_through_a_symlinked_directory(tmp_path):
     assert not link.exists() and not link.is_symlink()
 
 
+def test_full_build_never_writes_through_a_symlinked_output_file(tmp_path):
+    site = init_site(tmp_path)
+    assert run_tada('dev', cwd=str(site)).returncode == 0
+    outside = tmp_path / 'outside.html'
+    outside.write_text('keep me')
+    index = site / 'dist' / 'index.html'
+    index.unlink()
+    try:
+        os.symlink(outside, index)
+    except OSError:
+        pytest.skip('symlinks are not permitted here')
+
+    result = run_tada('dev', cwd=str(site))
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert outside.read_text() == 'keep me'
+    assert index.is_file() and not index.is_symlink()
+
+
 def test_rebuilt_search_index_has_no_stale_files(tmp_path):
     site = init_site(tmp_path)
     index_md = site / 'content' / 'index.md'
