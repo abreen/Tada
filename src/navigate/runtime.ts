@@ -140,10 +140,28 @@ function setTitleTransitionNames(titleEl: Element, enabled: boolean): void {
   }
 }
 
+// The footer and appearance pickers get their own layer only while they are in
+// the viewport, so the layer stays put when they are on screen on both pages
+// and fades on its own when they are on screen on only one.
+function setPageBottomTransitionName(window: Window): void {
+  const bottom = window.document.querySelector<HTMLElement>('.page-bottom');
+  if (!bottom) {
+    return;
+  }
+  const rect = bottom.getBoundingClientRect();
+  if (rect.bottom > 0 && rect.top < window.innerHeight) {
+    bottom.style.viewTransitionName = 'page-bottom';
+  }
+}
+
 function cleanupViewTransitionNames(document: Document): void {
   const titleEl = document.querySelector('.title-and-info');
   if (titleEl) {
     setTitleTransitionNames(titleEl, false);
+  }
+  const bottom = document.querySelector<HTMLElement>('.page-bottom');
+  if (bottom) {
+    bottom.style.viewTransitionName = '';
   }
 }
 
@@ -407,6 +425,7 @@ export async function navigateToUrl(
     if (titleVisible) {
       setTitleTransitionNames(titleEl, true);
     }
+    setPageBottomTransitionName(window);
 
     document.documentElement.classList.add(
       direction === 'forward' ? 'nav-forward' : 'nav-back',
@@ -427,6 +446,7 @@ export async function navigateToUrl(
       if (newTitleVisible && newTitleEl) {
         setTitleTransitionNames(newTitleEl, true);
       }
+      setPageBottomTransitionName(window);
     });
 
     await transition.finished;

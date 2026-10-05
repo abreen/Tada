@@ -130,10 +130,8 @@ test('TOC highlighting still accounts for alerts and dividers inside content', a
 });
 
 interface PageBottomTransitionSample {
-  name: string;
-  groupAnimation: string;
   oldDisplay: string;
-  newAnimation: string;
+  animations: string[];
   buttons: { disabled: boolean; checked: string | null }[];
 }
 
@@ -141,18 +139,7 @@ type WindowWithPageBottomTransitions = Window & {
   __pageBottomTransitions?: PageBottomTransitionSample[];
 };
 
-test('keeps appearance controls stationary and synchronized during navigation', async ({
-  page,
-}) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto('/index.html');
-  const font = page.getByRole('switch', { name: 'Use serif fonts' });
-  const contrast = page.getByRole('switch', { name: 'Use high contrast' });
-  await font.click();
-  await expect(font).toHaveAttribute('aria-checked', 'true');
-  await contrast.click();
-  await expect(contrast).toHaveAttribute('aria-checked', 'true');
-
+async function trackPageBottomTransitions(page: Page): Promise<void> {
   await page.evaluate(() => {
     const trackedWindow = window as WindowWithPageBottomTransitions;
     trackedWindow.__pageBottomTransitions = [];
@@ -163,19 +150,24 @@ test('keeps appearance controls stationary and synchronized during navigation', 
         const root = document.documentElement;
         const bottom = document.querySelector('.page-bottom')!;
         trackedWindow.__pageBottomTransitions!.push({
-          name: getComputedStyle(bottom).viewTransitionName,
-          groupAnimation: getComputedStyle(
-            root,
-            '::view-transition-group(page-bottom)',
-          ).animationName,
           oldDisplay: getComputedStyle(
             root,
             '::view-transition-old(page-bottom)',
           ).display,
-          newAnimation: getComputedStyle(
-            root,
-            '::view-transition-new(page-bottom)',
-          ).animationName,
+          animations: document
+            .getAnimations()
+            .flatMap(animation =>
+              animation instanceof CSSAnimation &&
+              animation.effect instanceof KeyframeEffect &&
+              animation.effect.pseudoElement?.includes('page-bottom')
+                ? [
+                    // A fade-out without a forwards fill shows the snapshot
+                    // again in the transition's last frame
+                    `${animation.effect.pseudoElement} ${animation.animationName} ${animation.effect.getComputedTiming().fill}`,
+                  ]
+                : [],
+            )
+            .sort(),
           buttons: Array.from(
             bottom.querySelectorAll<HTMLButtonElement>('button'),
             button => ({
@@ -188,41 +180,83 @@ test('keeps appearance controls stationary and synchronized during navigation', 
       return transition;
     };
   });
+}
 
-  await page.locator('main.body a[href="/markdown.html"]').click();
-  await expect(page).toHaveURL(/markdown\.html/);
-  await expect(font).toBeEnabled();
-  await page.goBack();
-  await expect(page).toHaveURL(/index\.html/);
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (window as WindowWithPageBottomTransitions).__pageBottomTransitions,
-      ),
-    )
-    .toEqual([
-      {
-        name: 'page-bottom',
-        groupAnimation: 'none',
-        oldDisplay: 'none',
-        newAnimation: 'none',
-        buttons: [
-          { disabled: false, checked: 'true' },
-          { disabled: false, checked: 'true' },
-        ],
-      },
-      {
-        name: 'page-bottom',
-        groupAnimation: 'none',
-        oldDisplay: 'none',
-        newAnimation: 'none',
-        buttons: [
-          { disabled: false, checked: 'true' },
-          { disabled: false, checked: 'true' },
-        ],
-      },
-    ]);
+async function pageBottomTransitionCount(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      (window as WindowWithPageBottomTransitions).__pageBottomTransitions
+        ?.length ?? 0,
+  );
+}
+
+async function clickInjectedLink(page: Page, href: string): Promise<void> {
+  await page.locator('.page-content').evaluate((content, href) => {
+    const link = document.createElement('a');
+    link.href = href;
+    link.setAttribute('data-tada-page', '');
+    link.id = 'page-layout-test-link';
+    link.textContent = 'Injected link';
+    content.prepend(link);
+  }, href);
+  // A real click would scroll the link into view; dispatch it in place
+  await page.locator('#page-layout-test-link').dispatchEvent('click');
+}
+
+test('keeps appearance controls stationary while on screen and fades them in or out of view', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto('/layout-short.html');
+  const font = page.getByRole('switch', { name: 'Use serif fonts' });
+  const contrast = page.getByRole('switch', { name: 'Use high contrast' });
+  await font.click();
+  await expect(font).toHaveAttribute('aria-checked', 'true');
+  await contrast.click();
+  await expect(contrast).toHaveAttribute('aria-checked', 'true');
+  await trackPageBottomTransitions(page);
+
+  const navigations: [() => Promise<void>, RegExp][] = [
+    // On screen on both pages, but the TOC column moves the group sideways
+    [
+      () => clickInjectedLink(page, '/layout-short-toc.html'),
+      /layout-short-toc\.html/,
+    ],
+    // On screen only on the old page
+    [() => clickInjectedLink(page, '/layout-long.html'), /layout-long\.html/],
+    // On screen only on the new page
+    [async () => void (await page.goBack()), /layout-short-toc\.html/],
+    [async () => void (await page.goBack()), /layout-short\.html/],
+  ];
+  for (const [index, [navigate, url]] of navigations.entries()) {
+    await navigate();
+    await expect(page).toHaveURL(url);
+    await expect.poll(() => pageBottomTransitionCount(page)).toBe(index + 1);
+    await expect(font).toBeEnabled();
+  }
+
+  const buttons = [
+    { disabled: false, checked: 'true' },
+    { disabled: false, checked: 'true' },
+  ];
+  const stationary = { oldDisplay: 'none', animations: [], buttons };
+  const leaving = {
+    oldDisplay: 'block',
+    animations: ['::view-transition-old(page-bottom) page-fade-out both'],
+    buttons,
+  };
+  const entering = {
+    // There is no old snapshot to style
+    oldDisplay: expect.any(String),
+    animations: ['::view-transition-new(page-bottom) page-fade-in both'],
+    buttons,
+  };
+  expect(
+    await page.evaluate(
+      () => (window as WindowWithPageBottomTransitions).__pageBottomTransitions,
+    ),
+  ).toEqual([stationary, leaving, entering, stationary]);
   await font.click();
   await expect(font).toHaveAttribute('aria-checked', 'false');
   await contrast.click();

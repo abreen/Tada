@@ -105,12 +105,10 @@ html.navigation-loading * {
   mix-blend-mode: normal;
 }
 
-// The footer and appearance controls get their own stationary layer. Show only
-// the incoming snapshot so disabled defaults and stale hover states cannot blend.
-.page-bottom {
-  view-transition-name: page-bottom;
-}
-
+// The footer and appearance controls get their own layer while they are in the
+// viewport. view-transition-name is set via inline style by the navigator. On
+// screen on both pages, the layer stays put and shows only the incoming
+// snapshot so disabled defaults and stale hover states cannot blend.
 ::view-transition-group(page-bottom),
 ::view-transition-old(page-bottom),
 ::view-transition-new(page-bottom) {
@@ -123,6 +121,19 @@ html.navigation-loading * {
 
 ::view-transition-new(page-bottom) {
   mix-blend-mode: normal;
+}
+
+// On screen on only one page, such as between a short page and the top of a
+// long page: fade out or in where they are, in step with the page. Fill both
+// ways, like the UA default, so the faded-out snapshot cannot reappear in the
+// transition's last frame.
+::view-transition-old(page-bottom):only-child {
+  display: block;
+  animation: page-fade-out $duration ease-in both;
+}
+
+::view-transition-new(page-bottom):only-child {
+  animation: page-fade-in $duration ease-out both;
 }
 
 // Forward navigation: old content slides left, new content slides in from right

@@ -21,12 +21,14 @@ maximum content width apply only to screens: printed output hides the TOC and
 gives the page heading and body the full printable width, with no empty TOC
 column or centering margins.
 
-During client-side navigation, the group uses a stationary View Transition
-layer showing only the incoming snapshot. Its appearance controls are
-synchronized before that snapshot is captured, preventing disabled/default
-states from flashing. If navigation changes the group's layout position
-(for example, between a short and long page), it takes its destination position
-without an animated slide or resize.
+During client-side navigation, the group uses its own View Transition layer.
+Its appearance controls are synchronized before the incoming snapshot is
+captured, preventing disabled/default states from flashing. When the group is
+on screen on both pages, the layer is stationary and shows only the incoming
+snapshot at its destination position, without an animated slide or resize.
+When it is on screen on only one page (for example, between a short page and
+the top of a long page), it fades out or in where it is (see
+[Client-Side Navigation](client-side-navigation.md)).
 
 Positioning uses CSS and works with JavaScript disabled. Appearance switches
 remain disabled until mounted. The entire bottom group is hidden in printed

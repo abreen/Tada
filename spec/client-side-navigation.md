@@ -56,9 +56,15 @@ adopts the destination's page title and shows the title for the destination's
 scroll position without rolling (see [Header Title](header-title.md)); any
 change crossfades over the same 150ms as the page heading.
 
-The footer and appearance-picker group uses its own named `page-bottom`
-transition layer. It does not slide, crossfade, or interpolate its bounds;
-only the incoming snapshot is shown at its destination layout position.
+The footer and appearance-picker group gets its own named `page-bottom`
+transition layer on each page where it is in the viewport; like the heading
+parts, the navigator sets the name via inline style. The layer never slides
+with the page or interpolates its bounds. When the group is on screen on both
+pages, the layer does not crossfade; only the incoming snapshot is shown at its
+destination layout position, so two copies are never visible at once. When it
+is on screen on only one page, such as between a short page and the top of a
+long page, that page's snapshot fades out or in where it is, with the same
+150ms `ease-in` and `ease-out` fades as the page.
 Appearance pickers mount synchronously during the content swap, before the
 browser captures that snapshot, so enabled states and visitor preferences
 do not flash back to the build-time defaults. Other per-page components mount
