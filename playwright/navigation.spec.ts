@@ -203,7 +203,9 @@ test.describe('responsive header layout', () => {
     await page.setViewportSize({ width: 348, height: 800 });
     await page.goto('/lectures/01/Rectangle.java.html');
     await emulateSearchDisabled(page);
-    await page.evaluate(() => window.scrollTo({ top: 700 }));
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.documentElement.scrollHeight }),
+    );
 
     const title = page.locator('header .header-title');
     const backToTop = page.locator('header a', { hasText: 'Back to top' });

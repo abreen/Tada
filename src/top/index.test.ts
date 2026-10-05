@@ -36,6 +36,38 @@ function create(html = '', url = 'http://localhost/') {
   return dom.window;
 }
 
+type TestWindow = ReturnType<typeof create>;
+
+const VIEWPORT_HEIGHT = 800;
+
+function setPageSize(
+  win: TestWindow,
+  pageHeight: number,
+  viewportHeight = VIEWPORT_HEIGHT,
+) {
+  Object.defineProperty(win, 'innerHeight', {
+    value: viewportHeight,
+    configurable: true,
+  });
+  Object.defineProperty(win.document.documentElement, 'scrollHeight', {
+    value: pageHeight,
+    configurable: true,
+  });
+}
+
+function scrollTo(win: TestWindow, y: number) {
+  Object.defineProperty(win, 'scrollY', { value: y, configurable: true });
+  win.dispatchEvent(new win.Event('scroll'));
+  // debounce is 50ms
+  jest.advanceTimersByTime(50);
+}
+
+function isVisible(win: TestWindow) {
+  return win.document
+    .querySelector('a.button')!
+    .classList.contains('is-visible');
+}
+
 describe('top', () => {
   test('creates a back-to-top link in the body', () => {
     const win = create();
@@ -72,39 +104,73 @@ describe('top', () => {
     cleanup!();
   });
 
-  test('shows link when scrolled past threshold', () => {
+  test('shows link when scrolled past 1.5 viewports on a long page', () => {
     jest.useFakeTimers();
     const win = create();
+    setPageSize(win, 3 * VIEWPORT_HEIGHT);
     mount(win);
 
     const link = win.document.querySelector('a.button') as HTMLElement;
-    expect(link.classList.contains('is-visible')).toBe(false);
+    scrollTo(win, 1.5 * VIEWPORT_HEIGHT);
+    expect(isVisible(win)).toBe(false);
 
-    Object.defineProperty(win, 'scrollY', { value: 300, writable: true });
-    win.dispatchEvent(new win.Event('scroll'));
-
-    // debounce is 50ms
-    jest.advanceTimersByTime(50);
-
+    scrollTo(win, 1.5 * VIEWPORT_HEIGHT + 1);
     expect(link.classList.contains('is-visible')).toBe(true);
     expect(link.getAttribute('tabindex')).toBe('0');
+  });
+
+  test('uses 25% of the scrollable distance on very long pages', () => {
+    jest.useFakeTimers();
+    const win = create();
+    // Scrollable distance is 20 viewports; 25% of it is 5 viewports
+    setPageSize(win, 21 * VIEWPORT_HEIGHT);
+    mount(win);
+
+    scrollTo(win, 5 * VIEWPORT_HEIGHT);
+    expect(isVisible(win)).toBe(false);
+
+    scrollTo(win, 5 * VIEWPORT_HEIGHT + 1);
+    expect(isVisible(win)).toBe(true);
+  });
+
+  test('never shows link on pages shorter than 3 viewports', () => {
+    jest.useFakeTimers();
+    const win = create();
+    setPageSize(win, 3 * VIEWPORT_HEIGHT - 1);
+    mount(win);
+
+    scrollTo(win, 2 * VIEWPORT_HEIGHT - 1);
+    expect(isVisible(win)).toBe(false);
+  });
+
+  test('recalculates visibility on resize', () => {
+    jest.useFakeTimers();
+    const win = create();
+    setPageSize(win, 3 * VIEWPORT_HEIGHT);
+    mount(win);
+
+    scrollTo(win, 2 * VIEWPORT_HEIGHT);
+    expect(isVisible(win)).toBe(true);
+
+    // A taller viewport makes the same page too short
+    setPageSize(win, 3 * VIEWPORT_HEIGHT, 2 * VIEWPORT_HEIGHT);
+    win.dispatchEvent(new win.Event('resize'));
+    jest.advanceTimersByTime(50);
+    expect(isVisible(win)).toBe(false);
   });
 
   test('hides link when scrolled back to top', () => {
     jest.useFakeTimers();
     const win = create();
+    setPageSize(win, 3 * VIEWPORT_HEIGHT);
     mount(win);
 
     const link = win.document.querySelector('a.button') as HTMLElement;
 
-    Object.defineProperty(win, 'scrollY', { value: 300, writable: true });
-    win.dispatchEvent(new win.Event('scroll'));
-    jest.advanceTimersByTime(50);
+    scrollTo(win, 2 * VIEWPORT_HEIGHT);
     expect(link.classList.contains('is-visible')).toBe(true);
 
-    Object.defineProperty(win, 'scrollY', { value: 0, writable: true });
-    win.dispatchEvent(new win.Event('scroll'));
-    jest.advanceTimersByTime(50);
+    scrollTo(win, 0);
     expect(link.classList.contains('is-visible')).toBe(false);
     expect(link.getAttribute('tabindex')).toBe('-1');
   });
