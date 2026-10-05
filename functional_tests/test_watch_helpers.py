@@ -1,4 +1,7 @@
 import os
+import shutil
+import socket
+import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -73,6 +76,36 @@ def test_no_rebuild_accepts_unchanged_snapshot(tmp_path):
     watch, output, _ = completed_rebuild(tmp_path)
 
     watch.assert_no_rebuild(output, watch.snapshot(output), timeout_sec=0.1)
+
+
+def test_watch_instances_avoid_port_reservation_races(site_dir, tmp_path, monkeypatch):
+    second_site = tmp_path / 'second-site'
+    shutil.copytree(site_dir, second_site)
+    watchers = []
+
+    with socket.socket() as reserved:
+        reserved.bind(('127.0.0.1', 0))
+        reserved.listen()
+        reserved_port = reserved.getsockname()[1]
+        # Reproduce another process claiming the port after a free-port probe.
+        monkeypatch.setattr(
+            watch_helpers, 'get_free_ports', lambda n: [reserved_port], raising=False
+        )
+        try:
+            for site in (site_dir, second_site):
+                watch = WatchProcess(site)
+                watchers.append(watch)
+                watch.wait_for_initial_build()
+                with urllib.request.urlopen(
+                    f'http://localhost:{watch.http_port}/index.html', timeout=5
+                ) as response:
+                    assert response.status == 200
+
+            assert watchers[0].http_port != watchers[1].http_port
+            assert all(watch.http_port != reserved_port for watch in watchers)
+        finally:
+            for watch in watchers:
+                watch.stop()
 
 
 def test_timeout_includes_watch_process_diagnostics(tmp_path, monkeypatch):

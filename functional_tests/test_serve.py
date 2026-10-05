@@ -1,4 +1,6 @@
 import http.client
+import re
+import socket
 import subprocess
 import time
 import urllib.error
@@ -8,7 +10,6 @@ import pytest
 from conftest import (
     PACKAGE_DIR,
     _bun_command,
-    get_free_ports,
     process_group_popen_kwargs,
     terminate_process_group,
 )
@@ -16,39 +17,70 @@ from conftest import (
 TADA_BIN = PACKAGE_DIR / 'bin' / 'tada.ts'
 
 
+def test_serve_instances_avoid_port_reservation_races(built_dev_site, tmp_path, monkeypatch):
+    servers = []
+    with socket.socket() as reserved:
+        reserved.bind(('127.0.0.1', 0))
+        reserved.listen()
+        reserved_port = reserved.getsockname()[1]
+        monkeypatch.setattr(f'{__name__}.get_free_ports', lambda n: [reserved_port], raising=False)
+        try:
+            ports = []
+            for index in range(2):
+                logs = tmp_path / str(index)
+                logs.mkdir()
+                server = TestServe.server.__wrapped__(TestServe(), built_dev_site, logs)
+                servers.append(server)
+                _, port = next(server)
+                ports.append(port)
+            assert ports[0] != ports[1]
+            assert reserved_port not in ports
+        finally:
+            for server in servers:
+                server.close()
+
+
 class TestServe:
     """Tests for the tada serve command."""
 
     @pytest.fixture
-    def server(self, built_dev_site):
-        """Start tada serve on a free port, yield (site_dir, port), then kill."""
-        port = get_free_ports(1)[0]
-        proc = subprocess.Popen(
-            _bun_command('serve', '--port', str(port)),
-            cwd=str(built_dev_site),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            **process_group_popen_kwargs(),
-        )
-
-        # Wait for server to be ready (poll with short requests)
-        url = f'http://localhost:{port}/index.html'
-        deadline = time.monotonic() + 10
-        ready = False
-        while time.monotonic() < deadline:
+    def server(self, built_dev_site, tmp_path):
+        """Start tada serve on a kernel-assigned port, then always stop it."""
+        log_path = tmp_path / 'serve.log'
+        with log_path.open('w') as output:
+            proc = subprocess.Popen(
+                _bun_command('serve', '--port', '0'),
+                cwd=str(built_dev_site),
+                stdout=output,
+                stderr=subprocess.STDOUT,
+                **process_group_popen_kwargs(),
+            )
             try:
-                urllib.request.urlopen(url, timeout=1)
-                ready = True
-                break
-            except (urllib.error.URLError, ConnectionError, OSError):
-                time.sleep(0.1)
+                deadline = time.monotonic() + 10
+                ready = False
+                while time.monotonic() < deadline:
+                    log = log_path.read_text(encoding='utf-8', errors='replace')
+                    assert proc.poll() is None, f'Serve process exited early:\n{log}'
+                    match = re.search(r'http://localhost:(\d+)/index\.html', log)
+                    if match:
+                        port = int(match.group(1))
+                        try:
+                            with urllib.request.urlopen(
+                                f'http://localhost:{port}/index.html', timeout=1
+                            ):
+                                ready = True
+                                break
+                        except (urllib.error.URLError, ConnectionError, OSError):
+                            pass
+                    time.sleep(0.1)
 
-        assert ready, 'Server did not become ready within 10 seconds'
-
-        yield built_dev_site, port
-
-        terminate_process_group(proc)
+                assert ready, (
+                    'Server did not become ready within 10 seconds:\n'
+                    + log_path.read_text(encoding='utf-8', errors='replace')
+                )
+                yield built_dev_site, port
+            finally:
+                terminate_process_group(proc)
 
     def test_serves_index_html(self, server):
         site_dir, port = server

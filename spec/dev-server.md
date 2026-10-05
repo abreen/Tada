@@ -1,7 +1,9 @@
 # Development Server
 
 Tada includes a static file server that serves the contents of `dist/`. The
-default port is 8080 and is configurable.
+default port is 8080 and is configurable. Use `--port 0` with `tada serve` or
+`tada watch` to let the operating system assign an available port when the
+server binds. The startup message reports the assigned port.
 
 The server decodes URLs, prevents path traversal, and returns appropriate HTTP
 status codes for missing files and errors. It can be run independently or is

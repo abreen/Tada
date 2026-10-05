@@ -7,7 +7,6 @@ from stat import S_ISREG
 import pytest
 from conftest import (
     _bun_command,
-    get_free_ports,
     process_group_popen_kwargs,
     terminate_process_group,
 )
@@ -43,14 +42,13 @@ class WatchProcess:
         self.dist_dir = site_dir / 'dist'
         self.stdout_log_path = site_dir / 'watch_stdout.log'
         self.stderr_log_path = site_dir / 'watch_stderr.log'
-        self.http_port = get_free_ports(1)[0]
         self._stdout_file = open(self.stdout_log_path, 'w')
         self._stderr_file = open(self.stderr_log_path, 'w')
         self.proc = subprocess.Popen(
             _bun_command(
                 'watch',
                 '--port',
-                str(self.http_port),
+                '0',
             ),
             cwd=str(site_dir),
             stdout=self._stdout_file,
@@ -58,6 +56,16 @@ class WatchProcess:
             **process_group_popen_kwargs(),
         )
         self._stdout_cursor = 0
+
+    @property
+    def http_port(self) -> int:
+        """Read the port atomically assigned when the watch server binds."""
+        match = re.search(
+            r'Dev server: http://localhost:(\d+)/index\.html', self._clean(self._stdout_text())
+        )
+        if match is None:
+            raise RuntimeError('Watch server has not announced its port')
+        return int(match.group(1))
 
     def _file_snapshot(self, path: Path):
         """Return a lightweight snapshot for change detection."""

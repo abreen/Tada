@@ -50,7 +50,7 @@ function parsePortArg(name: string): number | undefined {
   const idx = process.argv.indexOf(name);
   if (idx !== -1 && process.argv[idx + 1]) {
     const val = parseInt(process.argv[idx + 1], 10);
-    if (val > 0 && val < 65536) {
+    if (val >= 0 && val < 65536) {
       return val;
     }
   }
