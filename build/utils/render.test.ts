@@ -1,4 +1,12 @@
-import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  test,
+} from 'bun:test';
 import path from 'path';
 import { createFsModuleMock } from '../test-helpers';
 import { DEFAULT_FONT_PRELOAD_FILES } from '../generate-fonts';
@@ -8,6 +16,7 @@ import { initHighlighter } from './shiki-highlighter';
 const files = new Map<string, string>();
 let renderedPageVariables: Record<string, unknown> = {};
 let mockedCodeHtml = '<div class="code-body">rendered code</div>';
+const originalCode = { ...(await import('./code')) };
 
 function resolvePath(filePath: string): string {
   return path.resolve(filePath);
@@ -65,6 +74,10 @@ mock.module('./code', () => ({
     return lines;
   },
 }));
+
+afterAll(() => {
+  mock.module('./code', () => originalCode);
+});
 
 let preparePageTemplateHtml: typeof import('./render').preparePageTemplateHtml;
 let renderCodePageAsset: typeof import('./render').renderCodePageAsset;
