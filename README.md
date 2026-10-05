@@ -5,37 +5,62 @@
 
 A static site generator. The successor to Presto.
 
+<figure>
+  <a href="https://abreen.io/Tada/markdown.html" target="_blank">
+    <img src=".github/screenshot.png" alt="Four screenshots of the Tada example site">
+  </a>
+  <figcaption>
+    A screenshot of the Tada example site in:
+    <ul>
+      <li>light mode</li>
+      <li>dark mode, high contrast</li>
+      <li>light mode, high contrast, & serif fonts</li>
+      <li>dark mode, standard contrast</li>
+    </ul>
+    </figcaption>
+</figure>
+
+[Visit the example site ↗](https://abreen.io/Tada/index.html)
+
+
 ## Features
 
-- Modern design (light & dark following system, floating header, styled lists)
-- Fast client-side navigation
-- Detects a new version of the current page and allows the user to reload
-- Clickable/linkable landmarks (headings, deflists, alert boxes)
-- Dynamic table of contents
-  * Floats on the side of the screen when window is large enough
-  * Renders headings, alert boxes, and `<hr>` elements
-  * Highlights the heading currently being viewed
+- Modern design
+  * Light & dark mode following system, customizable tint
+  * Standard & high contrast picker
+  * Sans-serif & serif font picker
+  * Plus, provide your own web fonts (with many tuning options)
+
+- LaTeX math support
+  * Provided by [KaTeX][katex]
+  * Rendered completely at build time (zero load time on the client)
+
+- Automatically generated favicon
+  * Text, color, font and font weight taken from config file
+  * Or, provide your own favicon file
+
+- High quality output and ergonomic authoring
+  * Exhaustive internal link validation (broken links fail the build)
+  * External link handling (special visual treatment for external links,
+    no need to type `target="_blank"`)
+  * Internal links automatically prefixed with base path, if specified (no
+    need to keep writing the same URL prefix everywhere)
+
 - Built-in search powered by [Pagefind][pagefind]
   * Only pages in `content/` reachable from `/index.html` are indexed
+  * If `mutool` is installed, text inside PDFs in `content/` is indexed
+
 - Generated HTML pages for source code
   * Automatic code highlighting, clickable line numbers
   * Dynamic table of contents for each method/function
   * Converts new Markdown comment syntax ([added in Java 23][jep467]) to HTML
   * Indexed by Pagefind (classes, interfaces, methods, and fields)
-- Interactive execution traces via `renderTrace()`
-  * Supports Java and Python source files
-  * Renders step-by-step source highlighting, output, and memory diagrams
-- Slides mode: separate content by `---` and present sections as full-screen slides
-  * Click icon near slide titles to start presenting at that slide
-  * Right-click in presentation mode to annotate
-  * Hold Shift while annotating to erase
-- PDF files are copied into `dist/`
-  * Text of each PDF page is extracted using `mutool` (if present) and indexed
-- External link handling (special visual treatment for external links)
-- Internal link validation at build time (broken links fail the build)
-- Internal links automatically prefixed with base path, if specified
-- Time zone chooser (automatically adjusts `<datetime>` elements)
-- LaTeX math rendered at build time via [KaTeX][katex]
+
+- Dynamic table of contents
+  * Floats on the side of the screen when window is large enough
+  * Renders headings, alert boxes, and `<hr>` elements
+  * Highlights the heading currently being viewed
+
 - Extended Markdown syntax
   * `<<< details ... <<<` renders a collapsible box
   * `::: section ... :::` renders a special section with a fancy background
@@ -45,9 +70,26 @@ A static site generator. The successor to Presto.
   * `+++ ... +++ ... +++` renders a two-column layout
   * Special heading subtitles with `## Heading # A subtitle here`
   * `{{{ _partial.md }}}` syntax for including partials
-- Custom header logo from an image in `public/`
-- Automatically generated favicon or custom ICO from `public/`
-  * Text, color, font and font weight taken from config file
+
+- Extremely fast client-side navigation
+  * A miniature SPA without the bloat of a framework
+  * Highly efficient, thoroughly covered by cross-platform browser tests
+  * Also detects a new version of the current page and supplies a reload button
+
+### Experimental features
+
+- Interactive execution traces via `renderTrace()`
+  * Supports Java and Python source files
+  * Renders step-by-step source highlighting, output, and memory diagrams
+
+- Slides mode: separate content by `---` and present sections as full-screen slides
+  * Click icon near slide titles to start presenting at that slide
+  * Right-click in presentation mode to annotate
+  * Hold Shift while annotating to erase
+
+
+
+- Time zone chooser (automatically adjusts `<datetime>` elements)
 
 ## Prerequisites
 
