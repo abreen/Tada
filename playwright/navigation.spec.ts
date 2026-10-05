@@ -324,6 +324,37 @@ test.describe('header menu control', () => {
     await expect(page).toHaveURL(originalUrl);
   });
 
+  // Safari skips links on Tab unless "Press Tab to highlight each item" is
+  // enabled; this file runs only in Chromium.
+  for (const key of ['Enter', 'Space']) {
+    test(`opens with ${key} and moves through the links with Tab`, async ({
+      page,
+    }) => {
+      await page.goto('/index.html');
+      await waitForClientMount(page);
+      const details = page.locator('header details');
+      const summary = details.locator('summary');
+      const links = details.locator('nav a[href]');
+
+      await summary.focus();
+      await page.keyboard.press(key);
+      await expect(details).toHaveAttribute('open', '');
+      await expect(links.first()).toBeVisible();
+
+      await page.keyboard.press('Tab');
+      await expect(links.nth(0)).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(links.nth(1)).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await expect(links.nth(0)).toBeFocused();
+      await expect(details).toHaveAttribute('open', '');
+
+      await page.keyboard.press('Escape');
+      await expect(details).not.toHaveAttribute('open', '');
+      await expect(summary).toBeFocused();
+    });
+  }
+
   test('morphs the hamburger strokes into a close symbol', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.goto('/index.html');
