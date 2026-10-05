@@ -16,9 +16,13 @@ let currentAbortController: AbortController | null = null;
 let historyIndex = 0;
 let currentPath = '';
 let applyingFragment = false;
+let fragmentTargetRequest = 0;
 
 const scrollByIndex = new Map<number, number>();
 const scrollByLocation = new Map<string, number>();
+// Stylesheets the navigator added that have not loaded or failed yet. Those in
+// the initial document have settled before the deferred client script runs.
+const pendingStylesheets = new Map<Element, Promise<void>>();
 
 type Direction = 'forward' | 'back';
 
@@ -67,7 +71,19 @@ function updateHead(document: Document, newDoc: Document): void {
 
   for (const link of newDoc.querySelectorAll('link[rel="stylesheet"]')) {
     if (!existingHrefs.has(link.getAttribute('href'))) {
-      document.head.appendChild(link.cloneNode(true));
+      const clone = link.cloneNode(true) as Element;
+      pendingStylesheets.set(
+        clone,
+        new Promise(resolve => {
+          const settle = () => {
+            pendingStylesheets.delete(clone);
+            resolve();
+          };
+          clone.addEventListener('load', settle, { once: true });
+          clone.addEventListener('error', settle, { once: true });
+        }),
+      );
+      document.head.appendChild(clone);
     }
   }
 }
@@ -225,7 +241,28 @@ export function isApplyingFragment(): boolean {
 // content loses it in every browser. A fragment navigation sets it in every
 // browser, but it can reset the entry's history state and scroll position, so
 // restore both.
+//
+// WebKit defers fragment scrolling until pending stylesheets load, which would
+// later move the page away from the restored scroll position. Wait for them
+// first, and skip the update if another request or navigation replaced it.
 export function applyFragmentTarget(window: Window): void {
+  const request = ++fragmentTargetRequest;
+  const { href } = window.location;
+  const apply = (): void => {
+    if (request !== fragmentTargetRequest || window.location.href !== href) {
+      return;
+    }
+    const pending = Array.from(pendingStylesheets.values());
+    if (pending.length > 0) {
+      void Promise.all(pending).then(apply);
+      return;
+    }
+    replaceFragmentTarget(window);
+  };
+  apply();
+}
+
+function replaceFragmentTarget(window: Window): void {
   const { document, history, location } = window;
   if (
     document.querySelector(':target') === getHashTarget(document, location.hash)
@@ -236,11 +273,14 @@ export function applyFragmentTarget(window: Window): void {
   const state = history.state;
   const { scrollX, scrollY } = window;
   applyingFragment = true;
-  globals.replaceLocation(
-    window,
-    location.pathname + location.search + (location.hash || '#'),
-  );
-  applyingFragment = false;
+  try {
+    globals.replaceLocation(
+      window,
+      location.pathname + location.search + (location.hash || '#'),
+    );
+  } finally {
+    applyingFragment = false;
+  }
   history.replaceState(state, '', href);
   window.scrollTo({ left: scrollX, top: scrollY });
 }
@@ -356,9 +396,8 @@ export async function navigateToUrl(
     teardownPerPageComponents();
     swapContent(document, newDoc);
     if (!pushHistory) {
-      // Restore the entry's :target before updateHead adds stylesheets. WebKit
-      // defers fragment scrolling until they load, which would move the page
-      // away from the entry's restored scroll position.
+      // Restore the entry's :target before updateHead adds stylesheets, so it
+      // applies right away unless an earlier stylesheet is still loading
       applyFragmentTarget(window);
     }
     updateHead(document, newDoc);

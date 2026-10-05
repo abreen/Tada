@@ -131,3 +131,71 @@ test('page update refresh keeps the line target', async ({ page }) => {
   await expect(page.locator('#L30[data-before-refresh]')).toHaveCount(0);
   await expectRestoredLine(page, savedScroll);
 });
+
+test('back across pages keeps the saved scroll while an earlier stylesheet loads', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(`${CODE_PAGE}#L30`);
+  await waitForClientMount(page);
+  await expect(page.locator(':target')).toHaveId('L30');
+  await page.evaluate(() => window.scrollBy({ top: 200 }));
+  const savedScroll = await scrollY(page);
+
+  // The other page starts loading a stylesheet that is still pending on Back
+  let releaseStylesheet = () => {};
+  const stylesheetReleased = new Promise<void>(resolve => {
+    releaseStylesheet = resolve;
+  });
+  await page.route('**/markdown.html', async route => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace(
+      '</head>',
+      '<link href="/slow.css" rel="stylesheet"></head>',
+    );
+    await route.fulfill({ response, body });
+  });
+  await page.route('**/slow.css', async route => {
+    await stylesheetReleased;
+    await route.fulfill({ contentType: 'text/css', body: '' });
+  });
+  await goToOtherPage(page);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/Rectangle\.java\.html#L30$/);
+  await expect.poll(() => scrollY(page)).toBeCloseTo(savedScroll, -1);
+  releaseStylesheet();
+  await expectRestoredLine(page, savedScroll);
+  // Let any scrolling that waited for the stylesheet run
+  await page.evaluate(
+    () =>
+      new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  expect(await scrollY(page)).toBeCloseTo(savedScroll, -1);
+});
+
+test('back across pages restores a legacy named anchor target', async ({
+  page,
+}) => {
+  await page.route(`**${CODE_PAGE}`, async route => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace(
+      '<pre',
+      '<a name="legacy-target">Legacy target</a><pre',
+    );
+    await route.fulfill({ response, body });
+  });
+  await page.goto(`${CODE_PAGE}#legacy-target`);
+  await waitForClientMount(page);
+  const target = page.locator(':target');
+  await expect(target).toHaveAttribute('name', 'legacy-target');
+
+  await goToOtherPage(page);
+  await expect(target).toHaveCount(0);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/Rectangle\.java\.html#legacy-target$/);
+  await expect(target).toHaveAttribute('name', 'legacy-target');
+});

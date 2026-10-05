@@ -99,9 +99,11 @@ swapped-in content never starts with a target. When `:target` does not match
 the URL fragment, the navigator replaces the entry with a fragment navigation
 (`#` when there is no fragment), then restores the entry's URL, history state,
 and scroll position. On the same page this runs after the browser finishes the
-traversal, so browsers that already updated `:target` are left alone. After a
-swap it runs before new stylesheets are added, because WebKit delays fragment
-scrolling until they load.
+traversal, so browsers that already updated `:target` are left alone. WebKit
+delays fragment scrolling until pending stylesheets load, so the navigator
+waits for stylesheets it added on earlier navigations to load first. After a
+swap it runs before new stylesheets are added. Like a document load, the target
+is the element with the fragment's ID, or else an `<a name>` anchor.
 
 ## When it falls back
 
