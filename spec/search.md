@@ -30,10 +30,11 @@ excluded from production build manifests
 
 ## Client-side search
 
-A search combobox in the site header queries the Pagefind index. Results show
-excerpts and support keyboard navigation. PDF results are grouped by document,
-with individual page numbers shown as sub-results sorted by page number.
-The combobox is rendered disabled and is enabled only after its client
+A search field in a search landmark in the site header queries the Pagefind
+index. Results are exposed in a live region as a regular list of links, with
+excerpts and keyboard navigation. PDF results are grouped by document, with
+individual page numbers shown as sub-results sorted by page number.
+The search field is rendered disabled and is enabled only after its client
 component has attached the search and keyboard-shortcut listeners. Without
 JavaScript it remains disabled.
 The complete search control, including its icon, is hidden at viewport widths
@@ -42,11 +43,11 @@ header. When it is hidden or search is disabled, the site title reclaims the
 unused header space.
 All matching top-level results and nested sub-results are rendered; the result
 count reflects the number of grouped top-level results.
-If the user opens or types into the combobox before Pagefind finishes loading,
-the results panel shows a loading state and reruns the current query once the
-index is ready. If initialization fails, a later focus or input change retries
-with a fresh module URL. Concurrent interactions share one pending load; only
-the latest query can publish results.
+If the user opens or types into the search field before Pagefind finishes
+loading, the results panel shows a loading state and reruns the current query
+once the index is ready. If initialization fails, a later focus or input change
+retries with a fresh module URL. Concurrent interactions share one pending
+load; only the latest query can publish results.
 
 When motion is enabled, the results panel fades, moves a short distance, and
 subtly scales as it appears and disappears. Its `aria-hidden`, `inert`, and
@@ -54,6 +55,10 @@ pointer-interaction states still change immediately; visitors who request
 reduced motion get the same immediate visual state change. When a search result
 starts page navigation, the panel closes immediately so its exit motion does
 not overlap the page View Transition.
+
+Pressing Escape while a result is focused dismisses the results and returns
+focus to the search field. Pressing Escape again returns focus to the element
+that was focused before the search field.
 
 After a page-update refresh completes, the client discards any loaded Pagefind
 instance and reloads it so later searches use the refreshed index.

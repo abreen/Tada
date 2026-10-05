@@ -698,7 +698,7 @@ test.describe('client-side navigation', () => {
     await setNavMarker(page);
 
     // Type a search query
-    const searchInput = page.locator('input[name="quick-search"]');
+    const searchInput = page.getByRole('searchbox', { name: 'Search' });
     await searchInput.focus();
     await searchInput.fill('markdown');
 
@@ -764,7 +764,6 @@ test.describe('client-side navigation', () => {
     const resultsContainer = page.locator('.results-container');
     await expect(resultsContainer).toHaveAttribute('aria-hidden', 'true');
     await expect(resultsContainer).toHaveAttribute('inert', '');
-    await expect(searchInput).toHaveAttribute('aria-expanded', 'false');
 
     // Should be SPA navigation (no full reload)
     const marker = await getNavMarker(page);
@@ -807,7 +806,6 @@ test.describe('client-side navigation', () => {
     const resultsContainer = page.locator('.results-container');
     await expect(resultsContainer).toHaveAttribute('aria-hidden', 'true');
     await expect(resultsContainer).toHaveAttribute('inert', '');
-    await expect(searchInput).toHaveAttribute('aria-expanded', 'false');
 
     // Search input should be cleared
     const value = await page.evaluate(() => {
@@ -848,7 +846,6 @@ test.describe('client-side navigation', () => {
     const resultsContainer = page.locator('.results-container');
     await expect(resultsContainer).toHaveAttribute('aria-hidden', 'true');
     await expect(resultsContainer).toHaveAttribute('inert', '');
-    await expect(searchInput).toHaveAttribute('aria-expanded', 'false');
 
     // Search input should be cleared
     const value = await page.evaluate(() => {
@@ -894,12 +891,12 @@ test.describe('client-side navigation', () => {
     await searchInput.fill('markdown');
     const results = page.locator('.results-container .results a');
     await expect(results.first()).toBeVisible({ timeout: 5000 });
+    await expect(
+      page.getByRole('list', { name: 'Search results' }),
+    ).toBeVisible();
 
     await page.keyboard.press('ArrowDown');
     await expect(results.first()).toBeFocused();
-    await expect(
-      page.locator('.results-container [role="option"]').first(),
-    ).toHaveAttribute('aria-selected', 'true');
 
     await page.keyboard.press('ArrowDown');
     await expect(results.nth(1)).toBeFocused();
@@ -908,7 +905,10 @@ test.describe('client-side navigation', () => {
     await page.keyboard.press('ArrowUp');
     await expect(searchInput).toBeFocused();
 
+    await page.keyboard.press('ArrowDown');
+    await expect(results.first()).toBeFocused();
     await page.keyboard.press('Escape');
+    await expect(searchInput).toBeFocused();
     const resultsContainer = page.locator('.results-container');
     await expect(resultsContainer).toHaveAttribute('aria-hidden', 'true');
     await expect(resultsContainer).toHaveAttribute('inert', '');

@@ -14,7 +14,7 @@ are in `src/util.ts`.
   title headings also get a presentation icon button
 - **Table of contents**: a floating sidebar highlighting the current section
   based on scroll position
-- **Search**: a combobox in the header querying the Pagefind index (see
+- **Search**: a search field in the header querying the Pagefind index (see
   [Search](search.md))
 - **Q&A toggle**: reveals answers in question-and-answer blocks on click and
   handles multiple choice selections

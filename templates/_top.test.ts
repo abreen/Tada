@@ -109,6 +109,28 @@ describe('_top.html template', () => {
     expect(html).not.toContain('previousElementSibling.disabled=false');
   });
 
+  test('renders a search landmark with native search input semantics', () => {
+    const html = renderTop('sans', 'standard', undefined, undefined, true);
+    const searchControls = html.match(
+      /<div\b[^>]*\bclass="search-controls"[^>]*>/,
+    )?.[0];
+    const searchInput = html.match(
+      /<input\b[^>]*\bname="quick-search"[^>]*>/,
+    )?.[0];
+
+    expect(searchControls).toContain('role="search"');
+    expect(searchInput).toContain('type="search"');
+    expect(searchInput).toContain('aria-label="Search"');
+    expect(searchInput).toContain('aria-controls="quick-search-results"');
+    expect(searchInput).not.toContain(' role=');
+    expect(searchInput).not.toContain('aria-haspopup');
+    expect(searchInput).not.toContain('aria-autocomplete');
+    expect(searchInput).not.toContain('aria-expanded');
+    expect(html).toMatch(
+      /<div\b[^>]*\bid="quick-search-results"[^>]*\bclass="results-container"/,
+    );
+  });
+
   test('renders sans and standard defaults without effective state attributes', () => {
     const html = renderTop('sans', 'standard');
     const openingTag = html.match(/<html[^>]*>/)?.[0];

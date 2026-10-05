@@ -94,25 +94,7 @@ async function doSearch(query: string, window: Window): Promise<SearchState> {
   return { totalResults: grouped.length, results: grouped };
 }
 
-function applyHighlight(
-  resultsContainer: HTMLElement,
-  focusedEl: HTMLElement | null,
-) {
-  const options = Array.from(
-    resultsContainer.querySelectorAll('[role="option"]'),
-  ) as HTMLElement[];
-  options.forEach(opt => {
-    const selected = focusedEl !== null && opt.contains(focusedEl);
-    opt.setAttribute('aria-selected', selected ? 'true' : 'false');
-  });
-}
-
-function render(
-  input: HTMLInputElement,
-  resultsContainer: HTMLElement,
-  state: State,
-  loading = false,
-) {
+function render(resultsContainer: HTMLElement, state: State, loading = false) {
   const doc = resultsContainer.ownerDocument;
 
   if (state.showResults) {
@@ -129,16 +111,10 @@ function render(
   }
 
   const ol = doc.createElement('ol');
-  ol.id = `${input.name}-results`;
-  ol.role = 'listbox';
-  ol.tabIndex = -1;
   ol.setAttribute('aria-label', 'Search results');
 
-  const totalVisible = state.results.length;
-
-  state.results.forEach((result, i) => {
+  state.results.forEach(result => {
     const a = doc.createElement('a');
-    a.id = `result-${i}`;
     a.className = 'result';
     a.href = result.url;
     const isGeneratedPage = Boolean(result.template);
@@ -148,7 +124,6 @@ function render(
     a.tabIndex = 0;
 
     const titleEl = doc.createElement('div');
-    titleEl.id = `title-${i}`;
     titleEl.className = 'title';
     if (result.template === 'code') {
       titleEl.classList.add('code-page');
@@ -166,12 +141,6 @@ function render(
     a.appendChild(excerpt);
 
     const li = doc.createElement('li');
-    li.id = `option-${i}`;
-    li.setAttribute('role', 'option');
-    li.setAttribute('aria-selected', 'false');
-    li.setAttribute('aria-setsize', String(totalVisible));
-    li.setAttribute('aria-posinset', String(i + 1));
-    li.setAttribute('aria-labelledby', `title-${i}`);
     li.appendChild(a);
 
     const subsToShow = result.subResults;
@@ -265,9 +234,6 @@ function render(
     resultsContainer.setAttribute('aria-hidden', 'true');
     resultsContainer.setAttribute('inert', '');
   }
-
-  input.setAttribute('aria-expanded', String(state.showResults));
-  input.setAttribute('aria-controls', ol.id);
 }
 
 export default (window: Window) => {
@@ -335,7 +301,7 @@ export default (window: Window) => {
         pagefindLoadGeneration += 1;
         console.log(`failed to load Pagefind: ${err}`);
         if (state.showResults) {
-          render(input!, resultsContainer, state, false);
+          render(resultsContainer, state, false);
         }
       }
       return false;
@@ -362,7 +328,7 @@ export default (window: Window) => {
 
   async function update(updateId: number) {
     if (state.showResults) {
-      render(input!, resultsContainer, state, true);
+      render(resultsContainer, state, true);
     }
     const query = state.value;
     if (!(await loadPagefind()) || updateId !== latestUpdateId) {
@@ -380,7 +346,7 @@ export default (window: Window) => {
     if (!state.showResults) {
       return;
     }
-    render(input!, resultsContainer, state, false);
+    render(resultsContainer, state, false);
   }
 
   function queueUpdate() {
@@ -402,7 +368,7 @@ export default (window: Window) => {
       .catch(err => {
         console.log(`failed to load Pagefind: ${err}`);
         if (state.showResults) {
-          render(input!, resultsContainer, state, false);
+          render(resultsContainer, state, false);
         }
       });
   }
@@ -418,7 +384,7 @@ export default (window: Window) => {
     const stalePagefind = pagefind;
     invalidatePagefind();
     if (state.showResults) {
-      render(input!, resultsContainer, state, true);
+      render(resultsContainer, state, true);
     }
     if (stalePagefind) {
       try {
@@ -434,7 +400,7 @@ export default (window: Window) => {
     reloadPagefindAfterPageUpdateRefresh().catch(err => {
       console.log(`failed to reload Pagefind: ${err}`);
       if (state.showResults) {
-        render(input!, resultsContainer, state, false);
+        render(resultsContainer, state, false);
       }
     });
   }
@@ -446,7 +412,7 @@ export default (window: Window) => {
       return;
     }
     state.showResults = false;
-    render(input!, resultsContainer, state);
+    render(resultsContainer, state);
   }
 
   function handleInput(e: Event) {
@@ -573,21 +539,9 @@ export default (window: Window) => {
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      hide();
       input!.focus();
+      hide();
     }
-  }
-
-  function handleResultsFocusIn(e: FocusEvent) {
-    applyHighlight(resultsContainer, e.target as HTMLElement);
-  }
-
-  function handleResultsFocusOut(e: FocusEvent) {
-    const related = e.relatedTarget as HTMLElement | null;
-    if (related && (resultsContainer.contains(related) || related === input)) {
-      return;
-    }
-    applyHighlight(resultsContainer, null);
   }
 
   function handleWindowPointerDown(e: PointerEvent) {
@@ -616,8 +570,6 @@ export default (window: Window) => {
   resultsContainer.addEventListener('pointerdown', handlePointerDown);
   resultsContainer.addEventListener('click', handleResultClick);
   resultsContainer.addEventListener('keydown', handleResultsKeyDown);
-  resultsContainer.addEventListener('focusin', handleResultsFocusIn);
-  resultsContainer.addEventListener('focusout', handleResultsFocusOut);
   window.addEventListener('pointerup', handleWindowPointerUp);
   window.addEventListener('pointerdown', handleWindowPointerDown);
   window.addEventListener('pointermove', handleWindowPointerMove);
@@ -637,8 +589,6 @@ export default (window: Window) => {
     window.removeEventListener('pointermove', handleWindowPointerMove);
     window.removeEventListener('pointerdown', handleWindowPointerDown);
     window.removeEventListener('pointerup', handleWindowPointerUp);
-    resultsContainer.removeEventListener('focusout', handleResultsFocusOut);
-    resultsContainer.removeEventListener('focusin', handleResultsFocusIn);
     resultsContainer.removeEventListener('keydown', handleResultsKeyDown);
     resultsContainer.removeEventListener('click', handleResultClick);
     resultsContainer.removeEventListener('pointerdown', handlePointerDown);

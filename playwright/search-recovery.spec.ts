@@ -41,7 +41,10 @@ for (const clearPendingQuery of [false, true]) {
     releaseRetry();
     await recovered;
     if (clearPendingQuery) {
-      await expect(input).toHaveAttribute('aria-expanded', 'false');
+      await expect(page.locator('.results-container')).toHaveAttribute(
+        'aria-hidden',
+        'true',
+      );
       await expect(page.locator('a.result')).toHaveCount(0);
       await input.fill('Markdown');
     }

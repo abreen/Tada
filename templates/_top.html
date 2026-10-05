@@ -192,20 +192,17 @@
       <div class="header-controls">
         <div id="to-top-container" class="to-top-container"></div>
         <% if (site.features.search) { %>
-        <div class="search-controls">
+        <div class="search-controls" role="search">
           <input type="search" class="search quick-search"
                  autocomplete="off" name="quick-search"
                  placeholder="Search"
-                 role="combobox"
-                 aria-haspopup="listbox"
-                 aria-autocomplete="list"
-                 aria-expanded="false"
+                 aria-label="Search"
                  aria-controls="quick-search-results"
                  disabled />
         </div>
         <% } %>
       </div>
-      <div class="results-container" role="region"
+      <div id="quick-search-results" class="results-container" role="region"
            aria-label="Search results"
            aria-live="polite" aria-hidden="true" inert>
         <div class="results" style="display:none"></div>
