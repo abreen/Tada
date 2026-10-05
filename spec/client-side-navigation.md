@@ -90,6 +90,19 @@ scrolls to the top without fetching the page again. Clearing a fragment adds a
 history entry so Back restores the previous fragment and scroll position;
 clicking the already fragment-free URL does not add a duplicate entry.
 
+Back/Forward and in-place refreshes keep `:target` matching the URL fragment,
+as a document load would, so a highlighted code line follows the URL. Two
+things can leave it stale. The navigator sets `history.scrollRestoration` to
+`manual` so it can restore scroll after swapping content, and WebKit then skips
+fragment processing when Back/Forward on the same page reaches an entry. And
+swapped-in content never starts with a target. When `:target` does not match
+the URL fragment, the navigator replaces the entry with a fragment navigation
+(`#` when there is no fragment), then restores the entry's URL, history state,
+and scroll position. On the same page this runs after the browser finishes the
+traversal, so browsers that already updated `:target` are left alone. After a
+swap it runs before new stylesheets are added, because WebKit delays fragment
+scrolling until they load.
+
 ## When it falls back
 
 If the fetch fails or returns a non-OK response, the navigator gives up

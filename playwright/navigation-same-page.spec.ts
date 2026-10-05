@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './test-fixtures';
+import { test, expect, waitForClientMount, type Page } from './test-fixtures';
 
 type WindowWithMountGate = Window & {
   __initialMountGate?: { held: boolean; release(): Promise<void> };
@@ -138,6 +138,65 @@ for (const withHash of [true, false]) {
     }
   });
 }
+
+test('history back to the URL without a fragment clears the line target', async ({
+  page,
+}) => {
+  await page.goto('/lectures/01/Rectangle.java.html');
+  await waitForClientMount(page);
+  // Start away from the top so restoring the entry's scroll is observable.
+  await page
+    .locator('#L30')
+    .evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(100);
+  const initialUrl = page.url();
+  const initialScroll = await page.evaluate(() => window.scrollY);
+
+  for (const line of [30, 40, 50]) {
+    await page.locator(`#L${line}`).click();
+    await expect(page).toHaveURL(new RegExp(`#L${line}$`));
+    await expect(page.locator(':target')).toHaveId(`L${line}`);
+  }
+  for (const line of [40, 30]) {
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`#L${line}$`));
+    await expect(page.locator(':target')).toHaveId(`L${line}`);
+  }
+
+  await page.goBack();
+  await expect(page).toHaveURL(initialUrl);
+  await expect(page.locator(':target')).toHaveCount(0);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(initialScroll, -1);
+
+  await page.goForward();
+  await expect(page).toHaveURL(/#L30$/);
+  await expect(page.locator(':target')).toHaveId('L30');
+});
+
+test('history back to the initial fragment restores its line target', async ({
+  page,
+}) => {
+  await page.goto('/lectures/01/Rectangle.java.html#L30');
+  await waitForClientMount(page);
+  await expect(page.locator(':target')).toHaveId('L30');
+  const initialUrl = page.url();
+  const initialScroll = await page.evaluate(() => window.scrollY);
+
+  await page.locator('#L40').click();
+  await expect(page).toHaveURL(/#L40$/);
+  await expect(page.locator(':target')).toHaveId('L40');
+
+  await page.goBack();
+  await expect(page).toHaveURL(initialUrl);
+  await expect(page.locator(':target')).toHaveId('L30');
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(initialScroll, -1);
+});
 
 test('late startup keeps the scroll position restored by fragment history', async ({
   page,

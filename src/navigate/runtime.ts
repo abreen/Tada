@@ -5,6 +5,7 @@ import {
   teardownPerPageComponents,
 } from './lifecycle';
 import { globals } from '../globals';
+import { getHashTarget } from '../hash-target';
 import { swapHeaderTitle } from '../header';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
@@ -14,6 +15,7 @@ const LOADING_CURSOR_DELAY = 400;
 let currentAbortController: AbortController | null = null;
 let historyIndex = 0;
 let currentPath = '';
+let applyingFragment = false;
 
 const scrollByIndex = new Map<number, number>();
 const scrollByLocation = new Map<string, number>();
@@ -213,6 +215,36 @@ export function getSavedLocationScroll(
   return scrollByLocation.get(locationKey);
 }
 
+// Browsers fire popstate synchronously during applyFragmentTarget
+export function isApplyingFragment(): boolean {
+  return applyingFragment;
+}
+
+// Restoring a history entry can leave :target stale. With manual scroll
+// restoration, WebKit skips fragment processing on Back/Forward, and swapped
+// content loses it in every browser. A fragment navigation sets it in every
+// browser, but it can reset the entry's history state and scroll position, so
+// restore both.
+export function applyFragmentTarget(window: Window): void {
+  const { document, history, location } = window;
+  if (
+    document.querySelector(':target') === getHashTarget(document, location.hash)
+  ) {
+    return;
+  }
+  const { href } = location;
+  const state = history.state;
+  const { scrollX, scrollY } = window;
+  applyingFragment = true;
+  globals.replaceLocation(
+    window,
+    location.pathname + location.search + (location.hash || '#'),
+  );
+  applyingFragment = false;
+  history.replaceState(state, '', href);
+  window.scrollTo({ left: scrollX, top: scrollY });
+}
+
 export async function navigateToUrl(
   window: Window,
   options: NavigationOptions,
@@ -323,6 +355,12 @@ export async function navigateToUrl(
 
     teardownPerPageComponents();
     swapContent(document, newDoc);
+    if (!pushHistory) {
+      // Restore the entry's :target before updateHead adds stylesheets. WebKit
+      // defers fragment scrolling until they load, which would move the page
+      // away from the entry's restored scroll position.
+      applyFragmentTarget(window);
+    }
     updateHead(document, newDoc);
     mountAppearancePickerForPage(window);
     currentPath = parsed.pathname + parsed.search;

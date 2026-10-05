@@ -1,5 +1,6 @@
 import { isEligibleLink } from './eligible';
 import {
+  applyFragmentTarget,
   clearSearch,
   closeHeaderDetails,
   getCurrentPath,
@@ -7,6 +8,7 @@ import {
   getHistoryIndex,
   getSavedScroll,
   initNavigation,
+  isApplyingFragment,
   navigateToUrl,
   saveScrollPosition,
   setCurrentPath,
@@ -134,6 +136,10 @@ export default function mountNavigate(window: Window): () => void {
   }
 
   function handlePopState(event: PopStateEvent) {
+    if (isApplyingFragment()) {
+      return;
+    }
+
     if (clearingFragment) {
       clearingFragment = false;
       if (!window.location.hash) {
@@ -145,19 +151,24 @@ export default function mountNavigate(window: Window): () => void {
     if (newPath === getCurrentPath()) {
       const locationKey = newPath + window.location.hash;
       const savedY = getSavedLocationScroll(locationKey);
+      // Fragment traversal can update :target and apply its native target
+      // scroll after popstate. Correct both in the next task so the URL and our
+      // saved position win. Capture savedY now because the native scroll event
+      // can update the location map first.
+      window.setTimeout(() => {
+        const currentLocationKey =
+          window.location.pathname +
+          window.location.search +
+          window.location.hash;
+        if (currentLocationKey !== locationKey) {
+          return;
+        }
+        applyFragmentTarget(window);
+        if (typeof savedY === 'number') {
+          window.scrollTo({ top: savedY });
+        }
+      }, 0);
       if (typeof savedY === 'number') {
-        // Fragment traversal can apply its native target scroll after popstate.
-        // Restore in the next task so our saved position wins. Capture savedY
-        // now because the native scroll event can update the location map first.
-        window.setTimeout(() => {
-          const currentLocationKey =
-            window.location.pathname +
-            window.location.search +
-            window.location.hash;
-          if (currentLocationKey === locationKey) {
-            window.scrollTo({ top: savedY });
-          }
-        }, 0);
         return;
       }
 

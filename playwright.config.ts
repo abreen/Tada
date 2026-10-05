@@ -13,6 +13,11 @@ export default defineConfig({
       use: { browserName: 'webkit' },
     },
     {
+      name: 'webkit-navigation-target',
+      testMatch: '**/navigation-target.spec.ts',
+      use: { browserName: 'webkit' },
+    },
+    {
       name: 'webkit-external-link-wrapping',
       testMatch: '**/external-link-wrapping.spec.ts',
       use: { browserName: 'webkit' },
