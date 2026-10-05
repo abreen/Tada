@@ -29,6 +29,13 @@ View Transition where supported unless the visitor has requested reduced
 motion with `prefers-reduced-motion: reduce`. Reduced-motion navigations use
 the same immediate content swap without calling the View Transition API.
 
+The animated stripe below the header appears as soon as the fetch begins. If
+the response remains pending for 400ms, the whole document also uses the
+`progress` cursor until the response arrives or the navigation falls back.
+The cursor is delayed so fast navigations do not flash a transient busy state;
+`progress` also communicates that another link can still be used to replace
+the pending navigation.
+
 Page transitions slide horizontally by 8px over 150ms. Both outgoing and
 incoming content use `cubic-bezier(0.2, 0, 0, 1)` for movement, matching the
 header and search movement curve. Opacity animates independently over the

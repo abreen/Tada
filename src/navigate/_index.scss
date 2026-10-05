@@ -7,6 +7,11 @@ $movement-easing: cubic-bezier(0.2, 0, 0, 1);
   --page-transition-movement-easing: #{$movement-easing};
 }
 
+html.navigation-loading,
+html.navigation-loading * {
+  cursor: progress !important;
+}
+
 @keyframes page-fade-out {
   to {
     opacity: 0;

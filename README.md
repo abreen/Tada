@@ -71,9 +71,11 @@ A static site generator. The successor to Presto.
   * Special heading subtitles with `## Heading # A subtitle here`
   * `{{{ _partial.md }}}` syntax for including partials
 
-- Extremely fast client-side navigation
-  * A miniature SPA without the bloat of a framework
-  * Highly efficient, thoroughly covered by cross-platform browser tests
+- Extremely efficient client-side navigation
+  * A miniature SPA that uses internal links tagged at build time
+  * Get the benefits of DOM tree replacement without an entire bloated framework
+  * Thoroughly covered by browser tests across multiple engines
+  * Clear loading indicators for slow requests
   * Also detects a new version of the current page and supplies a reload button
 
 ### Experimental features

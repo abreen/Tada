@@ -9,6 +9,8 @@ import { swapHeaderTitle } from '../header';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
+const LOADING_CURSOR_DELAY = 400;
+
 let currentAbortController: AbortController | null = null;
 let historyIndex = 0;
 let currentPath = '';
@@ -235,15 +237,28 @@ export async function navigateToUrl(
 
   const header = document.querySelector('header');
   header?.classList.add('loading');
+  const loadingCursorTimeout = window.setTimeout(() => {
+    if (isActiveNavigation(controller)) {
+      document.documentElement.classList.add('navigation-loading');
+    }
+  }, LOADING_CURSOR_DELAY);
+  const stopLoading = (): void => {
+    window.clearTimeout(loadingCursorTimeout);
+    if (!isActiveNavigation(controller)) {
+      return;
+    }
+    header?.classList.remove('loading');
+    document.documentElement.classList.remove('navigation-loading');
+  };
 
   let response: Response;
   try {
     response = await globals.fetch(url, { signal: controller.signal });
   } catch (err: unknown) {
+    stopLoading();
     if (!isActiveNavigation(controller)) {
       return;
     }
-    header?.classList.remove('loading');
     if (isAbortError(err)) {
       return;
     }
@@ -252,11 +267,12 @@ export async function navigateToUrl(
   }
 
   if (!isActiveNavigation(controller)) {
+    stopLoading();
     return;
   }
 
   if (!response.ok) {
-    header?.classList.remove('loading');
+    stopLoading();
     globals.setLocationHref(window, url);
     return;
   }
@@ -265,10 +281,10 @@ export async function navigateToUrl(
   try {
     html = await response.text();
   } catch (err: unknown) {
+    stopLoading();
     if (!isActiveNavigation(controller)) {
       return;
     }
-    header?.classList.remove('loading');
     if (isAbortError(err)) {
       return;
     }
@@ -277,10 +293,11 @@ export async function navigateToUrl(
   }
 
   if (!isActiveNavigation(controller)) {
+    stopLoading();
     return;
   }
 
-  header?.classList.remove('loading');
+  stopLoading();
 
   const DOMParserCtor = (window as unknown as { DOMParser: typeof DOMParser })
     .DOMParser;

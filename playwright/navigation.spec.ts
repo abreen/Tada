@@ -514,6 +514,33 @@ test.describe('search results motion', () => {
 });
 
 test.describe('client-side navigation', () => {
+  test('shows a progress cursor only while a slow navigation is pending', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+
+    let releaseRequest!: () => void;
+    const requestPending = new Promise<void>(resolve => {
+      releaseRequest = resolve;
+    });
+    await page.route('**/markdown.html', async route => {
+      await requestPending;
+      await route.continue();
+    });
+
+    await page.locator('main.body a[href="/markdown.html"]').click();
+
+    const root = page.locator('html');
+    await expect(root).not.toHaveClass(/navigation-loading/);
+    await expect(root).toHaveClass(/navigation-loading/, { timeout: 1000 });
+    await expect(page.locator('body')).toHaveCSS('cursor', 'progress');
+
+    releaseRequest();
+    await expect(page.locator('h1')).toContainText('Markdown Examples');
+    await expect(root).not.toHaveClass(/navigation-loading/);
+    await expect(page.locator('body')).not.toHaveCSS('cursor', 'progress');
+  });
+
   test('uses View Transitions when motion is allowed', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.goto('/index.html');
