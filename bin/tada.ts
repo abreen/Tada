@@ -86,12 +86,12 @@ const INIT_QUESTIONS: Record<string, InitQuestion> = {
   },
   themeColor: {
     prompt: 'Theme color',
-    defaultValue: 'hsl(195 70% 40%)',
+    defaultValue: 'darkturquoise',
     validate: validateColor,
   },
   tintHue: {
     prompt: 'Background tint hue (0-360)',
-    defaultValue: '33',
+    defaultValue: '190',
     validate: validateHue,
   },
   tintAmount: {

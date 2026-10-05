@@ -110,8 +110,8 @@ Create a new Tada site in a new directory. Prompts for:
 - **Symbol**: short text (1-5 uppercase characters) shown in the logo and favicon,
   or a single emoji shown in the logo (defaults to 🎉; emoji symbols turn off
   generated favicons)
-- **Theme color**: HSL color, e.g. `hsl(195 70% 40%)`
-- **Background tint hue**: hue (0-360) for background/foreground tinting (defaults to `33`)
+- **Theme color**: CSS color, e.g. `hsl(195 70% 40%)` (defaults to `darkturquoise`)
+- **Background tint hue**: hue (0-360) for background/foreground tinting (defaults to `190`)
 - **Background tint amount**: percentage (0-100) of tint to apply (defaults to `100`)
 - **Default time zone**: for `<time>` elements (defaults to your system zone)
 - **Production base URL**: e.g. `https://example.edu`
@@ -274,7 +274,7 @@ vars:
 | `logo` | *Optional*, image path relative to `public/`, replacing the header symbol |
 | `favicon` | *Optional*, `.ico` path relative to `public/`, replacing generated favicons and the web app manifest |
 | `themeColor` | Theme color for the site (e.g., `"tomato"`, `"#c04040"`, `"hsl(195 70% 40%)"`) |
-| `tintHue` | *Optional*, hue (0-360) for background and foreground tinting (default `33`) |
+| `tintHue` | *Optional*, hue (0-360) for background and foreground tinting (default `190`) |
 | `tintAmount` | *Optional*, percentage (0-100) of tint to apply to the neutral palette (default `100`); link saturation stays fixed |
 | `defaultFont` | *Optional*, initial font pairing: `sans` or `serif` (default `sans`) |
 | `defaultContrast` | *Optional*, initial neutral-palette contrast: `standard` or `high` (default `standard`) |

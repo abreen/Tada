@@ -12,7 +12,7 @@ exist. The command prompts for:
 - Production base URL and base path
 
 Default answers are provided for all prompts; the defaults are the title
-"Tada" and the symbol 🎉. Both generated configs turn on `features.favicon`
+"Tada", the symbol 🎉, the theme color `darkturquoise`, and the tint hue 190. Both generated configs turn on `features.favicon`
 when the symbol is text. Generated favicons cannot draw emoji, so an emoji
 symbol sets `features.favicon: false` in both configs instead. Non-interactive mode skips prompts
 and uses defaults or values provided as arguments.

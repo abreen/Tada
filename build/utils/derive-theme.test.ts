@@ -104,8 +104,8 @@ describe('deriveLinkHue', () => {
     expect(deriveLinkHue(212)).toBe(212);
   });
 
-  test('default tint (33) lands in the blue range', () => {
-    const h = deriveLinkHue(33);
+  test('default tint (190) lands in the blue range', () => {
+    const h = deriveLinkHue(190);
     expect(h).toBeGreaterThanOrEqual(200);
     expect(h).toBeLessThanOrEqual(260);
   });
@@ -140,9 +140,9 @@ describe('deriveTraceLineActiveHue', () => {
   });
 
   test('default tint lands in the yellow range', () => {
-    const h = deriveTraceLineActiveHue(33);
+    const h = deriveTraceLineActiveHue(190);
     expect(h).toBeGreaterThanOrEqual(45);
-    expect(h).toBeLessThanOrEqual(55);
+    expect(h).toBeLessThanOrEqual(70);
   });
 
   test('output is always in [0, 360) for any tintHue', () => {

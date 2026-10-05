@@ -51,7 +51,7 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const templatePath = path.join(getPackageDir(), 'templates/_theme.scss');
   const template = fs.readFileSync(templatePath, 'utf-8');
   const theme = deriveTheme(siteVariables.themeColor);
-  const tintHue = siteVariables.tintHue ?? 33;
+  const tintHue = siteVariables.tintHue ?? 190;
   const tintAmount = siteVariables.tintAmount ?? 100;
 
   const linkHue = formatCssNumber(deriveLinkHue(tintHue));

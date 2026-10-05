@@ -76,8 +76,8 @@ class TestThemingDefaults:
     def test_default_config_stylesheet_contains_tint_hue(self, built_dev_site):
         """Default config CSS bundle contains --tint-hue with default value."""
         css = read_stylesheet(built_dev_site)
-        # Default tintHue is 33
-        assert '--tint-hue: 33deg' in css
+        # Default tintHue is 190
+        assert '--tint-hue: 190deg' in css
 
     def test_default_config_stylesheet_contains_tint_amount(self, built_dev_site):
         """Default config CSS bundle contains --tint-amount with default value."""
