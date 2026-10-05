@@ -20,6 +20,13 @@ ignored when checking the target file; percent-encoded pathnames are decoded
 for that check. Disabled links render as non-clickable UI without an `href`, so
 they do not participate in link validation or reachability.
 
+With JavaScript enabled, startup realigns an initial URL fragment after page
+components finish mounting, including on reload. It uses the fragment captured
+at initial page load and only realigns while the URL still matches that initial
+URL. A fragment selected by later navigation from a fragment-free load does not
+trigger startup alignment or overwrite a restored history scroll position.
+Without JavaScript, the browser's native fragment navigation remains available.
+
 The collapsed header always keeps the menu control and site logo visible. The
 navigation summary (menu control, logo, and title area) and the trailing
 controls share one CSS grid row: the summary takes a flexible first column and

@@ -1,4 +1,93 @@
-import { test, expect } from './test-fixtures';
+import { test, expect, type Page } from './test-fixtures';
+
+type WindowWithMountGate = Window & {
+  __initialMountGate?: { held: boolean; release(): Promise<void> };
+};
+
+async function holdInitialPerPageMounts(page: Page) {
+  await page.addInitScript(() => {
+    // WebKit uses scheduleTask's timer fallback; preserve native scheduling
+    // there while exposing the same controllable completion gate.
+    const scheduleIdle =
+      typeof window.requestIdleCallback === 'function'
+        ? window.requestIdleCallback.bind(window)
+        : (callback: IdleRequestCallback) =>
+            window.setTimeout(
+              () => callback({ didTimeout: false, timeRemaining: () => 0 }),
+              0,
+            );
+    const held: (() => void)[] = [];
+    const completions: Promise<void>[] = [];
+    let released = false;
+    const gate = {
+      held: false,
+      async release() {
+        released = true;
+        // Native scheduling already delivered these callbacks at the gate.
+        // Run them with their original deadlines, without a second idle wait.
+        for (const run of held.splice(0)) {
+          run();
+        }
+        // Include registered callbacks that have not yet reached the gate.
+        await Promise.all(completions);
+        // Let startup's completion reaction run after all actual mounts finish.
+        await new Promise<void>(resolve =>
+          requestAnimationFrame(() => resolve()),
+        );
+      },
+    };
+    (window as WindowWithMountGate).__initialMountGate = gate;
+    window.requestIdleCallback = (callback, options) => {
+      let complete!: () => void;
+      let fail!: (error: unknown) => void;
+      completions.push(
+        new Promise<void>((resolve, reject) => {
+          complete = resolve;
+          fail = reject;
+        }),
+      );
+      return scheduleIdle(deadline => {
+        // Async mount callbacks return their actual completion promises despite
+        // IdleRequestCallback's void signature. Preserve those outcomes.
+        const run = () => {
+          try {
+            Promise.resolve(callback(deadline)).then(complete, fail);
+          } catch (error) {
+            fail(error);
+          }
+        };
+        const appearance = document.querySelector<HTMLButtonElement>(
+          '[data-font-preference-switch]',
+        );
+        if (!released && appearance && !appearance.disabled) {
+          held.push(run);
+          gate.held = true;
+        } else {
+          run();
+        }
+      }, options);
+    };
+  });
+}
+
+async function expectInitialMountHeld(page: Page) {
+  await expect(
+    page.getByRole('switch', { name: 'Use serif fonts' }),
+  ).toBeEnabled();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as WindowWithMountGate).__initialMountGate?.held,
+      ),
+    )
+    .toBe(true);
+}
+
+async function releaseInitialMount(page: Page) {
+  await page.evaluate(() =>
+    (window as WindowWithMountGate).__initialMountGate!.release(),
+  );
+}
 
 for (const withHash of [true, false]) {
   test(`same-page URL scrolls to top ${withHash ? 'and clears the fragment' : 'without a previous fragment'}`, async ({
@@ -49,3 +138,94 @@ for (const withHash of [true, false]) {
     }
   });
 }
+
+test('late startup keeps the scroll position restored by fragment history', async ({
+  page,
+}) => {
+  await holdInitialPerPageMounts(page);
+  await page.goto('/markdown.html');
+  await expectInitialMountHeld(page);
+  await page.locator('nav.toc ol a').last().click();
+  await expect(page).toHaveURL(/#/);
+  await page.evaluate(() => {
+    const link = document.createElement('a');
+    link.href = '/markdown.html';
+    link.textContent = 'Same page without fragment';
+    link.id = 'same-page-link';
+    link.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:1000';
+    document.body.appendChild(link);
+    window.scrollTo({ top: 600 });
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(600, -1);
+  const previousUrl = page.url();
+  await page.locator('#same-page-link').click();
+  await expect(page).toHaveURL(/\/markdown\.html$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(10);
+  await page.goBack();
+  await expect(page).toHaveURL(previousUrl);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(600, -1);
+
+  await releaseInitialMount(page);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(600, -1);
+});
+
+test('late startup leaves a changed initial fragment at the visitor scroll position', async ({
+  page,
+}) => {
+  await holdInitialPerPageMounts(page);
+  await page.goto('/markdown.html#time-zone-chooser');
+  await expectInitialMountHeld(page);
+  const initialUrl = page.url();
+  await page.locator('nav.toc ol a').first().click();
+  await expect(page).not.toHaveURL(initialUrl);
+  await page.evaluate(() => window.scrollTo({ top: 600 }));
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(600, -1);
+
+  await releaseInitialMount(page);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeCloseTo(600, -1);
+});
+
+test('startup aligns an unchanged initial fragment on cold load and reload', async ({
+  page,
+}) => {
+  await holdInitialPerPageMounts(page);
+  await page.goto('/markdown.html#time-zone-chooser');
+  for (const reload of [false, true]) {
+    if (reload) {
+      await page.reload();
+    }
+    await expectInitialMountHeld(page);
+    // Native fragment positioning can happen before mounts finish. Move away
+    // so this control independently proves the late startup realignment.
+    await page.evaluate(() => window.scrollTo({ top: 0 }));
+    await expect
+      .poll(() =>
+        page
+          .locator('#time-zone-chooser')
+          .evaluate(
+            element =>
+              element.getBoundingClientRect().top >= window.innerHeight,
+          ),
+      )
+      .toBe(true);
+    await releaseInitialMount(page);
+    await expect
+      .poll(() =>
+        page.locator('#time-zone-chooser').evaluate(element => {
+          const rect = element.getBoundingClientRect();
+          return rect.top >= 0 && rect.top < window.innerHeight;
+        }),
+      )
+      .toBe(true);
+  }
+});
