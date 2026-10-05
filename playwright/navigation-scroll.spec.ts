@@ -258,6 +258,53 @@ test.describe('scroll and hash behavior', () => {
       .not.toBe(currentText1);
   });
 
+  test('back-to-top never shows on a short page', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.goto('/index.html');
+    const { pageHeight, viewportHeight } = await page.evaluate(() => ({
+      pageHeight: document.documentElement.scrollHeight,
+      viewportHeight: window.innerHeight,
+    }));
+    expect(pageHeight).toBeLessThan(3 * viewportHeight);
+
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.documentElement.scrollHeight }),
+    );
+    await page.waitForTimeout(200);
+    await expect(
+      page.locator('a.button.is-visible', { hasText: 'Back to top' }),
+    ).toHaveCount(0);
+  });
+
+  test('back-to-top shows only after scrolling well down a long page', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 400, height: 600 });
+    await page.goto('/lectures/01/Rectangle.java.html');
+    const threshold = await page.evaluate(() => {
+      const viewportHeight = window.innerHeight;
+      const maxScroll =
+        document.documentElement.scrollHeight - viewportHeight;
+      return Math.max(1.5 * viewportHeight, 0.25 * maxScroll);
+    });
+    const backToTop = page.locator('a.button.is-visible', {
+      hasText: 'Back to top',
+    });
+
+    await page.evaluate(
+      top => window.scrollTo({ top }),
+      Math.floor(threshold) - 10,
+    );
+    await page.waitForTimeout(200);
+    await expect(backToTop).toHaveCount(0);
+
+    await page.evaluate(
+      top => window.scrollTo({ top }),
+      Math.ceil(threshold) + 10,
+    );
+    await expect(backToTop).toBeVisible();
+  });
+
   test('back-to-top clears :target and scrolls to top', async ({ page }) => {
     await page.goto('/lectures/01/Rectangle.java.html');
 
@@ -265,7 +312,9 @@ test.describe('scroll and hash behavior', () => {
     await expect(page).toHaveURL(/#L40$/);
 
     // The back-to-top button only shows past a scroll threshold
-    await page.waitForFunction(() => window.scrollY > 250);
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.documentElement.scrollHeight }),
+    );
 
     await page
       .locator('a.button.is-visible', { hasText: 'Back to top' })
@@ -306,10 +355,9 @@ test.describe('scroll and hash behavior', () => {
     );
     expect(typeof navIndexBefore).toBe('number');
 
-    await page.evaluate(() => window.scrollTo({ top: 700 }));
-    await expect
-      .poll(() => page.evaluate(() => window.scrollY))
-      .toBeGreaterThan(250);
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.documentElement.scrollHeight }),
+    );
 
     await page
       .locator('a.button.is-visible', { hasText: 'Back to top' })

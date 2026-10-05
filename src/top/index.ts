@@ -1,8 +1,14 @@
 import { debounce, removeClass } from '../util';
 import { globals } from '../globals';
 
-/** Show the "Back to top" button once the user is past this scroll position */
-const SHOW_THRESHOLD_PX = 250;
+/** Only show the "Back to top" button on pages at least this many viewports tall */
+const MIN_PAGE_SCREENS = 3;
+
+/** Show the button once the user is this many viewports down the page... */
+const SHOW_AFTER_SCREENS = 1.5;
+
+/** ...or this fraction of the scrollable distance, whichever is farther */
+const SHOW_AFTER_FRACTION = 0.25;
 
 /** Debounce time (maximum amount of time to wait before updates) */
 const LATENCY_MS = 50;
@@ -60,8 +66,22 @@ export default (window: Window) => {
     isShowing = false;
   }
 
+  function shouldShow(): boolean {
+    const viewportHeight = window.innerHeight;
+    const maxScroll =
+      window.document.documentElement.scrollHeight - viewportHeight;
+    if (maxScroll < (MIN_PAGE_SCREENS - 1) * viewportHeight) {
+      return false;
+    }
+    const threshold = Math.max(
+      SHOW_AFTER_SCREENS * viewportHeight,
+      SHOW_AFTER_FRACTION * maxScroll,
+    );
+    return window.scrollY > threshold;
+  }
+
   function updateVisibility() {
-    if (window.scrollY > SHOW_THRESHOLD_PX) {
+    if (shouldShow()) {
       show(link);
     } else {
       hide(link);
@@ -70,9 +90,11 @@ export default (window: Window) => {
 
   const debounced = debounce(window, updateVisibility, LATENCY_MS);
   window.addEventListener('scroll', debounced, { passive: true });
+  window.addEventListener('resize', debounced, { passive: true });
   updateVisibility();
 
   return () => {
     window.removeEventListener('scroll', debounced);
+    window.removeEventListener('resize', debounced);
   };
 };

@@ -5,7 +5,7 @@ import { test, expect, type Page } from './test-fixtures';
 const MAX_TITLE_TO_CONTROLS_GAP_PX = 16;
 
 async function scrollUntilBackToTopShows(page: Page) {
-  await page.evaluate(() => window.scrollTo({ top: 700 }));
+  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight }));
   await expect(
     page.locator('header a', { hasText: 'Back to top' }),
   ).toBeVisible();

@@ -34,6 +34,11 @@ cannot make the title overlap the controls or leave unused space before them.
 The controls always keep their full width. The open navigation spans the full
 header width beneath both columns.
 
+The back-to-top button is client-only and appears only on long pages: the page
+must be at least 3 viewports tall, and the reader must scroll past 1.5 viewports
+or 25% of the scrollable distance, whichever is farther. Visibility updates on
+scroll and resize.
+
 Opening and closing the header morphs one inline SVG between the menu and close
 states: its top and bottom strokes shorten, move, and rotate into two halves of
 one diagonal while its middle stroke shortens and rotates into the other. All
