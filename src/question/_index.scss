@@ -21,7 +21,7 @@
 .question-a-label {
   flex: 0 0 var(--question-label-width);
   margin: 0;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--theme-color-text);
 
   @include user-select(none);
