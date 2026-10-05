@@ -80,11 +80,13 @@ describe('scanSteps', () => {
 
     const objects = scanSteps(steps);
     const obj1 = objects.get('1')!;
-    expect(obj1.references.has('2')).toBe(true);
-    expect(obj1.references.has('3')).toBe(true);
-    expect(obj1.fieldNames.has('left')).toBe(true);
-    expect(obj1.fieldNames.has('right')).toBe(true);
-    expect(obj1.maxFields).toBe(2);
+    expect(obj1.fieldRefs).toEqual(
+      new Map([
+        ['left', new Set(['2'])],
+        ['right', new Set(['3'])],
+      ]),
+    );
+    expect(obj1.fieldNames).toEqual(new Set(['left', 'right']));
   });
 
   test('detects arrays and tracks max elements', () => {
