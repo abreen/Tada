@@ -283,8 +283,7 @@ test.describe('scroll and hash behavior', () => {
     await page.goto('/lectures/01/Rectangle.java.html');
     const threshold = await page.evaluate(() => {
       const viewportHeight = window.innerHeight;
-      const maxScroll =
-        document.documentElement.scrollHeight - viewportHeight;
+      const maxScroll = document.documentElement.scrollHeight - viewportHeight;
       return Math.max(1.5 * viewportHeight, 0.25 * maxScroll);
     });
     const backToTop = page.locator('a.button.is-visible', {
