@@ -69,7 +69,7 @@ def test_disabled_favicon_still_validates_and_copies(tmp_path):
 
 def test_watch_transitions_and_asset_recovery(tmp_path):
     site = branding_site(tmp_path)
-    set_site_config(site, {'features': {'favicon': True}})
+    set_site_config(site, {'faviconSymbol': 'T', 'features': {'favicon': True}})
     wp = WatchProcess(site)
     try:
         wp.wait_for_initial_build()

@@ -51,6 +51,9 @@ await runTada([
   'init',
   siteDir,
   '--no-interactive',
+  // Long enough for the header title to truncate in narrow layouts
+  '--title',
+  'Introduction to Computer Science',
   '--default-time-zone',
   'America/New_York',
 ]);

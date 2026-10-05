@@ -38,7 +38,8 @@ Generated favicons stay text: `faviconSymbol` accepts only uppercase text, and
 it is not derived from an emoji `symbol`. When favicons are generated (the
 feature is on and no custom `favicon` is set), an emoji `symbol` without
 `faviconSymbol` fails validation with a message naming `faviconSymbol`. `tada
-init` still asks for a text symbol.
+init` accepts an emoji symbol and then writes `features.favicon: false` to
+both configs (see [Site initialization](site-init.md)).
 
 ```yaml
 symbol: "🚀"

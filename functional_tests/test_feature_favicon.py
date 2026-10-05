@@ -42,7 +42,7 @@ class TestFaviconFeatureEnabled:
     @pytest.fixture
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
-        set_site_config(site, {'features': {'favicon': True}})
+        set_site_config(site, {'faviconSymbol': 'T', 'features': {'favicon': True}})
         yield site
 
     def test_favicon_svg_generated(self, built_dev_site):

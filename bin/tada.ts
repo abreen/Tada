@@ -27,6 +27,7 @@ import {
   resolveSiteConfigFile,
   type SiteEnv,
 } from '../build/config-files';
+import { isEmojiSymbol } from '../build/utils/symbol';
 
 const { version } = packageJson;
 
@@ -75,12 +76,12 @@ interface InitQuestion {
 const INIT_QUESTIONS: Record<string, InitQuestion> = {
   title: {
     prompt: 'Site title',
-    defaultValue: 'Introduction to Computer Science',
+    defaultValue: 'Tada',
     validate: (v: string) => (v ? null : 'Title is required'),
   },
   symbol: {
-    prompt: 'Logo symbol (1-5 uppercase chars)',
-    defaultValue: 'CS 0',
+    prompt: 'Logo symbol (1-5 uppercase chars or one emoji)',
+    defaultValue: '🎉',
     validate: validateSymbol,
   },
   themeColor: {
@@ -338,6 +339,14 @@ async function initCommand(args: string[]): Promise<void> {
   // Create project directory
   fs.mkdirSync(projectDir);
 
+  // Generated favicons are text-only, so an emoji symbol starts without them
+  const features = {
+    search: true,
+    favicon: !isEmojiSymbol(symbol),
+    footer: true,
+    pickers: true,
+  };
+
   // Generate site configs
   const devConfig = createSiteConfig({
     title,
@@ -349,7 +358,7 @@ async function initCommand(args: string[]): Promise<void> {
     base: 'http://localhost:8080',
     basePath: '/',
     internalDomains: ['localhost'],
-    features: { search: true, favicon: false, footer: true, pickers: true },
+    features,
     extensionToShikiLanguage: bare ? {} : { java: 'java', py: 'python' },
     shikiLanguages: bare ? [] : ['java', 'python', 'html'],
   });
@@ -364,7 +373,7 @@ async function initCommand(args: string[]): Promise<void> {
     base: prodBase,
     basePath: prodBasePath,
     internalDomains: [prodDomain],
-    features: { search: true, favicon: true, footer: true, pickers: true },
+    features,
     extensionToShikiLanguage: bare ? {} : { java: 'java', py: 'python' },
     shikiLanguages: bare ? [] : ['java', 'python', 'html'],
   });

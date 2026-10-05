@@ -29,6 +29,14 @@ export function parseConfigText(text: string, fileName: string): unknown {
   try {
     return Bun.YAML.parse(text);
   } catch (error) {
+    // YAML rejects JSON surrogate pair escapes such as emoji in `\ud83c\udf89` form
+    if (fileName.endsWith('.json')) {
+      try {
+        return JSON.parse(text);
+      } catch {
+        // Report the YAML error, as for any other config
+      }
+    }
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`${fileName}: ${message}`, { cause: error });
   }

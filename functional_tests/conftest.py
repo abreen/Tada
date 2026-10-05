@@ -121,14 +121,16 @@ def straight_quotes(text):
 
 
 def load_structured_file(file_path):
-    return yaml.safe_load(file_path.read_text())
+    return yaml.safe_load(file_path.read_text(encoding='utf-8'))
 
 
 def write_structured_file(file_path, value):
     if file_path.suffix == '.json':
-        file_path.write_text(json.dumps(value, indent=2) + '\n')
+        file_path.write_text(json.dumps(value, indent=2) + '\n', encoding='utf-8')
     else:
-        file_path.write_text(yaml.safe_dump(value, sort_keys=False))
+        file_path.write_text(
+            yaml.safe_dump(value, sort_keys=False, allow_unicode=True), encoding='utf-8'
+        )
 
 
 def get_free_ports(n=2):
@@ -179,6 +181,7 @@ def run_tada(*args, cwd=None, timeout=120, check=False, input=None, env=None):
         cwd=cwd or os.getcwd(),
         capture_output=True,
         text=True,
+        encoding='utf-8',
         timeout=timeout,
         check=check,
         input=input,

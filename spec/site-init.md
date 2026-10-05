@@ -4,13 +4,17 @@ Tada can create a new site in a named directory. The directory must not already
 exist. The command prompts for:
 
 - Site title
-- Logo symbol (1 to 5 uppercase characters, digits, hyphens, or spaces)
+- Logo symbol (1 to 5 uppercase characters, digits, hyphens, or spaces, or a
+  single emoji)
 - Theme color (any CSS color format)
 - Background tint hue (0 to 360 degrees) and amount (0 to 100%)
 - Default time zone (one of the zones in `src/timezone/timezones.json`)
 - Production base URL and base path
 
-Default answers are provided for all prompts. Non-interactive mode skips prompts
+Default answers are provided for all prompts; the defaults are the title
+"Tada" and the symbol 🎉. Both generated configs turn on `features.favicon`
+when the symbol is text. Generated favicons cannot draw emoji, so an emoji
+symbol sets `features.favicon: false` in both configs instead. Non-interactive mode skips prompts
 and uses defaults or values provided as arguments.
 
 The time zone must be one of the zones listed in `src/timezone/timezones.json`,

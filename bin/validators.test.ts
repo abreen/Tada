@@ -39,8 +39,13 @@ describe('validateSymbol', () => {
     expect(validateSymbol('A.B')).not.toBeNull();
   });
 
-  test('rejects emoji, which need a separate text faviconSymbol', () => {
-    expect(validateSymbol('🎉')).not.toBeNull();
+  test('accepts a single emoji', () => {
+    expect(validateSymbol('🎉')).toBeNull();
+    expect(validateSymbol('👩‍💻')).toBeNull();
+  });
+
+  test('rejects more than one emoji', () => {
+    expect(validateSymbol('🎉🎉')).not.toBeNull();
   });
 });
 

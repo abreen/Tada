@@ -59,7 +59,7 @@ def test_every_page_error_is_printed_once_with_a_project_relative_path(tmp_path)
 
 def test_source_conflicting_with_a_generated_file_stops_the_build(tmp_path):
     site = init_site(tmp_path)
-    set_site_config(site, {'features': {'favicon': True}})
+    set_site_config(site, {'faviconSymbol': 'T', 'features': {'favicon': True}})
     (site / 'public' / 'manifest.json').write_text('{}')
 
     result = run_tada('dev', cwd=str(site))

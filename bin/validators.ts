@@ -1,5 +1,6 @@
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import type { SiteConfigInput, SiteVariables } from '../build/types';
+import { isValidSymbol } from '../build/utils/symbol';
 
 const SUPPORTED_TIME_ZONES: readonly string[] = timezones.map(tz => tz.value);
 const FALLBACK_TIME_ZONE = 'UTC';
@@ -8,13 +9,13 @@ export function validateSymbol(value: string): string | null {
   if (!value) {
     return 'Symbol is required';
   }
+  if (isValidSymbol(value)) {
+    return null;
+  }
   if (value.length > 5) {
-    return 'Symbol must be 5 characters or fewer';
+    return 'Symbol must be 5 characters or fewer, or a single emoji';
   }
-  if (!/^[A-Z0-9\- ]{1,5}$/.test(value)) {
-    return 'Symbol must contain only uppercase letters, digits, hyphens, and spaces';
-  }
-  return null;
+  return 'Symbol must contain only uppercase letters, digits, hyphens, and spaces, or be a single emoji';
 }
 
 export function validateColor(value: string): string | null {

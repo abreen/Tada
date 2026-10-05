@@ -32,4 +32,20 @@ describe('parseConfigText', () => {
       defaultTimeZone: 'America/New_York',
     });
   });
+
+  test('parses JSON surrogate pair escapes', () => {
+    const text =
+      '{"symbol": "' +
+      String.fromCharCode(92) +
+      'ud83c' +
+      String.fromCharCode(92) +
+      'udf89"}';
+    expect(parseConfigText(text, 'site.dev.json')).toEqual({ symbol: '🎉' });
+  });
+
+  test('names the file in JSON syntax errors', () => {
+    expect(() => parseConfigText('{"title": ', 'site.dev.json')).toThrow(
+      'site.dev.json: ',
+    );
+  });
 });

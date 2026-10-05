@@ -68,6 +68,24 @@ class TestInitDefault:
         assert (site_dir / 'content' / 'lectures' / 'index.md').exists()
         assert (site_dir / 'content' / 'lectures' / '01' / 'index.md').exists()
 
+    def test_emoji_symbol_turns_off_generated_favicons(self, site_dir):
+        dev = load_structured_file(site_dir / SITE_DEV_CONFIG_FILE)
+        prod = load_structured_file(site_dir / SITE_PROD_CONFIG_FILE)
+        assert prod['title'] == 'Tada'
+        assert prod['symbol'] == '🎉'
+        assert 'faviconSymbol' not in prod
+        assert dev['features']['favicon'] is False
+        assert prod['features']['favicon'] is False
+
+    def test_default_site_builds_for_production(self, site_dir):
+        result = run_tada('prod', cwd=str(site_dir))
+        assert result.returncode == 0, result.stdout + result.stderr
+        dist = site_dir / 'dist-prod' / 'v1'
+        html = (dist / 'index.html').read_text(encoding='utf-8')
+        assert '<span class="logo logo-emoji" aria-hidden="true">🎉</span>' in html
+        assert 'rel="icon"' not in html
+        assert not (dist / 'favicon.svg').exists()
+
     def test_stdout_contains_success_message(self, tmp_path):
         result = run_tada('init', 'mysite', '--no-interactive', cwd=str(tmp_path))
         assert result.returncode == 0
@@ -218,6 +236,8 @@ class TestInitNoInteractiveFlags:
         assert dev['title'] == 'CS 101'
         assert dev['symbol'] == 'CS 1'
         assert prod['basePath'] == '/cs101'
+        assert dev['features']['favicon'] is True
+        assert prod['features']['favicon'] is True
 
 
 class TestInitInteractive:
@@ -229,8 +249,8 @@ class TestInitInteractive:
         assert result.returncode == 0, f'init failed: {result.stderr}'
         site = tmp_path / 'testsite'
         dev = load_structured_file(site / SITE_DEV_CONFIG_FILE)
-        assert dev['title'] == 'Introduction to Computer Science'
-        assert dev['symbol'] == 'CS 0'
+        assert dev['title'] == 'Tada'
+        assert dev['symbol'] == '🎉'
         assert dev['base'] == 'http://localhost:8080'
         assert dev['basePath'] == '/'
 

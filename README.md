@@ -107,7 +107,9 @@ Visit [http://localhost:8080/index.html](http://localhost:8080/index.html).
 
 Create a new Tada site in a new directory. Prompts for:
 - **Site title**: displayed in the header and `<title>` tag
-- **Symbol**: short text (1-5 uppercase characters) shown in the logo and favicon
+- **Symbol**: short text (1-5 uppercase characters) shown in the logo and favicon,
+  or a single emoji shown in the logo (defaults to 🎉; emoji symbols turn off
+  generated favicons)
 - **Theme color**: HSL color, e.g. `hsl(195 70% 40%)`
 - **Background tint hue**: hue (0-360) for background/foreground tinting (defaults to `33`)
 - **Background tint amount**: percentage (0-100) of tint to apply (defaults to `100`)
