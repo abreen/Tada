@@ -8,7 +8,15 @@ type WindowWithSearchTransitionState = Window & {
   __searchWasAnimatingAtNavigation?: boolean;
 };
 
+async function waitForClientMount(page: Page) {
+  // Appearance controls enable after all persistent components have mounted.
+  await expect(
+    page.getByRole('switch', { name: 'Use serif fonts' }),
+  ).toBeEnabled();
+}
+
 async function setNavMarker(page: Page) {
+  await waitForClientMount(page);
   await page.evaluate(() => {
     (window as WindowWithNavMarker).__navMarker = 'alive';
   });
@@ -19,6 +27,7 @@ async function getNavMarker(page: Page) {
 }
 
 async function trackViewTransitions(page: Page): Promise<boolean> {
+  await waitForClientMount(page);
   return page.evaluate(() => {
     if (typeof document.startViewTransition !== 'function') {
       return false;
@@ -514,6 +523,24 @@ test.describe('search results motion', () => {
 });
 
 test.describe('client-side navigation', () => {
+  test('keeps the document when idle component mounting is delayed', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const requestIdleCallback = window.requestIdleCallback.bind(window);
+      window.requestIdleCallback = (callback, options) =>
+        requestIdleCallback(deadline => {
+          window.setTimeout(() => callback(deadline), 500);
+        }, options);
+    });
+    await page.goto('/index.html');
+    await setNavMarker(page);
+    await page.locator('main.body a[href="/markdown.html"]').click();
+    await expect(page).toHaveURL(/markdown\.html/);
+    await expect(page.locator('h1')).toContainText('Markdown Examples');
+    expect(await getNavMarker(page)).toBe('alive');
+  });
+
   test('uses View Transitions when motion is allowed', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.goto('/index.html');
@@ -603,6 +630,80 @@ test.describe('client-side navigation', () => {
     const newTitle = await page.title();
     expect(newTitle).not.toBe(homeTitle);
     expect(newTitle).toContain('Markdown');
+  });
+
+  test('adds, updates, and removes page metadata during client navigation without duplicates', async ({
+    page,
+  }) => {
+    const metadata = [
+      ['name', 'description'],
+      ['name', 'author'],
+      ['property', 'og:title'],
+      ['property', 'og:author'],
+    ] as const;
+    await page.route('**/markdown.html?metadata=*', async route => {
+      const response = await route.fetch();
+      const revision = new URL(route.request().url()).searchParams.get(
+        'metadata',
+      );
+      let html = (await response.text()).replace(
+        /<meta\b[^>]*\b(?:name|property)="(?:description|author|og:title|og:author)"[^>]*>/gi,
+        '',
+      );
+      if (revision !== 'removed') {
+        const tags = metadata
+          .map(
+            ([attribute, key]) =>
+              `<meta ${attribute}="${key}" content="${revision}-${key}">`,
+          )
+          .join('');
+        html = html.replace('</head>', `${tags}</head>`);
+      }
+      await route.fulfill({ response, body: html });
+    });
+
+    await page.goto('/index.html');
+    await expect(page.locator('[data-font-preference-switch]')).toBeEnabled();
+    await page
+      .locator(
+        metadata
+          .map(([attribute, key]) => `meta[${attribute}="${key}"]`)
+          .join(','),
+      )
+      .evaluateAll(tags => {
+        tags.forEach(tag => tag.remove());
+      });
+    await setNavMarker(page);
+
+    for (const revision of ['added', 'changed', 'removed']) {
+      const link = page.locator(
+        'header details nav a[href="/lectures/index.html"]',
+      );
+      // The persistent generated-page link remains marked for SPA navigation.
+      const target = `/markdown.html?metadata=${revision}`;
+      await link.evaluate(
+        (element, href) => element.setAttribute('href', href),
+        target,
+      );
+      await page.locator('header details > summary').click();
+      await page.locator(`header details nav a[href="${target}"]`).click();
+      await expect(page).toHaveURL(new RegExp(`metadata=${revision}$`));
+      await expect(page.locator('[data-font-preference-switch]')).toBeEnabled();
+      expect(await getNavMarker(page)).toBe('alive');
+
+      for (const [attribute, key] of metadata) {
+        const tag = page.locator(`meta[${attribute}="${key}"]`);
+        await expect(tag).toHaveCount(revision === 'removed' ? 0 : 1);
+        if (revision !== 'removed') {
+          await expect(tag).toHaveAttribute('content', `${revision}-${key}`);
+        }
+      }
+      await page
+        .locator(`header details nav a[href="${target}"]`)
+        .evaluate(element =>
+          element.setAttribute('href', '/lectures/index.html'),
+        );
+    }
   });
 
   test('external links in body have target=_blank', async ({ page }) => {

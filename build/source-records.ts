@@ -110,58 +110,39 @@ export function createContentRecord({
 
   const deps = createDependencyCollector();
   const assets: Asset[] = [];
+  const pageOptions = {
+    filePath,
+    contentDir: scan.contentDir,
+    siteVariables,
+    assetFiles,
+    isWatchMode,
+    validInternalTargets: scan.validTargets,
+    generatedPageTargets: scan.generatedPageTargets,
+    codePageSourceTargets: scan.codePageSourceTargets,
+    literateJavaOutputPaths: scan.literateJavaOutputPaths,
+    dependencyCollector: deps.collector,
+  };
 
   switch (renderKind) {
     case 'literate-java':
       assets.push(
         ...renderLiterateJavaPageAsset({
-          filePath,
-          contentDir: scan.contentDir,
-          siteVariables,
-          assetFiles,
-          isWatchMode,
+          ...pageOptions,
           skipExecution: skipLiterateJavaExecution,
-          validInternalTargets: scan.validTargets,
-          generatedPageTargets: scan.generatedPageTargets,
-          codePageSourceTargets: scan.codePageSourceTargets,
-          literateJavaOutputPaths: scan.literateJavaOutputPaths,
-          dependencyCollector: deps.collector,
         }),
       );
       break;
     case 'plain-text-page':
       assets.push(
         ...renderPlainTextPageAsset({
-          filePath,
-          contentDir: scan.contentDir,
-          siteVariables,
-          validInternalTargets: scan.validTargets,
-          generatedPageTargets: scan.generatedPageTargets,
-          codePageSourceTargets: scan.codePageSourceTargets,
-          assetFiles,
-          isWatchMode,
-          literateJavaOutputPaths: scan.literateJavaOutputPaths,
-          dependencyCollector: deps.collector,
+          ...pageOptions,
           traceCache,
           traceToolAvailability,
         }),
       );
       break;
     case 'code-page':
-      assets.push(
-        ...renderCodePageAsset({
-          filePath,
-          contentDir: scan.contentDir,
-          siteVariables,
-          validInternalTargets: scan.validTargets,
-          generatedPageTargets: scan.generatedPageTargets,
-          codePageSourceTargets: scan.codePageSourceTargets,
-          assetFiles,
-          isWatchMode,
-          literateJavaOutputPaths: scan.literateJavaOutputPaths,
-          dependencyCollector: deps.collector,
-        }),
-      );
+      assets.push(...renderCodePageAsset(pageOptions));
       assets.push(
         ...renderCopiedContentAsset({
           filePath,

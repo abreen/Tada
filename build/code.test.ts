@@ -234,30 +234,40 @@ describe('renderCodeWithComments', () => {
     expect(html).toContain('// note');
   });
 
-  test('data-prose-source contains rewritten links when pageDirPath is provided', () => {
-    const source = '/// See [rect](./rect.py)\npublic class Foo {}\n';
-    const html = renderCodeWithComments(
-      source,
-      'java',
-      {
-        base: 'https://example.edu',
-        basePath: '/course',
-        extensionToShikiLanguage: { java: 'java', py: 'python' },
-        shikiLanguages: ['java', 'python'],
-        internalDomains: [],
-        title: 'Test',
-        titlePostfix: ' - Test',
-        themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
-        features: { search: true, favicon: true, footer: true, pickers: true },
-      } as SiteVariables,
-      'lectures/01',
-    );
+  test.each([
+    ['', 'https://example.edu/course/rect.py.html'],
+    ['lectures/01', 'https://example.edu/course/lectures/01/rect.py.html'],
+    [undefined, './rect.py'],
+  ])(
+    'data-prose-source resolves links from directory %s',
+    (pageDirPath, expected) => {
+      const source = '/// See [rect](./rect.py)\npublic class Foo {}\n';
+      const html = renderCodeWithComments(
+        source,
+        'java',
+        {
+          base: 'https://example.edu',
+          basePath: '/course',
+          extensionToShikiLanguage: { java: 'java', py: 'python' },
+          shikiLanguages: ['java', 'python'],
+          internalDomains: [],
+          title: 'Test',
+          titlePostfix: ' - Test',
+          themeColor: 'steelblue',
+          defaultTimeZone: 'America/New_York',
+          features: {
+            search: true,
+            favicon: true,
+            footer: true,
+            pickers: true,
+          },
+        } as SiteVariables,
+        pageDirPath,
+      );
 
-    expect(html).toContain(
-      'https://example.edu/course/lectures/01/rect.py.html',
-    );
-  });
+      expect(html).toContain(`data-prose-source="/// See [rect](${expected})"`);
+    },
+  );
 
   test('leaves raw HTML prose links unchanged until page finalization', () => {
     const source = '/// <a href="./Pair.java">Pair</a>\npublic class Foo {}\n';

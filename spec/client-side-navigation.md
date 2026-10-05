@@ -72,8 +72,11 @@ page returns to the scroll position the user was last at for that entry.
 
 Hash links use real fragment navigation (`location.hash` for same-page,
 `location.replace` for cross-page) so `:target` CSS and `hashchange`
-listeners keep working. On reload the navigator manually scrolls to the
-URL hash once per-page components have mounted.
+listeners keep working. On cold load and reload the navigator manually scrolls
+to the initial URL hash once per-page components have mounted, provided the URL
+still matches the captured starting URL. A fragment selected later from a
+fragment-free load does not cause startup alignment to overwrite the visitor's
+restored history scroll position.
 
 A link to the current page without a fragment clears any active fragment and
 scrolls to the top without fetching the page again. Clearing a fragment adds a

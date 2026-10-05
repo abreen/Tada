@@ -5,11 +5,26 @@ syntax-highlighted HTML pages when their extension is configured in
 `extensionToShikiLanguage`. If that field is omitted or empty, Tada does not
 generate code pages for source files.
 
+Extension keys are literal configuration entries, including names such as
+`__proto__` and `constructor`; these can be mapped like any other extension.
+
+Extension keys and source-file extensions match case-insensitively. For example,
+`TS: typescript` renders `Sample.tS` using the TypeScript language, while preserving
+the source filename in the generated page and download. If multiple keys differ
+only by case, an exact lowercase key takes precedence; otherwise the last
+configured key is used. Language identifiers are used unchanged. The original
+mapping remains available to templates as `site.extensionToShikiLanguage`.
+
 Each code page includes:
 
 - Full syntax-highlighted source
 - Line numbers linked as anchors
 - A download button for the original file
+
+Downloads use native links without JavaScript and in cross-origin embedded
+pages. When the File System Access save picker is available in a top-level or
+same-origin embedded page, it lets visitors choose where to save the source.
+Cancelling the picker leaves the page unchanged and starts no native download.
 
 ## Markdown documentation comments
 
@@ -25,7 +40,12 @@ comment lines are restored in the clipboard so that pasted text is valid Java
 source. Markdown links in these comment lines are rewritten to full URLs
 (using `base` + `basePath`) so they resolve when the source is viewed outside
 the site. The same rewriting is applied to the downloaded copy of the source
-file.
+file. Java filename extensions match case-insensitively, so `.JAVA` and `.JaVa`
+receive the same prose-link rewriting as `.java`. Generated pages and downloads
+preserve the original filename case. Unmapped source files are copied unchanged.
+
+This rewriting also applies to code pages directly in the content root; their
+relative prose links resolve from the site root before the base path is added.
 
 ## Java table of contents
 

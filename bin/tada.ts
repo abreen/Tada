@@ -50,7 +50,7 @@ function parsePortArg(name: string): number | undefined {
   const idx = process.argv.indexOf(name);
   if (idx !== -1 && process.argv[idx + 1]) {
     const val = parseInt(process.argv[idx + 1], 10);
-    if (val > 0 && val < 65536) {
+    if (val >= 0 && val < 65536) {
       return val;
     }
   }
@@ -209,30 +209,19 @@ async function initCommand(args: string[]): Promise<void> {
       options: {
         'no-interactive': { type: 'boolean', default: false },
         bare: { type: 'boolean', default: false },
-        title: { type: 'string', default: INIT_QUESTIONS.title.defaultValue },
-        symbol: { type: 'string', default: INIT_QUESTIONS.symbol.defaultValue },
-        'theme-color': {
-          type: 'string',
-          default: INIT_QUESTIONS.themeColor.defaultValue,
-        },
-        'tint-hue': {
-          type: 'string',
-          default: INIT_QUESTIONS.tintHue.defaultValue,
-        },
-        'tint-amount': {
-          type: 'string',
-          default: INIT_QUESTIONS.tintAmount.defaultValue,
-        },
-        // No parseArgs default, so an omitted flag can be told apart
-        'default-time-zone': { type: 'string' },
-        'prod-base': {
-          type: 'string',
-          default: INIT_QUESTIONS.prodBase.defaultValue,
-        },
-        'prod-base-path': {
-          type: 'string',
-          default: INIT_QUESTIONS.prodBasePath.defaultValue,
-        },
+        ...Object.fromEntries(
+          Object.entries(FLAG_TO_KEY).map(([flag, key]) => [
+            flag,
+            {
+              type: 'string' as const,
+              // Keep an omitted time-zone flag distinguishable for the fallback note.
+              default:
+                key === 'defaultTimeZone'
+                  ? undefined
+                  : INIT_QUESTIONS[key].defaultValue,
+            },
+          ]),
+        ),
       },
       strict: true,
       allowPositionals: true,
@@ -559,22 +548,16 @@ function diffCommand(args: string[]): void {
     }
   }
 
-  if (diff.added.length > 0) {
-    console.log(`\nAdded (${diff.added.length}):`);
-    for (const f of diff.added) {
-      console.log(`  + ${f}`);
-    }
-  }
-  if (diff.changed.length > 0) {
-    console.log(`\nChanged (${diff.changed.length}):`);
-    for (const f of diff.changed) {
-      console.log(`  ~ ${f}`);
-    }
-  }
-  if (diff.removed.length > 0) {
-    console.log(`\nRemoved (${diff.removed.length}):`);
-    for (const f of diff.removed) {
-      console.log(`  - ${f}`);
+  for (const [heading, marker, files] of [
+    ['Added', '+', diff.added],
+    ['Changed', '~', diff.changed],
+    ['Removed', '-', diff.removed],
+  ] as const) {
+    if (files.length > 0) {
+      console.log(`\n${heading} (${files.length}):`);
+      for (const file of files) {
+        console.log(`  ${marker} ${file}`);
+      }
     }
   }
 

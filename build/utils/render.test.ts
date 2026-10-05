@@ -1,4 +1,12 @@
-import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  test,
+} from 'bun:test';
 import path from 'path';
 import { createFsModuleMock } from '../test-helpers';
 import { DEFAULT_FONT_PRELOAD_FILES } from '../generate-fonts';
@@ -7,7 +15,11 @@ import { initHighlighter } from './shiki-highlighter';
 
 const files = new Map<string, string>();
 let renderedPageVariables: Record<string, unknown> = {};
+let authorsConfig: Record<string, Record<string, unknown>> | undefined;
 let mockedCodeHtml = '<div class="code-body">rendered code</div>';
+const originalCode = { ...(await import('./code')) };
+const originalTemplates = { ...(await import('../templates')) };
+let renderedCodeLanguage: string | undefined;
 
 function resolvePath(filePath: string): string {
   return path.resolve(filePath);
@@ -35,8 +47,8 @@ mock.module('fs', () => createFsModuleMock(fsMock));
 
 mock.module('../templates', () => ({
   compileTemplates() {},
-  config() {
-    return undefined;
+  config(name: string) {
+    return name === 'authors' ? authorsConfig : undefined;
   },
   getConfigFileName() {
     return undefined;
@@ -51,6 +63,10 @@ mock.module('../templates', () => ({
   },
 }));
 
+afterAll(() => {
+  mock.module('../templates', () => originalTemplates);
+});
+
 mock.module('./code', () => ({
   extractJavaMethodToc() {
     return [];
@@ -58,13 +74,18 @@ mock.module('./code', () => ({
   renderCodeSegment() {
     return '<pre></pre>';
   },
-  renderCodeWithComments() {
+  renderCodeWithComments(_source: string, lang: string) {
+    renderedCodeLanguage = lang;
     return mockedCodeHtml;
   },
   rewriteProseLinks(lines: string[]) {
     return lines;
   },
 }));
+
+afterAll(() => {
+  mock.module('./code', () => originalCode);
+});
 
 let preparePageTemplateHtml: typeof import('./render').preparePageTemplateHtml;
 let renderCodePageAsset: typeof import('./render').renderCodePageAsset;
@@ -83,7 +104,9 @@ beforeAll(async () => {
 
 beforeEach(() => {
   files.clear();
+  authorsConfig = undefined;
   mockedCodeHtml = '<div class="code-body">rendered code</div>';
+  renderedCodeLanguage = undefined;
 });
 
 const siteVariables = {
@@ -303,6 +326,30 @@ describe('preparePageTemplateHtml', () => {
 });
 
 describe('renderCodePageAsset', () => {
+  test('uses the configured language for mixed-case extension keys and filenames', () => {
+    const contentDir = '/virtual/content';
+    const filePath = path.join(contentDir, 'Sample.tS');
+    writeFile(filePath, 'const value: number = 3;');
+
+    const [pageAsset] = renderCodePageAsset({
+      filePath,
+      contentDir,
+      isWatchMode: false,
+      siteVariables: {
+        ...siteVariables,
+        extensionToShikiLanguage: { TS: 'typescript' },
+      },
+      assetFiles: [],
+      validInternalTargets: new Set(),
+      literateJavaOutputPaths: new Set(),
+    });
+
+    expect(renderedCodeLanguage).toBe('typescript');
+    expect(pageAsset.assetPath).toBe('Sample.tS.html');
+    expect(renderedPageVariables.downloadName).toBe('Sample.tS');
+    expect(renderedPageVariables.codeFilePath).toBe('/Sample.tS');
+  });
+
   test('does not inject the KaTeX stylesheet into code pages', () => {
     const contentDir = '/virtual/content';
     const filePath = path.join(contentDir, 'labs', 'example.ts');
@@ -349,6 +396,128 @@ describe('renderCodePageAsset', () => {
 });
 
 describe('renderPlainTextPageAsset', () => {
+  test.each(['constructor', 'toString', '__proto__'])(
+    'rejects an unconfigured author named %s',
+    author => {
+      authorsConfig = {};
+
+      expect(() =>
+        renderMarkdownPage({
+          contentDir: '/virtual/content',
+          source: `---\ntitle: Test\nauthor: ${author}\n---\nContent.\n`,
+        }),
+      ).toThrow(`unknown author "${author}"`);
+    },
+  );
+
+  test.each(['constructor', 'toString', '__proto__'])(
+    'resolves an explicitly configured author named %s',
+    author => {
+      const entry = { name: 'Configured author', avatar: '/avatar.svg' };
+      authorsConfig = Object.fromEntries([[author, entry]]);
+
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        source: `---\ntitle: Test\nauthor: ${author}\n---\nContent.\n`,
+      });
+
+      expect(renderedPageVariables.author).toBe(entry);
+    },
+  );
+
+  test.each(['md', 'html'])(
+    'resolves relative links from a %s page in a literal percent-escape directory',
+    extension => {
+      const contentDir = path.resolve('/virtual/content');
+      const filePath = path.join(contentDir, '100%20done', `page.${extension}`);
+      writeFile(
+        filePath,
+        '---\ntitle: Percent directory\n---\n\n' +
+          '<main class="body"><a href="other.html">Other</a></main>',
+      );
+      const target = '/100%20done/other.html';
+      const dependencyCollector = { internalTargets: new Set<string>() };
+      const [asset] = renderPlainTextPageAsset({
+        filePath,
+        contentDir,
+        siteVariables,
+        isWatchMode: false,
+        assetFiles: [],
+        validInternalTargets: new Set([target]),
+        generatedPageTargets: new Set([target]),
+        dependencyCollector,
+      });
+      expect(asset.assetPath).toBe('100%20done/page.html');
+      expect(asset.content).toContain('href="other.html" data-tada-page');
+      expect(dependencyCollector.internalTargets).toEqual(new Set([target]));
+    },
+  );
+
+  test('resolves relative breadcrumbs from a literal encoded-slash directory', () => {
+    const dependencyCollector = { internalTargets: new Set<string>() };
+    renderMarkdownPage({
+      contentDir: path.resolve('/virtual/content'),
+      relativePath: path.join('literal%2Fslash', 'page.md'),
+      source:
+        '---\ntitle: Page\nbreadcrumbs:\n  - label: Other\n    url: other.html\n---\n\nContent.',
+      validInternalTargets: new Set(['/literal%2Fslash/other.html']),
+      dependencyCollector,
+    });
+    expect(dependencyCollector.internalTargets).toEqual(
+      new Set(['/literal%2Fslash/other.html']),
+    );
+  });
+  test.each(['.MD', '.mD', '.MARKDOWN', '.MarkDown'])(
+    'parses front matter and Markdown for a %s page while preserving its output basename',
+    extension => {
+      const contentDir = path.resolve('/virtual/content');
+      const filePath = path.join(contentDir, `MixedCase${extension}`);
+      writeFile(
+        filePath,
+        '---\ntitle: Mixed case\n---\n\n**Rendered Markdown**\n',
+      );
+      const [asset] = renderPlainTextPageAsset({
+        filePath,
+        contentDir,
+        siteVariables,
+        isWatchMode: false,
+        validInternalTargets: new Set(),
+        assetFiles: [],
+      });
+      expect(renderedPageVariables.title).toBe('Mixed case');
+      expect(asset.content).toContain('<strong>Rendered Markdown</strong>');
+      expect(asset.content).not.toContain('title: Mixed case');
+      expect(asset.assetPath).toBe('MixedCase.html');
+    },
+  );
+
+  test.each(['.HTML', '.HtMl'])(
+    'parses front matter but preserves literal HTML content for a %s page',
+    extension => {
+      const html = renderMarkdownPage({
+        contentDir: path.resolve('/virtual/content'),
+        relativePath: `MixedCase${extension}`,
+        source: '---\ntitle: HTML case\n---\n\n<p>**literal**</p>\n',
+      });
+      expect(renderedPageVariables.title).toBe('HTML case');
+      expect(html).toContain('<p>**literal**</p>');
+      expect(html).not.toContain('title: HTML case');
+    },
+  );
+
+  test('supports slides on an uppercase Markdown page', () => {
+    const html = renderMarkdownPage({
+      contentDir: path.resolve('/virtual/content'),
+      relativePath: 'Slides.MD',
+      source:
+        '---\ntitle: Slides\nslides: true\n---\n\n# First\n\n---\n\n# Second\n',
+    });
+    expect(renderedPageVariables.slides).toBe(true);
+    expect(html).toContain('data-slides-root');
+    expect(html).toContain('id="first"');
+    expect(html).toContain('id="second"');
+  });
+
   test('includes a basic Markdown partial block', () => {
     const contentDir = '/virtual/content';
     const partialPath = path.join(contentDir, '_partial.md');
@@ -676,33 +845,36 @@ describe('renderPlainTextPageAsset', () => {
     ).toThrow('include is not defined');
   });
 
-  test('rejects slides front matter on HTML content pages', () => {
-    const contentDir = '/virtual/content';
-    const filePath = path.join(contentDir, 'slides.html');
-    writeFile(
-      filePath,
-      [
-        '---',
-        'title: HTML Slides',
-        'slides: true',
-        '---',
-        '',
-        '<p>Hello</p>',
-      ].join('\n'),
-    );
-
-    expect(() =>
-      renderPlainTextPageAsset({
+  test.each(['.html', '.HTML', '.HtMl'])(
+    'rejects slides front matter on %s content pages',
+    extension => {
+      const contentDir = '/virtual/content';
+      const filePath = path.join(contentDir, `slides${extension}`);
+      writeFile(
         filePath,
-        contentDir,
-        isWatchMode: false,
-        siteVariables,
-        validInternalTargets: new Set(),
-        assetFiles: [],
-        literateJavaOutputPaths: new Set(),
-      }),
-    ).toThrow('slides mode is only supported on Markdown pages');
-  });
+        [
+          '---',
+          'title: HTML Slides',
+          'slides: true',
+          '---',
+          '',
+          '<p>Hello</p>',
+        ].join('\n'),
+      );
+
+      expect(() =>
+        renderPlainTextPageAsset({
+          filePath,
+          contentDir,
+          isWatchMode: false,
+          siteVariables,
+          validInternalTargets: new Set(),
+          assetFiles: [],
+          literateJavaOutputPaths: new Set(),
+        }),
+      ).toThrow('slides mode is only supported on Markdown pages');
+    },
+  );
 
   test('tracks multiple relative breadcrumbs from the declaring page', () => {
     const contentDir = '/virtual/content';
@@ -902,4 +1074,24 @@ public class Pair {}
     '/labs/index.html',
     '/labs/00/index.html',
   ]);
+});
+
+test('resolves literate Java breadcrumbs from a literal percent-escape directory', () => {
+  const contentDir = path.resolve('/virtual/content');
+  const filePath = path.join(contentDir, '100%20done', 'Pair.java.md');
+  writeFile(
+    filePath,
+    '---\ntitle: Pair\nbreadcrumbs:\n  - label: Other\n    url: other.html\n---\n\n' +
+      '```java\npublic class Pair {}\n```\n',
+  );
+  const [asset] = renderLiterateJavaPageAsset({
+    filePath,
+    contentDir,
+    isWatchMode: false,
+    skipExecution: true,
+    siteVariables,
+    validInternalTargets: new Set(['/100%20done/other.html']),
+    assetFiles: [],
+  });
+  expect(asset.assetPath).toBe('100%20done/Pair.java.html');
 });

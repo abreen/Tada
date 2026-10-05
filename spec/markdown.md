@@ -1,7 +1,8 @@
 # Markdown Processing
 
-Markdown files (`.md`, `.markdown`) are processed with standard Markdown plus
-several extensions.
+Markdown files (`.md`, `.markdown`, case-insensitive) are processed with standard
+Markdown plus several extensions. Generated `.html` pages preserve the source
+basename's case.
 
 
 ## Syntax highlighting
@@ -51,7 +52,10 @@ The answer is here.
 ```
 
 With JavaScript enabled, an unrevealed answer occupies its normal space behind
-one rectangular placeholder. A build-time content wrapper lets CSS fade the
+one rectangular placeholder. Its concealed content is excluded from keyboard
+focus and the accessibility tree until the answer is revealed. The reveal
+control remains available to keyboard and assistive technology users.
+A build-time content wrapper lets CSS fade the
 entire answer in as one visual unit over 0.25 seconds, while the placeholder and
 reveal hint fade out. Nested markup such as definitions and KaTeX keeps its
 normal styling and shares the same opacity transition; hidden math cannot paint
@@ -73,6 +77,12 @@ with no `A.` label:
 
 Exactly one option must be marked `[x]` or `[X]`. The option marker must use
 standard Markdown list spacing, such as `- [ ] Option`.
+
+With JavaScript enabled, activating an option reveals the selected result and
+the correct answer. If an option contains a link, the first activation selects
+the option without navigating; later activations follow the link. Links in the
+question prompt navigate normally. Without JavaScript, option links also follow
+their destinations on the first activation.
 
 
 ## Collapsible details

@@ -2,6 +2,7 @@ declare module 'pagefind' {
   interface PagefindIndex {
     addHTMLFile(file: {
       sourcePath: string;
+      url?: string;
       content: string;
     }): Promise<{ errors: string[] }>;
     addCustomRecord(record: {

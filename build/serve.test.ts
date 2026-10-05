@@ -52,6 +52,29 @@ describe('resolvePathname', () => {
     expect(result!.filePath).toBe(path.join(DIST_DIR, 'sub', 'page.html'));
   });
 
+  test.each([
+    ['/..notes.html', '..notes.html'],
+    ['/%2e%2enotes.html', '..notes.html'],
+    ['/..assets/page.html', path.join('..assets', 'page.html')],
+  ])('resolves contained dot-prefixed path %s', (pathname, relativePath) => {
+    const filePath = path.join(DIST_DIR, relativePath);
+    mockFs({ [filePath]: { kind: 'file' } });
+
+    expect(resolvePathname(DIST_DIR, pathname)?.filePath).toBe(filePath);
+  });
+
+  test.each(['/../outside.html', '/%2e%2e/outside.html', '/..'])(
+    'rejects existing paths outside dist: %s',
+    pathname => {
+      mockFs({
+        [path.join(DIST_DIR, '..', 'outside.html')]: { kind: 'file' },
+        [path.dirname(DIST_DIR)]: { kind: 'file' },
+      });
+
+      expect(resolvePathname(DIST_DIR, pathname)).toBeNull();
+    },
+  );
+
   test('returns null for nonexistent file', () => {
     expect(resolvePathname(DIST_DIR, '/missing.html')).toBeNull();
   });

@@ -23,7 +23,11 @@ export function resolvePathname(
 
   const resolvedPath = path.resolve(distDir, '.' + decodedPath);
   const relativePath = path.relative(distDir, resolvedPath);
-  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+  if (
+    relativePath === '..' ||
+    relativePath.startsWith('..' + path.sep) ||
+    path.isAbsolute(relativePath)
+  ) {
     return null;
   }
 

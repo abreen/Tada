@@ -232,6 +232,28 @@ function makeManifest(
 }
 
 describe('diffManifests', () => {
+  test('treats prototype property names as ordinary file names', () => {
+    const names = ['__proto__', 'constructor', 'toString'];
+    const files = Object.fromEntries(names.map(name => [name, 'hash']));
+    const empty = makeManifest({});
+    const populated = makeManifest(files);
+    expect(diffManifests(empty, populated)).toEqual({
+      added: names,
+      changed: [],
+      removed: [],
+    });
+    expect(diffManifests(populated, empty)).toEqual({
+      added: [],
+      changed: [],
+      removed: names,
+    });
+    expect(diffManifests(populated, populated)).toEqual({
+      added: [],
+      changed: [],
+      removed: [],
+    });
+  });
+
   test('detects added files', () => {
     const prev = makeManifest({ 'a.html': 'hash1' });
     const current = makeManifest({ 'a.html': 'hash1', 'b.html': 'hash2' });
@@ -331,6 +353,16 @@ describe('hashFile', () => {
 });
 
 describe('walkAndHash', () => {
+  test('hashes a file named __proto__ as an own JSON property', async () => {
+    writeFile(path.join(rootDir, '__proto__'), 'prototype-named asset');
+    const result = await walkAndHash(rootDir);
+    const serialized = JSON.parse(JSON.stringify(result));
+    expect(Object.keys(serialized)).toEqual(['__proto__']);
+    expect(serialized['__proto__']).toBe(
+      createHash('sha256').update('prototype-named asset').digest('hex'),
+    );
+  });
+
   test('returns a file map with relative paths and hashes', async () => {
     writeFile(path.join(rootDir, 'index.html'), '<html></html>');
     writeFile(path.join(rootDir, 'style.css'), 'body {}');

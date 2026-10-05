@@ -7,6 +7,90 @@ from conftest import init_site, run_tada, set_site_config
 MARKER = '123456789'
 
 
+def test_prototype_named_extension_generates_code_page_and_download(tmp_path):
+    site = init_site(tmp_path, bare=True)
+    set_site_config(
+        site, {'extensionToShikiLanguage': {'__proto__': 'text'}, 'basePath': '/course'}
+    )
+    (site / 'content' / 'sample.__proto__').write_text(
+        'mapping = <%= site.extensionToShikiLanguage["__proto__"] %>\n'
+        'own = <%= site.extensionToShikiLanguage.hasOwnProperty("__proto__") %>\n'
+        'object = <%= site.extensionToShikiLanguage.toString() %>\n'
+    )
+    (site / 'content' / 'index.md').write_text(
+        '---\ntitle: Home\n---\n\n[Source](./sample.__proto__)\n'
+    )
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 0, result.stdout + result.stderr
+    page = (site / 'dist' / 'sample.__proto__.html').read_text()
+    assert 'language-text' in page
+    assert 'download="sample.__proto__"' in page
+    assert (site / 'dist' / 'sample.__proto__').read_text() == (
+        'mapping = text\nown = true\nobject = [object Object]\n'
+    )
+    index = (site / 'dist' / 'index.html').read_text()
+    assert '<a href="./sample.__proto__.html" data-tada-page="">Source</a>' in index
+
+
+@pytest.mark.parametrize('extension', ['JAVA', 'JaVa', 'java'])
+@pytest.mark.parametrize('mapped', [True, False])
+def test_java_download_prose_links_match_rendered_page(tmp_path, extension, mapped):
+    site = init_site(tmp_path, bare=True)
+    set_site_config(
+        site,
+        {
+            'base': 'https://example.edu',
+            'basePath': '/course',
+            'extensionToShikiLanguage': {'java': 'java'} if mapped else {},
+        },
+    )
+    code_dir = site / 'content' / 'examples'
+    code_dir.mkdir()
+    source = '/// See [Help](../help.html?view=source#part)\npublic class Sample {}\n'
+    (code_dir / f'Sample.{extension}').write_text(source)
+    (site / 'content' / 'help.md').write_text('---\ntitle: Help\n---\nHelp.\n')
+
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 0, result.stdout + result.stderr
+    downloaded = (site / 'dist' / 'examples' / f'Sample.{extension}').read_text()
+    page = site / 'dist' / 'examples' / f'Sample.{extension}.html'
+    if mapped:
+        target = 'https://example.edu/course/help.html?view=source#part'
+        assert f'/// See [Help]({target})\n' in downloaded
+        assert target in html.unescape(page.read_text())
+        assert f'download="Sample.{extension}"' in page.read_text()
+    else:
+        assert downloaded == source
+        assert not page.exists()
+    assert (code_dir / f'Sample.{extension}').read_text() == source
+
+
+@pytest.mark.parametrize('extension_key', ['TS', 'tS'])
+def test_mixed_case_extension_mapping_highlights_and_preserves_source(tmp_path, extension_key):
+    site = init_site(tmp_path, bare=True)
+    set_site_config(site, {'extensionToShikiLanguage': {extension_key: 'typescript'}})
+    source = (
+        f'// language: <%= site.extensionToShikiLanguage.{extension_key} %>\n'
+        'const value: number = 3;\n'
+    )
+    (site / 'content' / 'Sample.tS').write_text(source)
+    (site / 'content' / 'links.md').write_text('---\ntitle: Links\n---\n\n[Sample](./Sample.tS)\n')
+
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 0, result.stdout + result.stderr
+    page = (site / 'dist' / 'Sample.tS.html').read_text()
+    assert 'language-typescript' in page
+    assert 'language-undefined' not in page
+    assert '<span style=' in page
+    assert 'download="Sample.tS"' in page
+    assert 'href="/Sample.tS"' in page
+    assert (site / 'dist' / 'Sample.tS').read_text() == (
+        '// language: typescript\nconst value: number = 3;\n'
+    )
+    links = (site / 'dist' / 'links.html').read_text()
+    assert '<a href="./Sample.tS.html" data-tada-page="">Sample</a>' in links
+
+
 def _init_code_site(tmp_path):
     site = init_site(tmp_path, bare=True)
     lectures_dir = site / 'content' / 'lectures' / '01'

@@ -47,7 +47,7 @@ export function validateExtensionToShikiLanguage(
     return undefined;
   }
 
-  const validated: Record<string, BundledLanguage | PlainTextLanguage> = {};
+  const entries: Array<[string, BundledLanguage | PlainTextLanguage]> = [];
   for (const [ext, lang] of Object.entries(value)) {
     if (typeof lang !== 'string') {
       continue;
@@ -57,9 +57,9 @@ export function validateExtensionToShikiLanguage(
         `${fileName}: extensionToShikiLanguage.${ext} "${lang}" is not a supported Shiki language`,
       );
     }
-    validated[ext] = lang;
+    entries.push([ext, lang]);
   }
-  return validated;
+  return Object.fromEntries(entries);
 }
 
 export function validateShikiLanguages(
@@ -97,13 +97,22 @@ export function validateShikiLanguages(
 export function getExtensionToShikiLanguage(
   siteVariables: SiteVariables,
 ): Record<string, BundledLanguage | PlainTextLanguage> {
-  return siteVariables.extensionToShikiLanguage ?? {};
+  const configured = siteVariables.extensionToShikiLanguage ?? {};
+  return Object.fromEntries(
+    Object.entries(configured).map(([ext, lang]) => {
+      const normalized = ext.toLowerCase();
+      return [
+        normalized,
+        Object.hasOwn(configured, normalized) ? configured[normalized] : lang,
+      ];
+    }),
+  );
 }
 
 export function getRuntimeBundledShikiLanguages(
   siteVariables: SiteVariables,
 ): BundledLanguage[] {
-  const configured = Object.values(getExtensionToShikiLanguage(siteVariables))
+  const configured = Object.values(siteVariables.extensionToShikiLanguage ?? {})
     .filter(isBundledLanguage)
     .concat(siteVariables.shikiLanguages ?? []);
   return [...new Set(configured)];

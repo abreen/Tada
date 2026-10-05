@@ -32,6 +32,9 @@ pages are prefixed with the base path. This includes:
 ### Relative links
 
 Relative links are not prefixed with the base path.
+They resolve from the generated page's encoded URL path, so a directory whose
+literal name contains a percent escape (for example, `100%20done`) remains
+distinct from one containing a space. The on-disk output names remain literal.
 
 ### Links to code
 

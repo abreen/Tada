@@ -123,7 +123,7 @@ function resolveAuthor(
   const authorKey = pageVariables.author as string;
   dependencyCollector?.setAuthorKey?.(authorKey);
   const authorEntry = authors[authorKey];
-  if (!authorEntry) {
+  if (!Object.hasOwn(authors, authorKey) || !authorEntry) {
     throw new Error(
       `${filePath}: unknown author "${authorKey}" (not found in author config)`,
     );
@@ -277,7 +277,7 @@ export function renderPlainTextPageAsset({
 }: RenderPlainTextOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
-  const sourceUrlPath = normalizeOutputPath(`/${subPath}.html`);
+  const sourceUrlPath = normalizeOutputPath(`/${toUrlPath(subPath)}.html`);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
   const { content, pageVariables, tocItems } = renderPlainTextContent(
@@ -426,7 +426,7 @@ export function renderCopiedContentAsset({
   const rawSource = fs.readFileSync(filePath, 'utf-8');
   const templated = applySourceTemplate(rawSource, siteVariables, filePath);
 
-  if (filePath.endsWith('.java')) {
+  if (path.extname(filePath).toLowerCase() === '.java') {
     const pageDirPath = toPosix(
       path.relative(contentDir, path.dirname(filePath)),
     );
@@ -568,7 +568,7 @@ function renderPlainTextContent(
 } {
   const applyBasePath = createApplyBasePath(siteVariables);
 
-  const ext = path.extname(filePath);
+  const ext = path.extname(filePath).toLowerCase();
   const raw = fs.readFileSync(filePath, 'utf-8');
   const { pageVariables: rawPageVariables, content } =
     parseFrontMatterAndContent(raw, ext);
@@ -655,7 +655,7 @@ export function renderLiterateJavaPageAsset({
 
   log.info`Rendering literate Java page ${B`${name}`}`;
 
-  const sourceUrlPath = `/${subPath}.java.html`;
+  const sourceUrlPath = `/${toUrlPath(subPath)}.java.html`;
   const raw = fs.readFileSync(filePath, 'utf-8');
   const { pageVariables: rawPageVariables, content } =
     parseFrontMatterAndContent(raw, '.md');

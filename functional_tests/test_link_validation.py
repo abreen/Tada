@@ -8,6 +8,26 @@ from conftest import (
 )
 
 
+@pytest.mark.parametrize('extension', ['md', 'html'])
+def test_relative_links_and_breadcrumbs_in_literal_percent_directory(site_dir, extension):
+    directory = site_dir / 'content' / '100%20done'
+    directory.mkdir()
+    (directory / 'other.md').write_text('---\ntitle: Other\n---\n\nOther page.\n')
+    (directory / f'page.{extension}').write_text(
+        '---\ntitle: Percent directory\nbreadcrumbs:\n  - label: Other\n'
+        '    url: other.html\n---\n\n<a href="other.html">Other link</a>\n'
+    )
+
+    result = run_tada('dev', cwd=str(site_dir))
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    output = site_dir / 'dist' / '100%20done'
+    assert (output / 'other.html').is_file()
+    html = (output / 'page.html').read_text()
+    assert 'href="other.html" data-tada-page' in html
+    assert '100%2520done' not in {path.name for path in (site_dir / 'dist').iterdir()}
+
+
 class TestBrokenNavLink:
     """A broken internal link in the nav config fails the build."""
 

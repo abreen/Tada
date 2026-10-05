@@ -38,6 +38,15 @@ function shouldIgnoreClick(
     return true;
   }
 
+  // Let the option's bubbling handler consume the click that reveals answers.
+  if (
+    anchor.closest(
+      '.question-multiple-choice:not([data-revealed]) .question-multiple-choice-option',
+    )
+  ) {
+    return true;
+  }
+
   const href = anchor.href;
   if (!href) {
     return true;

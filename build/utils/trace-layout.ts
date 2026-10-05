@@ -34,18 +34,13 @@ const MIN_ARRAY_CELL_WIDTH = 48;
 
 /** Information collected about a heap object across all trace steps. */
 interface ObjectInfo {
-  id: string;
   type: string;
   firstStep: number;
   lastStep: number;
-  /** Set of object IDs this object ever references (across all steps). */
-  references: Set<string>;
   /** Step indices where this object is actually present. */
   activeSteps: Set<number>;
   /** Per-field reference targets (field name -> set of referenced object IDs). */
   fieldRefs: Map<string, Set<string>>;
-  /** Max number of fields seen on this object (for field objects). */
-  maxFields: number;
   /** Max number of elements seen on this object (for arrays). */
   maxElements: number;
   /** Scalar value (for heap objects represented by a single value). */
@@ -70,7 +65,7 @@ interface TreeNode {
 
 /**
  * Walk every step, collect every heap object's type, lifetime (first/last step),
- * all references it ever makes, max fields seen, whether it's an array or string.
+ * reference targets by field, display widths, and whether it's an array or string.
  */
 export function scanSteps(steps: TraceStep[]): Map<string, ObjectInfo> {
   const objects = new Map<string, ObjectInfo>();
@@ -81,14 +76,11 @@ export function scanSteps(steps: TraceStep[]): Map<string, ObjectInfo> {
       let info = objects.get(id);
       if (!info) {
         info = {
-          id,
           type: obj.type,
           firstStep: stepIndex,
           lastStep: stepIndex,
-          references: new Set(),
           activeSteps: new Set(),
           fieldRefs: new Map(),
-          maxFields: 0,
           maxElements: 0,
           value: null,
           hasValue: false,
@@ -115,18 +107,14 @@ export function scanSteps(steps: TraceStep[]): Map<string, ObjectInfo> {
 
         for (const elem of obj.elements) {
           if (elem.type === 'ref') {
-            info.references.add(elem.id);
             elemRefs.add(elem.id);
           }
         }
       } else if ('fields' in obj) {
-        const fieldEntries = Object.entries(obj.fields);
-        info.maxFields = Math.max(info.maxFields, fieldEntries.length);
-        for (const [fieldName, val] of fieldEntries) {
+        for (const [fieldName, val] of Object.entries(obj.fields)) {
           info.fieldNames.add(fieldName);
 
           if (val.type === 'ref') {
-            info.references.add(val.id);
             if (!info.fieldRefs.has(fieldName)) {
               info.fieldRefs.set(fieldName, new Set());
             }

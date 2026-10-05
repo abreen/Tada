@@ -38,22 +38,18 @@ let pagefind: Pagefind | null = null;
 
 type SubResult = { title: string; url: string; excerpt: string };
 
-type State = {
-  value: string;
-  showResults: boolean;
-  results: Result[];
-  totalResults: number;
-};
+type State = { value: string; showResults: boolean; results: Result[] };
 
-type SearchState = Pick<State, 'results' | 'totalResults'> | null;
-
-async function doSearch(query: string, window: Window): Promise<SearchState> {
+async function doSearch(
+  query: string,
+  window: Window,
+): Promise<Result[] | null> {
   if (pagefind == null) {
     return null;
   }
 
   if (!query) {
-    return { results: [], totalResults: 0 };
+    return [];
   }
 
   const search = await pagefind.search(query);
@@ -90,8 +86,7 @@ async function doSearch(query: string, window: Window): Promise<SearchState> {
     };
   });
 
-  const grouped = groupPdfResults(results);
-  return { totalResults: grouped.length, results: grouped };
+  return groupPdfResults(results);
 }
 
 function applyHighlight(
@@ -247,7 +242,7 @@ function render(
     infoSpan.classList.add('loading');
   } else {
     infoSpan.classList.remove('loading');
-    const n = state.totalResults;
+    const n = state.results.length;
     if (n === 0) {
       countSpan.textContent = 'No results';
     } else if (n === 1) {
@@ -351,12 +346,7 @@ export default (window: Window) => {
     }
   }
 
-  const state: State = {
-    value: '',
-    showResults: false,
-    results: [],
-    totalResults: 0,
-  };
+  const state: State = { value: '', showResults: false, results: [] };
 
   let latestUpdateId = 0;
 
@@ -368,15 +358,14 @@ export default (window: Window) => {
     if (!(await loadPagefind()) || updateId !== latestUpdateId) {
       return;
     }
-    const nextState = await doSearch(query, window);
+    const results = await doSearch(query, window);
     if (updateId !== latestUpdateId) {
       return;
     }
-    if (!nextState) {
+    if (!results) {
       return;
     }
-    state.results = nextState.results;
-    state.totalResults = nextState.totalResults;
+    state.results = results;
     if (!state.showResults) {
       return;
     }
@@ -459,7 +448,6 @@ export default (window: Window) => {
       invalidateUpdates();
       hide();
       state.results = [];
-      state.totalResults = 0;
       return;
     }
     state.showResults = true;
@@ -573,8 +561,8 @@ export default (window: Window) => {
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      hide();
       input!.focus();
+      hide();
     }
   }
 

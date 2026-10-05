@@ -154,6 +154,21 @@ describe('validateNavLinks', () => {
 });
 
 describe('validateAuthorLinks', () => {
+  test('validates the avatar pathname while preserving its fragment', () => {
+    const authorsData = {
+      alex: { name: 'Alex', avatar: '/avatars/alex.svg#portrait' },
+    };
+    expect(
+      validateAuthorLinks(authorsData, new Set(['/avatars/alex.svg'])),
+    ).toEqual([]);
+    const errors = validateAuthorLinks(
+      authorsData,
+      new Set(['/avatars/alex.svg#portrait']),
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('/avatars/alex.svg#portrait');
+  });
+
   test('passes for valid author url and avatar', () => {
     const validTargets = new Set(['/about/alex.html', '/avatars/alex.jpg']);
     const authorsData = {

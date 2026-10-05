@@ -362,4 +362,54 @@ describe('search UI', () => {
       win.document.querySelector('a.result')?.hasAttribute('data-tada-page'),
     ).toBe(false);
   });
+
+  test('counts grouped PDF documents rather than pages and resets for no matches', async () => {
+    const pdfPages = ['/guide.pdf#page=3', '/guide.pdf#page=1'];
+    const pagefind = {
+      destroy: async () => {},
+      init: async () => {},
+      options: async () => {},
+      search: async (query: string) => ({
+        results: (query === 'none'
+          ? []
+          : query === 'pdf'
+            ? pdfPages
+            : [...pdfPages, '/about/']
+        ).map(url => ({
+          data: async () => ({ meta: { title: url }, url, score: 1 }),
+        })),
+      }),
+    };
+    mockGlobals({ importModule: async () => pagefind });
+    const win = createSearchWindow();
+    const cleanup = mount(win);
+    // Reload the shared Pagefind instance left by another mounted widget.
+    win.dispatchEvent(new win.Event(PAGE_UPDATE_REFRESH_EVENT));
+    await flush();
+    const input = win.document.querySelector(
+      'input.quick-search',
+    ) as HTMLInputElement;
+    input.dispatchEvent(new win.Event('focus'));
+
+    for (const [query, text, count] of [
+      ['mixed', '2 results', 2],
+      ['pdf', 'One result', 1],
+      ['none', 'No results', 0],
+    ] as const) {
+      input.value = query;
+      input.dispatchEvent(new win.Event('input', { bubbles: true }));
+      await flush();
+      expect(win.document.querySelector('.results-count')?.textContent).toBe(
+        text,
+      );
+      expect(win.document.querySelectorAll('a.result')).toHaveLength(count);
+      expect(win.document.querySelectorAll('a.sub-result')).toHaveLength(
+        count === 0 ? 0 : 2,
+      );
+    }
+    // Invalidate this mocked index before disposal so later widgets import theirs.
+    win.dispatchEvent(new win.Event(PAGE_UPDATE_REFRESH_EVENT));
+    cleanup?.();
+    await flush();
+  });
 });

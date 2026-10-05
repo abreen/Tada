@@ -25,6 +25,8 @@ const PERSISTENT_COMPONENTS: Record<
 let startTime = -1;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const initialHref = window.location.href;
+  const initialHash = window.location.hash;
   startTime = window.performance.now();
 
   const failed: Record<string, string> = {};
@@ -54,8 +56,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // fragment scroll. Do it ourselves once per-page components have
   // finished mutating the DOM. On a fresh cold load the browser already
   // scrolled, so this is a harmless re-align.
-  if (window.location.hash) {
-    getHashTarget(window.document, window.location.hash)?.scrollIntoView();
+  if (initialHash && window.location.href === initialHref) {
+    getHashTarget(window.document, initialHash)?.scrollIntoView();
   }
 
   for (const [name, reason] of Object.entries(failed)) {

@@ -485,9 +485,10 @@ export function renderCodeWithComments(
         const prose = segment.lines
           .map(line => line.replace(/^\s*\/\/\/(\s?)/, ''))
           .join('\n');
-        const rewrittenLines = pageDirPath
-          ? rewriteProseLinks(segment.lines, siteVariables, pageDirPath)
-          : segment.lines;
+        const rewrittenLines =
+          pageDirPath !== undefined
+            ? rewriteProseLinks(segment.lines, siteVariables, pageDirPath)
+            : segment.lines;
         const source = escapeAttr(rewrittenLines.join('\n'));
         return `<div class="code-prose" data-prose-source="${source}" style="--prose-indent: ${indent}ch"><div class="code-prose-gutter"></div><div class="code-prose-content">${md.render(prose)}</div></div>`;
       }

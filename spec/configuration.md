@@ -79,7 +79,8 @@ Generated development and production site configs explicitly include
   serif-monospace pair; see [Custom serif fonts](#custom-serif-fonts)
 - **internalDomains**: list of domains treated as internal for link styling
 - **extensionToShikiLanguage**: optional map from source-file extensions to the
-  Shiki language used for generated code pages
+  Shiki language used for generated code pages; extension keys match
+  case-insensitively (see [Code Pages](code-pages.md))
 - **shikiLanguages**: optional list of bundled Shiki languages allowed in
   Markdown fences; plain-text fences (`text`, `txt`, `plain`) work without it
 - **vars**: arbitrary key-value pairs accessible in templates as `vars.*`

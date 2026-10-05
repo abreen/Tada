@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { buildIndex, collectIndexTargets } from './pagefind';
 
 interface FakePagefindCalls {
-  htmlFiles?: { sourcePath: string; content: string }[];
+  htmlFiles?: { sourcePath: string; url?: string; content: string }[];
   customRecords?: {
     url: string;
     content: string;
@@ -16,7 +16,11 @@ interface FakePagefindCalls {
 
 function createFakePagefind(calls: FakePagefindCalls) {
   const fakeIndex = {
-    addHTMLFile: async (file: { sourcePath: string; content: string }) => {
+    addHTMLFile: async (file: {
+      sourcePath: string;
+      url?: string;
+      content: string;
+    }) => {
       calls.htmlFiles?.push(file);
       return { errors: [], file: { url: file.sourcePath, meta: {} } };
     },
@@ -45,6 +49,54 @@ function createFakePagefind(calls: FakePagefindCalls) {
 }
 
 describe('PagefindPlugin', () => {
+  for (const hasExtractedText of [true, false]) {
+    test.each([
+      ['/docs/lecture#1.pdf', '/docs/lecture%231.pdf'],
+      ['/100%20done/guide.pdf', '/100%2520done/guide.pdf'],
+      ['/docs/guide.pdf', '/docs/guide.pdf'],
+    ])(
+      `encodes PDF output path %s in search URLs (text=${hasExtractedText})`,
+      async (outputPath, urlPath) => {
+        const calls: FakePagefindCalls = { customRecords: [] };
+        const sourcePath = path.resolve(
+          'pdf-site',
+          'content',
+          ...outputPath.slice(1).split('/'),
+        );
+        const extractedFiles: string[] = [];
+        await buildIndex({
+          distPath: path.resolve('pdf-site', 'dist'),
+          prepareOutputDir: () => {},
+          htmlAssetsByPath: new Map(),
+          reachableHtmlPaths: [],
+          reachablePdfPaths: [outputPath],
+          pdfSourceByOutputPath: new Map([[outputPath, sourcePath]]),
+          loadPagefind: createFakePagefind(calls),
+          checkMutool: async () => {},
+          extractPages: async filePath => {
+            extractedFiles.push(filePath);
+            return {
+              hasExtractedText,
+              pages: hasExtractedText
+                ? [{ pageNumber: 2, content: 'Lecture text' }]
+                : [],
+            };
+          },
+        });
+        const title = path.posix.basename(outputPath);
+        expect(extractedFiles).toEqual([sourcePath]);
+        expect(calls.customRecords).toEqual([
+          {
+            url: urlPath + (hasExtractedText ? '#page=2' : ''),
+            content: hasExtractedText ? 'Lecture text' : title,
+            language: 'en',
+            meta: hasExtractedText ? { title, page: '2' } : { title },
+          },
+        ]);
+      },
+    );
+  }
+
   test('collectIndexTargets filters reachable generic asset targets down to PDFs', () => {
     const htmlAnalysisByPath = new Map([
       [
@@ -110,9 +162,14 @@ describe('PagefindPlugin', () => {
     });
 
     expect(calls.htmlFiles).toEqual([
-      { sourcePath: 'index.html', content: '<html><body>Home</body></html>' },
+      {
+        sourcePath: 'index.html',
+        url: '/index.html',
+        content: '<html><body>Home</body></html>',
+      },
       {
         sourcePath: 'about/index.html',
+        url: '/about/index.html',
         content: '<html><body>About</body></html>',
       },
     ]);
@@ -136,6 +193,34 @@ describe('PagefindPlugin', () => {
     expect(calls.outputPath).toBe(path.join('/tmp/dist', 'pagefind'));
     expect(calls.deleted).toBe(1);
   });
+
+  test.each([
+    ['docs/lecture#1.html', '/docs/lecture%231.html'],
+    ['100%20done/guide.html', '/100%2520done/guide.html'],
+    [
+      path.join('notes and examples', 'caf\u00e9.html'),
+      '/notes%20and%20examples/caf%C3%A9.html',
+    ],
+    ['docs/ordinary.html', '/docs/ordinary.html'],
+  ])(
+    'buildIndex supplies an encoded URL for raw HTML output %s',
+    async (sourcePath, url) => {
+      const content = '<html lang="en"><body>Searchable page</body></html>';
+      const calls: FakePagefindCalls = { htmlFiles: [] };
+
+      await buildIndex({
+        distPath: '/tmp/dist',
+        prepareOutputDir: () => {},
+        htmlAssetsByPath: new Map([[sourcePath, content]]),
+        reachableHtmlPaths: [sourcePath],
+        reachablePdfPaths: [],
+        pdfSourceByOutputPath: new Map(),
+        loadPagefind: createFakePagefind(calls),
+      });
+
+      expect(calls.htmlFiles).toEqual([{ sourcePath, url, content }]);
+    },
+  );
 
   test('buildIndex prepends filename to page 1 content for searchability', async () => {
     const calls: FakePagefindCalls = { htmlFiles: [], customRecords: [] };

@@ -1,14 +1,70 @@
 import { describe, expect, test } from 'bun:test';
 import { compile, doValidation } from './json-schema';
 import {
+  getExtensionToShikiLanguage,
+  getRuntimeBundledShikiLanguages,
   resolveFaviconSymbol,
   validateExtensionToShikiLanguage,
   validateShikiLanguages,
 } from './site-variables';
 import type { SiteVariables } from './types';
+import { getProcessedExts, getSourceRenderKind } from './source-model';
+import { applySourceTemplate } from './utils/source-template';
 import siteSchema from '../schema/site.schema.json' with { type: 'json' };
 
 describe('validateExtensionToShikiLanguage', () => {
+  test('retains template access to ordinary mapping methods', () => {
+    const site = siteWith({
+      extensionToShikiLanguage: validateExtensionToShikiLanguage(
+        { ts: 'typescript' },
+        'site.dev.json',
+      ),
+    });
+    expect(
+      applySourceTemplate(
+        '<%= site.extensionToShikiLanguage.hasOwnProperty("ts") %>|<%= site.extensionToShikiLanguage.toString() %>',
+        site,
+        'example.ts',
+      ),
+    ).toBe('true|[object Object]');
+  });
+
+  test.each(['__proto__', 'constructor', 'toString'])(
+    'retains an explicit %s extension mapping',
+    ext => {
+      const validated = validateExtensionToShikiLanguage(
+        JSON.parse(`{"${ext}":"text"}`),
+        'site.dev.json',
+      )!;
+      expect(Object.hasOwn(validated, ext)).toBe(true);
+      expect(validated[ext]).toBe('text');
+    },
+  );
+
+  test('uses the own __proto__ mapping for code-page classification', () => {
+    const mapping = validateExtensionToShikiLanguage(
+      JSON.parse('{"__proto__":"text"}'),
+      'site.dev.json',
+    )!;
+    const site = siteWith({ extensionToShikiLanguage: mapping });
+    const extensions = getExtensionToShikiLanguage(site);
+    expect(extensions['__proto__']).toBe('text');
+    expect(
+      getSourceRenderKind(
+        'example.__proto__',
+        'content',
+        getProcessedExts(Object.keys(extensions)),
+        true,
+      ),
+    ).toBe('code-page');
+    expect(Object.hasOwn(site.extensionToShikiLanguage!, '__proto__')).toBe(
+      true,
+    );
+    expect(JSON.stringify(site.extensionToShikiLanguage)).toBe(
+      '{"__proto__":"text"}',
+    );
+  });
+
   test('returns undefined when extensionToShikiLanguage is omitted', () => {
     expect(
       validateExtensionToShikiLanguage(undefined, 'site.dev.json'),
@@ -80,6 +136,76 @@ function siteWith(overrides: Partial<SiteVariables>): SiteVariables {
     ...overrides,
   };
 }
+
+describe('getExtensionToShikiLanguage', () => {
+  test('matches extension keys case-insensitively without changing author variables', () => {
+    const mapping = Object.freeze({
+      TS: 'typescript',
+      Py: 'python',
+      TXT: 'text',
+    } as const);
+    const site = siteWith({ extensionToShikiLanguage: mapping });
+
+    expect(getExtensionToShikiLanguage(site)).toEqual({
+      ts: 'typescript',
+      py: 'python',
+      txt: 'text',
+    });
+    expect(site.extensionToShikiLanguage).toBe(mapping);
+    expect(site.extensionToShikiLanguage).toEqual(mapping);
+    expect(getRuntimeBundledShikiLanguages(site)).toEqual([
+      'typescript',
+      'python',
+    ]);
+  });
+
+  test.each([
+    { ts: 'typescript', TS: 'text' },
+    { TS: 'text', ts: 'typescript' },
+  ] as const)(
+    'preserves an existing lowercase mapping regardless of alias order: %j',
+    mapping => {
+      expect(
+        getExtensionToShikiLanguage(
+          siteWith({ extensionToShikiLanguage: mapping }),
+        ),
+      ).toEqual({ ts: 'typescript' });
+    },
+  );
+
+  test('returns an empty mapping when omitted', () => {
+    expect(getExtensionToShikiLanguage(siteWith({}))).toEqual({});
+  });
+
+  test('uses only configured lowercase aliases when choosing precedence', () => {
+    expect(
+      getExtensionToShikiLanguage(
+        siteWith({ extensionToShikiLanguage: { CONSTRUCTOR: 'text' } }),
+      )['constructor'],
+    ).toBe('text');
+  });
+
+  test('uses the last case alias when no lowercase key is configured', () => {
+    expect(
+      getExtensionToShikiLanguage(
+        siteWith({
+          extensionToShikiLanguage: { TS: 'typescript', Ts: 'text' },
+        }),
+      ),
+    ).toEqual({ ts: 'text' });
+  });
+
+  test('keeps every configured bundled language available for Markdown fences', () => {
+    const site = siteWith({
+      extensionToShikiLanguage: { ts: 'typescript', TS: 'python' },
+    });
+    expect(getExtensionToShikiLanguage(site)).toEqual({ ts: 'typescript' });
+    expect(getRuntimeBundledShikiLanguages(site)).toEqual([
+      'typescript',
+      'python',
+    ]);
+  });
+});
 
 describe('resolveFaviconSymbol', () => {
   test('derives faviconSymbol from a text symbol', () => {

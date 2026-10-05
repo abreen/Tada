@@ -37,7 +37,7 @@ export function diffManifests(
   const removed: string[] = [];
 
   for (const key of Object.keys(currentFiles)) {
-    if (!(key in prevFiles)) {
+    if (!Object.hasOwn(prevFiles, key)) {
       added.push(key);
     } else if (prevFiles[key] !== currentFiles[key]) {
       changed.push(key);
@@ -45,7 +45,7 @@ export function diffManifests(
   }
 
   for (const key of Object.keys(prevFiles)) {
-    if (!(key in currentFiles)) {
+    if (!Object.hasOwn(currentFiles, key)) {
       removed.push(key);
     }
   }
@@ -72,7 +72,7 @@ export async function walkAndHash(
   dir: string,
 ): Promise<Record<string, string>> {
   const entries = fs.readdirSync(dir, { withFileTypes: true, recursive: true });
-  const result: Record<string, string> = {};
+  const result: Record<string, string> = Object.create(null);
 
   for (const entry of entries) {
     if (!entry.isFile()) {

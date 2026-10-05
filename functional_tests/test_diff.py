@@ -2,7 +2,81 @@ import hashlib
 import json
 import os
 
+import pytest
 from conftest import run_tada
+
+
+@pytest.mark.parametrize(
+    ('before', 'after', 'expected'),
+    [
+        (
+            {
+                'removed-z.html': 'old',
+                'changed-z.html': 'old',
+                'removed-a.html': 'old',
+                'changed-a.html': 'old',
+            },
+            {
+                'added-z.html': 'new',
+                'changed-z.html': 'new',
+                'added-a.html': 'new',
+                'changed-a.html': 'new',
+            },
+            [
+                '',
+                'Added (2):',
+                '  + added-a.html',
+                '  + added-z.html',
+                '',
+                'Changed (2):',
+                '  ~ changed-a.html',
+                '  ~ changed-z.html',
+                '',
+                'Removed (2):',
+                '  - removed-a.html',
+                '  - removed-z.html',
+                '',
+                'Total: 6 files differ',
+            ],
+        ),
+        (
+            {},
+            {'added.html': 'new'},
+            ['', 'Added (1):', '  + added.html', '', 'Total: 1 file differ'],
+        ),
+        (
+            {'changed.html': 'old'},
+            {'changed.html': 'new'},
+            ['', 'Changed (1):', '  ~ changed.html', '', 'Total: 1 file differ'],
+        ),
+        (
+            {'removed.html': 'old'},
+            {},
+            ['', 'Removed (1):', '  - removed.html', '', 'Total: 1 file differ'],
+        ),
+        ({'same.html': 'same'}, {'same.html': 'same'}, ['', 'No changes between builds.']),
+    ],
+    ids=['mixed', 'added-only', 'changed-only', 'removed-only', 'unchanged'],
+)
+def test_diff_output_sections(tmp_path, before, after, expected):
+    for version, files in enumerate([before, after], start=1):
+        output = tmp_path / 'dist-prod' / f'v{version}'
+        output.mkdir(parents=True)
+        manifest = {
+            'schema': 1,
+            'build': version,
+            'buildTime': '2026-01-01T00:00:00Z',
+            'files': files,
+        }
+        (output / 'tada.manifest.json').write_text(json.dumps(manifest))
+
+    result = run_tada('diff', cwd=str(tmp_path))
+
+    assert result.returncode == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert lines[0].startswith('v1  ')
+    assert lines[1].startswith('v2  ')
+    assert lines[2:] == expected
 
 
 class TestDiffErrors:
@@ -60,6 +134,33 @@ class TestDiffNoChanges:
 
 
 class TestDiffWithChanges:
+    def test_tracks_prototype_named_assets(self, site_dir):
+        names = ['__proto__', 'constructor', 'toString']
+        run_tada('prod', cwd=str(site_dir), check=True)
+
+        for name in names:
+            (site_dir / 'public' / name).write_bytes(f'asset {name}'.encode())
+        run_tada('prod', cwd=str(site_dir), check=True)
+
+        output = site_dir / 'dist-prod' / 'v2'
+        manifest = json.loads((output / 'tada.manifest.json').read_text())
+        for name in names:
+            asset_bytes = (site_dir / 'public' / name).read_bytes()
+            assert (output / name).read_bytes() == asset_bytes
+            assert manifest['files'][name] == hashlib.sha256(asset_bytes).hexdigest()
+
+        upload_dir = site_dir / 'upload'
+        added = run_tada('diff', '--copy', str(upload_dir), cwd=str(site_dir), check=True)
+        for name in names:
+            assert f'  + {name}' in added.stdout
+            assert (upload_dir / name).read_bytes() == (output / name).read_bytes()
+            (site_dir / 'public' / name).unlink()
+
+        run_tada('prod', cwd=str(site_dir), check=True)
+        removed = run_tada('diff', cwd=str(site_dir), check=True)
+        for name in names:
+            assert f'  - {name}' in removed.stdout
+
     def test_detects_changed_content(self, site_dir):
         run_tada('prod', cwd=str(site_dir), check=True)
 

@@ -64,8 +64,11 @@ Stdout uses the normal output text color; stderr is rendered in red. Traced
 program stderr is part of the trace data and is not printed among Tada's build
 logs. A toolbar with step buttons and a counter lets the user navigate through
 execution steps. Chunks are fetched on demand as the user steps forward. Trace
-controls render disabled and are enabled by the client-side component after the
-trace data is ready. If navigation requests overlap while chunks load, the
+navigation buttons render disabled and the resize handle renders inert. The
+client enables them after the initial trace data and interaction handlers are
+ready. Without JavaScript or when initial data cannot load, source HTML remains
+readable while the resize handle stays outside keyboard focus. If navigation
+requests overlap while chunks load, the
 latest request controls the displayed step; an older request finishing later
 cannot replace its source highlight, diagram, or output.
 

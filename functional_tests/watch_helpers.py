@@ -7,7 +7,6 @@ from stat import S_ISREG
 import pytest
 from conftest import (
     _bun_command,
-    get_free_ports,
     process_group_popen_kwargs,
     terminate_process_group,
 )
@@ -43,14 +42,13 @@ class WatchProcess:
         self.dist_dir = site_dir / 'dist'
         self.stdout_log_path = site_dir / 'watch_stdout.log'
         self.stderr_log_path = site_dir / 'watch_stderr.log'
-        self.http_port = get_free_ports(1)[0]
         self._stdout_file = open(self.stdout_log_path, 'w')
         self._stderr_file = open(self.stderr_log_path, 'w')
         self.proc = subprocess.Popen(
             _bun_command(
                 'watch',
                 '--port',
-                str(self.http_port),
+                '0',
             ),
             cwd=str(site_dir),
             stdout=self._stdout_file,
@@ -58,6 +56,16 @@ class WatchProcess:
             **process_group_popen_kwargs(),
         )
         self._stdout_cursor = 0
+
+    @property
+    def http_port(self) -> int:
+        """Read the port atomically assigned when the watch server binds."""
+        match = re.search(
+            r'Dev server: http://localhost:(\d+)/index\.html', self._clean(self._stdout_text())
+        )
+        if match is None:
+            raise RuntimeError('Watch server has not announced its port')
+        return int(match.group(1))
 
     def _file_snapshot(self, path: Path):
         """Return a lightweight snapshot for change detection."""
@@ -81,6 +89,7 @@ class WatchProcess:
             return None
 
         return {
+            'mtime': stat.st_mtime,
             'mtime_ns': stat.st_mtime_ns,
             'size': stat.st_size,
             'content': content,
@@ -174,13 +183,16 @@ class WatchProcess:
         raise self._timeout('Did not observe a successful rebuild within timeout')
 
     def wait_for_rebuild(self, path: Path, condition='modified', before_mtime=None):
-        """Wait for a file to be created, modified, or removed."""
+        """Wait for a file change relative to a previous mtime or full snapshot."""
         if condition == 'modified' and before_mtime is None:
             raise ValueError("before_mtime must be provided for 'modified' condition")
 
         deadline = time.monotonic() + REBUILD_TIMEOUT_SEC
         start = self._stdout_cursor
         before_snapshot = self._file_snapshot(path)
+        if isinstance(before_mtime, dict):
+            before_snapshot = before_mtime
+            before_mtime = None
 
         def _check():
             rebuild_started = self._has_rebuild_started_since(start)
@@ -196,7 +208,11 @@ class WatchProcess:
                 return rebuild_succeeded if rebuild_started else True
             if condition == 'modified':
                 current_snapshot = self._file_snapshot(path)
-                changed = current_snapshot is not None and current_snapshot != before_snapshot
+                # A fast rebuild can finish before this method captures its snapshot.
+                changed = current_snapshot is not None and (
+                    current_snapshot != before_snapshot
+                    or (before_mtime is not None and current_snapshot['mtime'] != before_mtime)
+                )
                 if rebuild_started:
                     return changed and rebuild_succeeded
                 return changed
@@ -211,15 +227,20 @@ class WatchProcess:
             time.sleep(POLL_SEC)
         raise self._timeout(f"File {path} did not meet condition '{condition}' within timeout")
 
-    def assert_no_rebuild(self, path: Path, before_mtime: float, timeout_sec=3):
+    def assert_no_rebuild(self, path: Path, before_mtime: float | dict, timeout_sec=3):
         """Assert that a file is not modified for a period."""
         deadline = time.monotonic() + timeout_sec
         before_snapshot = self._file_snapshot(path)
+        if isinstance(before_mtime, dict):
+            before_snapshot = before_mtime
+            before_mtime = None
         while time.monotonic() < deadline:
             current_snapshot = self._file_snapshot(path)
             if current_snapshot is None:
                 raise AssertionError(f'Expected no rebuild for {path}')
-            if current_snapshot != before_snapshot:
+            if current_snapshot != before_snapshot or (
+                before_mtime is not None and current_snapshot['mtime'] != before_mtime
+            ):
                 raise AssertionError(f'Expected no rebuild for {path}')
             if self.proc.poll() is not None:
                 raise RuntimeError(f'Watch process exited with code {self.proc.returncode}')

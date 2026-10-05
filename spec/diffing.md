@@ -4,6 +4,8 @@ Tada can compare two production builds to show what changed. It reads the
 manifests of two versions and uses file hashes to identify added, changed, and
 removed files. The root `tada.manifest.json` is excluded from its own hash map;
 public assets with that name in nested directories are tracked normally.
+Tracked filenames are treated literally, including root assets named
+`__proto__`, `constructor`, or `toString`.
 
 By default, the two most recent versions are compared. Specific version numbers
 can also be provided.

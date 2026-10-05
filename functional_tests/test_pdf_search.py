@@ -1,9 +1,11 @@
 import gzip
 import json
 import os
+import shutil
+from urllib.parse import quote, unquote, urlsplit
 
 import pytest
-from conftest import make_fake_failing_command, run_tada
+from conftest import PACKAGE_DIR, init_site, make_fake_failing_command, run_tada, set_site_config
 
 
 def _pagefind_has_pdf_ref(pagefind_dir, filename):
@@ -20,6 +22,36 @@ def _pagefind_has_pdf_ref(pagefind_dir, filename):
         if filename in content:
             return True
     return False
+
+
+@pytest.mark.parametrize('base_path', ['/', '/course'])
+@pytest.mark.parametrize('pdf_name', ['lecture#1.pdf', '100%20done/guide.pdf', 'guide.pdf'])
+def test_pdf_search_urls_encode_raw_output_paths(tmp_path, base_path, pdf_name):
+    site = init_site(tmp_path, bare=True)
+    set_site_config(site, {'basePath': base_path, 'features': {'search': True}})
+    source = site / 'content'
+    pdf = source.joinpath(*pdf_name.split('/'))
+    pdf.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(PACKAGE_DIR / 'init' / 'content' / 'lectures' / '01' / 'lecture1.pdf', pdf)
+    url_path = quote('/' + pdf_name, safe='/')
+    (source / 'index.md').write_text('---\ntitle: Home\n---\n[Lecture](' + url_path + ')\n')
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'mutool was not found' not in result.stdout + result.stderr
+    assert (site / 'dist').joinpath(*pdf_name.split('/')).read_bytes() == pdf.read_bytes()
+    records = []
+    for fragment in (site / 'dist' / 'pagefind').rglob('*.pf_fragment'):
+        payload = gzip.decompress(fragment.read_bytes()).decode('utf-8')
+        record = json.loads(payload[payload.index('{') :])
+        if record.get('meta', {}).get('title') == pdf.name:
+            records.append(record)
+    assert records, 'No PDF records found in actual Pagefind fragments'
+    assert {record['meta']['page'] for record in records} == {'1', '2'}
+    for record in records:
+        assert record['url'] == url_path + '#page=' + record['meta']['page']
+        parsed = urlsplit(record['url'])
+        assert unquote(parsed.path) == '/' + pdf_name
+        assert parsed.fragment == 'page=' + record['meta']['page']
 
 
 class TestPdfSearchIndexing:

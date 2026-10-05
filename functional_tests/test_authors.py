@@ -78,6 +78,33 @@ class TestAuthorsFeature:
         assert 'href="https://example.com/people/Jane%20Doe?q=hello%20world%3Ctag%3E%22"' in html
         assert 'hello%2520world' not in html
 
+    def test_author_avatar_fragment_validates_the_file_and_survives_rendering(self, site_dir):
+        image = site_dir / 'public' / 'images' / 'portrait.svg'
+        image.write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
+            '<view id="portrait" viewBox="0 0 32 32"/></svg>'
+        )
+        write_structured_file(
+            site_dir / AUTHORS_CONFIG_FILE,
+            {'jdoe': {'name': 'Jane Doe', 'avatar': '/images/portrait.svg#portrait'}},
+        )
+        (site_dir / 'content' / 'index.md').write_text(
+            '---\ntitle: Home\nauthor: jdoe\n---\n\nHello world.\n'
+        )
+
+        result = run_tada('dev', cwd=str(site_dir))
+
+        assert result.returncode == 0, result.stdout + result.stderr
+        html = (site_dir / 'dist' / 'index.html').read_text()
+        assert 'src="/images/portrait.svg#portrait"' in html
+        assert (site_dir / 'dist' / 'images' / 'portrait.svg').read_bytes() == image.read_bytes()
+
+        image.unlink()
+        missing = run_tada('dev', cwd=str(site_dir))
+        assert missing.returncode == 1
+        assert 'broken avatar path' in missing.stdout
+        assert '/images/portrait.svg#portrait' in missing.stdout
+
     def test_unknown_author_fails_build(self, site_dir):
         """Referencing an author not in the authors config should fail the build."""
         (site_dir / 'content' / 'index.md').write_text(

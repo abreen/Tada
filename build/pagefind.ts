@@ -2,7 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { makeLogger } from './log';
 import { collectReachableSiteAssets } from './reachability';
-import { normalizeOutputPath, SEARCH_INDEX_DIR } from './utils/paths';
+import {
+  normalizeOutputPath,
+  SEARCH_INDEX_DIR,
+  toUrlPath,
+} from './utils/paths';
 import { isFeatureEnabled } from './features';
 import type { SiteVariables } from './types';
 import type { TadaProjectScan } from './source-model';
@@ -50,7 +54,10 @@ async function addHtmlFile(
   index: NonNullable<PagefindIndex>,
   htmlFile: { sourcePath: string; content: string },
 ): Promise<void> {
-  const { errors: addErrors } = await index.addHTMLFile(htmlFile);
+  const { errors: addErrors } = await index.addHTMLFile({
+    ...htmlFile,
+    url: toUrlPath(normalizeOutputPath(htmlFile.sourcePath)),
+  });
   const addError = formatPagefindErrors(
     `index.addHTMLFile(${htmlFile.sourcePath})`,
     addErrors,
@@ -196,11 +203,12 @@ async function buildIndex({
 
       const { pages, hasExtractedText } = await extractPages(sourceFilePath);
       const title = path.posix.basename(pdfPath);
+      const urlPath = toUrlPath(pdfPath);
 
       if (!hasExtractedText) {
         await addPdfRecord(
           index,
-          { url: pdfPath, content: title, language: 'en', meta: { title } },
+          { url: urlPath, content: title, language: 'en', meta: { title } },
           pdfPath,
         );
         continue;
@@ -212,7 +220,7 @@ async function buildIndex({
         await addPdfRecord(
           index,
           {
-            url: `${pdfPath}#page=${page.pageNumber}`,
+            url: `${urlPath}#page=${page.pageNumber}`,
             content,
             language: 'en',
             meta: { title, page: String(page.pageNumber) },

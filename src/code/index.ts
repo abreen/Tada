@@ -1,5 +1,16 @@
 import { globals } from '../globals';
 
+function canUseSaveFilePicker(window: Window): boolean {
+  try {
+    return (
+      'showSaveFilePicker' in window &&
+      window.top?.location.origin === window.location.origin
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default async function mount(
   window: Window,
 ): Promise<void | (() => void)> {
@@ -75,7 +86,7 @@ export default async function mount(
   const downloadLink = document.querySelector<HTMLAnchorElement>(
     '.file-header a[download]',
   );
-  if (downloadLink && 'showSaveFilePicker' in window) {
+  if (downloadLink && canUseSaveFilePicker(window)) {
     const handleDownloadClick = async (e: MouseEvent) => {
       e.preventDefault();
       try {

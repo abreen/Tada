@@ -110,6 +110,19 @@ export function createTadaWatchPlan({
       include(snapshot.targetDependents, target);
     }
   }
+  for (const target of new Set([
+    ...snapshot.scan.codePageSourceTargets,
+    ...scan.codePageSourceTargets,
+  ])) {
+    if (
+      snapshot.scan.codePageSourceTargets.has(target) !==
+      scan.codePageSourceTargets.has(target)
+    ) {
+      // Inbound links may have resolved to either the raw source or its page.
+      include(snapshot.targetDependents, target);
+      include(snapshot.targetDependents, `${target}.html`);
+    }
+  }
   for (const [output, producers] of scan.outputProducers) {
     for (const source of producers) {
       if (snapshot.outputs.get(output)?.sourcePath !== source) {

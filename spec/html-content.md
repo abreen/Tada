@@ -1,7 +1,8 @@
 # HTML Content
 
-Files with the `.html` extension in the content directory are treated as page
-content. They support the same front matter format as Markdown files.
+Files with the `.html` extension (case-insensitive) in the content directory are
+treated as page content. They support the same front matter format as Markdown
+files. Generated `.html` pages preserve the source basename's case.
 
 HTML content is processed through the template system but is not passed through
 the Markdown pipeline. External-link decoration is not applied to HTML content,

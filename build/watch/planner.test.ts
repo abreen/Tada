@@ -4,6 +4,7 @@ import { createTadaWatchPlan, diffAuthorKeys } from './planner';
 import { indexSources, type SourceEntry } from '../source-model';
 import { createSnapshot, type TadaSnapshot } from '../site-build';
 import type { TadaSourceRecord } from '../source-records';
+import { finalizeHtmlPage } from '../utils/final-html';
 
 const root = path.resolve('planner-site');
 const source = (name: string) => path.join(root, name);
@@ -253,3 +254,121 @@ test('route ownership changes invalidate links even when the pathname stays vali
     ),
   ).toBe(true);
 });
+
+test.each([
+  ['public', 'code'],
+  ['code', 'public'],
+  ['literate', 'code'],
+  ['code', 'literate'],
+] as const)(
+  'code source handoff from %s to %s invalidates inbound links',
+  (beforeKind, afterKind) => {
+    const page = source('content/index.md');
+    const variables: TadaSnapshot['siteVariables'] = {
+      ...siteVariables,
+      extensionToShikiLanguage: { java: 'java' },
+    };
+    const sourceFor = (kind: typeof beforeKind) =>
+      source(
+        kind === 'public'
+          ? 'public/App.java'
+          : kind === 'code'
+            ? 'content/App.java'
+            : 'content/App.java.md',
+      );
+    const createScan = (kind: typeof beforeKind) =>
+      indexSources(
+        {
+          contentDir: source('content'),
+          publicDir: source('public'),
+          distDir: source('dist'),
+          processedExts: new Set(['md', 'html', 'java']),
+        },
+        new Map<string, SourceEntry>([
+          [
+            page,
+            {
+              kind: 'content',
+              renderKind: 'plain-text-page',
+              outputs: new Set(['index.html']),
+              targets: new Set(['/index.html', '/']),
+            },
+          ],
+          [
+            sourceFor(kind),
+            {
+              kind: kind === 'public' ? 'public' : 'content',
+              renderKind:
+                kind === 'public'
+                  ? 'public-copy'
+                  : kind === 'code'
+                    ? 'code-page'
+                    : 'literate-java',
+              outputs: new Set(
+                kind === 'public'
+                  ? ['App.java']
+                  : ['App.java', 'App.java.html'],
+              ),
+              targets: new Set(
+                kind === 'public'
+                  ? ['/App.java']
+                  : ['/App.java', '/App.java.html'],
+              ),
+            },
+          ],
+        ]),
+      );
+    const before = createScan(beforeKind);
+    const after = createScan(afterKind);
+    const finalize = (scan: typeof before, internalTargets: Set<string>) =>
+      finalizeHtmlPage({
+        filePath: page,
+        html: '<main class="body"><a href="/App.java">App</a></main>',
+        sourceUrlPath: '/index.html',
+        siteVariables: variables,
+        validInternalTargets: scan.validTargets,
+        generatedPageTargets: scan.generatedPageTargets,
+        codePageSourceTargets: scan.codePageSourceTargets,
+        literateJavaOutputPaths: scan.literateJavaOutputPaths,
+        dependencyCollector: { internalTargets },
+      }).html;
+    const internalTargets = new Set<string>();
+    const previousHtml = finalize(before, internalTargets);
+    expect(finalize(after, new Set())).not.toBe(previousHtml);
+    const records = new Map(
+      [...before.sources].map(([filePath, entry]) => [
+        filePath,
+        {
+          sourcePath: filePath,
+          kind: entry.kind,
+          outputs: new Map(
+            [...entry.outputs].map(output => [
+              output,
+              filePath === page ? previousHtml : 'class App {}',
+            ]),
+          ),
+          partialDeps: new Set<string>(),
+          traceDeps: new Set<string>(),
+          internalTargets:
+            filePath === page ? internalTargets : new Set<string>(),
+        },
+      ]),
+    );
+    const result = createTadaWatchPlan({
+      snapshot: createSnapshot({
+        siteVariables: variables,
+        assetFiles: [],
+        authorsData: {},
+        scan: before,
+        records,
+      }),
+      paths: new Set([sourceFor(beforeKind), sourceFor(afterKind)]),
+      scan: after,
+    });
+    expect(result.kind).toBe('incremental');
+    if (result.kind !== 'incremental') {
+      throw new Error('expected incremental');
+    }
+    expect(result.renderSources).toEqual(new Set([sourceFor(afterKind), page]));
+  },
+);

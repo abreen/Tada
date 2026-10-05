@@ -70,3 +70,47 @@ def test_watch_reclassifies_route_ownership(tmp_path):
         assert not marked(html.read_text(), 'Destination')
     finally:
         watch.stop()
+
+
+def test_watch_rewrites_code_links_after_public_content_handoff(tmp_path):
+    site = init_site(tmp_path, bare=True)
+    set_site_config(site, {'extensionToShikiLanguage': {'java': 'java'}})
+    copied = site / 'public' / 'App.java'
+    generated = site / 'content' / 'App.java'
+    copied.write_text('public class App {}\n')
+    page = site / 'content' / 'metadata.md'
+    page.write_text(
+        '---\ntitle: Metadata\n---\n'
+        '<a href="/App.java">Source</a>\n'
+        '<a href="/App.java" download>Download</a>\n'
+    )
+    unrelated = site / 'dist' / 'index.html'
+    watch = WatchProcess(site)
+    try:
+        watch.wait_for_initial_build()
+        html = site / 'dist' / 'metadata.html'
+        code_html = site / 'dist' / 'App.java.html'
+        assert 'href="/App.java">Source</a>' in html.read_text()
+        assert not marked(html.read_text(), 'Source')
+        previous_page_source = page.read_bytes()
+        previous_unrelated = watch.snapshot(unrelated)
+        copied.replace(generated)
+        watch.wait_for_successful_rebuild()
+        assert code_html.is_file()
+        assert re.search(r'<a\b[^>]*href="/App.java.html"[^>]*>Source</a>', html.read_text())
+        assert marked(html.read_text(), 'Source')
+        assert 'href="/App.java" download>Download</a>' in html.read_text()
+        assert not marked(html.read_text(), 'Download')
+        assert page.read_bytes() == previous_page_source
+        assert watch.snapshot(unrelated) == previous_unrelated
+
+        generated.replace(copied)
+        watch.wait_for_successful_rebuild()
+        assert not code_html.exists()
+        assert 'href="/App.java">Source</a>' in html.read_text()
+        assert not marked(html.read_text(), 'Source')
+        assert 'href="/App.java" download>Download</a>' in html.read_text()
+        assert page.read_bytes() == previous_page_source
+        assert watch.snapshot(unrelated) == previous_unrelated
+    finally:
+        watch.stop()

@@ -125,6 +125,11 @@ the new path.
 This means watch mode updates `dist/` so the old output disappears and the new
 output appears at its new location.
 
+Inbound code links are updated when their target changes between a generated
+code page and a raw source download, including moves between `content/` and
+`public/` and handoffs between regular Java and literate Java sources. This also applies when both
+output paths remain valid. Anchors with `download` keep their raw file target.
+
 An output path can change between a file and a directory. Tada deletes the old
 output before writing the new one.
 

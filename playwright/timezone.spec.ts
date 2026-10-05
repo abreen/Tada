@@ -20,6 +20,23 @@ test.describe('timezone chooser without JS', () => {
 });
 
 test.describe('timezone chooser', () => {
+  test.beforeEach(async ({ page }) => {
+    // These formatting expectations use New York's daylight-saving offset.
+    await page.clock.setFixedTime(new Date('2026-07-15T12:00:00Z'));
+  });
+
+  for (const [season, date, expected] of [
+    ['winter', '2026-01-15T12:00:00Z', '16:30'],
+    ['summer', '2026-07-15T12:00:00Z', '15:30'],
+  ] as const) {
+    test(`conversion uses the current ${season} offset`, async ({ page }) => {
+      await page.clock.setFixedTime(new Date(date));
+      await page.goto('/timezones.html');
+      await page.locator('select.time-zone').first().selectOption('UTC');
+      await expect(page.locator('time[datetime="11:30"]')).toHaveText(expected);
+    });
+  }
+
   test('uses real small-cap glyphs without allowing synthesis', async ({
     page,
   }) => {

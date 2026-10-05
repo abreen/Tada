@@ -6,10 +6,18 @@ each site build using Pagefind.
 ## Indexing
 
 Only pages reachable from the home page are indexed. Reachability is determined
-by a breadth-first traversal of internal `<a href>` links in generated HTML
+by traversal of internal `<a href>` links in generated HTML
 pages, starting from `index.html`.
 If a page is not reachable from `index.html`, it is not included in search
 results.
+
+HTML search records use root-relative URLs with each raw output-path segment
+percent-encoded. Names containing `#`, spaces, or literal percent escapes remain
+literal filenames when a result is opened. For example, `lecture#1.html` becomes
+`/lecture%231.html`, and `100%20done/guide.html` becomes
+`/100%2520done/guide.html`. The output files keep their original names; ordinary
+paths and explicit `index.html` suffixes remain unchanged. The configured base
+path is applied by the search client when it reads the index.
 
 PDF files in `content/` that are linked from reachable pages are also indexed.
 Linked files copied from `public/` are not added to the search index. Text is
@@ -19,6 +27,11 @@ warning is logged). If a PDF yields no extractable text, a fallback record
 with just the filename is created. Extracted text is cached by file size and
 modification time, so rebuilding the index in watch mode runs `mutool` only for
 new or changed PDFs.
+
+PDF result URLs percent-encode filesystem path components before adding any
+`#page=N` fragment. Literal `#` or percent escapes in file and directory names
+remain part of the path; result titles and copied filenames keep their original
+spelling. Filename-only fallback records use the same URL encoding.
 
 The search index is written over the existing `pagefind/` subdirectory without
 clearing it first. Older hashed files remain available to browsers using the
@@ -33,6 +46,9 @@ excluded from production build manifests
 A search combobox in the site header queries the Pagefind index. Results show
 excerpts and support keyboard navigation. PDF results are grouped by document,
 with individual page numbers shown as sub-results sorted by page number.
+Escape from a focused result returns focus to the search input and closes the
+results panel. A second Escape returns to the previously focused element,
+when available.
 The combobox is rendered disabled and is enabled only after its client
 component has attached the search and keyboard-shortcut listeners. Without
 JavaScript it remains disabled.

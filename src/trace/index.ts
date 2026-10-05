@@ -408,6 +408,7 @@ function setupTraceResizer(elements: WidgetElements, doc: Document): void {
     const direction = event.key === 'ArrowUp' ? 1 : -1;
     applySourceHeight(elements, doc, currentHeight + direction * step);
   });
+  resizer.inert = false;
 }
 
 function updateOutput(

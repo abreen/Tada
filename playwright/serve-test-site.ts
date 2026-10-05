@@ -3,6 +3,7 @@ import path from 'path';
 import { installCustomFontFixtures } from './custom-font-fixtures';
 import { installPageLayoutFixtures } from './page-layout-fixtures';
 import { installBreadcrumbFixtures } from './breadcrumb-fixtures';
+import { renderTraceWidgetHtml } from '../build/utils/trace-core';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
@@ -82,6 +83,19 @@ title: Questions
 A <dfn>fraction</dfn> such as $\frac{1}{\sqrt{x}}$ describes a ratio.
 
 A second paragraph with **emphasis** and [a link](./slides.html).
+???
+`,
+);
+
+writeFileSync(
+  path.join(siteDir, 'content', 'linked-questions.md'),
+  String.raw`---
+title: Linked questions
+---
+
+??? question Which example should you open? [Question help](./index.html)
+- [x] [Correct linked option](./markdown.html)
+- [ ] [Incorrect linked option](./slides.html)
 ???
 `,
 );
@@ -181,7 +195,7 @@ slides: true
     </div>
     <div class="trace-content">
       <div class="trace-diagram"></div>
-      <div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0"></div>
+      <div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0" inert></div>
       <div class="trace-source-wrapper">
         <div class="trace-source" data-trace-source-file="slides-trace.java">
           <pre><span class="code-row trace-line-active"><span class="line-number" data-line="1">1</span><code>trace demo</code></span></pre>
@@ -230,7 +244,7 @@ slides: true
     </div>
     <div class="trace-content">
       <div class="trace-diagram"></div>
-      <div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0"></div>
+      <div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0" inert></div>
       <div class="trace-source-wrapper">
         <div class="trace-source" data-trace-source-file="slides-reset-trace.java">
           <pre><span class="code-row trace-line-active"><span class="line-number" data-line="1">1</span><code>trace reset demo</code></span>
@@ -299,6 +313,24 @@ writeFileSync(
 
 installPageLayoutFixtures(siteDir);
 installBreadcrumbFixtures(siteDir);
+
+writeFileSync(
+  path.join(siteDir, 'content', 'trace-readiness.md'),
+  `---\ntitle: Trace Readiness\n---\n\n${renderTraceWidgetHtml({
+    highlightedSources: [
+      {
+        file: 'slides-reset-trace.java',
+        highlightedSource: `<pre>${Array.from(
+          { length: 20 },
+          (_, index) =>
+            `<span class="code-row"><a class="line-number" id="trace-line-${index + 1}" href="#trace-line-${index + 1}" data-line="${index + 1}">${index + 1}</a><code>trace line ${index + 1}</code></span>`,
+        ).join('\n')}</pre>`,
+      },
+    ],
+    manifestUrl: '/trace-reset/manifest.json',
+    totalSteps: 3,
+  })}\n`,
+);
 
 await runTada(['dev'], siteDir);
 await runTada(['serve', '--port', '8081'], siteDir);

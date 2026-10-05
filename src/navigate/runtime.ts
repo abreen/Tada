@@ -29,23 +29,15 @@ interface NavigationOptions {
 function updateHead(document: Document, newDoc: Document): void {
   document.title = newDoc.title;
 
-  const metaTags = ['description', 'author'];
-  for (const name of metaTags) {
-    const newMeta = newDoc.querySelector(`meta[name="${name}"]`);
-    const oldMeta = document.querySelector(`meta[name="${name}"]`);
-    if (newMeta && oldMeta) {
-      oldMeta.setAttribute('content', newMeta.getAttribute('content') ?? '');
-    } else if (newMeta && !oldMeta) {
-      document.head.appendChild(newMeta.cloneNode(true));
-    } else if (!newMeta && oldMeta) {
-      oldMeta.remove();
-    }
-  }
-
-  const ogTags = ['og:title', 'og:author'];
-  for (const prop of ogTags) {
-    const newMeta = newDoc.querySelector(`meta[property="${prop}"]`);
-    const oldMeta = document.querySelector(`meta[property="${prop}"]`);
+  const metaSelectors = [
+    'meta[name="description"]',
+    'meta[name="author"]',
+    'meta[property="og:title"]',
+    'meta[property="og:author"]',
+  ];
+  for (const selector of metaSelectors) {
+    const newMeta = newDoc.querySelector(selector);
+    const oldMeta = document.querySelector(selector);
     if (newMeta && oldMeta) {
       oldMeta.setAttribute('content', newMeta.getAttribute('content') ?? '');
     } else if (newMeta && !oldMeta) {

@@ -158,7 +158,7 @@ export function validateAuthorLinks(
     if (avatarRootRelativeError) {
       errors.push(avatarRootRelativeError);
     } else {
-      const avatarPath = normalizeOutputPath(author.avatar);
+      const avatarPath = getInternalHrefTarget(author.avatar);
       if (!validTargets.has(avatarPath)) {
         errors.push(
           `${fileName}: broken avatar path for "${key}": "${author.avatar}"`,
