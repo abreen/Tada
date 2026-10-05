@@ -5,6 +5,81 @@ import {
 } from './reachability';
 
 describe('reachability', () => {
+  test.each([
+    ['/', ['index.html'], []],
+    [
+      '/about',
+      ['index.html', 'about/index.html', 'about.html'],
+      ['about/index.html'],
+    ],
+    ['/about', ['index.html', 'about.html'], ['about.html']],
+    ['/about/', ['index.html', 'about.html'], []],
+    ['/about/', ['index.html', 'about/index.html'], ['about/index.html']],
+    [
+      '/about.html',
+      ['index.html', 'about/index.html', 'about.html'],
+      ['about.html'],
+    ],
+    ['docs/../about.html', ['index.html', 'about.html'], ['about.html']],
+    ['/missing', ['index.html', 'about.html'], []],
+    ['/guide.pdf', ['index.html', 'guide.pdf/index.html'], []],
+  ])('resolves %s against %j', (target, paths, followed) => {
+    const htmlAnalysisByPath = new Map(
+      paths.map(outputPath => [
+        outputPath,
+        {
+          outgoingTargets: new Set(outputPath === 'index.html' ? [target] : []),
+        },
+      ]),
+    );
+    expect(collectReachableHtmlAssets({ htmlAnalysisByPath })).toEqual(
+      ['index.html', ...followed].sort(),
+    );
+  });
+
+  test('deduplicates cyclic routes and collects only known non-HTML assets from the chosen root', () => {
+    const htmlAnalysisByPath = new Map([
+      ['index.html', { outgoingTargets: new Set(['/hidden.pdf']) }],
+      [
+        'start.html',
+        {
+          outgoingTargets: new Set([
+            '/about',
+            '/about/',
+            '/about/index.html',
+            '/guide.pdf',
+            '/unknown.png',
+            '/asset',
+            '/',
+          ]),
+        },
+      ],
+      [
+        'about/index.html',
+        { outgoingTargets: new Set(['/start.html', '/guide.pdf', '/z.png']) },
+      ],
+    ]);
+
+    expect(
+      collectReachableSiteAssets({
+        htmlAnalysisByPath,
+        rootPath: 'start.html',
+        knownAssetTargets: new Set([
+          '/guide.pdf',
+          '/z.png',
+          '/asset',
+          '/',
+          '/start.html',
+          '/about/index.html',
+          '/hidden.pdf',
+        ]),
+      }),
+    ).toEqual({
+      reachableHtmlPaths: ['about/index.html', 'index.html', 'start.html'],
+      reachableAssetTargets: ['/guide.pdf', '/hidden.pdf', '/z.png'],
+    });
+  });
+
   test('collectReachableSiteAssets follows HTML outputs and collects linked internal assets generically', () => {
     const htmlAnalysisByPath = new Map([
       [

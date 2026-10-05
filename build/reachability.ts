@@ -2,57 +2,22 @@ import path from 'path';
 import { normalizeOutputPath } from './util';
 import type { HtmlOutputAnalysis } from './types';
 
-function normalizeInternalTarget(target: string): string {
-  return normalizeOutputPath(target);
-}
-
+/** HTML candidates for an already normalized target without a non-HTML extension. */
 function toCandidateHtmlAssetPaths(target: string): string[] {
-  const normalizedTarget = normalizeInternalTarget(target);
-
-  if (normalizedTarget === '/') {
+  if (target === '/') {
     return ['index.html'];
   }
 
-  if (normalizedTarget.endsWith('.html')) {
-    return [normalizedTarget.slice(1)];
+  if (target.endsWith('.html')) {
+    return [target.slice(1)];
   }
 
-  if (path.posix.extname(normalizedTarget)) {
-    return [];
-  }
-
-  const withoutLeadingSlash = normalizedTarget.slice(1);
-  if (normalizedTarget.endsWith('/')) {
+  const withoutLeadingSlash = target.slice(1);
+  if (target.endsWith('/')) {
     return [`${withoutLeadingSlash}index.html`];
   }
 
   return [`${withoutLeadingSlash}/index.html`, `${withoutLeadingSlash}.html`];
-}
-
-function resolveTargetToAssetTarget(target: string): string | null {
-  const normalizedTarget = normalizeInternalTarget(target);
-  if (normalizedTarget === '/' || normalizedTarget.endsWith('.html')) {
-    return null;
-  }
-  return path.posix.extname(normalizedTarget) ? normalizedTarget : null;
-}
-
-function collectOutgoingHtmlAssetPaths(
-  analysis: HtmlOutputAnalysis,
-  knownHtmlAssetPaths: Set<string>,
-): string[] {
-  const htmlAssetPaths = new Set<string>();
-
-  for (const target of analysis.outgoingTargets) {
-    for (const candidate of toCandidateHtmlAssetPaths(target)) {
-      if (knownHtmlAssetPaths.has(candidate)) {
-        htmlAssetPaths.add(candidate);
-        break;
-      }
-    }
-  }
-
-  return [...htmlAssetPaths].sort();
 }
 
 interface CollectReachableOptions {
@@ -75,7 +40,6 @@ export function collectReachableSiteAssets({
     throw new Error(`Pagefind reachability root not found: ${rootPath}`);
   }
 
-  const knownHtmlAssetPaths = new Set(htmlAnalysisByPath.keys());
   const reachableHtmlPaths = new Set<string>();
   const reachableAssetTargets = new Set<string>();
   const pending: string[] = [rootPath];
@@ -89,19 +53,19 @@ export function collectReachableSiteAssets({
 
     const analysis = htmlAnalysisByPath.get(currentPath)!;
 
-    for (const targetPath of collectOutgoingHtmlAssetPaths(
-      analysis,
-      knownHtmlAssetPaths,
-    )) {
-      if (!reachableHtmlPaths.has(targetPath)) {
-        pending.push(targetPath);
+    for (const outgoingTarget of analysis.outgoingTargets) {
+      const target = normalizeOutputPath(outgoingTarget);
+      if (!target.endsWith('.html') && path.posix.extname(target)) {
+        if (knownAssetTargets.has(target)) {
+          reachableAssetTargets.add(target);
+        }
+        continue;
       }
-    }
-
-    for (const target of analysis.outgoingTargets) {
-      const assetTarget = resolveTargetToAssetTarget(target);
-      if (assetTarget && knownAssetTargets.has(assetTarget)) {
-        reachableAssetTargets.add(assetTarget);
+      const targetPath = toCandidateHtmlAssetPaths(target).find(candidate =>
+        htmlAnalysisByPath.has(candidate),
+      );
+      if (targetPath && !reachableHtmlPaths.has(targetPath)) {
+        pending.push(targetPath);
       }
     }
   }
