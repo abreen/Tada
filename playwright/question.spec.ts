@@ -1,5 +1,55 @@
 import { test, expect } from './test-fixtures';
 
+test('keyboard navigation skips concealed answer links until the answer is revealed', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/questions.html');
+  const answer = page.getByRole('button', { name: 'Click to reveal answer' });
+  await expect(answer).toHaveCount(1);
+  const link = page.locator('.question-a-content a');
+
+  await answer.focus();
+  await page.keyboard.press('Tab');
+  await expect(link).not.toBeFocused();
+  await expect
+    .poll(() =>
+      page
+        .locator('.question-a-body')
+        .evaluate(element => element.contains(document.activeElement)),
+    )
+    .toBe(false);
+
+  await answer.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.question-a-body')).not.toHaveAttribute(
+    'role',
+    'button',
+  );
+  await page.keyboard.press('Tab');
+  await expect(link).toBeFocused();
+  await expect(
+    page.getByRole('link', { name: 'a link', exact: true }),
+  ).toBeVisible();
+});
+
+test('answer links remain readable and usable without JavaScript', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto('/questions.html');
+    const link = page.getByRole('link', { name: 'a link', exact: true });
+    await expect(link).toBeVisible();
+    await link.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/slides\.html$/);
+  } finally {
+    await context.close();
+  }
+});
+
 test('reveals definitions and math in one opacity transition', async ({
   page,
 }) => {

@@ -51,7 +51,10 @@ The answer is here.
 ```
 
 With JavaScript enabled, an unrevealed answer occupies its normal space behind
-one rectangular placeholder. A build-time content wrapper lets CSS fade the
+one rectangular placeholder. Its concealed content is excluded from keyboard
+focus and the accessibility tree until the answer is revealed. The reveal
+control remains available to keyboard and assistive technology users.
+A build-time content wrapper lets CSS fade the
 entire answer in as one visual unit over 0.25 seconds, while the placeholder and
 reveal hint fade out. Nested markup such as definitions and KaTeX keeps its
 normal styling and shares the same opacity transition; hidden math cannot paint

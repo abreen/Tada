@@ -62,12 +62,19 @@ export default (window: Window) => {
   const bodies =
     window.document.querySelectorAll<HTMLElement>('.question-a-body');
   bodies.forEach(el => {
+    const content = el.querySelector<HTMLElement>('.question-a-content');
+    if (content) {
+      content.inert = !el.hasAttribute('data-revealed');
+    }
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', '0');
     el.setAttribute('aria-label', 'Click to reveal answer');
 
     const reveal = () => {
       el.setAttribute('data-revealed', '');
+      if (content) {
+        content.inert = false;
+      }
       el.removeAttribute('role');
       el.removeAttribute('tabindex');
       el.removeAttribute('aria-label');
