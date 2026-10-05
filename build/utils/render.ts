@@ -568,7 +568,7 @@ function renderPlainTextContent(
 } {
   const applyBasePath = createApplyBasePath(siteVariables);
 
-  const ext = path.extname(filePath);
+  const ext = path.extname(filePath).toLowerCase();
   const raw = fs.readFileSync(filePath, 'utf-8');
   const { pageVariables: rawPageVariables, content } =
     parseFrontMatterAndContent(raw, ext);

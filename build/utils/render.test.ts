@@ -362,6 +362,57 @@ describe('renderCodePageAsset', () => {
 });
 
 describe('renderPlainTextPageAsset', () => {
+  test.each(['.MD', '.mD', '.MARKDOWN', '.MarkDown'])(
+    'parses front matter and Markdown for a %s page while preserving its output basename',
+    extension => {
+      const contentDir = path.resolve('/virtual/content');
+      const filePath = path.join(contentDir, `MixedCase${extension}`);
+      writeFile(
+        filePath,
+        '---\ntitle: Mixed case\n---\n\n**Rendered Markdown**\n',
+      );
+      const [asset] = renderPlainTextPageAsset({
+        filePath,
+        contentDir,
+        siteVariables,
+        isWatchMode: false,
+        validInternalTargets: new Set(),
+        assetFiles: [],
+      });
+      expect(renderedPageVariables.title).toBe('Mixed case');
+      expect(asset.content).toContain('<strong>Rendered Markdown</strong>');
+      expect(asset.content).not.toContain('title: Mixed case');
+      expect(asset.assetPath).toBe('MixedCase.html');
+    },
+  );
+
+  test.each(['.HTML', '.HtMl'])(
+    'parses front matter but preserves literal HTML content for a %s page',
+    extension => {
+      const html = renderMarkdownPage({
+        contentDir: path.resolve('/virtual/content'),
+        relativePath: `MixedCase${extension}`,
+        source: '---\ntitle: HTML case\n---\n\n<p>**literal**</p>\n',
+      });
+      expect(renderedPageVariables.title).toBe('HTML case');
+      expect(html).toContain('<p>**literal**</p>');
+      expect(html).not.toContain('title: HTML case');
+    },
+  );
+
+  test('supports slides on an uppercase Markdown page', () => {
+    const html = renderMarkdownPage({
+      contentDir: path.resolve('/virtual/content'),
+      relativePath: 'Slides.MD',
+      source:
+        '---\ntitle: Slides\nslides: true\n---\n\n# First\n\n---\n\n# Second\n',
+    });
+    expect(renderedPageVariables.slides).toBe(true);
+    expect(html).toContain('data-slides-root');
+    expect(html).toContain('id="first"');
+    expect(html).toContain('id="second"');
+  });
+
   test('includes a basic Markdown partial block', () => {
     const contentDir = '/virtual/content';
     const partialPath = path.join(contentDir, '_partial.md');
@@ -689,33 +740,36 @@ describe('renderPlainTextPageAsset', () => {
     ).toThrow('include is not defined');
   });
 
-  test('rejects slides front matter on HTML content pages', () => {
-    const contentDir = '/virtual/content';
-    const filePath = path.join(contentDir, 'slides.html');
-    writeFile(
-      filePath,
-      [
-        '---',
-        'title: HTML Slides',
-        'slides: true',
-        '---',
-        '',
-        '<p>Hello</p>',
-      ].join('\n'),
-    );
-
-    expect(() =>
-      renderPlainTextPageAsset({
+  test.each(['.html', '.HTML', '.HtMl'])(
+    'rejects slides front matter on %s content pages',
+    extension => {
+      const contentDir = '/virtual/content';
+      const filePath = path.join(contentDir, `slides${extension}`);
+      writeFile(
         filePath,
-        contentDir,
-        isWatchMode: false,
-        siteVariables,
-        validInternalTargets: new Set(),
-        assetFiles: [],
-        literateJavaOutputPaths: new Set(),
-      }),
-    ).toThrow('slides mode is only supported on Markdown pages');
-  });
+        [
+          '---',
+          'title: HTML Slides',
+          'slides: true',
+          '---',
+          '',
+          '<p>Hello</p>',
+        ].join('\n'),
+      );
+
+      expect(() =>
+        renderPlainTextPageAsset({
+          filePath,
+          contentDir,
+          isWatchMode: false,
+          siteVariables,
+          validInternalTargets: new Set(),
+          assetFiles: [],
+          literateJavaOutputPaths: new Set(),
+        }),
+      ).toThrow('slides mode is only supported on Markdown pages');
+    },
+  );
 
   test('tracks multiple relative breadcrumbs from the declaring page', () => {
     const contentDir = '/virtual/content';

@@ -1,7 +1,8 @@
 # Markdown Processing
 
-Markdown files (`.md`, `.markdown`) are processed with standard Markdown plus
-several extensions.
+Markdown files (`.md`, `.markdown`, case-insensitive) are processed with standard
+Markdown plus several extensions. Generated `.html` pages preserve the source
+basename's case.
 
 
 ## Syntax highlighting
