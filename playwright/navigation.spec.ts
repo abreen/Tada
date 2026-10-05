@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './test-fixtures';
+import { test, expect, type Page, waitForClientMount } from './test-fixtures';
 
 type WindowWithNavMarker = Window & { __navMarker?: string };
 type WindowWithViewTransitionCount = Window & {
@@ -9,6 +9,7 @@ type WindowWithSearchTransitionState = Window & {
 };
 
 async function setNavMarker(page: Page) {
+  await waitForClientMount(page);
   await page.evaluate(() => {
     (window as WindowWithNavMarker).__navMarker = 'alive';
   });
@@ -19,6 +20,7 @@ async function getNavMarker(page: Page) {
 }
 
 async function trackViewTransitions(page: Page): Promise<boolean> {
+  await waitForClientMount(page);
   return page.evaluate(() => {
     if (typeof document.startViewTransition !== 'function') {
       return false;
@@ -516,6 +518,24 @@ test.describe('search results motion', () => {
 });
 
 test.describe('client-side navigation', () => {
+  test('keeps the document when idle component mounting is delayed', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const requestIdleCallback = window.requestIdleCallback.bind(window);
+      window.requestIdleCallback = (callback, options) =>
+        requestIdleCallback(deadline => {
+          window.setTimeout(() => callback(deadline), 500);
+        }, options);
+    });
+    await page.goto('/index.html');
+    await setNavMarker(page);
+    await page.locator('main.body a[href="/markdown.html"]').click();
+    await expect(page).toHaveURL(/markdown\.html/);
+    await expect(page.locator('h1')).toContainText('Markdown Examples');
+    expect(await getNavMarker(page)).toBe('alive');
+  });
+
   test('shows a progress cursor only while a slow navigation is pending', async ({
     page,
   }) => {

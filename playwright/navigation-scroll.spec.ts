@@ -1,4 +1,4 @@
-import { test, expect } from './test-fixtures';
+import { test, expect, waitForClientMount } from './test-fixtures';
 
 test.describe('scroll and hash behavior', () => {
   test('same-page hash links scroll to target', async ({ page }) => {
@@ -335,6 +335,7 @@ test.describe('scroll and hash behavior', () => {
 
   test('back-to-top preserves SPA history state', async ({ page }) => {
     await page.goto('/markdown.html');
+    await waitForClientMount(page);
 
     await page.evaluate(() => {
       const link = document.createElement('a');

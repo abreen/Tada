@@ -65,3 +65,10 @@ export const test = base.extend({
 
 export { expect };
 export type { Locator, Page } from '@playwright/test';
+
+export async function waitForClientMount(page: Page) {
+  // Appearance controls enable after all persistent components have mounted.
+  await expect(
+    page.getByRole('switch', { name: 'Use serif fonts' }),
+  ).toBeEnabled();
+}
