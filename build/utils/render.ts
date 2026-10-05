@@ -426,7 +426,7 @@ export function renderCopiedContentAsset({
   const rawSource = fs.readFileSync(filePath, 'utf-8');
   const templated = applySourceTemplate(rawSource, siteVariables, filePath);
 
-  if (filePath.endsWith('.java')) {
+  if (path.extname(filePath).toLowerCase() === '.java') {
     const pageDirPath = toPosix(
       path.relative(contentDir, path.dirname(filePath)),
     );

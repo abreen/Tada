@@ -7,6 +7,39 @@ from conftest import init_site, run_tada, set_site_config
 MARKER = '123456789'
 
 
+@pytest.mark.parametrize('extension', ['JAVA', 'JaVa', 'java'])
+@pytest.mark.parametrize('mapped', [True, False])
+def test_java_download_prose_links_match_rendered_page(tmp_path, extension, mapped):
+    site = init_site(tmp_path, bare=True)
+    set_site_config(
+        site,
+        {
+            'base': 'https://example.edu',
+            'basePath': '/course',
+            'extensionToShikiLanguage': {'java': 'java'} if mapped else {},
+        },
+    )
+    code_dir = site / 'content' / 'examples'
+    code_dir.mkdir()
+    source = '/// See [Help](../help.html?view=source#part)\npublic class Sample {}\n'
+    (code_dir / f'Sample.{extension}').write_text(source)
+    (site / 'content' / 'help.md').write_text('---\ntitle: Help\n---\nHelp.\n')
+
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 0, result.stdout + result.stderr
+    downloaded = (site / 'dist' / 'examples' / f'Sample.{extension}').read_text()
+    page = site / 'dist' / 'examples' / f'Sample.{extension}.html'
+    if mapped:
+        target = 'https://example.edu/course/help.html?view=source#part'
+        assert f'/// See [Help]({target})\n' in downloaded
+        assert target in html.unescape(page.read_text())
+        assert f'download="Sample.{extension}"' in page.read_text()
+    else:
+        assert downloaded == source
+        assert not page.exists()
+    assert (code_dir / f'Sample.{extension}').read_text() == source
+
+
 def _init_code_site(tmp_path):
     site = init_site(tmp_path, bare=True)
     lectures_dir = site / 'content' / 'lectures' / '01'

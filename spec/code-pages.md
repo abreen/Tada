@@ -25,7 +25,9 @@ comment lines are restored in the clipboard so that pasted text is valid Java
 source. Markdown links in these comment lines are rewritten to full URLs
 (using `base` + `basePath`) so they resolve when the source is viewed outside
 the site. The same rewriting is applied to the downloaded copy of the source
-file.
+file. Java filename extensions match case-insensitively, so `.JAVA` and `.JaVa`
+receive the same prose-link rewriting as `.java`. Generated pages and downloads
+preserve the original filename case. Unmapped source files are copied unchanged.
 
 ## Java table of contents
 
