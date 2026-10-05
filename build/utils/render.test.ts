@@ -17,6 +17,7 @@ const files = new Map<string, string>();
 let renderedPageVariables: Record<string, unknown> = {};
 let mockedCodeHtml = '<div class="code-body">rendered code</div>';
 const originalCode = { ...(await import('./code')) };
+const originalTemplates = { ...(await import('../templates')) };
 
 function resolvePath(filePath: string): string {
   return path.resolve(filePath);
@@ -59,6 +60,10 @@ mock.module('../templates', () => ({
     return `<html><head><meta charset="UTF-8"></head><body>${content}</body></html>`;
   },
 }));
+
+afterAll(() => {
+  mock.module('../templates', () => originalTemplates);
+});
 
 mock.module('./code', () => ({
   extractJavaMethodToc() {

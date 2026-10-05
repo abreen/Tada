@@ -1,12 +1,19 @@
-import { beforeEach, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, expect, mock, test } from 'bun:test';
 import type { TadaBuildMeta } from '../build-types';
 import type { SiteVariables } from '../types';
 
 const runners: { runs: number }[] = [];
+const originalServe = { ...(await import('../serve')) };
 
 mock.module('../serve', () => ({
+  ...originalServe,
   startServer: () => ({ port: 8080, publish() {}, stop() {} }),
 }));
+
+afterAll(() => {
+  mock.module('../serve', () => originalServe);
+});
+
 mock.module('../pagefind', () => ({
   WatchPagefindRunner: class {
     state = { runs: 0 };
