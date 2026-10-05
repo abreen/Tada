@@ -220,6 +220,7 @@ body.literate main table {
 footer {
   @include user-select(none);
 
+  font-size: var(--font-size-smaller);
   color: var(--fg2-color);
   text-align: center;
 
