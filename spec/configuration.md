@@ -61,8 +61,8 @@ Generated development and production site configs explicitly include
   with a slash
 - **logo**: optional image path relative to `public/`, replacing the header symbol (see [Header logo](logo.md))
 - **favicon**: optional public-relative `.ico` path replacing all generated favicons and manifest (see [Favicons](favicons.md))
-- **symbol**: short text (1 to 5 chars) for the header fallback and generated favicon
-- **faviconSymbol**: overrides symbol for the favicon (defaults to symbol)
+- **symbol**: short text (1 to 5 chars) or a single emoji for the header fallback and generated favicon
+- **faviconSymbol**: text (1 to 5 chars) overriding symbol for the favicon (defaults to a text symbol; required when symbol is an emoji and favicons are generated)
 - **faviconColor**: overrides theme color for the favicon
 - **faviconFontWeight**: font weight for the favicon symbol (1 to 1000)
 - **titlePostfix**: appended to page titles in `<title>` (derived from title)

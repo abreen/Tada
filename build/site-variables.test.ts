@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { compile, doValidation } from './json-schema';
 import {
+  resolveFaviconSymbol,
   validateExtensionToShikiLanguage,
   validateShikiLanguages,
 } from './site-variables';
+import type { SiteVariables } from './types';
 import siteSchema from '../schema/site.schema.json' with { type: 'json' };
 
 describe('validateExtensionToShikiLanguage', () => {
@@ -63,6 +65,53 @@ describe('validateShikiLanguages', () => {
     ).toThrow(
       'site.dev.json: shikiLanguages[0] "not-a-language" is not a supported Shiki language',
     );
+  });
+});
+
+function siteWith(overrides: Partial<SiteVariables>): SiteVariables {
+  return {
+    base: 'https://example.edu',
+    basePath: '/',
+    title: 'Test',
+    titlePostfix: ' - Test',
+    themeColor: 'tomato',
+    defaultTimeZone: 'America/New_York',
+    features: { search: true, favicon: true, footer: true, pickers: true },
+    ...overrides,
+  };
+}
+
+describe('resolveFaviconSymbol', () => {
+  test('derives faviconSymbol from a text symbol', () => {
+    const site = siteWith({ symbol: 'CS 0' });
+    resolveFaviconSymbol(site, 'site.dev.yaml');
+    expect(site.faviconSymbol).toBe('CS 0');
+  });
+
+  test('keeps an explicit faviconSymbol alongside an emoji symbol', () => {
+    const site = siteWith({ symbol: '🚀', faviconSymbol: 'CS 0' });
+    resolveFaviconSymbol(site, 'site.dev.yaml');
+    expect(site.faviconSymbol).toBe('CS 0');
+  });
+
+  test('requires faviconSymbol when an emoji symbol would be a generated favicon', () => {
+    expect(() =>
+      resolveFaviconSymbol(siteWith({ symbol: '🚀' }), 'site.dev.yaml'),
+    ).toThrow(
+      'site.dev.yaml: faviconSymbol is required when symbol is an emoji',
+    );
+  });
+
+  test('allows an emoji symbol alone when favicons are not generated', () => {
+    const disabled = siteWith({
+      symbol: '🚀',
+      features: { search: true, favicon: false, footer: true, pickers: true },
+    });
+    const custom = siteWith({ symbol: '🚀', favicon: 'brand/icon.ico' });
+    for (const site of [disabled, custom]) {
+      expect(() => resolveFaviconSymbol(site, 'site.dev.yaml')).not.toThrow();
+      expect(site.faviconSymbol).toBeUndefined();
+    }
   });
 });
 

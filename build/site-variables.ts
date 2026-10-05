@@ -4,6 +4,7 @@ import type { SiteEnv } from './config-files';
 import { loadSiteConfig } from './config-loader';
 import { compile as compileJsonSchema, doValidation } from './json-schema';
 import { getProjectDir } from './utils/paths';
+import { isEmojiSymbol } from './utils/symbol';
 import type { PlainTextLanguage, SiteVariables } from './types';
 import siteSchema from '../schema/site.schema.json' with { type: 'json' };
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
@@ -131,10 +132,7 @@ function getSiteVariables(env: SiteEnv): SiteVariables {
     },
   } as SiteVariables;
 
-  // Derive faviconSymbol from symbol if not explicitly set
-  if (variables.symbol && !variables.faviconSymbol) {
-    variables.faviconSymbol = variables.symbol;
-  }
+  resolveFaviconSymbol(variables, fileName);
 
   // Derive faviconColor from themeColor if not explicitly set
   if (!variables.faviconColor) {
@@ -155,6 +153,28 @@ function getSiteVariables(env: SiteEnv): SiteVariables {
   }
 
   return variables;
+}
+
+/**
+ * Derive faviconSymbol from a text symbol. Generated favicons are drawn with a
+ * text font that has no emoji, so an emoji symbol needs a text faviconSymbol.
+ */
+export function resolveFaviconSymbol(
+  variables: SiteVariables,
+  fileName: string,
+): void {
+  if (!variables.symbol || variables.faviconSymbol) {
+    return;
+  }
+  if (!isEmojiSymbol(variables.symbol)) {
+    variables.faviconSymbol = variables.symbol;
+    return;
+  }
+  if (variables.features.favicon !== false && !variables.favicon) {
+    throw new Error(
+      `${fileName}: faviconSymbol is required when symbol is an emoji and favicons are generated; set faviconSymbol to 1 to 5 uppercase characters, digits, hyphens, or spaces`,
+    );
+  }
 }
 
 export function getDevSiteVariables(): SiteVariables {

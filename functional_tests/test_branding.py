@@ -98,3 +98,23 @@ def test_watch_transitions_and_asset_recovery(tmp_path):
         assert (site / 'dist/manifest.json').exists()
     finally:
         wp.stop()
+
+
+def test_emoji_symbol_requires_text_favicon_symbol(tmp_path):
+    site = branding_site(tmp_path)
+    set_site_config(site, {'title': 'Test Site', 'symbol': '🚀', 'features': {'favicon': True}})
+    config_path = site / 'site.dev.yaml'
+    config = load_structured_file(config_path)
+    config.pop('faviconSymbol', None)
+    write_structured_file(config_path, config)
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode != 0
+    assert 'faviconSymbol is required when symbol is an emoji' in result.stdout + result.stderr
+
+    set_site_config(site, {'faviconSymbol': 'GO'})
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 0, result.stdout + result.stderr
+    html = (site / 'dist/index.html').read_text(encoding='utf-8')
+    assert '<span class="logo logo-emoji" aria-hidden="true">🚀</span>' in html
+    assert '<meta name="apple-mobile-web-app-title" content="Test Site">' in html
+    assert (site / 'dist/favicon.svg').exists()

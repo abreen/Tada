@@ -23,7 +23,7 @@
     <link rel="apple-touch-icon" sizes="512x512" href="/favicon-512.png" />
     <link rel="apple-touch-icon" sizes="256x256" href="/favicon-256.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="apple-mobile-web-app-title" content="<%- site.symbol %>">
+    <meta name="apple-mobile-web-app-title" content="<%- site.title %>">
     <meta name="mobile-web-app-capable" content="yes">
     <% } %>
     <% } %>
@@ -219,7 +219,7 @@
             <path class="menu-icon-line menu-icon-line-middle" d="M3 12h18" />
             <path class="menu-icon-line menu-icon-line-bottom" d="M3 18h18" />
           </svg>
-          <% if (site.logo) { %><img class="logo-image" src="/<%- encodePublicAssetPath(site.logo) %>" alt="" aria-hidden="true" /><% } else if (site.symbol) { %><span class="logo" aria-hidden="true"><%- site.symbol %></span><% } %>
+          <% if (site.logo) { %><img class="logo-image" src="/<%- encodePublicAssetPath(site.logo) %>" alt="" aria-hidden="true" /><% } else if (site.symbol) { %><span class="<%- isEmojiSymbol(site.symbol) ? 'logo logo-emoji' : 'logo' %>" aria-hidden="true"><%- site.symbol %></span><% } %>
           <span class="header-title" aria-hidden="true">
             <span class="header-title-reel">
               <span class="site-title"><%- site.title %></span>

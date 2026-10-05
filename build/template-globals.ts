@@ -1,4 +1,5 @@
 import { encodePublicAssetPath } from './custom-fonts';
+import { isEmojiSymbol } from './utils/symbol';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import type { SiteVariables } from './types';
 
@@ -26,6 +27,7 @@ interface TemplateGlobals {
   cx: (obj: Record<string, unknown>) => string;
   encodeAuthoredUrl: (value: string) => string;
   encodePublicAssetPath: (value: string) => string;
+  isEmojiSymbol: (value: string | null | undefined) => boolean;
   renderTimeZoneChooser: () => string;
 }
 
@@ -56,6 +58,7 @@ export default function createTemplateGlobals(
     cx: classNames,
     encodeAuthoredUrl,
     encodePublicAssetPath,
+    isEmojiSymbol,
     renderTimeZoneChooser,
   };
 }

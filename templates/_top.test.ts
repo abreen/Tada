@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import _ from 'lodash';
 import { compileTemplate } from '../build/lodash-template';
 import TOP_TEMPLATE from './_top.html' with { type: 'text' };
+import { isEmojiSymbol } from '../build/utils/symbol';
 
 function renderTop(
   defaultFont: 'sans' | 'serif',
@@ -210,6 +211,7 @@ describe('_top.html template', () => {
       tadaVersion: '0.0.0',
       isWatchMode: false,
       speculationRulesHrefMatches: '/*',
+      isEmojiSymbol,
       render: () => '',
     });
 
@@ -226,7 +228,7 @@ describe('_top.html template', () => {
       '<title>Width is 5&quot; bold &amp; more - Tom &amp; Jerry &lt;Lab&gt;</title>',
     );
     expect(html).toContain(
-      '<meta name="apple-mobile-web-app-title" content="A&amp;B">',
+      '<meta name="apple-mobile-web-app-title" content="Tom &amp; Jerry &lt;Lab&gt;">',
     );
     expect(html).toContain(
       '<span class="logo" aria-hidden="true">A&amp;B</span>',

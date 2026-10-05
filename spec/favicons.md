@@ -5,7 +5,12 @@ from the site's configured symbol text and color.
 
 The symbol (1 to 5 characters) is rendered at multiple sizes as PNG and ICO files,
 plus an SVG version. An Apple Touch Icon is also generated. The favicon uses the
-light mode theme color and its derived text color.
+light mode theme color and its derived text color. The home-screen app name
+(`apple-mobile-web-app-title`) is the site title.
+
+Favicons are drawn from text glyphs and cannot render emoji. `faviconSymbol`
+defaults to a text `symbol`; with an emoji `symbol`, generated favicons require
+an explicit text `faviconSymbol` (see [Header logo](logo.md)).
 
 A web app manifest (`manifest.json`) is generated alongside the favicons,
 referencing all icon sizes and the site title.

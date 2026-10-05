@@ -38,6 +38,10 @@ describe('validateSymbol', () => {
     expect(validateSymbol('A@B')).not.toBeNull();
     expect(validateSymbol('A.B')).not.toBeNull();
   });
+
+  test('rejects emoji, which need a separate text faviconSymbol', () => {
+    expect(validateSymbol('🎉')).not.toBeNull();
+  });
 });
 
 describe('validateColor', () => {

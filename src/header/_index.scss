@@ -184,6 +184,17 @@ header summary .logo {
   background: var(--theme-color);
 }
 
+// A single emoji is the logo itself: no badge, sized like an image logo
+header summary .logo-emoji {
+  padding: 0;
+  font-family:
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-size: 22px;
+  font-weight: normal;
+  line-height: 24px;
+  background: none;
+}
+
 header summary .logo-image {
   flex: 0 0 auto;
   width: auto;

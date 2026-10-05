@@ -268,7 +268,7 @@ vars:
 | `title` | Title for the whole site (also used to derive `titlePostfix`) |
 | `titlePostfix` | *Optional*, the string to append to each page's `title` |
 | `banner` | *Optional*, Markdown rendered in a bordered box above every page |
-| `symbol` | Text (1-5 chars) displayed in header when `logo` is absent; also used for generated favicons |
+| `symbol` | Text (1-5 chars) or a single emoji displayed in header when `logo` is absent; also used for generated favicons |
 | `logo` | *Optional*, image path relative to `public/`, replacing the header symbol |
 | `favicon` | *Optional*, `.ico` path relative to `public/`, replacing generated favicons and the web app manifest |
 | `themeColor` | Theme color for the site (e.g., `"tomato"`, `"#c04040"`, `"hsl(195 70% 40%)"`) |
@@ -277,7 +277,7 @@ vars:
 | `defaultFont` | *Optional*, initial font pairing: `sans` or `serif` (default `sans`) |
 | `defaultContrast` | *Optional*, initial neutral-palette contrast: `standard` or `high` (default `standard`) |
 | `fontOverrides` | *Optional*, custom serif and serif-monospace WOFF2 faces from `public/`; each configured family requires `regular` and may include styled faces, OpenType `features`, and font-specific `tuning` |
-| `faviconSymbol` | *Optional*, the text to use instead of `symbol` in generated favicons |
+| `faviconSymbol` | *Optional*, the text to use instead of `symbol` in generated favicons; required when `symbol` is an emoji and favicons are generated |
 | `features.search` | Enable search UI and Pagefind index generation |
 | `features.favicon` | Enable favicon links and generation (default `true`); `false` also omits custom favicon links |
 | `features.footer` | Show the Tada footer at the bottom of every page |

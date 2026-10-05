@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import template from 'lodash/template';
 import TOP from './_top.html' with { type: 'text' };
 import { encodePublicAssetPath } from '../build/custom-fonts';
+import { isEmojiSymbol } from '../build/utils/symbol';
 
 function render(site: Record<string, unknown> = {}) {
   return template(TOP)({
@@ -10,6 +11,7 @@ function render(site: Record<string, unknown> = {}) {
     tadaVersion: 'test',
     isWatchMode: true,
     encodePublicAssetPath,
+    isEmojiSymbol,
     render: () => '',
   });
 }
@@ -27,6 +29,13 @@ test('symbol fallback and omitted branding', () => {
     '<span class="logo" aria-hidden="true">TADA</span>',
   );
   expect(render()).not.toContain('class="logo');
+});
+
+test('emoji symbol renders without the text badge', () => {
+  expect(render({ symbol: '👩‍💻' })).toContain(
+    '<span class="logo logo-emoji" aria-hidden="true">👩‍💻</span>',
+  );
+  expect(render({ symbol: 'TADA' })).not.toContain('logo-emoji');
 });
 
 test('custom favicon emits only its ICO link', () => {

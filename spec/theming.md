@@ -10,7 +10,7 @@ Sites are visually customized through a few config values:
   100 gives a clearly visible tint.
 - **defaultContrast**: selects standard or high contrast before the page is
   rendered; visitors can override it with the appearance picker.
-- **symbol**: short text displayed in the site logo area when `logo` is absent.
+- **symbol**: short text or a single emoji displayed in the site logo area when `logo` is absent.
 - **logo**: optional public-relative image replacing the header symbol; see [Header logo](logo.md).
 - **favicon**: optional public-relative ICO replacing generated favicon assets and manifest; see [Favicons](favicons.md).
 
