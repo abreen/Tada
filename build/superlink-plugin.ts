@@ -8,6 +8,8 @@ const CARET = 0x5e;
 const OPEN_PAREN = 0x28;
 const CLOSE_PAREN = 0x29;
 const NEWLINE = 0x0a;
+const LESS_THAN = 0x3c;
+const RAW_ANCHOR_OPEN = /^<a[\s>]/i;
 
 // Renders `[Title][Description](/destination.html)` as a two-line superlink.
 // It must run before the built-in `link` rule, which would otherwise
@@ -25,6 +27,46 @@ export default function superlinkPlugin(
       pos++;
     }
     return pos;
+  }
+
+  // Whether a `<…>` construct (an autolink or inline HTML) renders an anchor.
+  // It is parsed alone with a throwaway `env`, and nothing in it can reach the
+  // superlink rule again.
+  function isAnchorMarkup(state: StateInline, markup: string): boolean {
+    const tokens: StateInline['tokens'] = [];
+    state.md.inline.parse(markup, state.md, {}, tokens);
+    return tokens.some(
+      token =>
+        token.type === 'link_open' ||
+        (token.type === 'html_inline' && RAW_ANCHOR_OPEN.test(token.content)),
+    );
+  }
+
+  // `parseLinkLabel` rejects bracketed links but not autolinks (`<https://…>`)
+  // or raw `<a>` tags. An anchor inside the superlink anchor is invalid HTML:
+  // the parser closes the outer one early, stranding the description.
+  //
+  // This walks the label the way `parseLinkLabel` does, with the silent
+  // `skipToken`, so the state's position cache keeps the work linear and rules
+  // that register things in `env`, such as inline footnotes, do not run.
+  function labelHasAnchor(
+    state: StateInline,
+    start: number,
+    end: number,
+  ): boolean {
+    const oldPos = state.pos;
+    let found = false;
+    state.pos = start;
+    while (state.pos < end && !found) {
+      const pos = state.pos;
+      state.md.inline.skipToken(state);
+      found =
+        state.src.charCodeAt(pos) === LESS_THAN &&
+        state.pos - pos > 1 &&
+        isAnchorMarkup(state, state.src.slice(pos, state.pos));
+    }
+    state.pos = oldPos;
+    return found;
   }
 
   function pushPart(
@@ -112,6 +154,14 @@ export default function superlinkPlugin(
 
     pos = skipSpaces(src, destination.pos, max);
     if (pos >= max || src.charCodeAt(pos) !== CLOSE_PAREN) {
+      return false;
+    }
+
+    // Last, so labels are only scanned when everything else already matches
+    if (
+      labelHasAnchor(state, titleStart, titleEnd) ||
+      labelHasAnchor(state, descriptionStart, descriptionEnd)
+    ) {
       return false;
     }
 

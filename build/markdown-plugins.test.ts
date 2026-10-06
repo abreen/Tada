@@ -337,6 +337,65 @@ describe('superlink-plugin', () => {
     );
   });
 
+  test('does not allow autolinks or raw anchors inside either part', () => {
+    const md = new MarkdownIt({ html: true }).use(superlinkPlugin, {
+      internalDomains: [],
+    });
+
+    for (const source of [
+      '[<https://example.com>][Desc](/b.html)',
+      '[Title][<https://example.com>](/b.html)',
+      '[**<https://example.com>**][Desc](/b.html)',
+      '[<a href="/a.html">Raw</a>][Desc](/b.html)',
+      '[Title][<A HREF="/a.html">Raw</A>](/b.html)',
+    ]) {
+      const html = md.render(source);
+      expect(html).not.toContain('superlink');
+    }
+  });
+
+  test('allows other inline HTML inside either part', () => {
+    const md = new MarkdownIt({ html: true }).use(superlinkPlugin, {
+      internalDomains: [],
+    });
+
+    const html = md.render('[A <abbr>B</abbr>][<kbd>C</kbd>](/x.html)');
+
+    expect(html).toContain('<a href="/x.html" class="button superlink">');
+    expect(html).toContain('<abbr>B</abbr>');
+    expect(html).toContain('<kbd>C</kbd>');
+  });
+
+  test('does not reparse nested brackets that have no destination', () => {
+    const md = createSuperlinkMarkdown();
+    let source = '[A][B]';
+    for (let i = 0; i < 20; i++) {
+      source = `[${source}][B]`;
+    }
+
+    const start = performance.now();
+    const html = md.render(source);
+    const elapsed = performance.now() - start;
+
+    expect(html).not.toContain('superlink');
+    expect(elapsed).toBeLessThan(1000);
+  });
+
+  test('checking labels for anchors does not register footnotes', () => {
+    const md = new MarkdownIt({ html: true })
+      .use(footnote)
+      .use(superlinkPlugin, { internalDomains: [] });
+    const footnoteCount = (html: string) =>
+      html.split('class="footnote-item"').length - 1;
+
+    expect(footnoteCount(md.render('[A ^[note]][B]'))).toBe(1);
+    expect(footnoteCount(md.render('[A ^[note]][B](/x.html)'))).toBe(1);
+    // A rejected superlink is parsed again as ordinary Markdown
+    const rejected = md.render('[<https://example.com> ^[note]][B](/x.html)');
+    expect(rejected).not.toContain('superlink');
+    expect(footnoteCount(rejected)).toBe(1);
+  });
+
   test('marks external destinations without wrapping a tail span', () => {
     const md = createSuperlinkMarkdown({ externalLinks: true });
 

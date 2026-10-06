@@ -130,7 +130,9 @@ beneath it. Write it as two bracketed labels followed by a destination:
 The two labels must be directly adjacent (`][`), and the destination follows
 immediately in parentheses. Whitespace inside the parentheses is allowed. A link
 title string is not supported. Both labels accept inline Markdown (emphasis,
-code spans) but must not be empty or contain links.
+code spans) but must not be empty or contain links, including autolinks
+(`<https://example.com>`) and raw `<a>` tags, because an anchor inside the
+superlink's anchor is invalid HTML. A label with one is not a superlink.
 
 The syntax takes precedence over CommonMark reference links: `[A][B](/x.html)` is
 a superlink even when a reference named `B` is defined. Anything that does not
