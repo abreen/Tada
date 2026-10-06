@@ -263,33 +263,46 @@ export function isApplyingFragment(): boolean {
 // WebKit defers fragment scrolling until pending stylesheets load, which would
 // later move the page away from the restored scroll position. Wait for them
 // first, and skip the update if another request or navigation replaced it.
-export function applyFragmentTarget(window: Window): void {
+//
+// That deferred scroll can also set :target before the wait ends, which would
+// leave nothing to replace. WebKit then scrolls to the target again on the next
+// frame, undoing a scroll back to the saved position. A fragment navigation of
+// our own does not have that problem, so after waiting, repeat it even when
+// :target matches, restoring the saved position the caller passed in.
+export function applyFragmentTarget(
+  window: Window,
+  restoredTop?: number,
+): void {
   const request = ++fragmentTargetRequest;
   const { href } = window.location;
+  let waited = false;
   const apply = (): void => {
     if (request !== fragmentTargetRequest || window.location.href !== href) {
       return;
     }
     const pending = Array.from(pendingStylesheets.values());
     if (pending.length > 0) {
+      waited = true;
       void Promise.all(pending).then(apply);
       return;
     }
-    replaceFragmentTarget(window);
+    replaceFragmentTarget(window, waited ? restoredTop : undefined);
   };
   apply();
 }
 
-function replaceFragmentTarget(window: Window): void {
+function replaceFragmentTarget(window: Window, forcedTop?: number): void {
   const { document, history, location } = window;
   if (
+    forcedTop === undefined &&
     document.querySelector(':target') === getHashTarget(document, location.hash)
   ) {
     return;
   }
   const { href } = location;
   const state = history.state;
-  const { scrollX, scrollY } = window;
+  const { scrollX } = window;
+  const scrollY = forcedTop ?? window.scrollY;
   applyingFragment = true;
   try {
     globals.replaceLocation(
@@ -416,7 +429,10 @@ export async function navigateToUrl(
     if (!pushHistory) {
       // Restore the entry's :target before updateHead adds stylesheets, so it
       // applies right away unless an earlier stylesheet is still loading
-      applyFragmentTarget(window);
+      applyFragmentTarget(
+        window,
+        typeof scrollTarget === 'number' ? scrollTarget : undefined,
+      );
     }
     updateHead(document, newDoc);
     mountAppearancePickerForPage(window);

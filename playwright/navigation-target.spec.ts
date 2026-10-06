@@ -1,4 +1,10 @@
-import { test, expect, waitForClientMount, type Page } from './test-fixtures';
+import {
+  test,
+  expect,
+  waitForClientMount,
+  wheelScrollBy,
+  type Page,
+} from './test-fixtures';
 
 const CODE_PAGE = '/lectures/01/Rectangle.java.html';
 
@@ -13,9 +19,9 @@ async function selectLineAndScrollAway(page: Page): Promise<number> {
   await expect(page).toHaveURL(/#L30$/);
   await expect(page.locator(':target')).toHaveId('L30');
   const targetScroll = await scrollY(page);
-  await page.evaluate(() => window.scrollBy({ top: 200 }));
-  await expect.poll(() => scrollY(page)).toBeCloseTo(targetScroll + 200, -1);
-  return scrollY(page);
+  const awayScroll = await wheelScrollBy(page, 200);
+  expect(awayScroll).toBeGreaterThan(targetScroll + 100);
+  return awayScroll;
 }
 
 async function goToOtherPage(page: Page) {
@@ -136,11 +142,7 @@ test('back across pages keeps the saved scroll while an earlier stylesheet loads
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto(`${CODE_PAGE}#L30`);
-  await waitForClientMount(page);
-  await expect(page.locator(':target')).toHaveId('L30');
-  await page.evaluate(() => window.scrollBy({ top: 200 }));
-  const savedScroll = await scrollY(page);
+  const savedScroll = await selectLineAndScrollAway(page);
 
   // The other page starts loading a stylesheet that is still pending on Back
   let releaseStylesheet = () => {};

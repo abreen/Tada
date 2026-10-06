@@ -66,6 +66,28 @@ export const test = base.extend({
 export { expect };
 export type { Locator, Page } from '@playwright/test';
 
+// Scroll with a real wheel event and return the settled position. Firefox can
+// pull a page that only scripts scrolled back to a link's fragment after layout
+// changes, but not one the visitor scrolled.
+export async function wheelScrollBy(
+  page: Page,
+  deltaY: number,
+): Promise<number> {
+  const start = await page.evaluate(() => window.scrollY);
+  await page.mouse.move(400, 300);
+  await page.mouse.wheel(0, deltaY);
+  let last = start;
+  await expect
+    .poll(async () => {
+      const current = await page.evaluate(() => window.scrollY);
+      const settled = current !== start && current === last;
+      last = current;
+      return settled;
+    })
+    .toBe(true);
+  return last;
+}
+
 export async function waitForClientMount(page: Page) {
   // Appearance controls enable after all persistent components have mounted.
   await expect(
