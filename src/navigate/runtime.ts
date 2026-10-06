@@ -11,25 +11,14 @@ import { swapHeaderTitle } from '../header';
 export const NAVIGATION_EVENT = 'tada:navigation';
 
 const LOADING_CURSOR_DELAY = 400;
-const HOLD_SCROLL_FRAMES = 6;
-const HOLD_SCROLL_RELEASE_EVENTS = [
-  'wheel',
-  'touchstart',
-  'keydown',
-  'pointerdown',
-] as const;
 
 let currentAbortController: AbortController | null = null;
 let historyIndex = 0;
 let currentPath = '';
 let applyingFragment = false;
-let fragmentTargetRequest = 0;
 
 const scrollByIndex = new Map<number, number>();
 const scrollByLocation = new Map<string, number>();
-// Stylesheets the navigator added that have not loaded or failed yet. Those in
-// the initial document have settled before the deferred client script runs.
-const pendingStylesheets = new Map<Element, Promise<void>>();
 
 type Direction = 'forward' | 'back';
 
@@ -78,19 +67,7 @@ function updateHead(document: Document, newDoc: Document): void {
 
   for (const link of newDoc.querySelectorAll('link[rel="stylesheet"]')) {
     if (!existingHrefs.has(link.getAttribute('href'))) {
-      const clone = link.cloneNode(true) as Element;
-      pendingStylesheets.set(
-        clone,
-        new Promise(resolve => {
-          const settle = () => {
-            pendingStylesheets.delete(clone);
-            resolve();
-          };
-          clone.addEventListener('load', settle, { once: true });
-          clone.addEventListener('error', settle, { once: true });
-        }),
-      );
-      document.head.appendChild(clone);
+      document.head.appendChild(link.cloneNode(true));
     }
   }
 }
@@ -266,53 +243,16 @@ export function isApplyingFragment(): boolean {
 // content loses it in every browser. A fragment navigation sets it in every
 // browser, but it can reset the entry's history state and scroll position, so
 // restore both.
-//
-// WebKit defers fragment scrolling until pending stylesheets load, which would
-// later move the page away from the restored scroll position. Wait for them
-// first, and skip the update if another request or navigation replaced it.
-//
-// That deferred scroll can also set :target before the wait ends, which would
-// leave nothing to replace. WebKit then scrolls to the target again on the next
-// frame, undoing a scroll back to the saved position. A fragment navigation of
-// our own does not have that problem, so after waiting, repeat it even when
-// :target matches, restoring the saved position the caller passed in. When the
-// last stylesheet finishes loading just after the content swap, WebKit can
-// still scroll to the target in the next rendering update, after our restore,
-// so hold that position for a few frames.
-export function applyFragmentTarget(
-  window: Window,
-  restoredTop?: number,
-): void {
-  const request = ++fragmentTargetRequest;
-  const { href } = window.location;
-  let waited = false;
-  const apply = (): void => {
-    if (request !== fragmentTargetRequest || window.location.href !== href) {
-      return;
-    }
-    const pending = Array.from(pendingStylesheets.values());
-    if (pending.length > 0) {
-      waited = true;
-      void Promise.all(pending).then(apply);
-      return;
-    }
-    replaceFragmentTarget(window, waited ? restoredTop : undefined);
-  };
-  apply();
-}
-
-function replaceFragmentTarget(window: Window, forcedTop?: number): void {
+export function applyFragmentTarget(window: Window): void {
   const { document, history, location } = window;
   if (
-    forcedTop === undefined &&
     document.querySelector(':target') === getHashTarget(document, location.hash)
   ) {
     return;
   }
   const { href } = location;
   const state = history.state;
-  const { scrollX } = window;
-  const scrollY = forcedTop ?? window.scrollY;
+  const { scrollX, scrollY } = window;
   applyingFragment = true;
   try {
     globals.replaceLocation(
@@ -324,41 +264,6 @@ function replaceFragmentTarget(window: Window, forcedTop?: number): void {
   }
   history.replaceState(state, '', href);
   window.scrollTo({ left: scrollX, top: scrollY });
-  if (forcedTop !== undefined) {
-    holdScroll(window, scrollX, scrollY);
-  }
-}
-
-// Scroll back to the given position on each of the next few frames if the
-// browser moved the page, until the visitor scrolls or the URL changes
-function holdScroll(window: Window, left: number, top: number): void {
-  const { href } = window.location;
-  let held = true;
-  const release = (): void => {
-    held = false;
-    for (const type of HOLD_SCROLL_RELEASE_EVENTS) {
-      window.removeEventListener(type, release);
-    }
-  };
-  for (const type of HOLD_SCROLL_RELEASE_EVENTS) {
-    window.addEventListener(type, release, { passive: true });
-  }
-  let frames = 0;
-  const tick = (): void => {
-    if (!held || window.location.href !== href) {
-      release();
-      return;
-    }
-    if (Math.abs(window.scrollY - top) > 1) {
-      window.scrollTo({ left, top });
-    }
-    if (++frames < HOLD_SCROLL_FRAMES) {
-      window.requestAnimationFrame(tick);
-    } else {
-      release();
-    }
-  };
-  window.requestAnimationFrame(tick);
 }
 
 export async function navigateToUrl(
@@ -472,12 +377,10 @@ export async function navigateToUrl(
     teardownPerPageComponents();
     swapContent(document, newDoc);
     if (!pushHistory) {
-      // Restore the entry's :target before updateHead adds stylesheets, so it
-      // applies right away unless an earlier stylesheet is still loading
-      applyFragmentTarget(
-        window,
-        typeof scrollTarget === 'number' ? scrollTarget : undefined,
-      );
+      // Restore the entry's :target before updateHead adds stylesheets. WebKit
+      // defers fragment scrolling until they load, which would move the page
+      // away from the entry's restored scroll position.
+      applyFragmentTarget(window);
     }
     updateHead(document, newDoc);
     mountAppearancePickerForPage(window);

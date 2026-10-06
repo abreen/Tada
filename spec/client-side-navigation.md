@@ -105,20 +105,22 @@ swapped-in content never starts with a target. When `:target` does not match
 the URL fragment, the navigator replaces the entry with a fragment navigation
 (`#` when there is no fragment), then restores the entry's URL, history state,
 and scroll position. On the same page this runs after the browser finishes the
-traversal, so browsers that already updated `:target` are left alone. WebKit
-delays fragment scrolling until pending stylesheets load, so the navigator
-waits for stylesheets it added on earlier navigations to load first. After a
-swap it runs before new stylesheets are added. When it had to wait, WebKit may
-already have scrolled to the target and matched `:target`, then scroll to it
-again on the next frame. The navigator therefore repeats the fragment
-navigation even when `:target` matches, and restores the entry's saved scroll
-position afterward. When the last stylesheet finishes just after the content
-swap, WebKit can still scroll to the target in the next rendering update, so
-the navigator holds the restored position for six frames, scrolling back
-whenever the browser moved the page. A wheel, touch, key, or pointer press
-from the visitor, or a change of URL, ends the hold. Like a document load,
-the target is the element with the fragment's ID, or else an `<a name>`
-anchor.
+traversal, so browsers that already updated `:target` are left alone. After a
+swap it runs before new stylesheets are added, because WebKit delays fragment
+scrolling until they load. Like a document load, the target is the element with
+the fragment's ID, or else an `<a name>` anchor.
+
+### Known WebKit difference
+
+WebKit delays a fragment scroll while any stylesheet is still loading, and the
+navigator does not work around it. If the visitor goes Back across pages to a
+URL with a fragment while a stylesheet added by an earlier navigation is still
+loading, WebKit can scroll to the fragment target after the navigator has
+restored the saved scroll position, so the page ends up at the target instead
+of where the visitor left it. It needs a stylesheet that is still loading at
+that moment, which is rare, and it was only seen in WebKit. Nothing is lost:
+the page is at the fragment the URL names. There is no test for it, because
+the outcome depends on browser timing.
 
 ## When it falls back
 
