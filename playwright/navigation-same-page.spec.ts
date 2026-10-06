@@ -1,4 +1,11 @@
-import { test, expect, waitForClientMount, type Page } from './test-fixtures';
+import {
+  test,
+  expect,
+  waitForClientMount,
+  wheelScrollBy,
+  type Locator,
+  type Page,
+} from './test-fixtures';
 
 type WindowWithMountGate = Window & {
   __initialMountGate?: { held: boolean; release(): Promise<void> };
@@ -87,6 +94,16 @@ async function releaseInitialMount(page: Page) {
   await page.evaluate(() =>
     (window as WindowWithMountGate).__initialMountGate!.release(),
   );
+}
+
+// Firefox applies a link's fragment scroll after the click returns. Wait for it,
+// or it can land after the test scrolls elsewhere and win.
+async function clickAndWaitForScroll(page: Page, link: Locator) {
+  const before = await page.evaluate(() => window.scrollY);
+  await link.click();
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .not.toBe(before);
 }
 
 for (const withHash of [true, false]) {
@@ -204,7 +221,7 @@ test('late startup keeps the scroll position restored by fragment history', asyn
   await holdInitialPerPageMounts(page);
   await page.goto('/markdown.html');
   await expectInitialMountHeld(page);
-  await page.locator('nav.toc ol a').last().click();
+  await clickAndWaitForScroll(page, page.locator('nav.toc ol a').last());
   await expect(page).toHaveURL(/#/);
   await page.evaluate(() => {
     const link = document.createElement('a');
@@ -241,17 +258,14 @@ test('late startup leaves a changed initial fragment at the visitor scroll posit
   await page.goto('/markdown.html#time-zone-chooser');
   await expectInitialMountHeld(page);
   const initialUrl = page.url();
-  await page.locator('nav.toc ol a').first().click();
+  await clickAndWaitForScroll(page, page.locator('nav.toc ol a').first());
   await expect(page).not.toHaveURL(initialUrl);
-  await page.evaluate(() => window.scrollTo({ top: 600 }));
-  await expect
-    .poll(() => page.evaluate(() => window.scrollY))
-    .toBeCloseTo(600, -1);
+  const visitorScroll = await wheelScrollBy(page, 300);
 
   await releaseInitialMount(page);
   await expect
     .poll(() => page.evaluate(() => window.scrollY))
-    .toBeCloseTo(600, -1);
+    .toBeCloseTo(visitorScroll, -1);
 });
 
 test('startup aligns an unchanged initial fragment on cold load and reload', async ({

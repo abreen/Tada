@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './test-fixtures';
+import { test, expect, type Page, waitForClientMount } from './test-fixtures';
 
 async function expectVowelTrail(page: Page) {
   const nav = page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
@@ -70,6 +70,7 @@ test('client navigation replaces trails and clears breadcrumb transition names',
   page,
 }) => {
   await page.goto('/labs/00/VowelCounter.java.html');
+  await waitForClientMount(page);
   await page.evaluate(() => {
     (window as Window & { breadcrumbMarker?: boolean }).breadcrumbMarker = true;
   });
@@ -113,6 +114,7 @@ type BreadcrumbTestWindow = Window & {
 };
 
 async function trackBreadcrumbTransitions(page: Page) {
+  await waitForClientMount(page);
   await page.evaluate(() => {
     const state = window as BreadcrumbTestWindow;
     state.breadcrumbTransitions = [];

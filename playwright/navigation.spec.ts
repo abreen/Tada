@@ -324,12 +324,15 @@ test.describe('header menu control', () => {
     await expect(page).toHaveURL(originalUrl);
   });
 
-  // Safari skips links on Tab unless "Press Tab to highlight each item" is
-  // enabled; this file runs only in Chromium.
   for (const key of ['Enter', 'Space']) {
     test(`opens with ${key} and moves through the links with Tab`, async ({
       page,
+      browserName,
     }) => {
+      // Safari skips links on Tab unless "Press Tab to highlight each item" is
+      // enabled
+      test.skip(browserName === 'webkit', 'Safari does not Tab to links');
+
       await page.goto('/index.html');
       await waitForClientMount(page);
       const details = page.locator('header details');

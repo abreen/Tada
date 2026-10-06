@@ -1,5 +1,38 @@
 import { defineConfig } from '@playwright/test';
 
+// Chromium runs every spec. WebKit and Firefox run the specs where engines
+// differ most: client-side navigation, history and scroll restoration, and
+// fragment targets, plus a few layout and font specs on WebKit.
+const webkitSpecs = [
+  'author-byline',
+  'breadcrumbs',
+  'external-link-wrapping',
+  'font-loading',
+  'header-layout',
+  'navigation',
+  'navigation-download',
+  'navigation-history',
+  'navigation-same-page',
+  'navigation-scroll',
+  'navigation-target',
+  'search-recovery',
+  'trace-navigation',
+];
+
+const firefoxSpecs = [
+  'breadcrumbs',
+  'navigation-download',
+  'navigation-history',
+  'navigation-same-page',
+  'navigation-scroll',
+  'navigation-target',
+  'search-recovery',
+  'trace-navigation',
+];
+
+const matchSpecs = (specs: string[]) =>
+  specs.map(spec => `**/${spec}.spec.ts`);
+
 export default defineConfig({
   testDir: './playwright',
   timeout: 20_000,
@@ -8,34 +41,14 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },
     {
-      name: 'webkit-same-page-navigation',
-      testMatch: '**/navigation-same-page.spec.ts',
+      name: 'webkit',
+      testMatch: matchSpecs(webkitSpecs),
       use: { browserName: 'webkit' },
     },
     {
-      name: 'webkit-navigation-target',
-      testMatch: '**/navigation-target.spec.ts',
-      use: { browserName: 'webkit' },
-    },
-    {
-      name: 'webkit-external-link-wrapping',
-      testMatch: '**/external-link-wrapping.spec.ts',
-      use: { browserName: 'webkit' },
-    },
-    {
-      name: 'webkit-author-byline',
-      testMatch: '**/author-byline.spec.ts',
-      use: { browserName: 'webkit' },
-    },
-    {
-      name: 'webkit-header-layout',
-      testMatch: '**/header-layout.spec.ts',
-      use: { browserName: 'webkit' },
-    },
-    {
-      name: 'webkit-font-loading',
-      testMatch: '**/font-loading.spec.ts',
-      use: { browserName: 'webkit' },
+      name: 'firefox',
+      testMatch: matchSpecs(firefoxSpecs),
+      use: { browserName: 'firefox' },
     },
   ],
   webServer: [
