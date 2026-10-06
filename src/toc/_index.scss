@@ -149,10 +149,15 @@ body.code .toc ol a {
   width: var(--toc-alert-icon-size);
   height: var(--toc-alert-icon-size);
   margin-right: 4px;
-  vertical-align: sub;
+  vertical-align: middle;
   content: '';
 
   @include contained-mask(var(--toc-alert-icon));
+
+  // Center the icon on the cap height, which scales with each level's font
+  @supports (width: 1cap) {
+    vertical-align: calc(0.5cap - var(--toc-alert-icon-size) / 2);
+  }
 }
 
 .toc ol li.label {
