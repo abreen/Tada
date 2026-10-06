@@ -24,7 +24,7 @@ letters, digits, and hyphens; non-root base paths must not end with a slash.
 Absolute internal `href` and `src` attributes (starting with `/`) in generated
 pages are prefixed with the base path. This includes:
 
-- links and images rendered from Markdown
+- links and images rendered from Markdown, including superlinks
 - raw HTML written inside Markdown files
 - `.html` content pages
 - markup contributed by Markdown partials
@@ -51,6 +51,12 @@ external during Markdown rendering. External links open in a new tab with
 feature. The final word and external-link icon stay together when wrapping,
 and the icon also stays with any immediately following non-whitespace content,
 such as sentence punctuation.
+
+Superlinks (`[Title][Description](url)`, see [Markdown](markdown.md)) with an
+external destination also open in a new tab with `rel="noopener noreferrer"` and
+get the `external` class, but their text is not wrapped in an
+`external-link-tail` span. The external-link icon replaces the superlink's
+chevron instead of following the text.
 
 
 ## Internal link validation

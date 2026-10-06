@@ -373,6 +373,27 @@ static boolean isOdd(int n) {
 ```
 +++
 
+### Superlinks
+
+Use
+
+```
+[Home][Back to the front page](index.html)
+[Markdown][You are here](markdown.html)
+[KaTeX][The library behind math support](https://katex.org/)
+```
+
+to create a link with a title and a description:
+
+[Home][Back to the front page](index.html)
+[Markdown][You are here](markdown.html)
+[KaTeX][The library behind math support](https://katex.org/)
+
+Superlinks are rendered as block elements, so don't use them inline, in the
+middle of a paragraph, or in a heading. Put them on their own lines, as above.
+A superlink to another website, like the last one above, opens in a new tab and
+shows an external link icon in place of the chevron.
+
 ---
 
 ## Additional features

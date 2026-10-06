@@ -1,9 +1,11 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import MarkdownIt from 'markdown-it';
 import deflist from 'markdown-it-deflist';
+import footnote from 'markdown-it-footnote';
 import deflistIdPlugin from './deflist-id-plugin';
 import externalLinksPlugin from './external-links-plugin';
 import headingSubtitlePlugin from './heading-subtitle-plugin';
+import superlinkPlugin from './superlink-plugin';
 import columnsPlugin from './columns-plugin';
 import { createMarkdown } from './utils/markdown';
 import { stripHtmlComments, injectKatexStylesheet } from './utils/render';
@@ -178,6 +180,269 @@ describe('external-links-plugin', () => {
     expect(html).toContain(
       '<a href="https://example.com" class="external" target="_blank" rel="noopener noreferrer"><strong>bold <em>and <span class="external-link-tail">italic</span></em></strong></a>',
     );
+  });
+});
+
+describe('superlink-plugin', () => {
+  function createSuperlinkMarkdown(
+    options: { typographer?: boolean; externalLinks?: boolean } = {},
+  ) {
+    const siteVariables = { internalDomains: ['example.com'] };
+    const md = new MarkdownIt({ typographer: options.typographer });
+    if (options.externalLinks) {
+      md.use(externalLinksPlugin, siteVariables);
+    }
+    return md.use(superlinkPlugin, siteVariables);
+  }
+
+  test('renders a title and description superlink', () => {
+    const md = createSuperlinkMarkdown();
+
+    expect(
+      md.render('[Foo bar][Second line with description](/destination.html)'),
+    ).toBe(
+      '<p><a href="/destination.html" class="button superlink">' +
+        '<span class="superlink-title">Foo bar</span>\n' +
+        '<span class="superlink-description">Second line with description</span>' +
+        '</a></p>\n',
+    );
+  });
+
+  test('allows whitespace around the destination', () => {
+    const md = createSuperlinkMarkdown();
+
+    const html = md.render('[Foo][Bar](  /destination.html  )');
+
+    expect(html).toContain(
+      '<a href="/destination.html" class="button superlink">',
+    );
+  });
+
+  test('renders inline Markdown in both the title and the description', () => {
+    const md = createSuperlinkMarkdown();
+
+    const html = md.render('[**Bold** title][A `code` description](/x.html)');
+
+    expect(html).toContain(
+      '<span class="superlink-title"><strong>Bold</strong> title</span>',
+    );
+    expect(html).toContain(
+      '<span class="superlink-description">A <code>code</code> description</span>',
+    );
+  });
+
+  test('applies typographer replacements in both parts', () => {
+    const md = createSuperlinkMarkdown({ typographer: true });
+
+    const html = md.render("[It's here][Don't stop -- read on](/x.html)");
+
+    expect(html).toContain('<span class="superlink-title">It’s here</span>');
+    expect(html).toContain(
+      '<span class="superlink-description">Don’t stop – read on</span>',
+    );
+  });
+
+  test('a code span containing ][ does not end the title', () => {
+    const md = createSuperlinkMarkdown();
+
+    const html = md.render('[Use `][` here][Description](/x.html)');
+
+    expect(html).toContain(
+      '<span class="superlink-title">Use <code>][</code> here</span>',
+    );
+  });
+
+  test('takes precedence over a defined reference link', () => {
+    const md = createSuperlinkMarkdown();
+
+    const html = md.render(
+      ['[Foo][Bar](/button.html)', '', '[Bar]: /reference.html'].join('\n'),
+    );
+
+    expect(html).toContain('<a href="/button.html" class="button superlink">');
+    expect(html).not.toContain('/reference.html');
+  });
+
+  test('leaves ordinary links and reference links alone', () => {
+    const md = createSuperlinkMarkdown();
+
+    const html = md.render(
+      [
+        '[inline](/inline.html)',
+        '[reference][ref]',
+        '[shortcut][]',
+        '',
+        '[ref]: /reference.html',
+        '[shortcut]: /shortcut.html',
+      ].join('\n'),
+    );
+
+    expect(html).toContain('<a href="/inline.html">inline</a>');
+    expect(html).toContain('<a href="/reference.html">reference</a>');
+    expect(html).toContain('<a href="/shortcut.html">shortcut</a>');
+    expect(html).not.toContain('superlink');
+  });
+
+  test('does not match when the parts are not directly adjacent', () => {
+    const md = createSuperlinkMarkdown();
+
+    for (const source of [
+      '[Foo] [Bar](/x.html)',
+      '[Foo]\n[Bar](/x.html)',
+      '[Foo][Bar] (/x.html)',
+    ]) {
+      expect(md.render(source)).not.toContain('superlink');
+    }
+  });
+
+  test('does not match an escaped opening bracket', () => {
+    const md = createSuperlinkMarkdown();
+
+    const html = md.render('\\[Foo][Bar](/x.html)');
+
+    expect(html).not.toContain('superlink');
+    expect(html).toContain('<a href="/x.html">Bar</a>');
+  });
+
+  test('does not match when a part is empty or blank', () => {
+    const md = createSuperlinkMarkdown();
+
+    for (const source of [
+      '[][Bar](/x.html)',
+      '[Foo][](/x.html)',
+      '[ ][Bar](/x.html)',
+      '[Foo][ ](/x.html)',
+    ]) {
+      expect(md.render(source)).not.toContain('superlink');
+    }
+  });
+
+  test('does not match an unsafe destination', () => {
+    const md = createSuperlinkMarkdown();
+
+    const html = md.render('[Foo][Bar](javascript:alert(1))');
+
+    expect(html).not.toContain('superlink');
+    expect(html).not.toContain('<a');
+  });
+
+  test('does not allow links inside either part', () => {
+    const md = createSuperlinkMarkdown();
+
+    expect(md.render('[See [inner](/a.html)][Desc](/b.html)')).not.toContain(
+      'superlink',
+    );
+    expect(md.render('[Title][See [inner](/a.html)](/b.html)')).not.toContain(
+      'superlink',
+    );
+  });
+
+  test('marks external destinations without wrapping a tail span', () => {
+    const md = createSuperlinkMarkdown({ externalLinks: true });
+
+    const html = md.render(
+      '[Out][Elsewhere on the web](https://outside.example/docs)',
+    );
+
+    expect(html).toBe(
+      '<p><a href="https://outside.example/docs" class="button superlink external" target="_blank" rel="noopener noreferrer">' +
+        '<span class="superlink-title">Out</span>\n' +
+        '<span class="superlink-description">Elsewhere on the web</span>' +
+        '</a></p>\n',
+    );
+  });
+
+  test('does not add target or rel to internal destinations', () => {
+    const md = createSuperlinkMarkdown({ externalLinks: true });
+
+    const html = md.render(
+      '[Home][Same site](https://example.com/docs) [Local][Relative](/docs.html)',
+    );
+
+    expect(html).toContain(
+      '<a href="https://example.com/docs" class="button superlink">',
+    );
+    expect(html).toContain('<a href="/docs.html" class="button superlink">');
+    expect(html).not.toContain('target=');
+    expect(html).not.toContain('external');
+  });
+
+  test('separates the title and description in extracted text', () => {
+    const md = createSuperlinkMarkdown();
+
+    const html = md.render('[Foo bar][Second line](/x.html)');
+
+    expect(html.replace(/<[^>]+>/g, '')).toBe('Foo bar\nSecond line\n');
+  });
+
+  test('leaves a footnote reference followed by a link alone', () => {
+    const md = new MarkdownIt().use(footnote);
+    md.use(superlinkPlugin, { internalDomains: [] });
+
+    const html = md.render(
+      ['Word[^1][source](/x.html)', '', '[^1]: The note.'].join('\n'),
+    );
+
+    expect(html).toContain('footnote-ref');
+    expect(html).toContain('<a href="/x.html">source</a>');
+    expect(html).not.toContain('superlink');
+  });
+
+  test('does not match a title that starts with a caret', () => {
+    const md = createSuperlinkMarkdown();
+
+    expect(md.render('[^note][Desc](/x.html)')).not.toContain('superlink');
+  });
+
+  test('renders consecutive lines as sibling anchors', () => {
+    const md = createSuperlinkMarkdown();
+
+    const html = md.render('[A][a](/a.html)\n[B][b](/b.html)');
+
+    expect(html).toBe(
+      '<p><a href="/a.html" class="button superlink">' +
+        '<span class="superlink-title">A</span>\n' +
+        '<span class="superlink-description">a</span></a>\n' +
+        '<a href="/b.html" class="button superlink">' +
+        '<span class="superlink-title">B</span>\n' +
+        '<span class="superlink-description">b</span></a></p>\n',
+    );
+  });
+
+  test('is registered in the project Markdown pipeline', () => {
+    const md = createMarkdown(
+      {
+        base: '',
+        basePath: '/',
+        internalDomains: [],
+        extensionToShikiLanguage: {},
+        shikiLanguages: ['ts'],
+        features: { search: true, favicon: false, footer: true, pickers: true },
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+        defaultTimeZone: 'America/New_York',
+      } as SiteVariables,
+      { validatorOptions: { enabled: false } },
+    );
+
+    const html = md.render(
+      [
+        '[Foo bar][Second line](/destination.html)',
+        '[Out][Away](https://outside.example/docs)',
+        '',
+        '[Normal](/normal.html)',
+      ].join('\n'),
+    );
+
+    expect(html).toContain(
+      '<a href="/destination.html" class="button superlink"><span class="superlink-title">Foo bar</span>',
+    );
+    expect(html).toContain(
+      '<a href="https://outside.example/docs" class="button superlink external" target="_blank" rel="noopener noreferrer">',
+    );
+    expect(html).not.toContain('external-link-tail');
+    expect(html).toContain('<a href="/normal.html">Normal</a>');
   });
 });
 

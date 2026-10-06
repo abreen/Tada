@@ -68,6 +68,7 @@ A static site generator. The successor to Presto.
   * `??? question ... ???` renders a Q&A section; answer is hidden until click
     - To display clickable multiple choice options, use a [task list][task-list]
   * `+++ ... +++ ... +++` renders a two-column layout
+  * `[Title][Description](url)` renders a two-line superlink
   * Special heading subtitles with `## Heading # A subtitle here`
   * `{{{ _partial.md }}}` syntax for including partials
 

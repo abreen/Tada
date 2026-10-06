@@ -118,6 +118,66 @@ indented code blocks remain literal code, including `+++`. An unclosed code
 fence consumes the remaining content rather than supplying column boundaries.
 The output is a CSS Grid container with two equal-width columns.
 
+## Superlinks
+
+A superlink is a link rendered on two lines: a title, with a description
+beneath it. Write it as two bracketed labels followed by a destination:
+
+```
+[Problem Set 1][Due Friday](/problem_sets/ps1.html)
+```
+
+The two labels must be directly adjacent (`][`), and the destination follows
+immediately in parentheses. Whitespace inside the parentheses is allowed. A link
+title string is not supported. Both labels accept inline Markdown (emphasis,
+code spans) but must not be empty or contain links.
+
+The syntax takes precedence over CommonMark reference links: `[A][B](/x.html)` is
+a superlink even when a reference named `B` is defined. Anything that does not
+match this exact form, such as a space between the labels, an empty label, or an
+unsafe destination like `javascript:`, is parsed as ordinary Markdown. A first
+label that starts with `^` is also left alone, so a footnote reference directly
+followed by a link (`text[^1][source](/x.html)`) still renders as a footnote
+reference and a link.
+
+The output is a single anchor with two block-level spans, separated by a
+newline so that text extraction (search indexing, copy and paste) keeps the last
+word of the title apart from the first word of the description:
+
+```
+<a href="/problem_sets/ps1.html" class="button superlink"><span class="superlink-title">Problem Set 1</span>
+<span class="superlink-description">Due Friday</span></a>
+```
+
+The `href` goes through the same base path rewriting, link validation, and
+client-side navigation marking as any other link (see
+[Link Processing](link-processing.md)). External destinations open in a new tab
+with `rel="noopener noreferrer"` and are given the `external` class, which shows
+the external-link icon in place of the chevron. Unlike ordinary external links,
+the last word is not wrapped in an `external-link-tail` span, because the icon
+sits at the right edge rather than after the text.
+
+A superlink is a block-level link that keeps the `button` class, so it shares
+the border, background, hover, focus, and pressed styles of `a.button`. It is
+left-aligned and inherits the surrounding font size (so it scales with its
+container, for example in slides), uses half the `--gap` block padding, and has
+extra inline end padding to clear the chevron. The title has font weight
+600, and the description has normal weight and is colored with `--fg2-color`. A
+right-pointing chevron (the `breadcrumb-separator` mask icon) is drawn with
+`::after` at the right edge, vertically centered, in `--fg2-color` (the same
+color as the border and description). On an external superlink the shared
+`a.external` rules replace it with the `external-link` icon in the same color,
+shifted left by half the difference in the two icons' box sizes so that both
+share the same center.
+Adjacent superlinks, such as consecutive
+lines of a paragraph, are separated by `--gap`. This is HTML and CSS only, so it
+behaves the same with JavaScript turned off.
+
+Because a superlink is a block element, it should not be used inline, in the
+middle of a paragraph, or in a heading: it breaks the surrounding text onto
+separate lines, and in a heading it would nest a block-level link in the table
+of contents entry. Superlinks belong on their own lines.
+
 ## Slides
 
 When a Markdown page's front matter sets `slides: true`, top-level thematic

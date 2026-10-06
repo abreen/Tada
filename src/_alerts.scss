@@ -35,7 +35,7 @@
     background: inherit;
   }
 
-  a {
+  a:not(.superlink) {
     @include link-underline;
 
     color: var(--fg-color);

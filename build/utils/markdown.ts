@@ -12,6 +12,7 @@ import { isBundledLanguage, isPlainTextLanguage } from '../site-variables';
 import headingSubtitlePlugin from '../heading-subtitle-plugin';
 import deflistIdPlugin from '../deflist-id-plugin';
 import externalLinksPlugin from '../external-links-plugin';
+import superlinkPlugin from '../superlink-plugin';
 import { tocPlugin } from '../toc-plugin';
 import columnsPlugin from '../columns-plugin';
 import katexPlugin from './katex';
@@ -61,6 +62,7 @@ export function createMarkdown(
     .use(markdownItDeflist)
     .use(deflistIdPlugin)
     .use(externalLinksPlugin, siteVariables)
+    .use(superlinkPlugin, siteVariables)
     .use(tocPlugin)
     .use(columnsPlugin)
     .use(katexPlugin)

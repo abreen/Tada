@@ -164,6 +164,60 @@ select:focus {
   border-color: var(--fg-color);
 }
 
+a.superlink {
+  position: relative;
+  display: block;
+  padding-block: calc(var(--gap) / 2);
+  padding-inline: var(--gap)
+    calc(var(--gap) * 2 + var(--icon-breadcrumb-separator-size));
+  font-size: inherit;
+  text-align: left;
+
+  + a.superlink {
+    margin-top: var(--gap);
+  }
+
+  .superlink-title {
+    display: block;
+    font-weight: 600;
+  }
+
+  .superlink-description {
+    display: block;
+    font-weight: normal;
+    color: var(--fg2-color);
+  }
+
+  &::after {
+    @include contained-mask(var(--icon-breadcrumb-separator));
+
+    position: absolute;
+    top: 50%;
+    right: var(--gap);
+    width: var(--icon-breadcrumb-separator-size);
+    height: var(--icon-breadcrumb-separator-size);
+    content: '';
+    background-color: var(--fg2-color);
+    transform: translateY(-50%);
+  }
+
+  // External superlinks get the external-link icon instead of the chevron from
+  // the shared `a.external` rules above, which win on mask, size and content.
+  // They also set currentcolor, so restore the subdued color. The icon's box
+  // is smaller than the chevron's, so shift it left to share the chevron's
+  // center, which keeps the two optically aligned.
+  &.external::after {
+    right: calc(
+      var(--gap) +
+        (
+          var(--icon-breadcrumb-separator-size) - var(--icon-external-link-size)
+        ) /
+        2
+    );
+    background-color: var(--fg2-color);
+  }
+}
+
 button.icon-button {
   display: inline-flex;
   align-items: center;

@@ -5,16 +5,23 @@ import type { SiteVariables } from './types';
 
 const log = makeLogger(import.meta.url);
 
+export function isExternalHref(
+  href: string,
+  siteVariables: SiteVariables,
+): boolean {
+  if (!href.match(/^https?:\/\/.*$/)) {
+    return false;
+  }
+  const url = new URL(href);
+  return !siteVariables.internalDomains?.includes(url.host);
+}
+
 export default function externalLinks(
   md: MarkdownIt,
   siteVariables: SiteVariables,
 ): void {
   function isExternal(href: string): boolean {
-    if (!href.match(/^https?:\/\/.*$/)) {
-      return false;
-    }
-    const url = new URL(href);
-    return !siteVariables.internalDomains?.includes(url.host);
+    return isExternalHref(href, siteVariables);
   }
 
   function findMatchingClose(children: Token[], openIdx: number): number {

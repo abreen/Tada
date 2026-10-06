@@ -23,7 +23,7 @@ the shared SVG attributes.
 
 | Icon | Size | Used by |
 | --- | --- | --- |
-| `external-link` | 20px | External links |
+| `external-link` | 20px | External links and external superlinks (replacing the chevron) |
 | `search` | 20px | Header search field |
 | `contrast-standard` | 20px | Contrast picker, standard endpoint |
 | `contrast-high` | 20px | Contrast picker, high endpoint |
@@ -31,7 +31,7 @@ the shared SVG attributes.
 | `info-compact` | 20px | Note entries in the table of contents |
 | `warning` | 40px | Warning alerts |
 | `warning-compact` | 20px | Inline `i.warning` and warning TOC entries |
-| `breadcrumb-separator` | 24px | Breadcrumb separators |
+| `breadcrumb-separator` | 24px | Breadcrumb separators and the superlink chevron |
 | `heading-present` | 24px | Slide-title presentation buttons |
 | `check` | 18px | Checked checkboxes |
 | `question-correct` | 22px | Correct multiple-choice answers |
