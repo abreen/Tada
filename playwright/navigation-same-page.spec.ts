@@ -2,7 +2,7 @@ import {
   test,
   expect,
   waitForClientMount,
-  wheelScrollBy,
+  visitorScrollBy,
   type Locator,
   type Page,
 } from './test-fixtures';
@@ -101,9 +101,7 @@ async function releaseInitialMount(page: Page) {
 async function clickAndWaitForScroll(page: Page, link: Locator) {
   const before = await page.evaluate(() => window.scrollY);
   await link.click();
-  await expect
-    .poll(() => page.evaluate(() => window.scrollY))
-    .not.toBe(before);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).not.toBe(before);
 }
 
 for (const withHash of [true, false]) {
@@ -260,7 +258,7 @@ test('late startup leaves a changed initial fragment at the visitor scroll posit
   const initialUrl = page.url();
   await clickAndWaitForScroll(page, page.locator('nav.toc ol a').first());
   await expect(page).not.toHaveURL(initialUrl);
-  const visitorScroll = await wheelScrollBy(page, 300);
+  const visitorScroll = await visitorScrollBy(page, 300);
 
   await releaseInitialMount(page);
   await expect

@@ -66,16 +66,22 @@ export const test = base.extend({
 export { expect };
 export type { Locator, Page } from '@playwright/test';
 
-// Scroll with a real wheel event and return the settled position. Firefox can
-// pull a page that only scripts scrolled back to a link's fragment after layout
-// changes, but not one the visitor scrolled.
-export async function wheelScrollBy(
+// Scroll like a visitor and return the settled position. Firefox can pull a
+// page that only scripts scrolled back to a link's fragment after layout
+// changes, but not one scrolled with the wheel. Other browsers do not need real
+// input, and Playwright's WebKit does not scroll the page on a wheel event on
+// Linux.
+export async function visitorScrollBy(
   page: Page,
   deltaY: number,
 ): Promise<number> {
   const start = await page.evaluate(() => window.scrollY);
-  await page.mouse.move(400, 300);
-  await page.mouse.wheel(0, deltaY);
+  if (page.context().browser()?.browserType().name() === 'firefox') {
+    await page.mouse.move(400, 300);
+    await page.mouse.wheel(0, deltaY);
+  } else {
+    await page.evaluate(top => window.scrollBy({ top }), deltaY);
+  }
   let last = start;
   await expect
     .poll(async () => {

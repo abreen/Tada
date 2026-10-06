@@ -2,7 +2,7 @@ import {
   test,
   expect,
   waitForClientMount,
-  wheelScrollBy,
+  visitorScrollBy,
   type Page,
 } from './test-fixtures';
 
@@ -19,7 +19,7 @@ async function selectLineAndScrollAway(page: Page): Promise<number> {
   await expect(page).toHaveURL(/#L30$/);
   await expect(page.locator(':target')).toHaveId('L30');
   const targetScroll = await scrollY(page);
-  const awayScroll = await wheelScrollBy(page, 200);
+  const awayScroll = await visitorScrollBy(page, 200);
   expect(awayScroll).toBeGreaterThan(targetScroll + 100);
   return awayScroll;
 }
