@@ -25,6 +25,7 @@ function harness(
   const watchers: (EventEmitter & { close: () => Promise<void> })[] = [];
   let closes = 0;
   const added: string[] = [];
+  const calls: string[] = [];
   const existingFiles = new Set<string>();
   const builds: (ReadonlySet<string> | undefined)[] = [];
   const events: WatchLifecycleEvent<number>[] = [];
@@ -64,6 +65,11 @@ function harness(
           },
           add(filePath: string) {
             added.push(filePath);
+            calls.push(`add ${filePath}`);
+            return this;
+          },
+          unwatch(filePath: string) {
+            calls.push(`unwatch ${filePath}`);
             return this;
           },
         });
@@ -106,6 +112,7 @@ function harness(
     ready,
     advance,
     added,
+    calls,
     existingFiles,
     closes: () => closes,
   };
@@ -305,6 +312,44 @@ test('a polling file that becomes a directory gains a recursive subscription', a
   await h.handle.close();
   h.watchers[0].emit('change', '/sources/item', { isDirectory: () => true });
   expect(h.added).toHaveLength(1);
+});
+
+test('a directory replaced by a file is resubscribed when only its children report removal', async () => {
+  const h = harness();
+  await h.ready();
+  // A poll that misses the gap between removing the directory and creating the
+  // file never reports the directory itself, only what was inside it.
+  h.existingFiles.add('/sources/0/item');
+  h.watchers[0].emit('unlinkDir', '/sources/0/item/nested');
+  h.watchers[0].emit('unlink', '/sources/0/item/nested/child.txt');
+  await h.advance();
+  expect(h.calls).toEqual(['unwatch /sources/0/item', 'add /sources/0/item']);
+  expect(h.builds[1]).toEqual(
+    new Set([
+      path.resolve('/sources/0/item/nested'),
+      path.resolve('/sources/0/item/nested/child.txt'),
+    ]),
+  );
+  await h.handle.close();
+});
+
+test('removals under directories that are still directories are not resubscribed', async () => {
+  const h = harness();
+  await h.ready();
+  h.watchers[0].emit('unlink', '/sources/0/item/child.txt');
+  await h.advance();
+  expect(h.calls).toEqual([]);
+  await h.handle.close();
+});
+
+test('removals do not look for replaced directories above the watch target', async () => {
+  const h = harness();
+  await h.ready();
+  h.existingFiles.add('/sources');
+  h.watchers[0].emit('unlink', '/sources/0/child.txt');
+  await h.advance();
+  expect(h.calls).toEqual([]);
+  await h.handle.close();
 });
 
 test('a removed directory replaced by a file gains a file subscription', async () => {

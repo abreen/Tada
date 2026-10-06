@@ -128,10 +128,15 @@ output appears at its new location.
 An output path can change between a file and a directory. Tada deletes the old
 output before writing the new one.
 
-Watch mode watches `content/` and `public/` by polling. A known limitation:
-if a directory is replaced by a file and then by a directory again in quick
-succession, edits inside the recreated directory may not be detected. Restart
-watch mode if that happens.
+Watch mode watches `content/` and `public/` by polling. The watcher tracks
+entries by name, so it can miss a directory being replaced by a file of the same
+name. When the removal of the directory's contents is reported, watch mode
+checks each parent of a removed path once changes settle and resubscribes any
+that is now a file, so later edits to that file are detected.
+
+A known limitation: if a directory is replaced by a file and then by a directory
+again in quick succession, edits inside the recreated directory may not be
+detected. Restart watch mode if that happens.
 
 ## Output Path Conflicts
 

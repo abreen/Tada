@@ -22,6 +22,10 @@ export function runWatchEngine<Meta>(
   const debounceMs = options.debounceMs ?? 300;
   const watchers: ReturnType<typeof chokidar.watch>[] = [];
   const pending = new Set<string>();
+  const removed = new Map<
+    string,
+    { watcher: ReturnType<typeof chokidar.watch>; root: string }
+  >();
   let uncommitted = new Set<string>();
   let closed = false;
   let fatal: { error: unknown } | undefined;
@@ -33,6 +37,7 @@ export function runWatchEngine<Meta>(
   function stop(): void {
     closed = true;
     pending.clear();
+    removed.clear();
     if (timer !== undefined) {
       clock.clearTimeout(timer);
     }
@@ -76,6 +81,52 @@ export function runWatchEngine<Meta>(
     } else {
       wake?.();
     }
+  }
+
+  function isFile(filePath: string): boolean {
+    try {
+      return dependencies.stat(filePath)?.isFile() ?? false;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOTDIR') {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  function isInside(root: string, filePath: string): boolean {
+    const relative = path.relative(root, filePath);
+    return (
+      relative !== '' &&
+      relative !== '..' &&
+      !relative.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relative)
+    );
+  }
+
+  /**
+   * Chokidar tracks entries by name, so a directory replaced by a file keeps
+   * its directory subscription and edits to the file are never reported. When
+   * a poll misses the moment between the two, the only events are removals of
+   * what was inside the directory. Once changes have settled, resubscribe any
+   * parent of a removed path that is now a file.
+   */
+  function resubscribeReplacedDirectories(): void {
+    const checked = new Set<string>();
+    for (const [removedPath, { watcher, root }] of removed) {
+      for (
+        let dir = path.dirname(removedPath);
+        isInside(root, dir) && !checked.has(dir);
+        dir = path.dirname(dir)
+      ) {
+        checked.add(dir);
+        if (isFile(dir)) {
+          watcher.unwatch(dir);
+          watcher.add(dir);
+        }
+      }
+    }
+    removed.clear();
   }
 
   async function emit(event: WatchLifecycleEvent<Meta>): Promise<void> {
@@ -139,7 +190,13 @@ export function runWatchEngine<Meta>(
           fail(error);
         }
       };
-      watcher.on('add', included).on('unlink', included);
+      const removedPath = (filePath: string) => {
+        if (!closed) {
+          removed.set(filePath, { watcher, root: target.path });
+        }
+        included(filePath);
+      };
+      watcher.on('add', included).on('unlink', removedPath);
       watcher.on('change', (filePath, stats) => {
         if (closed) {
           return;
@@ -156,20 +213,18 @@ export function runWatchEngine<Meta>(
       });
       watcher.on('addDir', included);
       watcher.on('unlinkDir', filePath => {
-        included(filePath);
+        removedPath(filePath);
         // Wait until Chokidar finishes closing the old directory subscription.
         queueMicrotask(() => {
           if (closed) {
             return;
           }
           try {
-            if (dependencies.stat(filePath)?.isFile()) {
+            if (isFile(filePath)) {
               watcher.add(filePath);
             }
           } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== 'ENOTDIR') {
-              fail(error);
-            }
+            fail(error);
           }
         });
       });
@@ -197,6 +252,7 @@ export function runWatchEngine<Meta>(
       while (!closed && pending.size) {
         const paths = new Set([...uncommitted, ...pending]);
         pending.clear();
+        resubscribeReplacedDirectories();
         const outcome = await build(paths);
         if (!outcome?.ok) {
           uncommitted = paths;
