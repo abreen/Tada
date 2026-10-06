@@ -372,7 +372,9 @@ describe('superlink-plugin', () => {
 
     const html = md.render('[Foo bar][Second line](/x.html)');
 
-    expect(html.replace(/<[^>]+>/g, '')).toBe('Foo bar\nSecond line\n');
+    expect(html).toContain(
+      'Foo bar</span>\n<span class="superlink-description">Second line</span>',
+    );
   });
 
   test('leaves a footnote reference followed by a link alone', () => {
