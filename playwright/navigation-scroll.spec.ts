@@ -188,10 +188,7 @@ test.describe('scroll and hash behavior', () => {
     expect(marker).toBe('alive');
 
     // L24 should match :target
-    const isTarget = await page.evaluate(
-      () => document.getElementById('L24')?.matches(':target') ?? false,
-    );
-    expect(isTarget).toBe(true);
+    await expect(page.locator(':target')).toHaveId('L24');
   });
 
   test('refresh preserves scroll position to hash target', async ({ page }) => {

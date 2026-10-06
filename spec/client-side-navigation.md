@@ -112,8 +112,13 @@ swap it runs before new stylesheets are added. When it had to wait, WebKit may
 already have scrolled to the target and matched `:target`, then scroll to it
 again on the next frame. The navigator therefore repeats the fragment
 navigation even when `:target` matches, and restores the entry's saved scroll
-position afterward. Like a document load, the target is the element with the
-fragment's ID, or else an `<a name>` anchor.
+position afterward. When the last stylesheet finishes just after the content
+swap, WebKit can still scroll to the target in the next rendering update, so
+the navigator holds the restored position for six frames, scrolling back
+whenever the browser moved the page. A wheel, touch, key, or pointer press
+from the visitor, or a change of URL, ends the hold. Like a document load,
+the target is the element with the fragment's ID, or else an `<a name>`
+anchor.
 
 ## When it falls back
 

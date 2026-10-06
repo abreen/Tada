@@ -39,6 +39,37 @@ async function goToOtherPage(page: Page) {
   await expect(page.locator('h1')).toContainText('Markdown Examples');
 }
 
+// Make the other page link a stylesheet that stays pending until released, so
+// it is still loading when Back returns to the code page
+async function holdStylesheetOnOtherPage(page: Page): Promise<() => void> {
+  let release = () => {};
+  const released = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/markdown.html', async route => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace(
+      '</head>',
+      '<link href="/slow.css" rel="stylesheet"></head>',
+    );
+    await route.fulfill({ response, body });
+  });
+  await page.route('**/slow.css', async route => {
+    await released;
+    await route.fulfill({ contentType: 'text/css', body: '' });
+  });
+  return release;
+}
+
+// Let any scrolling that waited for a stylesheet or a frame run
+const waitForFrames = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+
 async function expectRestoredLine(page: Page, savedScroll: number) {
   await expect(page).toHaveURL(/Rectangle\.java\.html#L30$/);
   await expect(page.locator(':target')).toHaveId('L30');
@@ -94,13 +125,7 @@ test('back across pages keeps the saved scroll when the page adds a stylesheet',
       ),
     )
     .toBe(true);
-  // Let any scrolling that waited for the stylesheet run
-  await page.evaluate(
-    () =>
-      new Promise(resolve =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve)),
-      ),
-  );
+  await waitForFrames(page);
   expect(await scrollY(page)).toBeCloseTo(savedScroll, -1);
 });
 
@@ -143,24 +168,7 @@ test('back across pages keeps the saved scroll while an earlier stylesheet loads
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const savedScroll = await selectLineAndScrollAway(page);
-
-  // The other page starts loading a stylesheet that is still pending on Back
-  let releaseStylesheet = () => {};
-  const stylesheetReleased = new Promise<void>(resolve => {
-    releaseStylesheet = resolve;
-  });
-  await page.route('**/markdown.html', async route => {
-    const response = await route.fetch();
-    const body = (await response.text()).replace(
-      '</head>',
-      '<link href="/slow.css" rel="stylesheet"></head>',
-    );
-    await route.fulfill({ response, body });
-  });
-  await page.route('**/slow.css', async route => {
-    await stylesheetReleased;
-    await route.fulfill({ contentType: 'text/css', body: '' });
-  });
+  const releaseStylesheet = await holdStylesheetOnOtherPage(page);
   await goToOtherPage(page);
 
   await page.goBack();
@@ -168,13 +176,28 @@ test('back across pages keeps the saved scroll while an earlier stylesheet loads
   await expect.poll(() => scrollY(page)).toBeCloseTo(savedScroll, -1);
   releaseStylesheet();
   await expectRestoredLine(page, savedScroll);
-  // Let any scrolling that waited for the stylesheet run
-  await page.evaluate(
-    () =>
-      new Promise(resolve =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve)),
-      ),
-  );
+  await waitForFrames(page);
+  expect(await scrollY(page)).toBeCloseTo(savedScroll, -1);
+});
+
+test('back across pages keeps the saved scroll when an earlier stylesheet finishes as the page swaps in', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const savedScroll = await selectLineAndScrollAway(page);
+  const releaseStylesheet = await holdStylesheetOnOtherPage(page);
+  await goToOtherPage(page);
+  // The stylesheet finishes along with the restored page, so it can load right
+  // after the content swap, before the browser's next rendering update
+  await page.route(`**${CODE_PAGE}`, async route => {
+    const response = await route.fetch();
+    releaseStylesheet();
+    await route.fulfill({ response });
+  });
+
+  await page.goBack();
+  await expectRestoredLine(page, savedScroll);
+  await waitForFrames(page);
   expect(await scrollY(page)).toBeCloseTo(savedScroll, -1);
 });
 

@@ -11,6 +11,13 @@ import { swapHeaderTitle } from '../header';
 export const NAVIGATION_EVENT = 'tada:navigation';
 
 const LOADING_CURSOR_DELAY = 400;
+const HOLD_SCROLL_FRAMES = 6;
+const HOLD_SCROLL_RELEASE_EVENTS = [
+  'wheel',
+  'touchstart',
+  'keydown',
+  'pointerdown',
+] as const;
 
 let currentAbortController: AbortController | null = null;
 let historyIndex = 0;
@@ -268,7 +275,10 @@ export function isApplyingFragment(): boolean {
 // leave nothing to replace. WebKit then scrolls to the target again on the next
 // frame, undoing a scroll back to the saved position. A fragment navigation of
 // our own does not have that problem, so after waiting, repeat it even when
-// :target matches, restoring the saved position the caller passed in.
+// :target matches, restoring the saved position the caller passed in. When the
+// last stylesheet finishes loading just after the content swap, WebKit can
+// still scroll to the target in the next rendering update, after our restore,
+// so hold that position for a few frames.
 export function applyFragmentTarget(
   window: Window,
   restoredTop?: number,
@@ -314,6 +324,41 @@ function replaceFragmentTarget(window: Window, forcedTop?: number): void {
   }
   history.replaceState(state, '', href);
   window.scrollTo({ left: scrollX, top: scrollY });
+  if (forcedTop !== undefined) {
+    holdScroll(window, scrollX, scrollY);
+  }
+}
+
+// Scroll back to the given position on each of the next few frames if the
+// browser moved the page, until the visitor scrolls or the URL changes
+function holdScroll(window: Window, left: number, top: number): void {
+  const { href } = window.location;
+  let held = true;
+  const release = (): void => {
+    held = false;
+    for (const type of HOLD_SCROLL_RELEASE_EVENTS) {
+      window.removeEventListener(type, release);
+    }
+  };
+  for (const type of HOLD_SCROLL_RELEASE_EVENTS) {
+    window.addEventListener(type, release, { passive: true });
+  }
+  let frames = 0;
+  const tick = (): void => {
+    if (!held || window.location.href !== href) {
+      release();
+      return;
+    }
+    if (Math.abs(window.scrollY - top) > 1) {
+      window.scrollTo({ left, top });
+    }
+    if (++frames < HOLD_SCROLL_FRAMES) {
+      window.requestAnimationFrame(tick);
+    } else {
+      release();
+    }
+  };
+  window.requestAnimationFrame(tick);
 }
 
 export async function navigateToUrl(
