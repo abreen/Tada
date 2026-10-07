@@ -383,16 +383,33 @@ Use
 [KaTeX][The library behind math support](https://katex.org/)
 ```
 
-to create a link with a title and a description:
+to render a large, button-styled link with a title and description:
 
 [Home][Back to the front page](index.html)
 [Markdown][You are here](markdown.html)
 [KaTeX][The library behind math support](https://katex.org/)
 
-Superlinks are rendered as block elements, so don't use them inline, in the
-middle of a paragraph, or in a heading. Put them on their own lines, as above.
-A superlink to another website, like the last one above, opens in a new tab and
-shows an external link icon in place of the chevron.
+The syntax is an extension of the normal link syntax, but with a second set of
+square brackets `[ ]` for the superlink description.
+
+Because superlinks are block elements, don't use them in paragraphs or headings.
+Instead, separate them from surrrounding content with blank lines.
+
+Combine superlinks with [two-column layout](#two-column-layout) to achieve a row
+or grid of links:
+
++++
+
+[First][Back to the front page](index.html)
+[Second][Back to the front page](index.html)
+[Third][Back to the front page](index.html)
+
++++
+
+[Fourth][You are here](https://example.com)
+[Fifth][You are here](markdown.html)
+
++++
 
 ---
 
