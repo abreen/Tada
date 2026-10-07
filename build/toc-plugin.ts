@@ -23,6 +23,14 @@ interface AlertItem {
 
 type TocItem = HeadingItem | DinkusItem | AlertItem;
 
+// Net <details> elements an HTML block opens. Markdown between a raw <details>
+// and its </details> is parsed as separate tokens, so track the nesting here.
+function detailsDepthChange(html: string): number {
+  const opened = html.match(/<details[\s>]/gi)?.length ?? 0;
+  const closed = html.match(/<\/details\s*>/gi)?.length ?? 0;
+  return opened - closed;
+}
+
 export function tocPlugin(md: MarkdownIt): void {
   md.core.ruler.push('toc_collector', state => {
     if (!state.env) {
@@ -31,14 +39,27 @@ export function tocPlugin(md: MarkdownIt): void {
 
     const tokens = state.tokens;
     const items: TocItem[] = [];
-    const containerStack: string[] = [];
+    let containerDepth = 0;
+    let detailsDepth = 0;
     const usedAlertIds = new Map<string, number>();
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
 
-      // Headings (included at any nesting level)
+      // Nothing inside a <details> is listed
+      if (token.type === 'html_block') {
+        detailsDepth = Math.max(
+          0,
+          detailsDepth + detailsDepthChange(token.content),
+        );
+        continue;
+      }
+
+      // Headings (included at any container depth, but not inside a <details>)
       if (token.type === 'heading_open') {
+        if (detailsDepth > 0) {
+          continue;
+        }
         const inline = tokens[i + 1];
         if (!inline || inline.type !== 'inline') {
           continue;
@@ -56,22 +77,20 @@ export function tocPlugin(md: MarkdownIt): void {
         continue;
       }
 
-      // Thematic breaks / dinkuses (only at top level)
+      // Thematic breaks / dinkuses (not inside an alert, question, or <details>)
       if (
         token.type === 'hr' &&
-        containerStack.length === 0 &&
+        containerDepth === 0 &&
+        detailsDepth === 0 &&
         !state.env?.slides
       ) {
         items.push({ kind: 'dinkus' });
         continue;
       }
 
-      // Alerts (only at top level or directly inside a section)
+      // Alerts (not inside another alert, question, or <details>)
       // Must be checked before generic container tracking below
       if (token.type === 'container_alert_open') {
-        const depth = containerStack.length;
-        const parentIsSection = depth === 1 && containerStack[0] === 'section';
-
         const match = token.info
           .trim()
           .match(/^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/);
@@ -81,7 +100,7 @@ export function tocPlugin(md: MarkdownIt): void {
           // Assign IDs to every alert, including those excluded from the TOC.
           const id = deduplicateId(usedAlertIds, textToId(title || type));
           token.attrSet('id', id);
-          if (depth === 0 || parentIsSection) {
+          if (containerDepth === 0 && detailsDepth === 0) {
             const displayTitle = title
               ? md.utils.escapeHtml(curlyQuote(title))
               : type === 'warning'
@@ -90,23 +109,19 @@ export function tocPlugin(md: MarkdownIt): void {
             items.push({ kind: 'alert', type, title: displayTitle, id });
           }
         }
-        // Fall through to push 'alert' onto container stack
+        // Fall through to count the alert as a container
       }
 
       // Track container nesting
       if (token.type.startsWith('container_') && token.type.endsWith('_open')) {
-        const containerType = token.type.slice(
-          'container_'.length,
-          -'_open'.length,
-        );
-        containerStack.push(containerType);
+        containerDepth++;
         continue;
       }
       if (
         token.type.startsWith('container_') &&
         token.type.endsWith('_close')
       ) {
-        containerStack.pop();
+        containerDepth--;
         continue;
       }
     }

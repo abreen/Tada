@@ -23,7 +23,7 @@ New features must work with client-side JavaScript turned off. Treat JS as progr
 - Render client-only controls `disabled`, `hidden`, or inert until mounted
 - Use `<noscript>` or build-time fallback HTML when a feature cannot provide equivalent no-JS behavior
 
-Existing patterns: nav and TOCs navigate without client routing; header nav and Markdown details expand without JS; timezone rendering shows the default timezone without JS; code downloads work without the File System Access API.
+Existing patterns: nav and TOCs navigate without client routing; header nav and `<details>` elements expand without JS; timezone rendering shows the default timezone without JS; code downloads work without the File System Access API.
 
 ## Commands
 

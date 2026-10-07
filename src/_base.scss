@@ -122,14 +122,6 @@ pre {
   }
 }
 
-details .content > *:first-child {
-  margin-top: 0;
-}
-
-details .content > *:last-child {
-  margin-bottom: 0;
-}
-
 details summary {
   padding: var(--details-padding);
   cursor: pointer;
@@ -146,11 +138,6 @@ main details:focus-within {
   outline-offset: 1px;
 }
 
-details .content {
-  padding: 0 var(--details-padding) var(--details-padding)
-    var(--details-padding);
-}
-
 @media (hover: hover) {
   details summary:hover {
     color: var(--fg2-color);
@@ -164,9 +151,31 @@ details summary:active {
 }
 
 main details {
+  padding: 0 var(--details-padding);
   margin-bottom: 1rem;
   border: 2px solid var(--fg-color);
   border-radius: var(--border-radius);
+}
+
+main details[open] {
+  padding-bottom: var(--details-padding);
+}
+
+/*
+ * Plain <details> in content has no .content wrapper, and its body can be bare
+ * text, so the details element supplies the inset. The summary spans the full
+ * width so its whole row stays clickable.
+ */
+main details > summary {
+  margin: 0 calc(-1 * var(--details-padding));
+}
+
+main details > summary + * {
+  margin-top: 0;
+}
+
+main details > :last-child {
+  margin-bottom: 0;
 }
 
 input[type='text'],

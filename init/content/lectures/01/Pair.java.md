@@ -159,11 +159,12 @@ Please note:
 To provide some confidence that our `Pair` class works, let's write some tests.
 
 <!---
-Code blocks inside of Tada's special containers, like alerts, collapisbles,
-sections, etc. are included in the final .java file.
+Code blocks inside of Tada's special containers, like alerts, or inside raw HTML
+elements, like details, are included in the final .java file.
 -->
 
-<<< details The `test()` helper method
+<details>
+<summary>The <code>test()</code> helper method</summary>
 
 ```
     private static void test(boolean condition) {
@@ -179,7 +180,7 @@ sections, etc. are included in the final .java file.
     }
 ```
 
-<<<
+</details>
 
 <!---
 When Tada renders a literate code block, it trims leading whitespace common to

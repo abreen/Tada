@@ -2,11 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
 import {
   alertToTableItem,
+  getHeadingsAndAlerts,
   getHighlightIndexes,
   headingToTableItem,
   switchCurrent,
   type Alert,
-  type Dinkus,
   type Heading,
 } from './model';
 
@@ -36,15 +36,6 @@ describe('getHighlightIndexes', () => {
     const items: (Heading | Alert)[] = [
       { type: 'note', title: 'FYI' },
       { level: '1', id: 'a', innerHtml: 'A' },
-    ];
-    expect(getHighlightIndexes(items)).toEqual([0, 1]);
-  });
-
-  test('skips dinkus items entirely', () => {
-    const items: (Heading | Dinkus)[] = [
-      { level: '1', id: 'a', innerHtml: 'A' },
-      { type: 'dinkus' },
-      { level: '2', id: 'b', innerHtml: 'B' },
     ];
     expect(getHighlightIndexes(items)).toEqual([0, 1]);
   });
@@ -128,5 +119,36 @@ describe('switchCurrent', () => {
     switchCurrent(items[0] as HTMLElement, items[1] as HTMLElement);
     expect(items[0].classList.contains('current')).toBe(false);
     expect(items[1].classList.contains('current')).toBe(true);
+  });
+});
+
+describe('getHeadingsAndAlerts', () => {
+  const page = `
+    <main class="body"><div class="page-content">
+      <h2 id="heading">Heading</h2>
+      <div class="alert note" id="top-alert"></div>
+      <details><summary>More</summary><h3 id="in-details-heading">Hidden</h3>
+        <div class="alert note" id="in-details"></div></details>
+      <section><div class="alert note" id="in-section"></div></section>
+      <div class="columns"><div class="alert warning" id="in-columns"></div></div>
+      <div class="alert note" id="outer-alert"><div class="content">
+        <h3 id="alert-heading">Heading in alert</h3>
+        <div class="alert note" id="nested-alert"></div>
+      </div></div>
+      <div class="question"><div class="question-a-content">
+        <div class="alert note" id="question-alert"></div>
+      </div></div>
+    </div></main>`;
+
+  test('skips <details>, alerts inside alerts, and questions', () => {
+    const { document } = dom(page).window;
+    expect(getHeadingsAndAlerts(document.body).map(el => el.id)).toEqual([
+      'heading',
+      'top-alert',
+      'in-section',
+      'in-columns',
+      'outer-alert',
+      'alert-heading',
+    ]);
   });
 });

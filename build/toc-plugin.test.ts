@@ -109,39 +109,85 @@ describe('generateCodeTocHtml', () => {
   });
 });
 
+function renderToc(source: string): { html: string; toc: string } {
+  const md = createMarkdown({
+    base: 'https://example.edu',
+    basePath: '/',
+    title: 'Test',
+    titlePostfix: '',
+    themeColor: 'steelblue',
+    defaultTimeZone: 'America/New_York',
+    features: { search: false, favicon: false, footer: false, pickers: false },
+  });
+  const env: Record<string, unknown> = {};
+  const html = md.render(source, env);
+  const toc = generateTocHtml(
+    env.tocItems as Parameters<typeof generateTocHtml>[0],
+  );
+  return { html, toc };
+}
+
 describe('collected alert targets', () => {
   test.each(['Nested', 'Visible'])(
     'keeps the visible alert target when an excluded alert is titled %s',
     nestedTitle => {
-      const md = createMarkdown({
-        base: 'https://example.edu',
-        basePath: '/',
-        title: 'Test',
-        titlePostfix: '',
-        themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
-        features: {
-          search: false,
-          favicon: false,
-          footer: false,
-          pickers: false,
-        },
-      });
-      const env: Record<string, unknown> = {};
-      const html = md.render(
-        `<<< details More\n\n!!! note "${nestedTitle}"\nHidden in details.\n!!!\n\n<<<\n\n` +
-          '!!! note "Visible"\nVisible content.\n!!!\n\n' +
-          '::: section\n\n!!! warning "Section alert"\nContent.\n!!!\n\n:::\n',
-        env,
-      );
-      const toc = generateTocHtml(
-        env.tocItems as Parameters<typeof generateTocHtml>[0],
+      const { html, toc } = renderToc(
+        `??? question What?\n\n!!! note "${nestedTitle}"\nHidden in question.\n!!!\n\n???\n\n` +
+          '!!! note "Visible"\nVisible content.\n!!!\n',
       );
       const visibleId = nestedTitle === 'Visible' ? 'visible-2' : 'visible';
       expect(html).toContain(`id="${visibleId}">Visible</p>`);
       expect(toc).toContain(`href="#${visibleId}">Visible</a>`);
-      expect(toc).toContain('href="#section-alert">Section alert</a>');
-      expect(toc.match(/class="alert-item/g)).toHaveLength(2);
+      expect(toc.match(/class="alert-item/g)).toHaveLength(1);
     },
   );
+
+  test('skips alerts inside inline details but lists those in section elements', () => {
+    const { html, toc } = renderToc(
+      '<details>\n<summary>More</summary>\n\n!!! note "In details"\nText.\n!!!\n\n</details>\n\n' +
+        '<section>\n\n!!! warning "In section"\nText.\n!!!\n\n</section>\n',
+    );
+    expect(html).toContain('id="in-details"');
+    expect(toc).not.toContain('In details');
+    expect(toc).toContain('href="#in-section">In section</a>');
+    expect(toc.match(/class="alert-item/g)).toHaveLength(1);
+  });
+});
+
+describe('collected headings', () => {
+  test('skips headings inside inline details, including nested ones', () => {
+    const { toc } = renderToc(
+      '## Before\n\n<details>\n<summary>Outer</summary>\n\n### Hidden\n\n' +
+        '<details>\n<summary>Inner</summary>\n\n#### Deeper\n\n</details>\n\n### Still hidden\n\n</details>\n\n' +
+        '## After\n',
+    );
+    expect(toc.match(/<a href="#[^"]*">([^<]*)<\/a>/g)).toEqual([
+      '<a href="#before">Before</a>',
+      '<a href="#after">After</a>',
+    ]);
+  });
+
+  test('lists headings after a details written as one HTML block', () => {
+    const { toc } = renderToc(
+      '<details><summary>More</summary>Text</details>\n\n## After\n',
+    );
+    expect(toc).toContain('href="#after">After</a>');
+  });
+});
+
+describe('collected dinkuses', () => {
+  test('skips thematic breaks inside inline details but lists those in section elements', () => {
+    const { toc } = renderToc(
+      'Intro.\n\n---\n\n<details>\n<summary>More</summary>\n\n---\n\n</details>\n\n' +
+        '<section>\n\n---\n\n</section>\n',
+    );
+    expect(toc.match(/class="dinkus-item"/g)).toHaveLength(2);
+  });
+
+  test('skips thematic breaks inside alerts and questions', () => {
+    const { toc } = renderToc(
+      '!!! note\nText.\n\n---\n\nMore.\n!!!\n\n??? question What?\n\n---\n\n???\n',
+    );
+    expect(toc).not.toContain('dinkus-item');
+  });
 });

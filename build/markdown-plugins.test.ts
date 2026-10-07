@@ -586,19 +586,6 @@ describe('custom markdown containers', () => {
     );
   }
 
-  test('renders collapsible details blocks', () => {
-    const md = createProjectMarkdown();
-
-    const html = md.render(
-      ['<<< details More info', 'Hello', '<<<'].join('\n'),
-    );
-
-    expect(html).toContain('<details><summary>More info</summary>');
-    expect(html).toContain('<div class="content">');
-    expect(html).toContain('<p>Hello</p>');
-    expect(html).toContain('</div></details>');
-  });
-
   test('renders comment tokens with fg2 color in fenced code blocks', () => {
     const md = createProjectMarkdown();
 
@@ -610,28 +597,6 @@ describe('custom markdown containers', () => {
       'style="--shiki-light:var(--fg2-color);--shiki-dark:var(--fg2-color)"',
     );
     expect(html).toContain('// note');
-  });
-
-  test('renders collapsible details blocks with inline Markdown in summary', () => {
-    const md = createProjectMarkdown();
-
-    const html = md.render(
-      ['<<< details More **info**', 'Hello', '<<<'].join('\n'),
-    );
-
-    expect(html).toContain(
-      '<details><summary>More <strong>info</strong></summary>',
-    );
-  });
-
-  test('renders section containers as section elements', () => {
-    const md = createProjectMarkdown();
-
-    const html = md.render(['::: section', 'Body', ':::'].join('\n'));
-
-    expect(html).toContain('<section>');
-    expect(html).toContain('<p>Body</p>');
-    expect(html).toContain('</section>');
   });
 
   test('renders questions with question and spoiler answer', () => {

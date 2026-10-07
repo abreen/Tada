@@ -202,24 +202,6 @@ headings, so you may [link directly to a definition](#binary-tree):
 ```
 
 
-### Collapsible section
-
-Use
-
-```
-<<< details Title of *collapsible*
-Here's the content that is visible when expanded.
-<<<
-```
-
-to create a collapsible section (the `<details>` element):
-
-<<< details Title of *collapsible*
-Here's the content that is visible when expanded. (When the page is being
-printed, all collapsibles are automatically opened.)
-<<<
-
-
 ### Alerts
 
 Brightly colored boxes that call attention to specific warnings or information.
@@ -303,45 +285,6 @@ becomes a multiple choice question with clickable options:
 - [ ] `word.length`
 ???
 
-
-### Generic section
-
-Break up a long page by introducing a `<section>` (a standard HTML 5 element)
-which must start with a heading. Generic sections are displayed with a slightly
-different background.
-
-Use
-
-```
-::: section
-
-### Submitting your work
-
-Here are the steps to follow when you are ready to submit your work for
-this problem set.
-
-...
-
-:::
-```
-
-to create:
-
-::: section
-
-### Submitting your work
-
-Here are the steps to follow when you are ready to submit your work for
-this problem set.
-
-1. Step one
-2. Step two
-3. Step three
-4. Step four
-
-Email the files you changed to the course staff.
-
-:::
 
 ### Two-column layout
 

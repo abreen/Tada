@@ -1,10 +1,10 @@
 import { debounce } from '../util';
 import {
   alertToTableItem,
+  getHeadingsAndAlerts,
   getHighlightIndexes,
   headingToTableItem,
   switchCurrent,
-  type Dinkus,
 } from './model';
 
 const LATENCY_MS = 50;
@@ -38,26 +38,6 @@ function scrollIfNeeded(element: HTMLElement, doc: Document) {
   const desiredScrollTop = elementCenter - container.clientHeight / 2;
 
   container.scrollTo({ top: desiredScrollTop });
-}
-
-function getHeadingsAndAlerts(
-  parent: HTMLElement,
-): (HTMLHeadingElement | HTMLDivElement)[] {
-  return Array.from(
-    parent.querySelectorAll(
-      '.body h1, .body h2, .body h3, .body h4, .body h5, .body h6, :is(.body, .page-content) > div.alert, .body section > div.alert',
-    ),
-  );
-}
-
-function getTocElements(
-  parent: HTMLElement,
-): (HTMLHeadingElement | HTMLDivElement | HTMLHRElement)[] {
-  return Array.from(
-    parent.querySelectorAll(
-      '.body h1, .body h2, .body h3, .body h4, .body h5, .body h6, :is(.body, .page-content) > div.alert, .body section > div.alert, :is(.body, .page-content) > hr',
-    ),
-  );
 }
 
 /* Calculate how much to offset scroll calculations based on floating header */
@@ -156,17 +136,12 @@ export default (window: Window) => {
   }
 
   const headingsAndAlerts = getHeadingsAndAlerts(window.document.body);
-  const items = getTocElements(window.document.body)
-    .map(el => {
-      const tag = el.tagName.toLowerCase();
-      if (tag === 'hr') {
-        return { type: 'dinkus' } as Dinkus;
-      } else if (tag === 'div') {
-        return alertToTableItem(el as HTMLElement);
-      } else {
-        return headingToTableItem(el as HTMLHeadingElement);
-      }
-    })
+  const items = headingsAndAlerts
+    .map(el =>
+      el.tagName === 'DIV'
+        ? alertToTableItem(el)
+        : headingToTableItem(el as HTMLHeadingElement),
+    )
     .filter(obj => obj != null);
 
   const highlightIndexes = getHighlightIndexes(items);

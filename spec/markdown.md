@@ -79,26 +79,6 @@ Exactly one option must be marked `[x]` or `[X]`. The option marker must use
 standard Markdown list spacing, such as `- [ ] Option`.
 
 
-## Collapsible details
-
-```
-<<< details Summary text
-Hidden content here.
-<<<
-```
-
-
-## Sections
-
-Generic section wrappers:
-
-```
-::: section
-Content grouped into a section.
-:::
-```
-
-
 ## Two-column layout
 
 Arrange content in two equal columns:

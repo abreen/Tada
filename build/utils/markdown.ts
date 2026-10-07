@@ -19,7 +19,6 @@ import katexPlugin from './katex';
 import markdownPartialsPlugin from './markdown-partials';
 import type { RenderDependencyCollector, SiteVariables } from '../types';
 
-const DETAILS_PATTERN = /^details\s+(.*)$/;
 const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
 const QUESTION_PATTERN = /^question\s+(.+)$/;
 const MULTIPLE_CHOICE_MARKER_LENGTH = 4;
@@ -65,40 +64,7 @@ export function createMarkdown(
     .use(superlinkPlugin, siteVariables)
     .use(tocPlugin)
     .use(columnsPlugin)
-    .use(katexPlugin)
-    .use(markdownItContainer, 'details', {
-      marker: '<',
-      validate: function (params: string) {
-        return DETAILS_PATTERN.test(params.trim());
-      },
-
-      render: function (tokens: Token[], idx: number) {
-        const m = tokens[idx].info.trim().match(DETAILS_PATTERN);
-
-        if (tokens[idx].nesting === 1) {
-          return (
-            '<details><summary>' +
-            markdown.renderInline(m![1]) +
-            '</summary><div class="content">\n'
-          );
-        } else {
-          return '</div></details>\n';
-        }
-      },
-    })
-    .use(markdownItContainer, 'section', {
-      marker: ':',
-      validate: function (params: string) {
-        return !!params.trim().match(/^section$/);
-      },
-      render: function (tokens: Token[], idx: number) {
-        if (tokens[idx].nesting === 1) {
-          return '<section>\n';
-        } else {
-          return '</section>\n';
-        }
-      },
-    });
+    .use(katexPlugin);
 
   if (filePath && options.templateParams) {
     markdown.use(markdownPartialsPlugin, {

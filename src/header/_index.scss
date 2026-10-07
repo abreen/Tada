@@ -171,6 +171,15 @@ header .content {
   position: relative;
   box-sizing: border-box;
   width: 100cqw;
+  padding: 0 var(--details-padding) var(--details-padding);
+}
+
+header .content > :first-child {
+  margin-top: 0;
+}
+
+header .content > :last-child {
+  margin-bottom: 0;
 }
 
 header summary .logo {

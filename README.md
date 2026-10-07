@@ -62,8 +62,6 @@ A static site generator. The successor to Presto.
   * Highlights the heading currently being viewed
 
 - Extended Markdown syntax
-  * `<<< details ... <<<` renders a collapsible box
-  * `::: section ... :::` renders a special section with a fancy background
   * `!!! note ... !!!` and `!!! warning ... !!!` render alert boxes
   * `??? question ... ???` renders a Q&A section; answer is hidden until click
     - To display clickable multiple choice options, use a [task list][task-list]
