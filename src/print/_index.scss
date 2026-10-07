@@ -46,18 +46,16 @@
   }
 
   .code-body pre,
-  .code-prose-content code,
   .file-header tt,
   .file-header code {
     border: none;
   }
 
-  // .alert strips the default padding from inline code (since it also
-  // strips the background). In print we add a border, so restore the
-  // padding so the border doesn't hug the text.
-  .alert .content tt,
-  .alert .content code {
-    padding: var(--mono-padding);
+  // Alerts and code prose draw a themed border around inline code on screen.
+  // Print uses the same light border as other inline code.
+  .alert .content :is(tt, code):not(pre *),
+  body.code .code-prose .code-prose-content :is(tt, code):not(pre *) {
+    border-color: #ccc;
   }
 
   .footnotes {

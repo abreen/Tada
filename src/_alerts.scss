@@ -29,10 +29,11 @@
     color: var(--fg-color);
   }
 
-  tt,
-  code {
-    padding: inherit;
-    background: inherit;
+  // Inline code keeps its padding. A border replaces the background chip,
+  // which would clash with the alert's own background.
+  :is(tt, code):not(pre *) {
+    background: none;
+    border: 1px solid var(--fg-color);
   }
 
   a:not(.superlink) {

@@ -40,6 +40,15 @@ This is a warning with a custom title.
 !!!
 ```
 
+Inline code inside an alert keeps its default padding but has no background
+chip, which would clash with the alert's colored background. A 1px border in
+the primary foreground color marks it instead. In print the border is the
+same light gray as other inline code. Code inside a fenced block in an alert is
+unaffected and uses the normal code block styles. The chip is removed only where
+a `<code>` element is the whole element, such as a code page's file title, the
+header title, search result titles, and a multiple-choice option that contains
+only code.
+
 
 ## Question-and-answer blocks
 

@@ -168,9 +168,11 @@ body.code .code-prose {
       color: inherit;
     }
 
-    code {
-      padding: inherit;
-      background: inherit;
+    // The prose block is on the same background as the inline code chip, so a
+    // border delineates inline code instead
+    :is(tt, code):not(pre *) {
+      background: none;
+      border: 1px solid var(--fg2-color);
     }
   }
 }

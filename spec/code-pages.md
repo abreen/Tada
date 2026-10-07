@@ -19,6 +19,10 @@ Markdown, and displayed inline between the surrounding code segments. The
 rendered prose preserves the indentation level of the original comments. These
 comments support the same build-time KaTeX math syntax as Markdown pages, so
 authors can write inline math such as `$E = mc^2$` and display math with `$$`.
+The prose block uses the same background as inline code, so inline code in
+comments keeps its default padding and gets a 1px border in the secondary
+foreground color instead of a background (light gray in print). Fenced code
+blocks in comments are unaffected.
 
 When a user copies a section that includes rendered prose, the original `///`
 comment lines are restored in the clipboard so that pasted text is valid Java
