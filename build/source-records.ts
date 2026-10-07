@@ -203,7 +203,7 @@ export function createPublicRecord(
   };
 }
 
-export function collectSourceOutputs(
+function collectSourceOutputs(
   assets: Asset[],
   traceOutputs: ReadonlyMap<string, string>,
 ): Map<string, OutputContent> {
@@ -223,7 +223,7 @@ function cloneHtmlOutputAnalysis(
   return { outgoingTargets: new Set(analysis.outgoingTargets) };
 }
 
-export function collectSourceHtmlAnalysis(
+function collectSourceHtmlAnalysis(
   assets: Asset[],
 ): Map<string, HtmlOutputAnalysis> {
   const htmlAnalysisByOutputPath = new Map<string, HtmlOutputAnalysis>();

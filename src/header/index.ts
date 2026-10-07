@@ -1,7 +1,7 @@
 import { getElement } from '../util';
 import { globals } from '../globals';
 
-export type HeaderTitleState = 'site' | 'page';
+type HeaderTitleState = 'site' | 'page';
 
 export interface HeadingGeometry {
   /** Bottom edge of the page heading block (breadcrumbs, h1, and info) */

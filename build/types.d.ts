@@ -217,10 +217,8 @@ export interface LiterateCodeBlock {
   hidden: boolean;
 }
 
-/** Result from parseLiterateJava */
+/** Result from extractLiterateJavaCode */
 export interface LiterateJavaParseResult {
-  pageVariables: Record<string, unknown>;
-  content: string;
   javaSource: string;
   codeBlocks: LiterateCodeBlock[];
   visibleBlockIndices: number[];

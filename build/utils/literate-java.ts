@@ -3,11 +3,8 @@ import type Token from 'markdown-it/lib/token.mjs';
 import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import { createMarkdown } from './markdown';
 import { makeLogger } from '../log';
-import { parseFrontMatterAndContent } from './front-matter';
 import type {
-  SiteVariables,
   LiterateJavaParseResult,
   LiterateCodeBlock,
   LiterateRunnerEntry,
@@ -50,29 +47,9 @@ let runnerClassDir: string | null = null;
 
 const MAIN_PATTERN = /\bvoid\s+main\s*\(/m;
 
-export function parseLiterateJava(
-  rawContent: string,
-  siteVariables: SiteVariables,
-): LiterateJavaParseResult {
-  const { pageVariables, content } = parseFrontMatterAndContent(
-    rawContent,
-    '.md',
-  );
-
-  const md = createMarkdown(siteVariables, {
-    validatorOptions: { enabled: false },
-  });
-  const tokens = md.parse(content, {});
-
-  return { pageVariables, content, ...extractLiterateJavaCode(tokens) };
-}
-
 export function extractLiterateJavaCode(
   tokens: Token[],
-): Pick<
-  LiterateJavaParseResult,
-  'javaSource' | 'codeBlocks' | 'visibleBlockIndices'
-> {
+): LiterateJavaParseResult {
   const codeBlocks: LiterateCodeBlock[] = [];
   let javaLine = 1;
 

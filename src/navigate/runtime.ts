@@ -103,11 +103,6 @@ export function closeHeaderDetails(document: Document): void {
   }
 }
 
-export interface NavigationEventDetail {
-  path: string;
-  validators: ResponseValidators;
-}
-
 function dispatchNavigationEvent(
   window: Window,
   validators: ResponseValidators,
