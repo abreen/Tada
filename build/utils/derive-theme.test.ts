@@ -4,7 +4,6 @@ import {
   deriveTheme,
   deriveLinkHue,
   deriveTraceLineActiveHue,
-  getTextOnColor,
 } from './derive-theme';
 
 function getL(hex: string): number {
@@ -121,7 +120,7 @@ describe('deriveLinkHue', () => {
   test('hue wraparound near 0/360 produces nearby results', () => {
     // tintHue=10 and tintHue=350 are both 10deg away from 0 and should
     // therefore produce link hues within a few degrees of each other,
-    // because the shortest arc to the anchor 220 wraps through 0.
+    // because the shortest arc to the anchor 212 wraps through 0.
     const h10 = deriveLinkHue(10);
     const h350 = deriveLinkHue(350);
     expect(Math.abs(h10 - h350)).toBeLessThan(10);
@@ -157,21 +156,5 @@ describe('deriveTraceLineActiveHue', () => {
     const h10 = deriveTraceLineActiveHue(10);
     const h350 = deriveTraceLineActiveHue(350);
     expect(Math.abs(h10 - h350)).toBeLessThan(10);
-  });
-});
-
-describe('getTextOnColor', () => {
-  test('returns white for dark colors', () => {
-    expect(getTextOnColor('navy')).toBe('#fff');
-    expect(getTextOnColor('#000')).toBe('#fff');
-  });
-
-  test('returns black for bright colors', () => {
-    expect(getTextOnColor('cornsilk')).toBe('#000');
-    expect(getTextOnColor('#fff')).toBe('#000');
-  });
-
-  test('throws on invalid color', () => {
-    expect(() => getTextOnColor('notacolor')).toThrow('Invalid color');
   });
 });

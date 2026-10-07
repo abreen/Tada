@@ -28,8 +28,8 @@
 
   // Secondary foreground color (lighter)
   --fg2-color: hsl(var(--tint-hue) calc(8% * var(--tint-amount)) 45%);
-  --link-color: <%= linkColor %>;
-  --link-color-hover: <%= linkColorHover %>;
+  --link-color: hsl(<%= linkHue %>deg 66% 38%);
+  --link-color-hover: hsl(<%= linkHue %>deg 56% 49%);
 
   // Main background color (the color of the page background)
   --bg-color: hsl(var(--tint-hue) calc(65% * var(--tint-amount)) 97%);
@@ -44,7 +44,7 @@
   --bg2-color-translucent: hsl(
     var(--tint-hue) calc(55% * var(--tint-amount)) 92% / 66%
   );
-  --bg-trace-line-active: <%= bgTraceLineActive %>;
+  --bg-trace-line-active: hsl(<%= traceLineActiveHue %>deg 100% 86%);
   --box-shadow: 0 2px 9px
     hsl(var(--tint-hue) calc(85% * var(--tint-amount)) 10% / 25%);
   --backdrop-filter: blur(10px);
@@ -110,8 +110,8 @@
       var(--tint-hue) calc(85% * var(--tint-amount)) 90% / 33%
     );
     --fg2-color: hsl(var(--tint-hue) calc(10% * var(--tint-amount)) 60%);
-    --link-color: <%= linkColorDark %>;
-    --link-color-hover: <%= linkColorHoverDark %>;
+    --link-color: hsl(<%= linkHue %>deg 50% 72%);
+    --link-color-hover: hsl(<%= linkHue %>deg 40% 80%);
     --bg-color: hsl(var(--tint-hue) calc(35% * var(--tint-amount)) 5%);
     --bg-color-translucent: hsl(
       var(--tint-hue) calc(35% * var(--tint-amount)) 10% / 66%
@@ -120,7 +120,7 @@
     --bg2-color-translucent: hsl(
       var(--tint-hue) calc(40% * var(--tint-amount)) 12% / 66%
     );
-    --bg-trace-line-active: <%= bgTraceLineActiveDark %>;
+    --bg-trace-line-active: hsl(<%= traceLineActiveHue %>deg 90% 18%);
     --box-shadow: 0 3px 8px
       hsl(var(--tint-hue) calc(33% * var(--tint-amount)) 8% / 70%);
     --link-active-color: #fff;

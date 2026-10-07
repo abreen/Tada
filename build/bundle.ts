@@ -38,14 +38,6 @@ function getBundleNaming(): string {
   return `[name].bundle.tada-${version}.[ext]`;
 }
 
-function formatCssNumber(value: number, precision = 4): string {
-  if (Number.isInteger(value)) {
-    return String(value);
-  }
-
-  return value.toFixed(precision).replace(/\.?0+$/, '');
-}
-
 // Returns the rendered SCSS source of the theme module (`config/theme`)
 function renderThemeScss(siteVariables: SiteVariables): string {
   const templatePath = path.join(getPackageDir(), 'templates/_theme.scss');
@@ -54,14 +46,6 @@ function renderThemeScss(siteVariables: SiteVariables): string {
   const tintHue = siteVariables.tintHue ?? 190;
   const tintAmount = siteVariables.tintAmount ?? 100;
 
-  const linkHue = formatCssNumber(deriveLinkHue(tintHue));
-  const linkColor = `hsl(${linkHue}deg 66% 38%)`;
-  const linkColorHover = `hsl(${linkHue}deg 56% 49%)`;
-  const linkColorDark = `hsl(${linkHue}deg 50% 72%)`;
-  const linkColorHoverDark = `hsl(${linkHue}deg 40% 80%)`;
-  const traceLineActiveHue = formatCssNumber(deriveTraceLineActiveHue(tintHue));
-  const bgTraceLineActive = `hsl(${traceLineActiveHue}deg 100% 86%)`;
-  const bgTraceLineActiveDark = `hsl(${traceLineActiveHue}deg 90% 18%)`;
   const customFontFaces = renderCustomFontFaceScss(siteVariables.fontOverrides);
   const customFontTuning = renderCustomFontTuningScss(
     siteVariables.fontOverrides,
@@ -71,12 +55,8 @@ function renderThemeScss(siteVariables: SiteVariables): string {
     ...theme,
     tintHue,
     tintAmount,
-    linkColor,
-    linkColorHover,
-    linkColorDark,
-    linkColorHoverDark,
-    bgTraceLineActive,
-    bgTraceLineActiveDark,
+    linkHue: deriveLinkHue(tintHue),
+    traceLineActiveHue: deriveTraceLineActiveHue(tintHue),
     serifFontStack: getSerifFontStack(siteVariables.fontOverrides),
     serifMonoFontStack: getSerifMonoFontStack(siteVariables.fontOverrides),
     serifFontFeatureSettings: renderFontFeatureSettings(
