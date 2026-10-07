@@ -33,9 +33,15 @@ slightly lighter in dark mode (10% vs. 5%) for a subtle tonal separation.
 ## Link color
 
 Links use a dedicated `--link-color` CSS variable that is derived from the
-tint settings. The hue is anchored at GitHub-style blue (HSL 212) and pulled
-5% of the way along the shortest hue arc toward `tintHue`, so the link color
-reads as a clean blue that subtly leans into the site's tint. Saturation and
+tint settings. The hue, `--link-hue`, is anchored at blue (HSL 216) and leans
+up to 9 degrees toward `tintHue`: the lean is `9deg * sin(tintHue - 216deg)`,
+strongest when the tint is 90 degrees from the anchor
+and zero at the anchor and its opposite. The link color reads as a clean blue
+that subtly leans into the site's tint. The browser computes the lean from
+`--tint-hue`, so changing `--tint-hue` at runtime also changes link colors, and
+the color changes smoothly all the way around the hue wheel. Browsers without
+CSS `sin()` use the fixed anchor hue. The active trace line background works
+the same way, anchored at HSL 52 with up to 18 degrees of lean. Saturation and
 lightness are fixed independently of `tintAmount`: 66% saturation and 38%
 lightness in light mode, and 50% and 72% in dark mode. Hover colors are lighter
 and less saturated: 56% and 49% in light mode, and 40% and 80% in dark mode.

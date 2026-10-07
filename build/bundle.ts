@@ -3,11 +3,7 @@ import path from 'path';
 import { compileTemplate } from './lodash-template';
 import * as sass from 'sass';
 import { getPackageDir, toPosix } from './utils/paths';
-import {
-  deriveTheme,
-  deriveLinkHue,
-  deriveTraceLineActiveHue,
-} from './utils/derive-theme';
+import { deriveTheme } from './utils/derive-theme';
 import type { PluginBuilder } from 'bun';
 import type { SiteVariables } from './types';
 import timezones from '../src/timezone/timezones.json' with { type: 'json' };
@@ -55,8 +51,6 @@ function renderThemeScss(siteVariables: SiteVariables): string {
     ...theme,
     tintHue,
     tintAmount,
-    linkHue: deriveLinkHue(tintHue),
-    traceLineActiveHue: deriveTraceLineActiveHue(tintHue),
     serifFontStack: getSerifFontStack(siteVariables.fontOverrides),
     serifMonoFontStack: getSerifMonoFontStack(siteVariables.fontOverrides),
     serifFontFeatureSettings: renderFontFeatureSettings(

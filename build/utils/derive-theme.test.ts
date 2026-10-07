@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { parse, oklch } from 'culori';
-import {
-  deriveTheme,
-  deriveLinkHue,
-  deriveTraceLineActiveHue,
-} from './derive-theme';
+import { deriveTheme } from './derive-theme';
 
 function getL(hex: string): number {
   return oklch(parse(hex))!.l;
@@ -95,66 +91,5 @@ describe('deriveTheme', () => {
 
   test('throws on invalid color', () => {
     expect(() => deriveTheme('notacolor')).toThrow('Invalid color');
-  });
-});
-
-describe('deriveLinkHue', () => {
-  test('returns the anchor hue when tintHue equals the anchor', () => {
-    expect(deriveLinkHue(212)).toBe(212);
-  });
-
-  test('default tint (190) lands in the blue range', () => {
-    const h = deriveLinkHue(190);
-    expect(h).toBeGreaterThanOrEqual(200);
-    expect(h).toBeLessThanOrEqual(260);
-  });
-
-  test('output is always in [0, 360) for any tintHue', () => {
-    for (let tintHue = 0; tintHue < 360; tintHue += 7) {
-      const h = deriveLinkHue(tintHue);
-      expect(h).toBeGreaterThanOrEqual(0);
-      expect(h).toBeLessThan(360);
-    }
-  });
-
-  test('hue wraparound near 0/360 produces nearby results', () => {
-    // tintHue=10 and tintHue=350 are both 10deg away from 0 and should
-    // therefore produce link hues within a few degrees of each other,
-    // because the shortest arc to the anchor 212 wraps through 0.
-    const h10 = deriveLinkHue(10);
-    const h350 = deriveLinkHue(350);
-    expect(Math.abs(h10 - h350)).toBeLessThan(10);
-  });
-
-  test('green tint biases blue toward cyan', () => {
-    const h = deriveLinkHue(120);
-    expect(h).toBeLessThan(220);
-    expect(h).toBeGreaterThanOrEqual(200);
-  });
-});
-
-describe('deriveTraceLineActiveHue', () => {
-  test('returns the anchor hue when tintHue equals the anchor', () => {
-    expect(deriveTraceLineActiveHue(52)).toBe(52);
-  });
-
-  test('default tint lands in the yellow range', () => {
-    const h = deriveTraceLineActiveHue(190);
-    expect(h).toBeGreaterThanOrEqual(45);
-    expect(h).toBeLessThanOrEqual(70);
-  });
-
-  test('output is always in [0, 360) for any tintHue', () => {
-    for (let tintHue = 0; tintHue < 360; tintHue += 7) {
-      const h = deriveTraceLineActiveHue(tintHue);
-      expect(h).toBeGreaterThanOrEqual(0);
-      expect(h).toBeLessThan(360);
-    }
-  });
-
-  test('hue wraparound near 0/360 produces nearby results', () => {
-    const h10 = deriveTraceLineActiveHue(10);
-    const h350 = deriveTraceLineActiveHue(350);
-    expect(Math.abs(h10 - h350)).toBeLessThan(10);
   });
 });

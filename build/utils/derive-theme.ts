@@ -14,11 +14,6 @@ const LIGHT_TEXT_L_MAX = 0.5;
 const DARK_TEXT_L_MIN = 0.7;
 const DARK_TEXT_L_MAX = 0.82;
 
-const LINK_ANCHOR_HUE = 212;
-const LINK_TINT_BLEND = 0.05;
-const TRACE_LINE_ACTIVE_ANCHOR_HUE = 52;
-const TRACE_LINE_ACTIVE_TINT_BLEND = 0.1;
-
 function clamp(v: number, min: number, max: number): number {
   return Math.min(Math.max(v, min), max);
 }
@@ -58,24 +53,4 @@ export function deriveTheme(cssColor: string): DerivedTheme {
     textOnThemeLight: pickTextColor(themeColorLight),
     textOnThemeDark: pickTextColor(themeColorDark),
   };
-}
-
-// Move `amount` of the way from `anchorHue` toward `tintHue` along the
-// shortest arc, rounded to keep floating-point noise out of the CSS
-function blendHue(anchorHue: number, tintHue: number, amount: number): number {
-  const diff = ((tintHue - anchorHue + 540) % 360) - 180;
-  const hue = (anchorHue + diff * amount + 360) % 360;
-  return Math.round(hue * 1e4) / 1e4;
-}
-
-export function deriveLinkHue(tintHue: number): number {
-  return blendHue(LINK_ANCHOR_HUE, tintHue, LINK_TINT_BLEND);
-}
-
-export function deriveTraceLineActiveHue(tintHue: number): number {
-  return blendHue(
-    TRACE_LINE_ACTIVE_ANCHOR_HUE,
-    tintHue,
-    TRACE_LINE_ACTIVE_TINT_BLEND,
-  );
 }
