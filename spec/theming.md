@@ -58,6 +58,25 @@ back to `--fg-color` (and the external link icon falls back to a foreground
 variant), since the alert backgrounds are already saturated and a blue link
 on top would be hard to read.
 
+## Danger text color
+
+Nested `<strong>` inside `<em>` (or vice versa) uses a dedicated
+`--danger-text-color` CSS variable that follows the same design pattern as
+link color. The hue, `--danger-hue`, is anchored at a warm red (HSL 15) and
+leans up to 9 degrees toward `tintHue`: the lean is `9deg * sin(tintHue -
+15deg)`, strongest when the tint is 90 degrees from the anchor and zero at
+the anchor and its opposite. The color reads as a red with a slight tint that
+subtly shifts with the site's tint. The browser computes the lean from
+`--tint-hue`, so changing `--tint-hue` at runtime also changes danger text
+colors, and the color changes smoothly all the way around the hue wheel.
+Browsers without CSS `sin()` use the fixed anchor hue. Saturation and
+lightness are fixed independently of `tintAmount`: 60% saturation and 40%
+lightness in light mode, and 55% and 68% in dark mode. Hover colors are
+lighter and less saturated: 50% and 50% in light mode, and 45% and 76% in
+dark mode. The light mode text keeps at least 4.5:1 contrast against the
+primary background at any `tintHue` with full tint. Changing `tintAmount`
+affects the neutral palette, not danger text color.
+
 ## Contrast preference
 
 The page-bottom [contrast picker](contrast-picker.md) offers an explicit high
