@@ -60,6 +60,11 @@ class TestTheming:
         # tintAmount 75 becomes .75 in CSS (leading zero removed by Bun)
         assert '--tint-amount: .75' in css
 
+    def test_stylesheet_contains_danger_text_color_property(self, built_dev_site):
+        """CSS bundle contains --danger-text-color property."""
+        css = read_stylesheet(built_dev_site)
+        assert '--danger-text-color:' in css
+
     def test_html_page_links_theme_css_without_inlining(self, built_dev_site):
         """HTML output links the stylesheet instead of inlining theme CSS."""
         assert_links_stylesheet_without_inlining_theme(built_dev_site)
@@ -84,6 +89,12 @@ class TestThemingDefaults:
         css = read_stylesheet(built_dev_site)
         # Default tintAmount is 100, which becomes 1.0
         assert '--tint-amount: 1' in css
+
+    def test_default_config_stylesheet_contains_danger_hue(self, built_dev_site):
+        """Default config CSS bundle contains --danger-hue with the red anchor."""
+        css = read_stylesheet(built_dev_site)
+        assert '--danger-hue: 0deg' in css
+        assert '--danger-text-color:' in css
 
     def test_default_html_links_theme_css_without_inlining(self, built_dev_site):
         """Default config HTML output links the stylesheet instead of inlining theme CSS."""

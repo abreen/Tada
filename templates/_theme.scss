@@ -39,6 +39,10 @@
   --link-color: hsl(var(--link-hue) 66% 38%);
   --link-color-hover: hsl(var(--link-hue) 56% 49%);
 
+  // Danger text color; the @supports block below leans the hue toward the tint
+  --danger-hue: 0deg;
+  --danger-text-color: hsl(var(--danger-hue) 66% 38%);
+
   // Main background color (the color of the page background)
   --bg-color: hsl(var(--tint-hue) calc(65% * var(--tint-amount)) 97%);
 
@@ -95,6 +99,7 @@
 @supports (scale: sin(90deg)) {
   :root {
     --link-hue: #{lean-toward-tint(216deg, 9deg)};
+    --danger-hue: #{lean-toward-tint(0deg, 9deg)};
     --trace-line-active-hue: #{lean-toward-tint(52deg, 18deg)};
   }
 }
@@ -129,6 +134,7 @@
     --fg2-color: hsl(var(--tint-hue) calc(10% * var(--tint-amount)) 60%);
     --link-color: hsl(var(--link-hue) 50% 72%);
     --link-color-hover: hsl(var(--link-hue) 40% 80%);
+    --danger-text-color: hsl(var(--danger-hue) 50% 72%);
     --bg-color: hsl(var(--tint-hue) calc(35% * var(--tint-amount)) 5%);
     --bg-color-translucent: hsl(
       var(--tint-hue) calc(35% * var(--tint-amount)) 10% / 66%

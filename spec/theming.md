@@ -58,12 +58,29 @@ back to `--fg-color` (and the external link icon falls back to a foreground
 variant), since the alert backgrounds are already saturated and a blue link
 on top would be hard to read.
 
+## Danger text color
+
+Nested emphasis — a `<strong>` containing an `<em>`, or an `<em>` containing
+a `<strong>` — is painted with a dedicated `--danger-text-color` on both
+elements of the pair. The hue, `--danger-hue`, is anchored at red (HSL 0) and
+leans up to 9 degrees toward `tintHue` with the same `sin()` lean as the link
+color, so the text reads as red with a slight tint from the site's palette.
+Browsers without CSS `sin()` use the fixed anchor hue. Saturation and
+lightness are fixed independently of `tintAmount`: 66% saturation and 38%
+lightness in light mode, and 50% and 72% in dark mode, keeping at least 4.5:1
+contrast against both the primary and secondary backgrounds at any `tintHue`
+with full tint. The rule is zero-specificity, and its pair selectors exclude
+elements inside links and buttons, so bold-italic link or button text keeps
+the link or foreground color, and a `<strong>` or `<em>` without the other
+element is unaffected.
+
 ## Contrast preference
 
 The page-bottom [contrast picker](contrast-picker.md) offers an explicit high
 contrast mode. It replaces the tint-sensitive neutral palette with achromatic
 primary and secondary foregrounds, backgrounds, translucent colors, shadows,
 and embedded neutral icons. Light mode uses black on white, and dark mode uses
-white on black. Theme accents, links, warnings, and notes are not changed.
+white on black. Theme accents, links, danger text, warnings, and notes are not
+changed.
 Sites can make this the build-time default with `defaultContrast: high` without
 changing the palette or picker behavior.

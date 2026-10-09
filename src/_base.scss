@@ -82,6 +82,18 @@ a {
   }
 }
 
+// A <strong> containing an <em>, or an <em> containing a <strong>, reads as a
+// danger. Pairs inside links or buttons are excluded entirely, so they
+// inherit the link or foreground color instead.
+:where(
+  strong:has(em):not(a *, button *),
+  strong em:not(a *, button *),
+  em:has(strong):not(a *, button *),
+  em strong:not(a *, button *)
+) {
+  color: var(--danger-text-color);
+}
+
 pre,
 tt,
 code {
