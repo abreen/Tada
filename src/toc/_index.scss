@@ -73,11 +73,11 @@ body.code .toc ol a {
   color: var(--link-active-color);
 }
 
-@media (width >= 900px) {
-  .toc ol li.current a {
-    background: var(--bg2-color);
-  }
+.toc .toc-highlight {
+  display: none;
+}
 
+@media (width >= 900px) {
   .toc ol li:last-child {
     margin-bottom: var(--gap);
   }
@@ -85,6 +85,28 @@ body.code .toc ol a {
   .toc ol::before {
     display: none;
     content: '';
+  }
+}
+
+// The highlight is positioned in the sticky TOC, which is only on screens
+@media screen and (width >= 900px) {
+  // Positioned and sized by the client to sit behind the current item's link,
+  // relative to its static position at the top-left corner of the list
+  .js .toc .toc-highlight:not([hidden]) {
+    position: absolute;
+    z-index: -1;
+    display: block;
+    pointer-events: none;
+    background: var(--bg2-color);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .js .toc .toc-highlight {
+      transition:
+        transform 200ms cubic-bezier(0.2, 0, 0, 1),
+        width 200ms cubic-bezier(0.2, 0, 0, 1),
+        height 200ms cubic-bezier(0.2, 0, 0, 1);
+    }
   }
 }
 

@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
-import { formatDuration, removeClass, getElement, applyBasePath } from './util';
+import {
+  applyBasePath,
+  debounce,
+  formatDuration,
+  getElement,
+  removeClass,
+} from './util';
 
 function create(html: string) {
   const dom = new JSDOM(`<body>${html}</body>`);
@@ -9,6 +15,18 @@ function create(html: string) {
 
 beforeEach(() => {
   globalThis.__SITE_BASE_PATH__ = '/';
+});
+
+describe('debounce', () => {
+  test('cancel stops a pending call', async () => {
+    const win = create('') as unknown as Window;
+    let calls = 0;
+    const debounced = debounce(win, () => calls++, 5);
+    debounced();
+    debounced.cancel();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(calls).toBe(0);
+  });
 });
 
 describe('formatDuration', () => {

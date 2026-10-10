@@ -96,5 +96,6 @@ export default (window: Window) => {
   return () => {
     window.removeEventListener('scroll', debounced);
     window.removeEventListener('resize', debounced);
+    debounced.cancel();
   };
 };

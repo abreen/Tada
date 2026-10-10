@@ -4,12 +4,14 @@ export function debounce<T extends (...args: unknown[]) => void>(
   time: number,
 ) {
   let timer: number;
-  return (...args: Parameters<T>) => {
+  const debounced = (...args: Parameters<T>) => {
     win.clearTimeout(timer);
     timer = win.setTimeout(() => {
       fn(...args);
     }, time);
   };
+  debounced.cancel = () => win.clearTimeout(timer);
+  return debounced;
 }
 
 export function removeClass(el: HTMLElement, className: string) {

@@ -16,6 +16,7 @@ const webkitSpecs = [
   'navigation-scroll',
   'navigation-target',
   'search-recovery',
+  'toc-highlight',
   'trace-navigation',
 ];
 
@@ -27,11 +28,11 @@ const firefoxSpecs = [
   'navigation-scroll',
   'navigation-target',
   'search-recovery',
+  'toc-highlight',
   'trace-navigation',
 ];
 
-const matchSpecs = (specs: string[]) =>
-  specs.map(spec => `**/${spec}.spec.ts`);
+const matchSpecs = (specs: string[]) => specs.map(spec => `**/${spec}.spec.ts`);
 
 export default defineConfig({
   testDir: './playwright',

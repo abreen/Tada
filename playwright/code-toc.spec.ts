@@ -21,7 +21,6 @@ test('code TOC follows source positions across grouped fields and methods', asyn
     ['#L4', '#L4'],
     ['#L3-L5', '#L3'],
     ['#L6', '#L5'],
-    ['#L1', '#L2'],
   ]) {
     await page.evaluate(hash => {
       window.location.hash = hash;
@@ -29,8 +28,11 @@ test('code TOC follows source positions across grouped fields and methods', asyn
     await expect(current).toHaveAttribute('href', expected);
   }
 
-  await page.evaluate(() => {
-    window.location.hash = '';
-  });
-  await expect(current).toHaveCount(0);
+  // No entry is current for a line before every entry, or without a line
+  for (const hash of ['#L1', '']) {
+    await page.evaluate(hash => {
+      window.location.hash = hash;
+    }, hash);
+    await expect(current).toHaveCount(0);
+  }
 });
