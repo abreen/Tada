@@ -36,29 +36,28 @@ The cursor is delayed so fast navigations do not flash a transient busy state;
 `progress` also communicates that another link can still be used to replace
 the pending navigation.
 
-Page transitions slide horizontally by 8px over 150ms. Both outgoing and
-incoming content use `cubic-bezier(0.2, 0, 0, 1)` for movement, matching the
-header and search movement curve. Opacity animates independently over the
-same duration: outgoing content fades with `ease-in`, and incoming content
-fades with `ease-out`. Forward navigation slides left; back navigation slides
-right.
+Page transitions fade the page content in place over 150ms: outgoing content
+fades with `ease-in`, and incoming content fades with `ease-out`. Link clicks,
+Back, and Forward all use the same transition; there is no directional
+movement.
 
 When the page heading is visible, the breadcrumb trail, `h1`, and page info
 get their own named transition layers (`page-breadcrumbs`, `page-title`, and
-`page-info`) instead of sliding with the page. They crossfade in place and
-move to their new layout positions over the same 150ms with the same
-`cubic-bezier(0.2, 0, 0, 1)` curve, so they stay in step when the layout
+`page-info`) instead of fading with the page. They crossfade and move to
+their new layout positions over the same 150ms with the
+`cubic-bezier(0.2, 0, 0, 1)` curve, matching the header and search movement
+curve, so they stay in step when the layout
 changes.
 
 The header keeps its own named `site-header` transition layer, so it does not
-slide with the page. Before that layer's new snapshot is captured, the header
+fade with the page. Before that layer's new snapshot is captured, the header
 adopts the destination's page title and shows the title for the destination's
 scroll position without rolling (see [Header Title](header-title.md)); any
 change crossfades over the same 150ms as the page heading.
 
 The footer and appearance-picker group gets its own named `page-bottom`
 transition layer on each page where it is in the viewport; like the heading
-parts, the navigator sets the name via inline style. The layer never slides
+parts, the navigator sets the name via inline style. The layer never fades
 with the page or interpolates its bounds. When the group is on screen on both
 pages, the layer does not crossfade; only the incoming snapshot is shown at its
 destination layout position, so two copies are never visible at once. When it

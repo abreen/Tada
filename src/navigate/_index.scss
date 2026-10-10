@@ -1,4 +1,3 @@
-$shift: 8px;
 $duration: 150ms;
 $movement-easing: cubic-bezier(0.2, 0, 0, 1);
 
@@ -24,31 +23,8 @@ html.navigation-loading * {
   }
 }
 
-@keyframes slide-out-left {
-  to {
-    transform: translateX(-$shift);
-  }
-}
-
-@keyframes slide-in-right {
-  from {
-    transform: translateX($shift);
-  }
-}
-
-@keyframes slide-out-right {
-  to {
-    transform: translateX($shift);
-  }
-}
-
-@keyframes slide-in-left {
-  from {
-    transform: translateX(-$shift);
-  }
-}
-
-// Page heading parts: crossfade in place instead of sliding with the page
+// Page heading parts: crossfade and move to their new layout positions instead
+// of fading with the page
 // view-transition-name is set via inline style by the navigator
 // only when .title-and-info is visible in the viewport. All parts share one
 // duration and easing so they move in step when the layout changes; the
@@ -89,7 +65,7 @@ html.navigation-loading * {
 }
 
 // The site-wide banner does not change between pages. Keep it out of the root
-// slide and pin its named transition layer in place without a crossfade.
+// fade and pin its named transition layer in place without a crossfade.
 .site-banner {
   view-transition-name: site-banner;
 }
@@ -136,28 +112,11 @@ html.navigation-loading * {
   animation: page-fade-in $duration ease-out both;
 }
 
-// Forward navigation: old content slides left, new content slides in from right
-.nav-forward::view-transition-old(root) {
-  animation:
-    slide-out-left $duration $movement-easing,
-    page-fade-out $duration ease-in;
+// Page content fades out and in place
+::view-transition-old(root) {
+  animation: page-fade-out $duration ease-in;
 }
 
-.nav-forward::view-transition-new(root) {
-  animation:
-    slide-in-right $duration $movement-easing,
-    page-fade-in $duration ease-out;
-}
-
-// Back navigation: old content slides right, new content slides in from left
-.nav-back::view-transition-old(root) {
-  animation:
-    slide-out-right $duration $movement-easing,
-    page-fade-out $duration ease-in;
-}
-
-.nav-back::view-transition-new(root) {
-  animation:
-    slide-in-left $duration $movement-easing,
-    page-fade-in $duration ease-out;
+::view-transition-new(root) {
+  animation: page-fade-in $duration ease-out;
 }

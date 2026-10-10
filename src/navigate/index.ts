@@ -5,7 +5,6 @@ import {
   closeHeaderDetails,
   getCurrentPath,
   getSavedLocationScroll,
-  getHistoryIndex,
   getSavedScroll,
   initNavigation,
   isApplyingFragment,
@@ -130,7 +129,6 @@ export default function mountNavigate(window: Window): () => void {
     navigateToUrl(window, {
       url: anchor.href,
       scrollTarget: hash,
-      direction: 'forward',
       pushHistory: true,
     });
   }
@@ -183,13 +181,11 @@ export default function mountNavigate(window: Window): () => void {
 
     setCurrentPath(newPath);
     const targetIndex = event.state?.navIndex ?? 0;
-    const direction = targetIndex >= getHistoryIndex() ? 'forward' : 'back';
     setHistoryIndex(targetIndex);
     const savedY = getSavedScroll(targetIndex);
     navigateToUrl(window, {
       url: window.location.href,
       scrollTarget: typeof savedY === 'number' ? savedY : null,
-      direction,
       pushHistory: false,
     });
   }

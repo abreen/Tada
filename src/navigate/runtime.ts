@@ -20,12 +20,9 @@ let applyingFragment = false;
 const scrollByIndex = new Map<number, number>();
 const scrollByLocation = new Map<string, number>();
 
-type Direction = 'forward' | 'back';
-
 interface NavigationOptions {
   url: string;
   scrollTarget: number | string | null;
-  direction: Direction;
   pushHistory: boolean;
   useViewTransition?: boolean;
 }
@@ -117,7 +114,7 @@ function dispatchNavigationEvent(
   );
 }
 
-// Heading parts that get their own layer instead of sliding with the page. The
+// Heading parts that get their own layer instead of fading with the page. The
 // breadcrumb trail is one group so every item, including the current one,
 // moves together when the page layout changes.
 const TITLE_TRANSITION_NAMES = [
@@ -210,10 +207,6 @@ export function setCurrentPath(path: string): void {
   currentPath = path;
 }
 
-export function getHistoryIndex(): number {
-  return historyIndex;
-}
-
 export function setHistoryIndex(index: number): void {
   historyIndex = index;
 }
@@ -266,13 +259,7 @@ export async function navigateToUrl(
   options: NavigationOptions,
 ): Promise<void> {
   const { document } = window;
-  const {
-    url,
-    scrollTarget,
-    direction,
-    pushHistory,
-    useViewTransition = true,
-  } = options;
+  const { url, scrollTarget, pushHistory, useViewTransition = true } = options;
 
   if (currentAbortController) {
     currentAbortController.abort();
@@ -280,7 +267,6 @@ export async function navigateToUrl(
 
   const controller = new AbortController();
   currentAbortController = controller;
-  document.documentElement.classList.remove('nav-forward', 'nav-back');
   cleanupViewTransitionNames(document);
 
   const header = document.querySelector('header');
@@ -425,10 +411,6 @@ export async function navigateToUrl(
     }
     setPageBottomTransitionName(window);
 
-    document.documentElement.classList.add(
-      direction === 'forward' ? 'nav-forward' : 'nav-back',
-    );
-
     const transition = transitionDoc.startViewTransition(() => {
       if (!doSwap()) {
         return;
@@ -452,7 +434,6 @@ export async function navigateToUrl(
       return;
     }
 
-    document.documentElement.classList.remove('nav-forward', 'nav-back');
     cleanupViewTransitionNames(document);
   } else {
     if (!doSwap()) {
@@ -476,7 +457,6 @@ export async function refreshCurrentPage(window: Window): Promise<void> {
   await navigateToUrl(window, {
     url: window.location.href,
     scrollTarget: window.scrollY,
-    direction: 'forward',
     pushHistory: false,
     useViewTransition: false,
   });
