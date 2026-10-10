@@ -58,6 +58,17 @@ back to `--fg-color` (and the external link icon falls back to a foreground
 variant), since the alert backgrounds are already saturated and a blue link
 on top would be hard to read.
 
+## Scrollbars
+
+Scrollbars follow the tint through `scrollbar-color` on `:root`, which every
+scrollable element inherits. The thumb, `--scrollbar-thumb-color`, uses the
+tint hue at 25% of `tintAmount` saturation, with 72% lightness in light mode
+and 28% in dark mode. The track, `--scrollbar-track-color`, is the primary
+background. High contrast mode uses an achromatic gray thumb (55% lightness in
+light mode, 45% in dark mode). The difference is most visible on platforms with
+classic, always-visible scrollbars such as Windows; browsers without
+`scrollbar-color` keep their native scrollbars.
+
 ## Contrast preference
 
 The page-bottom [contrast picker](contrast-picker.md) offers an explicit high

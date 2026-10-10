@@ -52,6 +52,12 @@
   --bg2-color-translucent: hsl(
     var(--tint-hue) calc(55% * var(--tint-amount)) 92% / 66%
   );
+
+  // Scrollbar thumb and track
+  --scrollbar-thumb-color: hsl(
+    var(--tint-hue) calc(25% * var(--tint-amount)) 72%
+  );
+  --scrollbar-track-color: var(--bg-color);
   --trace-line-active-hue: 52deg;
   --bg-trace-line-active: hsl(var(--trace-line-active-hue) 100% 86%);
   --box-shadow: 0 2px 9px
@@ -89,6 +95,7 @@
   --mono-padding: 0.12em 0.25em;
 
   color-scheme: light dark;
+  scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
 }
 
 // Browsers without CSS sin() keep the fixed hues above
@@ -114,6 +121,7 @@
   --bg-color-translucent: hsl(0deg 0% 100% / 66%);
   --bg2-color: #f4f4f4;
   --bg2-color-translucent: rgb(244 244 244 / 66%);
+  --scrollbar-thumb-color: hsl(0deg 0% 55%);
   --box-shadow: 0 2px 9px hsl(0deg 0% 0% / 25%);
 }
 
@@ -137,6 +145,9 @@
     --bg2-color-translucent: hsl(
       var(--tint-hue) calc(40% * var(--tint-amount)) 12% / 66%
     );
+    --scrollbar-thumb-color: hsl(
+      var(--tint-hue) calc(25% * var(--tint-amount)) 28%
+    );
     --bg-trace-line-active: hsl(var(--trace-line-active-hue) 90% 18%);
     --box-shadow: 0 3px 8px
       hsl(var(--tint-hue) calc(33% * var(--tint-amount)) 8% / 70%);
@@ -153,6 +164,7 @@
     --bg-color-translucent: hsl(0deg 0% 0% / 66%);
     --bg2-color: hsl(0deg 0% 15%);
     --bg2-color-translucent: hsl(0deg 0% 15% / 66%);
+    --scrollbar-thumb-color: hsl(0deg 0% 45%);
     --box-shadow: 0 3px 8px hsl(0deg 0% 0% / 70%);
   }
 }
