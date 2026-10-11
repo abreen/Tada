@@ -146,7 +146,7 @@ def test_malformed_scripts_value_fails(site):
 
 
 def test_compile_error_fails_the_build(site):
-    write(site, 'src/lectures/clock.ts', 'export default () => {\n')
+    write(site, 'src/lectures/clock.ts', 'export default () => {')
     result = run_tada('dev', cwd=str(site))
     assert result.returncode == 1
     assert 'src/lectures/clock.ts:1:' in result.stdout
@@ -424,7 +424,7 @@ def test_watch_keeps_reporting_a_broken_script_until_it_is_fixed(site):
     wp = WatchProcess(site)
     try:
         wp.wait_for_initial_build()
-        write(site, 'src/lectures/clock.ts', 'export default () => {\n')
+        write(site, 'src/lectures/clock.ts', 'export default () => {')
         wp.wait_for_error()
         # An unrelated edit must not hide the error behind the old script
         write(site, 'content/about.md', page('About', body='Edited'))
