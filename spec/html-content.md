@@ -4,8 +4,9 @@ Files with the `.html` extension (case-insensitive) in the content directory are
 treated as page content. They support the same front matter format as Markdown
 files. Generated `.html` pages preserve the source basename's case.
 
-HTML content is processed through the template system but is not passed through
-the Markdown pipeline. External-link decoration is not applied to HTML content,
+[Site variables](variables.md) in HTML content are substituted, but HTML content
+is not passed through the Markdown pipeline, so it cannot include partials or
+trace blocks. External-link decoration is not applied to HTML content,
 but final page processing still rewrites and validates internal URLs.
 
 ## Internal URLs

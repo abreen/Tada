@@ -11,7 +11,10 @@ export interface TraceCacheEntry {
   files: TraceArtifactFile[];
   highlightedSources: { file: string; highlightedSource: string }[];
   totalSteps: number;
-  sourceMtims: Record<string, number>;
+  /** Absolute paths of the traced files */
+  sourcePaths: string[];
+  /** Hash of the traced files after variable substitution */
+  sourceHash: string;
 }
 
 export type TraceCache = Map<string, TraceCacheEntry>;

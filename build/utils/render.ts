@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { compileTemplate } from '../lodash-template';
 import type MarkdownIt from 'markdown-it';
 import { makeLogger } from '../log';
 import { B } from '../colors';
@@ -31,14 +30,19 @@ import { htmlToPlainText } from './plain-text';
 import { finalizeHtmlPage } from './final-html';
 import {
   createApplyBasePath,
-  getProjectDir,
   normalizeOutputPath,
+  toDisplayPath,
   toPosix,
   toUrlPath,
 } from './paths';
-import { applySourceTemplate } from './source-template';
+import {
+  getSiteVars,
+  parseYamlWithVariables,
+  substituteContent,
+  substituteVariables,
+} from '../variables';
 import pkg from '../../package.json' with { type: 'json' };
-import { parseFrontMatterAndContent } from './front-matter';
+import { parseFrontMatter, parseFrontMatterYaml } from './front-matter';
 import {
   getPageAuthorAssets,
   getPageScripts,
@@ -85,6 +89,53 @@ const RESERVED_FRONT_MATTER_KEYS: readonly string[] = [
   'parent',
   'parentLabel',
 ];
+
+// Front matter fields Tada reads. Any other key is ignored with a warning.
+const KNOWN_FRONT_MATTER_FIELDS: ReadonlySet<string> = new Set([
+  'title',
+  'description',
+  'author',
+  'published',
+  'toc',
+  'slides',
+  'breadcrumbs',
+  'skip',
+  'stdin',
+  'scripts',
+]);
+
+/** Reads a page, whose front matter can use variables */
+function readPage(
+  filePath: string,
+  ext: string,
+): { pageVariables: Record<string, unknown>; content: string } {
+  const { frontMatter, content } = parseFrontMatter(
+    fs.readFileSync(filePath, 'utf-8'),
+    ext,
+  );
+  const pageVariables = parseYamlWithVariables(
+    frontMatter ?? '',
+    toDisplayPath(filePath),
+    parseFrontMatterYaml,
+  );
+  return { pageVariables: pageVariables as Record<string, unknown>, content };
+}
+
+/** Returns only the front matter fields Tada reads, warning about others */
+function dropUnknownFrontMatterKeys(
+  pageVariables: Record<string, unknown>,
+  filePath: string,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(pageVariables).filter(([key]) => {
+      if (KNOWN_FRONT_MATTER_FIELDS.has(key)) {
+        return true;
+      }
+      log.warn`${toDisplayPath(filePath)}: ignoring unknown front matter field "${key}"; put custom variables under "vars" in the site config`;
+      return false;
+    }),
+  );
+}
 
 function renderInlineField(
   md: MarkdownIt,
@@ -145,8 +196,9 @@ function rejectReservedFrontMatterKeys(
     Object.hasOwn(pageVariables, k),
   );
   if (key) {
-    const displayPath = toPosix(path.relative(getProjectDir(), filePath));
-    throw new Error(`${displayPath}: front matter key "${key}" is reserved`);
+    throw new Error(
+      `${toDisplayPath(filePath)}: front matter key "${key}" is reserved`,
+    );
   }
 }
 
@@ -180,7 +232,6 @@ function createTemplateParameters({
     authorScriptPaths: (authorAssets?.js ?? []).map(file =>
       normalizeOutputPath('/' + file),
     ),
-    vars: siteVariables.vars || {},
     ...createTemplateGlobals(pageVariables, siteVariables, subPath),
     site: siteVariables,
     page: pageVariables,
@@ -316,11 +367,9 @@ export function renderPlainTextPageAsset({
   log.info`Rendering page ${B`${subPath + ext}`}`;
   const { content, pageVariables, tocItems } = renderPlainTextContent(
     filePath,
-    subPath,
     sourceUrlPath,
     siteVariables,
     validInternalTargets,
-    isWatchMode,
     { dependencyCollector, traceCache, contentDir, traceToolAvailability },
   );
 
@@ -379,6 +428,7 @@ export function renderPlainTextPageAsset({
 
 export function renderCodePageAsset({
   filePath,
+  source,
   contentDir,
   siteVariables,
   assetFiles,
@@ -394,8 +444,6 @@ export function renderCodePageAsset({
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
   const lang =
     getExtensionToShikiLanguage(siteVariables)[ext.slice(1).toLowerCase()];
-  const rawSource = fs.readFileSync(filePath, 'utf-8');
-  const sourceCode = applySourceTemplate(rawSource, siteVariables, filePath);
   const pageDirPath = toPosix(path.relative(contentDir, dir));
   const sourceUrlPath = normalizeOutputPath(
     `/${toUrlPath(path.relative(contentDir, filePath))}.html`,
@@ -403,7 +451,7 @@ export function renderCodePageAsset({
 
   log.info`Rendering code page ${B`${subPath + ext}`}`;
   const content = renderCodeWithComments(
-    sourceCode,
+    source,
     lang,
     siteVariables,
     pageDirPath,
@@ -412,7 +460,7 @@ export function renderCodePageAsset({
     `/${toUrlPath(path.relative(contentDir, filePath))}`,
   );
   const titleHtml = `<code>${name + ext}</code>`;
-  const tocItems = lang === 'java' ? extractJavaMethodToc(sourceCode) : [];
+  const tocItems = lang === 'java' ? extractJavaMethodToc(source) : [];
   const tocHtml = generateCodeTocHtml(tocItems);
   const pageVariables: Record<string, unknown> = {
     template: 'code',
@@ -473,6 +521,7 @@ export function renderCodePageAsset({
 
 export function renderCopiedContentAsset({
   filePath,
+  source,
   contentDir,
   siteVariables,
 }: RenderCopiedContentOptions): Asset[] {
@@ -481,32 +530,27 @@ export function renderCopiedContentAsset({
 
   log.info`${label} ${B`${relPath}`}`;
 
-  const rawSource = fs.readFileSync(filePath, 'utf-8');
-  const templated = applySourceTemplate(rawSource, siteVariables, filePath);
-
   if (path.extname(filePath).toLowerCase() === '.java') {
     const pageDirPath = toPosix(
       path.relative(contentDir, path.dirname(filePath)),
     );
     const rewrittenLines = rewriteProseLinks(
-      templated.split('\n'),
+      source.split('\n'),
       siteVariables,
       pageDirPath,
     );
     return [{ assetPath: relPath, content: rewrittenLines.join('\n') }];
   }
 
-  return [{ assetPath: relPath, content: templated }];
+  return [{ assetPath: relPath, content: source }];
 }
 
 interface PreparePageVariablesInput {
   rawPageVariables: Record<string, unknown>;
   filePath: string;
-  subPath: string;
   sourceUrlPath: string;
   siteVariables: SiteVariables;
   validInternalTargets: ReadonlySet<string>;
-  isWatchMode: boolean;
   /** Whether this renderer supports `slides: true` (Markdown pages only) */
   allowSlides: boolean;
   dependencyCollector?: RenderDependencyCollector;
@@ -515,39 +559,37 @@ interface PreparePageVariablesInput {
 /**
  * Turns parsed front matter into page variables. Shared by every renderer
  * whose source has front matter, so each one applies the same rules:
- * Lodash processing of string values, inline Markdown for the title and
- * description, required fields, author lookup, and breadcrumb validation.
+ * site variable substitution in string values, inline Markdown for the title
+ * and description, required fields, author lookup, and breadcrumb validation.
  */
 function preparePageVariables({
   rawPageVariables,
   filePath,
-  subPath,
   sourceUrlPath,
   siteVariables,
   validInternalTargets,
-  isWatchMode,
   allowSlides,
   dependencyCollector,
 }: PreparePageVariablesInput): Record<string, unknown> {
   rejectReservedFrontMatterKeys(rawPageVariables, filePath);
-  if (rawPageVariables.slides === true && !allowSlides) {
+  const knownPageVariables = dropUnknownFrontMatterKeys(
+    rawPageVariables,
+    filePath,
+  );
+  if (knownPageVariables.slides === true && !allowSlides) {
     throw new Error(
       `${filePath}: slides mode is only supported on Markdown pages`,
     );
   }
 
-  // Handle substitutions inside front matter using siteVariables
-  const siteOnlyParams = createTemplateParameters({
-    pageVariables: {},
-    siteVariables,
-    content: null,
-    subPath,
-    isWatchMode,
-  });
+  const vars = getSiteVars(siteVariables);
+  const displayPath = toDisplayPath(filePath);
   const templateString = (value: unknown): unknown =>
-    typeof value === 'string' ? compileTemplate(value)(siteOnlyParams) : value;
+    typeof value === 'string'
+      ? substituteVariables(value, vars, displayPath)
+      : value;
   const pageVariables: Record<string, unknown> = Object.fromEntries(
-    Object.entries(rawPageVariables).map(([key, value]) => [
+    Object.entries(knownPageVariables).map(([key, value]) => [
       key,
       templateString(value),
     ]),
@@ -599,14 +641,12 @@ function preparePageVariables({
   return pageVariables;
 }
 
-/** Parses the file, renders using template, returns HTML & params used to generate page */
+/** Parses the file, substitutes site variables, and renders Markdown pages */
 function renderPlainTextContent(
   filePath: string,
-  subPath: string,
   sourceUrlPath: string,
   siteVariables: SiteVariables,
   validInternalTargets: ReadonlySet<string>,
-  isWatchMode: boolean,
   {
     dependencyCollector,
     traceCache,
@@ -627,71 +667,46 @@ function renderPlainTextContent(
   const applyBasePath = createApplyBasePath(siteVariables);
 
   const ext = path.extname(filePath).toLowerCase();
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const { pageVariables: rawPageVariables, content } =
-    parseFrontMatterAndContent(raw, ext);
+  const { pageVariables: rawPageVariables, content } = readPage(filePath, ext);
   const pageVariables = preparePageVariables({
     rawPageVariables,
     filePath,
-    subPath,
     sourceUrlPath,
     siteVariables,
     validInternalTargets,
-    isWatchMode,
     allowSlides: extensionIsMarkdown(ext),
     dependencyCollector,
   });
 
-  const strippedContent = stripHtmlComments(content);
-
-  const params = createTemplateParameters({
-    pageVariables,
-    siteVariables,
-    content: strippedContent,
-    subPath,
-    isWatchMode,
-  });
-
-  if (traceCache) {
-    const helpers = createTraceHelpers({
-      filePath,
-      contentDir,
-      applyBasePath,
-      cache: traceCache,
-      toolAvailability: traceToolAvailability,
-      dependencyCollector,
-    });
-    params.renderTrace = helpers.renderTrace;
-  }
-
-  let html: string;
-  try {
-    html = compileTemplate(strippedContent)(params);
-  } catch (err: unknown) {
-    throw new Error(
-      `${filePath}: Lodash template error in page or template: ${(err as Error).message}`,
-      { cause: err },
-    );
-  }
+  const vars = getSiteVars(siteVariables);
+  let html = substituteContent(content, vars, filePath);
 
   let tocItems: unknown[] | null = null;
   if (extensionIsMarkdown(ext)) {
+    const renderTrace = traceCache
+      ? createTraceHelpers({
+          filePath,
+          contentDir,
+          applyBasePath,
+          cache: traceCache,
+          toolAvailability: traceToolAvailability,
+          dependencyCollector,
+          siteVariables,
+        }).renderTrace
+      : undefined;
     const md = createMarkdown(siteVariables, {
       filePath,
       slides: pageVariables.slides === true,
-      templateParams: params,
+      vars,
+      renderTrace,
       dependencyCollector,
     });
     const env: Record<string, unknown> = {};
-    html = md.render(html!, env);
+    html = md.render(html, env);
     tocItems = (env.tocItems as unknown[] | undefined) || null;
   }
 
-  return {
-    content: html,
-    pageVariables: params.page as Record<string, unknown>,
-    tocItems,
-  };
+  return { content: html, pageVariables, tocItems };
 }
 
 export function renderLiterateJavaPageAsset({
@@ -715,35 +730,31 @@ export function renderLiterateJavaPageAsset({
   log.info`Rendering literate Java page ${B`${name}`}`;
 
   const sourceUrlPath = `/${subPath}.java.html`;
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const { pageVariables: rawPageVariables, content } =
-    parseFrontMatterAndContent(raw, '.md');
+  const { pageVariables: rawPageVariables, content } = readPage(
+    filePath,
+    '.md',
+  );
   const pageVariables = preparePageVariables({
     rawPageVariables,
     filePath,
-    subPath,
     sourceUrlPath,
     siteVariables,
     validInternalTargets,
-    isWatchMode,
     allowSlides: false,
     dependencyCollector,
   });
-  const params = createTemplateParameters({
-    pageVariables,
-    siteVariables,
-    content,
-    subPath,
-    isWatchMode,
-  });
+  const vars = getSiteVars(siteVariables);
   const md = createMarkdown(siteVariables, {
     filePath,
-    templateParams: params,
+    vars,
     preserveHtmlComments: true,
     dependencyCollector,
   });
   const env: Record<string, unknown> = {};
-  const tokens = md.parse(compileTemplate(content)(params), env);
+  const tokens = md.parse(
+    substituteContent(content, vars, filePath, true),
+    env,
+  );
   const { javaSource, codeBlocks, visibleBlockIndices } =
     extractLiterateJavaCode(tokens);
 

@@ -1,6 +1,8 @@
+import html
 import json
+import re
 
-from conftest import run_tada
+from conftest import run_tada, set_site_config
 
 
 def load_manifest(site_dir, trace_name):
@@ -22,7 +24,7 @@ class TestMultiFileTraces:
             'void main() {\n    int value = 7;\n    System.out.println(value);\n}\n'
         )
         (labs_dir / 'index.md').write_text(
-            "---\ntitle: Trace Lab\n---\n\n<%= renderTrace('UnnamedDemo.java') %>\n"
+            '---\ntitle: Trace Lab\n---\n\n```trace\nUnnamedDemo.java\n```\n'
         )
 
         result = run_tada('dev', cwd=str(site_dir), timeout=180)
@@ -62,7 +64,10 @@ class TestMultiFileTraces:
             '---\n'
             'title: Trace Lab\n'
             '---\n\n'
-            "<%= renderTrace('ArrayBagDemo.java', ['../../lectures/bag/ArrayBag.java']) %>\n"
+            '```trace\n'
+            'ArrayBagDemo.java\n'
+            '../../lectures/bag/ArrayBag.java\n'
+            '```\n'
         )
 
         result = run_tada('dev', cwd=str(site_dir), timeout=180)
@@ -87,7 +92,7 @@ class TestMultiFileTraces:
             'from helper import double\nvalue = double(3)\nprint(value)\n'
         )
         (labs_dir / 'index.md').write_text(
-            "---\ntitle: Trace Lab\n---\n\n<%= renderTrace('trace_import.py', ['helper.py']) %>\n"
+            '---\ntitle: Trace Lab\n---\n\n```trace\ntrace_import.py\nhelper.py\n```\n'
         )
 
         result = run_tada('dev', cwd=str(site_dir), timeout=180)
@@ -101,3 +106,55 @@ class TestMultiFileTraces:
         ]
         chunk = load_chunk(manifest_path)
         assert any(entry['file'] == 'helper.py' for entry in chunk)
+
+    def test_java_trace_runs_substituted_source(self, site_dir):
+        set_site_config(site_dir, {'extensionToShikiLanguage': {'java': 'java'}})
+        labs_dir = site_dir / 'content' / 'labs' / '01'
+        labs_dir.mkdir(parents=True, exist_ok=True)
+        (labs_dir / 'VarsDemo.java').write_text(
+            '/// Written for course {{ foobar }}\n'
+            'public class VarsDemo {\n'
+            '    public static void main(String[] args) {\n'
+            '        String s = "{{ foobar }}";\n'
+            '        System.out.println(s);\n'
+            '    }\n'
+            '}\n'
+        )
+        (labs_dir / 'index.md').write_text(
+            '---\ntitle: Trace Lab\n---\n\n```trace\nVarsDemo.java\n```\n'
+        )
+
+        result = run_tada('dev', cwd=str(site_dir), timeout=180)
+        assert result.returncode == 0, result.stderr
+
+        page = (site_dir / 'dist' / 'labs' / '01' / 'index.html').read_text()
+        text = html.unescape(re.sub(r'<[^>]+>', '', page))
+        assert '/// Written for course 123' in text
+        assert 'String s = "123";' in text
+
+        # The trace runs the substituted file
+        _manifest_path, manifest = load_manifest(site_dir, 'VarsDemo')
+        assert 'String s = "123";' in manifest['sources'][0]['source']
+
+    def test_unmapped_trace_source_is_not_substituted(self, site_dir):
+        labs_dir = site_dir / 'content' / 'labs' / '01'
+        labs_dir.mkdir(parents=True, exist_ok=True)
+        (labs_dir / 'RawDemo.java').write_text(
+            'public class RawDemo {\n'
+            '    public static void main(String[] args) {\n'
+            '        String s = "{{ undefinedName }}";\n'
+            '        System.out.println(s);\n'
+            '    }\n'
+            '}\n'
+        )
+        (labs_dir / 'index.md').write_text(
+            '---\ntitle: Trace Lab\n---\n\n```trace\nRawDemo.java\n```\n'
+        )
+
+        result = run_tada('dev', cwd=str(site_dir), timeout=180)
+        assert result.returncode == 0, result.stderr
+
+        _manifest_path, manifest = load_manifest(site_dir, 'RawDemo')
+        assert 'String s = "{{ undefinedName }}";' in manifest['sources'][0]['source']
+        copied = (site_dir / 'dist' / 'labs' / '01' / 'RawDemo.java').read_text()
+        assert 'String s = "{{ undefinedName }}";' in copied

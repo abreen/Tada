@@ -6,6 +6,7 @@ import {
   renderPlainTextPageAsset,
   toPosix,
 } from './util';
+import { readSourceFile } from './variables';
 import type {
   Asset,
   OutputContent,
@@ -152,10 +153,13 @@ export function createContentRecord({
         }),
       );
       break;
-    case 'code-page':
+    case 'code-page': {
+      // Shared so the code page and the copied file substitute variables once
+      const source = readSourceFile(filePath, scan.contentDir, siteVariables);
       assets.push(
         ...renderCodePageAsset({
           filePath,
+          source,
           contentDir: scan.contentDir,
           siteVariables,
           validInternalTargets: scan.validTargets,
@@ -171,11 +175,13 @@ export function createContentRecord({
       assets.push(
         ...renderCopiedContentAsset({
           filePath,
+          source,
           contentDir: scan.contentDir,
           siteVariables,
         }),
       );
       break;
+    }
     case 'content-copy':
       assets.push(...createRawContentAsset(filePath, scan.contentDir));
       break;

@@ -4,7 +4,7 @@ breadcrumbs:
     url: /labs/index.html
 title: Lab 0
 author: alex
-description: An example lab page for <%= site.title %>.
+description: An example lab page.
 ---
 
 In this lab, we'll explore the [`VowelCounter` program](./VowelCounter.java.html).

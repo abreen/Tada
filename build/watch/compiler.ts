@@ -26,7 +26,7 @@ import {
 } from '../site-build';
 import { buildIncremental } from './build-incremental';
 import type { TadaSourceRecord } from '../source-records';
-import { checkTraceToolAvailability, isTraceSourceFile } from '../utils/trace';
+import { checkTraceToolAvailability } from '../utils/trace';
 import {
   createTadaWatchPlan,
   diffAuthorKeys,
@@ -37,21 +37,6 @@ import {
   getWatchConfigFilePaths,
   classifyWatchConfigPath,
 } from './config-paths';
-
-export function invalidateTraceCacheForBatch(
-  traceCache: TraceCache,
-  paths: ReadonlySet<string>,
-): void {
-  for (const sourcePath of paths) {
-    if (isTraceSourceFile(sourcePath)) {
-      for (const [cacheKey, entry] of traceCache) {
-        if (sourcePath in entry.sourceMtims) {
-          traceCache.delete(cacheKey);
-        }
-      }
-    }
-  }
-}
 
 /** Drops cached traces whose source files no page in the build traces. */
 export function pruneTraceCache(
@@ -65,7 +50,7 @@ export function pruneTraceCache(
     }
   }
   for (const [cacheKey, entry] of traceCache) {
-    if (!Object.keys(entry.sourceMtims).every(file => traced.has(file))) {
+    if (!entry.sourcePaths.every(file => traced.has(file))) {
       traceCache.delete(cacheKey);
     }
   }
@@ -124,9 +109,6 @@ export class TadaWatchCompiler {
     snapshot: TadaSnapshot | undefined,
     paths?: ReadonlySet<string>,
   ): Promise<CompileOutcome> {
-    if (paths) {
-      invalidateTraceCacheForBatch(this.traceCache, paths);
-    }
     const configKinds = new Set(
       [...(paths ?? [])].map(classifyWatchConfigPath),
     );

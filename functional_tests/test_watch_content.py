@@ -526,7 +526,7 @@ class TestWatchPartials:
 
 
 class TestWatchTraceRebuildsOnJavaChange:
-    """Editing a Java file used by renderTrace re-runs the trace."""
+    """Editing a Java file used by a trace block re-runs the trace."""
 
     @pytest.fixture
     def site_dir(self, tmp_path):

@@ -1,7 +1,7 @@
 ---
 title: Labs
 author: alex
-description: An example page for <%= site.title %>.
+description: An example page listing labs.
 ---
 
 In each one-hour lab, we'll dive deeper and write code together, exploring how

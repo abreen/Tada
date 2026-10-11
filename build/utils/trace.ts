@@ -4,6 +4,7 @@ import path from 'path';
 import { makeLogger } from '../log';
 import { B } from '../colors';
 import { toPosix } from './paths';
+import { readSourceFile } from '../variables';
 import { checkJavac } from './literate-java';
 import {
   buildManifestUrl,
@@ -22,13 +23,12 @@ import { resolvePythonCommand } from '../../python/command';
 import { runPythonTrace } from './trace-python';
 import type {
   RenderDependencyCollector,
+  SiteVariables,
   TraceToolAvailability,
 } from '../types';
 import type { TraceCache, TraceCacheEntry } from '../build-types';
 
 const log = makeLogger(import.meta.url);
-
-export const TRACEABLE_EXTENSIONS = new Set(['.java', '.py']);
 
 export interface TraceContext {
   filePath: string;
@@ -37,10 +37,7 @@ export interface TraceContext {
   cache: TraceCache;
   toolAvailability?: TraceToolAvailability;
   dependencyCollector?: RenderDependencyCollector;
-}
-
-export function isTraceSourceFile(filePath: string): boolean {
-  return TRACEABLE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
+  siteVariables: SiteVariables;
 }
 
 export function checkTraceToolAvailability(): TraceToolAvailability {
@@ -116,6 +113,14 @@ function runTraceForFile(
   throw new Error(`Unsupported trace source: ${primaryFilePath}`);
 }
 
+/**
+ * Hash of the traced files' text after variable substitution, so changing a
+ * variable re-runs the trace (and replaces the cached entry)
+ */
+export function traceSourceHash(sources: { source: string }[]): string {
+  return Bun.hash(sources.map(source => source.source).join('\0')).toString(36);
+}
+
 export function createTraceHelpers(context: TraceContext): {
   renderTrace: (sourceFile: string, companionFiles?: string[]) => string;
 } {
@@ -126,6 +131,7 @@ export function createTraceHelpers(context: TraceContext): {
     cache,
     toolAvailability,
     dependencyCollector,
+    siteVariables,
   } = context;
   const pageDir = path.dirname(filePath);
 
@@ -133,10 +139,6 @@ export function createTraceHelpers(context: TraceContext): {
     sourceFile: string,
     companionFiles?: string[],
   ): TraceSourceFile[] {
-    if (companionFiles !== undefined && !Array.isArray(companionFiles)) {
-      throw new Error('renderTrace companionFiles must be an array');
-    }
-
     const requestedPaths = [sourceFile, ...(companionFiles ?? [])];
     const sources = requestedPaths.map(requestedPath => {
       const absolutePath = path.resolve(pageDir, requestedPath);
@@ -147,7 +149,8 @@ export function createTraceHelpers(context: TraceContext): {
         requestedPath,
         absolutePath,
         file: path.basename(requestedPath),
-        source: fs.readFileSync(absolutePath, 'utf-8'),
+        // The text the file's code page and download show
+        source: readSourceFile(absolutePath, contentDir, siteVariables),
       };
     });
 
@@ -175,38 +178,11 @@ export function createTraceHelpers(context: TraceContext): {
     return sources;
   }
 
-  function cacheKeyForSources(sources: TraceSourceFile[]): string {
-    return JSON.stringify(sources.map(source => source.absolutePath));
-  }
-
-  function getSourceMtims(sources: TraceSourceFile[]): Record<string, number> {
-    return Object.fromEntries(
-      sources.map(source => [
-        source.absolutePath,
-        fs.statSync(source.absolutePath).mtimeMs,
-      ]),
-    );
-  }
-
-  function cacheIsFresh(
-    sources: TraceSourceFile[],
-    cached: TraceCacheEntry,
-  ): boolean {
-    return sources.every(source => {
-      const mtime = fs.statSync(source.absolutePath, {
-        throwIfNoEntry: false,
-      })?.mtimeMs;
-      return (
-        mtime !== undefined && cached.sourceMtims[source.absolutePath] === mtime
-      );
-    });
-  }
-
   function createTraceWorkspace(sources: TraceSourceFile[]): string {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-trace-work-'));
     try {
       for (const source of sources) {
-        fs.copyFileSync(source.absolutePath, path.join(tempDir, source.file));
+        fs.writeFileSync(path.join(tempDir, source.file), source.source);
       }
       return tempDir;
     } catch (err) {
@@ -220,9 +196,10 @@ export function createTraceHelpers(context: TraceContext): {
     sources: TraceSourceFile[],
     traceName: string,
   ): TraceCacheEntry {
-    const cacheKey = cacheKeyForSources(sources);
+    const cacheKey = JSON.stringify(sources.map(source => source.absolutePath));
+    const sourceHash = traceSourceHash(sources);
     const cached = cache.get(cacheKey);
-    if (cached && cacheIsFresh(sources, cached)) {
+    if (cached?.sourceHash === sourceHash) {
       return cached;
     }
 
@@ -260,7 +237,8 @@ export function createTraceHelpers(context: TraceContext): {
         highlightedSource: highlightTraceSource(source.source, language),
       })),
       totalSteps: manifest.totalSteps,
-      sourceMtims: getSourceMtims(sources),
+      sourcePaths: sources.map(source => source.absolutePath),
+      sourceHash,
     };
     cache.set(cacheKey, entry);
     return entry;

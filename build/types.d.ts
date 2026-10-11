@@ -133,6 +133,8 @@ export interface TraceToolAvailability {
 /** Options for code page asset rendering */
 export interface RenderCodePageOptions {
   filePath: string;
+  /** The file's source after variable substitution */
+  source: string;
   contentDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
@@ -166,6 +168,8 @@ export interface RenderLiterateJavaOptions {
 /** Options for copied content asset rendering */
 export interface RenderCopiedContentOptions {
   filePath: string;
+  /** The file's source after variable substitution */
+  source: string;
   contentDir: string;
   siteVariables: SiteVariables;
 }

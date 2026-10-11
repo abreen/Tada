@@ -2,7 +2,9 @@
 
 Tada uses Lodash HTML templates to wrap page content. **Templates are internal
 to the package and not edited by site authors.** They use the `render()`
-function to assemble a complete page.
+function to assemble a complete page. Lodash is only used by these internal
+templates (and the internal theme stylesheet); author content uses
+[site variables](variables.md) instead.
 
 ## Page templates
 
@@ -29,11 +31,6 @@ quotes, `<`, and `&` never break an attribute or element. Values that already
 hold HTML (`content`, `bannerHtml`, `page.tocHtml`, `page.titleHtml` in element
 bodies, and `render(...)` output) use `<%= %>`.
 
-Site config values are accessible in templates. You may also use site config
-values in the `nav.*` and `authors.*` config files. In those config files,
-Lodash templating is only supported inside individual values; it cannot
-generate or conditionally modify the YAML/JSON structure itself.
-
 Template rendering failures abort the build and identify the innermost failing
 HTML template. Rendering a template name that does not exist is a failure too,
 never an empty page. Each render attempt tracks errors independently, including
@@ -45,8 +42,4 @@ complete normally.
 
 Tada recognizes only the `<% %>` (evaluate), `<%= %>` (interpolate without
 escaping), and `<%- %>` (interpolate with HTML escaping) delimiters. ES template
-literal syntax such as `${name}` is literal text everywhere Tada runs Lodash:
-HTML templates, page content, front matter strings, Markdown partials, mapped
-source code files, and config file values. This lets authors write shell
-variables, JavaScript template literals, and Kotlin string templates in prose
-and code without escaping them.
+literal syntax such as `${name}` is literal text in the internal templates.

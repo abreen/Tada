@@ -45,11 +45,9 @@ A maximum nesting depth of 10 is enforced to prevent infinite recursion.
 ## Markdown rendering
 
 Partials must be Markdown files (`.md` or `.markdown`) and must have a basename
-that starts with `_`. The partial is Lodash-processed with the including page's
-template context, then parsed as Markdown at the directive's block position.
-Only `<% %>`, `<%= %>`, and `<%- %>` are template syntax; `${...}` is literal
-text.
-This means headings, links, lists, blockquotes, and other Markdown syntax in the
+that starts with `_`. [Site variables](variables.md) in the partial are
+substituted, then the partial is parsed as Markdown at the directive's block
+position. This means headings, links, lists, blockquotes, and other Markdown syntax in the
 partial render in the context where the directive appears.
 
 Partials do not have their own front matter.
@@ -57,12 +55,14 @@ Partials do not have their own front matter.
 Partial line endings are normalized before Markdown parsing, so LF and CRLF
 partials render identically on every platform.
 
-## Template context
+## Variables
 
-Partials receive the same template parameters as the including page. This
-includes `page`, `site`, and other page-level helpers such as trace rendering.
-The partial path itself is read after Lodash preprocessing of the file that
-contains the directive, so template expressions can generate a directive path.
+Partials can use the same [site variables](variables.md) as pages
+(`{{ name }}`). An unknown variable fails the build and names the partial file.
+Partials cannot read the including page's front matter.
+
+A partial can contain [trace blocks](traces.md). Their paths resolve relative
+to the including page, not the partial.
 
 ## Unsupported includes
 

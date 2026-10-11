@@ -20,6 +20,10 @@ let renderedParams: Record<string, unknown> = {};
 let mockedCodeHtml = '<div class="code-body">rendered code</div>';
 const originalCode = { ...(await import('./code')) };
 const originalTemplates = { ...(await import('../templates')) };
+const originalTrace = { ...(await import('./trace')) };
+const originalGlobals = { ...(await import('../globals')) };
+let stdout = '';
+const traceCalls: { filePath: string; args: unknown[] }[] = [];
 
 function resolvePath(filePath: string): string {
   return path.resolve(filePath);
@@ -87,10 +91,47 @@ afterAll(() => {
   mock.module('./code', () => originalCode);
 });
 
+mock.module('../globals', () => ({
+  globals: {
+    ...originalGlobals.globals,
+    cwd() {
+      return path.resolve('/virtual');
+    },
+    stdoutWrite(chunk: string) {
+      stdout += chunk;
+    },
+  },
+}));
+
+afterAll(() => {
+  mock.module('../globals', () => originalGlobals);
+});
+
+function warnings(): string[] {
+  return stdout.split('\n').filter(line => line.includes(' warn '));
+}
+
+mock.module('./trace', () => ({
+  createTraceHelpers({ filePath }: { filePath: string }) {
+    return {
+      renderTrace(sourceFile: string, companionFiles?: string[]) {
+        traceCalls.push({ filePath, args: [sourceFile, companionFiles] });
+        return `<div class="trace-stub">${sourceFile}</div>`;
+      },
+    };
+  },
+}));
+
+afterAll(() => {
+  mock.module('./trace', () => originalTrace);
+});
+
 let preparePageTemplateHtml: typeof import('./render').preparePageTemplateHtml;
 let renderCodePageAsset: typeof import('./render').renderCodePageAsset;
 let renderPlainTextPageAsset: typeof import('./render').renderPlainTextPageAsset;
 let renderLiterateJavaPageAsset: typeof import('./render').renderLiterateJavaPageAsset;
+let renderCopiedContentAsset: typeof import('./render').renderCopiedContentAsset;
+let readSourceFile: typeof import('../variables').readSourceFile;
 
 beforeAll(async () => {
   await initHighlighter(['text']);
@@ -99,11 +140,15 @@ beforeAll(async () => {
     renderCodePageAsset,
     renderPlainTextPageAsset,
     renderLiterateJavaPageAsset,
+    renderCopiedContentAsset,
   } = await import('./render'));
+  ({ readSourceFile } = await import('../variables'));
 });
 
 beforeEach(() => {
   files.clear();
+  traceCalls.length = 0;
+  stdout = '';
   mockedCodeHtml = '<div class="code-body">rendered code</div>';
 });
 
@@ -117,6 +162,10 @@ const siteVariables = {
   defaultContrast: 'standard',
   features: { search: true, favicon: true, footer: true, pickers: true },
   extensionToShikiLanguage: { ts: 'ts' },
+  vars: {
+    courseName: 'Intro to CS',
+    course: { code: 'CS 112', slug: 'cs112' },
+  },
 } as SiteVariables;
 
 function renderMarkdownPage({
@@ -125,11 +174,15 @@ function renderMarkdownPage({
   source,
   dependencyCollector,
   validInternalTargets = new Set<string>(),
+  withTraces = false,
+  siteVariables: pageSiteVariables = siteVariables,
 }: {
+  siteVariables?: SiteVariables;
   contentDir: string;
   relativePath?: string;
   source: string;
   validInternalTargets?: ReadonlySet<string>;
+  withTraces?: boolean;
   dependencyCollector?: {
     partials?: Set<string>;
     internalTargets?: Set<string>;
@@ -142,12 +195,13 @@ function renderMarkdownPage({
     filePath,
     contentDir,
     isWatchMode: false,
-    siteVariables,
+    siteVariables: pageSiteVariables,
     validInternalTargets,
     assetFiles: [],
     authorScripts: createEmptyAuthorScripts(),
     literateJavaOutputPaths: new Set(),
     dependencyCollector,
+    traceCache: withTraces ? new Map() : undefined,
   });
 
   return pageAsset.content.toString();
@@ -363,6 +417,7 @@ describe('renderCodePageAsset', () => {
 
     const [pageAsset] = renderCodePageAsset({
       filePath,
+      source: 'console.log("hello");',
       contentDir,
       isWatchMode: false,
       siteVariables,
@@ -388,6 +443,7 @@ describe('renderCodePageAsset', () => {
 
     const [pageAsset] = renderCodePageAsset({
       filePath,
+      source: '/// $x$\npublic class Example {}\n',
       contentDir,
       isWatchMode: false,
       siteVariables,
@@ -520,11 +576,11 @@ describe('renderPlainTextPageAsset', () => {
     ]);
   });
 
-  test('processes Lodash expressions in Markdown partials', () => {
+  test('substitutes site variables in Markdown partials', () => {
     const contentDir = '/virtual/content';
     writeFile(
       path.join(contentDir, '_partial.md'),
-      'Page: <%= page.title %>, site: <%= site.title %>',
+      'Course: {{ courseName }} ({{ course.code }})',
     );
 
     const html = renderMarkdownPage({
@@ -532,7 +588,19 @@ describe('renderPlainTextPageAsset', () => {
       source: '---\ntitle: Partial Context\n---\n\n{{{ _partial.md }}}\n',
     });
 
-    expect(html).toContain('Page: Partial Context, site: Course');
+    expect(html).toContain('Course: Intro to CS (CS 112)');
+  });
+
+  test('reports unknown variables with the partial path', () => {
+    const contentDir = '/virtual/content';
+    writeFile(path.join(contentDir, '_partial.md'), '{{ page.title }}');
+
+    expect(() =>
+      renderMarkdownPage({
+        contentDir,
+        source: '---\ntitle: Partial Context\n---\n\n{{{ _partial.md }}}\n',
+      }),
+    ).toThrow('content/_partial.md: unknown variable "{{ page.title }}"');
   });
 
   test('supports nested partials relative to the partial file', () => {
@@ -816,17 +884,257 @@ describe('renderPlainTextPageAsset', () => {
     ).toThrow('maximum include depth');
   });
 
-  test('does not expose the old Lodash include helper', () => {
+  test('warns about and ignores unknown front matter keys', () => {
+    renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source:
+        '---\ntitle: Keys\ntoolName: Tada\npublshed: 2026-01-01\n---\n\nBody\n',
+    });
+
+    const lines = warnings();
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain(
+      'content/page.md: ignoring unknown front matter field "toolName"',
+    );
+    expect(lines[0]).toContain('"vars"');
+    expect(lines[1]).toContain('unknown front matter field "publshed"');
+  });
+
+  test('drops unknown front matter keys before substitution', () => {
+    renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source: '---\ntitle: Keys\nnotes: "see {{ oldVar }}"\n---\n\nBody\n',
+    });
+
+    expect(warnings()).toHaveLength(1);
+    expect(renderedPageVariables).not.toHaveProperty('notes');
+  });
+
+  test('substitutes variables in inline footnotes and question headings', () => {
+    const html = renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source: [
+        '---',
+        'title: Extensions',
+        '---',
+        '',
+        'Text^[See {{ courseName }}]',
+        '',
+        '??? question Is \\{{ courseName }} `\\{{ code }}` {{ courseName }}?',
+        '',
+        'Yes.',
+        '',
+        '???',
+        '',
+      ].join('\n'),
+    });
+
+    expect(html).toContain('See Intro to CS');
+    expect(html).toContain(
+      'Is {{ courseName }} <code>{{ code }}</code> Intro to CS?',
+    );
+    expect(html).not.toContain('\uE000');
+  });
+
+  test('marks a superlink external from its substituted URL', () => {
+    const html = renderMarkdownPage({
+      siteVariables: {
+        ...siteVariables,
+        vars: { docsUrl: 'https://other.site/docs' },
+      },
+      contentDir: '/virtual/content',
+      source: '---\ntitle: Links\n---\n\n[Docs][Reference]({{ docsUrl }})\n',
+    });
+
+    expect(html).toContain('href="https://other.site/docs"');
+    expect(html).toContain('class="button superlink external"');
+    expect(html).toContain('target="_blank"');
+  });
+
+  test('does not warn about known front matter keys', () => {
+    renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source:
+        '---\ntitle: Keys\ndescription: D\npublished: 2026-01-01\ntoc: true\nbreadcrumbs: []\nskip: false\nstdin: x\n---\n\nBody\n',
+    });
+
+    expect(warnings()).toEqual([]);
+  });
+
+  test('substitutes site variables in front matter strings', () => {
+    renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source:
+        '---\ntitle: "{{ course.code }} home"\ndescription: About {{ courseName }}\n---\n\nBody\n',
+    });
+
+    expect(renderedPageVariables.title).toBe('CS 112 home');
+    expect(renderedPageVariables.description).toBe('About Intro to CS');
+  });
+
+  test('substitutes site variables in the page body', () => {
+    const html = renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source:
+        '---\ntitle: Vars\n---\n\nWelcome to **{{ courseName }}**, [{{ course.code }}](https://example.edu/{{ course.slug }}).\n',
+    });
+
+    expect(html).toContain('Welcome to <strong>Intro to CS</strong>');
+    expect(html).toContain('href="https://example.edu/cs112"');
+  });
+
+  test('substitutes site variables in HTML page bodies', () => {
+    const html = renderMarkdownPage({
+      contentDir: '/virtual/content',
+      relativePath: 'page.html',
+      source: '---\ntitle: Vars\n---\n\n<p>{{ courseName }}</p>\n',
+    });
+
+    expect(html).toContain('<p>Intro to CS</p>');
+  });
+
+  test('substitutes variables in code, where a backslash escapes them', () => {
+    const html = renderMarkdownPage({
+      contentDir: '/virtual/content',
+      source:
+        '---\ntitle: Vars\n---\n\n`{{ courseName }}` and `\\{{ name }}`\n\n```text\n<p>\\{{ message }}</p> {{ courseName }}\n```\n',
+    });
+
+    expect(html).toContain(
+      '<code>Intro to CS</code> and <code>{{ name }}</code>',
+    );
+    expect(html).toContain('{{ message }}');
+    expect(html).not.toContain('\\{{');
+  });
+
+  test('fails for an unquoted variable in front matter', () => {
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        source: '---\ntitle: {{ courseName }}\n---\n\nBody\n',
+      }),
+    ).toThrow(
+      'content/page.md: a value for "title" starts with an unquoted {{ }} variable',
+    );
+  });
+
+  test('fails clearly for an unquoted variable followed by more text', () => {
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        source:
+          '---\ntitle: {{ courseName }} home\n---\n\nNote: {{ courseName }}\n',
+      }),
+    ).toThrow(
+      'content/page.md: a value for "title" starts with an unquoted {{ }} variable',
+    );
+  });
+
+  test('inserts variable values as Markdown source', () => {
+    const html = renderMarkdownPage({
+      siteVariables: { ...siteVariables, vars: { x: '**bold**' } },
+      contentDir: '/virtual/content',
+      source: '---\ntitle: "{{ x }}"\n---\n\nValue: {{ x }}\n',
+    });
+
+    expect(html).toContain('Value: <strong>bold</strong>');
+    expect(renderedPageVariables.title).toBe('bold');
+  });
+
+  test('fails for an unknown variable in the page body', () => {
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        source: '---\ntitle: Vars\n---\n\n{{ missing }}\n',
+      }),
+    ).toThrow('content/page.md: unknown variable "{{ missing }}"');
+  });
+
+  test('renders Lodash template syntax in author content as literal text', () => {
     const contentDir = '/virtual/content';
     writeFile(path.join(contentDir, '_partial.md'), 'Should not render');
 
+    const html = renderMarkdownPage({
+      contentDir,
+      source:
+        "---\ntitle: Literal Lodash\n---\n\n<%= include('_partial.md') %> and <% if (x) { %>\n",
+    });
+
+    expect(html).not.toContain('Should not render');
+    expect(html).toContain('&lt;%= include(');
+  });
+
+  test('renders a trace fence with the trace helper', () => {
+    const html = renderMarkdownPage({
+      contentDir: '/virtual/content',
+      relativePath: 'labs/index.md',
+      withTraces: true,
+      source: [
+        '---',
+        'title: Traces',
+        '---',
+        '',
+        '```trace',
+        'Demo.java',
+        '',
+        '  ../lib/Helper.java  ',
+        '```',
+        '',
+        '```trace',
+        'demo.py',
+        '```',
+        '',
+      ].join('\n'),
+    });
+
+    expect(html).toContain('<div class="trace-stub">Demo.java</div>');
+    expect(html).toContain('<div class="trace-stub">demo.py</div>');
+    expect(traceCalls.map(call => call.args)).toEqual([
+      ['Demo.java', ['../lib/Helper.java']],
+      ['demo.py', []],
+    ]);
+    expect(traceCalls[0].filePath).toBe(
+      path.join('/virtual/content', 'labs', 'index.md'),
+    );
+  });
+
+  test('renders a trace fence inside a partial relative to the page', () => {
+    const contentDir = '/virtual/content';
+    writeFile(
+      path.join(contentDir, 'shared', '_trace.md'),
+      '```trace\nDemo.java\n```\n',
+    );
+
+    const html = renderMarkdownPage({
+      contentDir,
+      relativePath: 'labs/index.md',
+      withTraces: true,
+      source: '---\ntitle: Traces\n---\n\n{{{ ../shared/_trace.md }}}\n',
+    });
+
+    expect(html).toContain('<div class="trace-stub">Demo.java</div>');
+    expect(traceCalls[0].filePath).toBe(
+      path.join(contentDir, 'labs', 'index.md'),
+    );
+  });
+
+  test('fails for an empty trace fence', () => {
     expect(() =>
       renderMarkdownPage({
-        contentDir,
-        source:
-          "---\ntitle: Removed Include\n---\n\n<%= include('_partial.md') %>\n",
+        contentDir: '/virtual/content',
+        withTraces: true,
+        source: '---\ntitle: Traces\n---\n\n```trace\n\n```\n',
       }),
-    ).toThrow('include is not defined');
+    ).toThrow('trace block must name a source file');
+  });
+
+  test('fails for a trace fence when traces are unavailable', () => {
+    expect(() =>
+      renderMarkdownPage({
+        contentDir: '/virtual/content',
+        source: '---\ntitle: Traces\n---\n\n```trace\nDemo.java\n```\n',
+      }),
+    ).toThrow('trace blocks are not supported here');
   });
 
   test.each(['.html', '.HTML', '.HtMl'])(
@@ -943,10 +1251,10 @@ describe('breadcrumb front matter', () => {
     ['breadcrumbs: Docs', 'breadcrumbs must be a list'],
     ['breadcrumbs: {}', 'breadcrumbs must be a list'],
     [
-      'breadcrumbs: [{label: "<%= \'\' %>", url: /index.html}]',
+      'breadcrumbs: [{label: "{{ empty }}", url: /index.html}]',
       'breadcrumb entry 1',
     ],
-    ['breadcrumbs: [{label: Docs, url: "<%= \'\' %>"}]', 'breadcrumb entry 1'],
+    ['breadcrumbs: [{label: Docs, url: "{{ empty }}"}]', 'breadcrumb entry 1'],
     ['breadcrumbs: [null]', 'breadcrumb entry 1'],
     ['breadcrumbs: [Docs]', 'breadcrumb entry 1'],
     ['breadcrumbs: [[]]', 'breadcrumb entry 1'],
@@ -966,6 +1274,7 @@ describe('breadcrumb front matter', () => {
   ])('rejects malformed %s', (frontMatter, diagnostic) => {
     expect(() =>
       renderMarkdownPage({
+        siteVariables: { ...siteVariables, vars: { empty: '' } },
         contentDir: '/virtual/content',
         source: `---\ntitle: Page\n${frontMatter}\n---\n\nContent.`,
         validInternalTargets: new Set(['/index.html']),
@@ -998,17 +1307,25 @@ describe('breadcrumb front matter', () => {
   );
 });
 
-test('processes nested breadcrumb labels and URLs with the front matter context before validation', () => {
+test('substitutes site variables in nested breadcrumb labels and URLs before validation', () => {
   const dependencyCollector = { internalTargets: new Set<string>() };
   renderMarkdownPage({
+    siteVariables: {
+      ...siteVariables,
+      vars: {
+        courseName: 'Intro to CS',
+        docsDir: 'docs',
+        homeUrl: '/index.html',
+      },
+    },
     contentDir: '/virtual/content',
     source: `---
 title: Counting **vowels** & <em>letters</em>
 breadcrumbs:
-  - label: "<%= site.title %> & <Notes>"
-    url: "<%= '/docs/index.html' %>?view=full#overview"
-  - label: "<%= _.capitalize('home') %>"
-    url: "<%= '/index.html' %>"
+  - label: "{{ courseName }} & <Notes>"
+    url: "/{{ docsDir }}/index.html?view=full#overview"
+  - label: Home
+    url: "{{ homeUrl }}"
 ---
 
 Content.`,
@@ -1016,7 +1333,10 @@ Content.`,
     dependencyCollector,
   });
   expect(renderedPageVariables.breadcrumbs).toEqual([
-    { label: 'Course & <Notes>', url: '/docs/index.html?view=full#overview' },
+    {
+      label: 'Intro to CS & <Notes>',
+      url: '/docs/index.html?view=full#overview',
+    },
     { label: 'Home', url: '/index.html' },
   ]);
   expect(renderedPageVariables.title).toBe('Counting vowels & letters');
@@ -1062,4 +1382,138 @@ public class Pair {}
     '/labs/index.html',
     '/labs/00/index.html',
   ]);
+});
+
+test('ignores variables inside HTML comments in literate Java pages and their partials', () => {
+  const contentDir = '/virtual/content';
+  const filePath = path.join(contentDir, 'labs', 'Pair.java.md');
+  writeFile(
+    path.join(contentDir, 'labs', '_note.md'),
+    'Note <!--- {{ missingInPartial }} --->',
+  );
+  writeFile(
+    filePath,
+    `---
+title: Pair
+---
+
+<!--- TODO: mention {{ missingInPage }} --->
+
+{{{ _note.md }}}
+
+\`\`\`java
+public class Pair {}
+\`\`\`
+`,
+  );
+  expect(() =>
+    renderLiterateJavaPageAsset({
+      filePath,
+      contentDir,
+      isWatchMode: true,
+      skipExecution: true,
+      siteVariables,
+      validInternalTargets: new Set(),
+      assetFiles: [],
+      authorScripts: createEmptyAuthorScripts(),
+      literateJavaOutputPaths: new Set(),
+    }),
+  ).not.toThrow();
+});
+
+describe('variables in hidden literate Java blocks', () => {
+  const contentDir = '/virtual/content';
+  const filePath = path.join(contentDir, 'labs', 'Course.java.md');
+
+  function renderLiterate(page: string) {
+    writeFile(filePath, `---\ntitle: Course\n---\n\n${page}`);
+    return renderLiterateJavaPageAsset({
+      filePath,
+      contentDir,
+      isWatchMode: true,
+      skipExecution: true,
+      siteVariables,
+      validInternalTargets: new Set(),
+      assetFiles: [],
+      authorScripts: createEmptyAuthorScripts(),
+      literateJavaOutputPaths: new Set(),
+    });
+  }
+
+  test('substitutes variables in hidden blocks on the page and in partials', () => {
+    writeFile(
+      path.join(contentDir, 'labs', '_hidden.md'),
+      '<!---\n```java\nstatic String P = "{{ courseName }}";\n```\n--->',
+    );
+    const [, javaAsset] = renderLiterate(
+      [
+        '<!---',
+        '```java',
+        'public class Course {',
+        '  static String C = "{{ courseName }}";',
+        '```',
+        '--->',
+        '',
+        '{{{ _hidden.md }}}',
+        '',
+        '```java',
+        '}',
+        '```',
+        '',
+      ].join('\n'),
+    );
+
+    expect(javaAsset.content).toContain('static String C = "Intro to CS";');
+    expect(javaAsset.content).toContain('static String P = "Intro to CS";');
+  });
+
+  test('keeps comment-like text in visible Java code', () => {
+    const [, javaAsset] = renderLiterate(
+      '```java\nclass Course { String s = "<!--- {{ courseName }} -->"; }\n```\n',
+    );
+
+    expect(javaAsset.content).toContain(
+      'String s = "<!--- {{ courseName }} -->";',
+    );
+  });
+
+  test('fails for an unknown variable in a hidden block', () => {
+    expect(() =>
+      renderLiterate(
+        '<!---\n```java\nclass Course { String s = "{{ missingHidden }}"; }\n```\n--->\n',
+      ),
+    ).toThrow('unknown variable "{{ missingHidden }}"');
+  });
+});
+
+describe('renderCopiedContentAsset', () => {
+  const contentDir = path.resolve('/virtual/content');
+  const codeSiteVariables = {
+    ...siteVariables,
+    extensionToShikiLanguage: { java: 'java', py: 'python' },
+  } as SiteVariables;
+
+  function copy(fileName: string, source: string) {
+    const filePath = path.join(contentDir, fileName);
+    writeFile(filePath, source);
+    const [asset] = renderCopiedContentAsset({
+      filePath,
+      source: readSourceFile(filePath, contentDir, codeSiteVariables),
+      contentDir,
+      siteVariables: codeSiteVariables,
+    });
+    return asset.content;
+  }
+
+  test('substitutes variables in mapped source files', () => {
+    expect(
+      copy(
+        'A.java',
+        '/// For {{ courseName }}\nclass A { String s = "{{ courseName }}"; }\n',
+      ),
+    ).toBe('/// For Intro to CS\nclass A { String s = "Intro to CS"; }\n');
+    expect(copy('demo.py', '# {{ courseName }}\nprint(f"\\{{x}}")\n')).toBe(
+      '# Intro to CS\nprint(f"{{x}}")\n',
+    );
+  });
 });

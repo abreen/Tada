@@ -1,5 +1,9 @@
 import fs from 'fs';
-import { compileTemplate } from './lodash-template';
+import {
+  getSiteVars,
+  parseYamlWithVariables,
+  substituteVariables,
+} from './variables';
 import {
   resolveProjectConfigFile,
   resolveSiteConfigFile,
@@ -18,13 +22,6 @@ export interface LoadedProjectConfigFile<
   value: T;
 }
 
-interface ConfigTemplateContext {
-  vars: Record<string, unknown>;
-  site: SiteVariables;
-}
-
-const EXACT_INTERPOLATION_RE = /^\s*<%=\s*([\s\S]+?)\s*%>\s*$/;
-
 export function parseConfigText(text: string, fileName: string): unknown {
   try {
     return Bun.YAML.parse(text);
@@ -42,80 +39,25 @@ export function parseConfigText(text: string, fileName: string): unknown {
   }
 }
 
-function getTemplateErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function renderConfigTemplateString(
-  value: string,
-  context: ConfigTemplateContext,
-  fileName: string,
-): string {
-  try {
-    return compileTemplate(value)(context);
-  } catch (error) {
-    throw new Error(
-      `${fileName}: Lodash template error in config: ${getTemplateErrorMessage(error)}`,
-      { cause: error },
-    );
-  }
-}
-
-function evaluateConfigTemplateExpression(
-  expression: string,
-  context: ConfigTemplateContext,
-  fileName: string,
-): unknown {
-  let captured: unknown;
-
-  try {
-    compileTemplate(`<% __capture(( ${expression} )); %>`)({
-      ...context,
-      __capture(value: unknown) {
-        captured = value;
-      },
-    });
-  } catch (error) {
-    throw new Error(
-      `${fileName}: Lodash template error in config: ${getTemplateErrorMessage(error)}`,
-      { cause: error },
-    );
-  }
-
-  return captured;
-}
-
-function interpolateConfigValue(
+/** Substitutes site variables in every string value of a parsed config */
+export function interpolateConfigValue(
   value: unknown,
-  context: ConfigTemplateContext,
+  vars: Record<string, unknown>,
   fileName: string,
 ): unknown {
   if (typeof value === 'string') {
-    if (!value.includes('<%')) {
-      return value;
-    }
-
-    const exactInterpolation = value.match(EXACT_INTERPOLATION_RE);
-    if (exactInterpolation) {
-      return evaluateConfigTemplateExpression(
-        exactInterpolation[1],
-        context,
-        fileName,
-      );
-    }
-
-    return renderConfigTemplateString(value, context, fileName);
+    return substituteVariables(value, vars, fileName);
   }
 
   if (Array.isArray(value)) {
-    return value.map(item => interpolateConfigValue(item, context, fileName));
+    return value.map(item => interpolateConfigValue(item, vars, fileName));
   }
 
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
         key,
-        interpolateConfigValue(item, context, fileName),
+        interpolateConfigValue(item, vars, fileName),
       ]),
     );
   }
@@ -128,20 +70,18 @@ function loadResolvedConfigFile<
   Name extends ConfigName = ConfigName,
 >(
   resolved: ResolvedProjectConfigFile<Name>,
-  {
-    interpolate = false,
-    siteVariables,
-  }: { interpolate?: boolean; siteVariables?: SiteVariables } = {},
+  /** Substitutes variables in string values when given */
+  siteVariables?: SiteVariables,
 ): LoadedProjectConfigFile<T, Name> {
   const rawText = fs.readFileSync(resolved.filePath, 'utf-8');
-  const parsed = parseConfigText(rawText, resolved.fileName);
-  const value = interpolate
+  const parse = (text: string) => parseConfigText(text, resolved.fileName);
+  const value = siteVariables
     ? interpolateConfigValue(
-        parsed,
-        { vars: siteVariables?.vars || {}, site: siteVariables! },
+        parseYamlWithVariables(rawText, resolved.fileName, parse),
+        getSiteVars(siteVariables),
         resolved.fileName,
       )
-    : parsed;
+    : parse(rawText);
 
   return { ...resolved, value: value as T };
 }
@@ -163,5 +103,5 @@ export function loadProjectConfig(
   if (!resolved) {
     return undefined;
   }
-  return loadResolvedConfigFile(resolved, { interpolate: true, siteVariables });
+  return loadResolvedConfigFile(resolved, siteVariables);
 }

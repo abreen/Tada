@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseConfigText } from './config-loader';
+import { interpolateConfigValue, parseConfigText } from './config-loader';
 
 describe('parseConfigText', () => {
   test('parses YAML objects', () => {
@@ -41,5 +41,43 @@ describe('parseConfigText', () => {
     expect(() => parseConfigText('{"title": ', 'site.dev.json')).toThrow(
       'site.dev.json: ',
     );
+  });
+});
+
+describe('interpolateConfigValue', () => {
+  const vars = { courseName: 'Intro to CS', term: { year: 2026 } };
+
+  test('substitutes site variables in nested string values', () => {
+    expect(
+      interpolateConfigValue(
+        [
+          { title: 'Welcome to {{ courseName }}', count: 3 },
+          { links: [{ text: 'Fall {{ term.year }}', external: true }] },
+        ],
+        vars,
+        'nav.yaml',
+      ),
+    ).toEqual([
+      { title: 'Welcome to Intro to CS', count: 3 },
+      { links: [{ text: 'Fall 2026', external: true }] },
+    ]);
+  });
+
+  test('keeps a whole-value variable as a string', () => {
+    expect(interpolateConfigValue('{{ term.year }}', vars, 'nav.yaml')).toBe(
+      '2026',
+    );
+  });
+
+  test('leaves Lodash template syntax as literal text', () => {
+    expect(interpolateConfigValue('<%= site.title %>', vars, 'nav.yaml')).toBe(
+      '<%= site.title %>',
+    );
+  });
+
+  test('names the config file for an unknown variable', () => {
+    expect(() =>
+      interpolateConfigValue({ title: '{{ missing }}' }, vars, 'nav.yaml'),
+    ).toThrow('nav.yaml: unknown variable "{{ missing }}"');
   });
 });

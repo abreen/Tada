@@ -9,11 +9,13 @@ author: alex
 
 Here is a sample description of the topics covered at the first lecture.
 
-The value of `vars.foobar` is <%= vars.foobar %>.
+The value of the `foobar` site variable is {{ foobar }}.
 
 You can add any variables you want to the `site.dev.yaml` and `site.prod.yaml`
-files under the `"vars"` property and access them using Lodash template syntax
-from Markdown files, HTML files, and source code. (Lodash template subtitution
+files under the `vars` property and insert them with `\{{ name }}` anywhere
+in Markdown files, HTML files, front matter, partials, and source code
+(including code blocks). Put a backslash before the braces when a code sample
+needs literal double braces, as this paragraph does. (Variable substitution
 only works in source code files whose extension is listed in
 `extensionToShikiLanguage`.)
 

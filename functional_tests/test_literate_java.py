@@ -6,9 +6,7 @@ import subprocess
 import pytest
 from conftest import (
     PACKAGE_DIR,
-    SITE_DEV_CONFIG_FILE,
     init_site,
-    load_structured_file,
     make_fake_failing_command,
     parse_head_metadata,
     run_tada,
@@ -200,17 +198,17 @@ class TestLiterateJavaFrontMatter:
         assert straight_quotes(head.meta['description']) == 'She said "hi" to Pair'
         assert sorted(head.meta_attrs['description']) == ['content', 'name']
 
-    def test_front_matter_templates_are_interpolated(self, site_dir):
-        site_title = load_structured_file(site_dir / SITE_DEV_CONFIG_FILE)['title']
+    def test_front_matter_variables_are_substituted(self, site_dir):
+        set_site_config(site_dir, {'vars': {'courseName': 'Intro to CS'}})
         _write_literate_page(
             site_dir,
-            'title: <%= site.title %> Pair\ndescription: About <%= site.title %>\n',
+            'title: "{{ courseName }} Pair"\ndescription: About {{ courseName }}\n',
         )
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode == 0, result.stdout + result.stderr
         head = parse_head_metadata((site_dir / 'dist' / 'Pair.java.html').read_text())
-        assert head.meta['og:title'] == f'{site_title} Pair'
-        assert head.meta['description'] == f'About {site_title}'
+        assert head.meta['og:title'] == 'Intro to CS Pair'
+        assert head.meta['description'] == 'About Intro to CS'
 
     def test_slides_front_matter_fails_build(self, site_dir):
         _write_literate_page(site_dir, 'title: Pair\nslides: true\n')
@@ -262,12 +260,13 @@ def test_literate_java_partials_render_extract_and_watch(tmp_path):
     from watch_helpers import WatchProcess
 
     site = init_site(tmp_path, bare=True)
+    set_site_config(site, {'vars': {'kind': 'example'}})
     content = site / 'content'
     (content / 'parts').mkdir()
     (content / 'Example.java.md').write_text(
         '---\ntitle: Included example\ntoc: true\n---\n\n{{{ parts/_outer.md }}}\n'
     )
-    (content / 'parts' / '_outer.md').write_text('## <%= page.title %>\n\n{{{ _body.md }}}\n')
+    (content / 'parts' / '_outer.md').write_text('## Included {{ kind }}\n\n{{{ _body.md }}}\n')
     partial = content / 'parts' / '_body.md'
 
     def write_partial(value):

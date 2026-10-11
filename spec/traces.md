@@ -4,22 +4,41 @@ Traces are interactive step-by-step visualizations of program execution. The
 trace data model is language-agnostic. Tada currently supports trace backends
 for `.java` and `.py` source files.
 
-A trace is embedded in a page using the `renderTrace` template function:
+A trace is embedded in a Markdown page using a fenced code block whose language
+is `trace`:
 
-```
-<%= renderTrace('MyProgram.java') %>
-<%= renderTrace('my_program.py') %>
-<%= renderTrace('Demo.java', ['../../lectures/bag/ArrayBag.java']) %>
+````md
+```trace
+MyProgram.java
 ```
 
-The first argument is the primary source file, resolved relative to the page.
-The optional second argument is an explicit array of companion source files,
-also resolved relative to the page. Companions are non-transitive: every source
-file that should be traced must be listed.
+```trace
+Demo.java
+../../lectures/bag/ArrayBag.java
+```
+````
+
+The first non-blank line names the primary source file, resolved relative to
+the page. Each further non-blank line names a companion source file, also
+resolved relative to the page. Surrounding whitespace on each line is ignored.
+Companions are non-transitive: every source file that should be traced must be
+listed.
+
+Trace blocks work in Markdown pages and in partials included by Markdown pages
+(paths still resolve relative to the page). An empty trace block fails the
+build. A trace block in a literate Java page fails the build because traces are
+not supported there. HTML pages and front matter cannot embed traces.
 
 ## Build processing
 
-At build time, `renderTrace` picks a backend by file extension and executes the
+[Site variables](variables.md) in traced files in `content/` whose extension is
+mapped in `extensionToShikiLanguage` are substituted before the trace runs, so
+the program, the widget's source listing, and the file's
+[code page](code-pages.md) all show the same text. Changing a variable re-runs
+the trace. Other traced files (unmapped ones, or files outside `content/` such
+as in `public/`) are traced as written, matching their unprocessed copy.
+
+At build time, the trace block picks a backend by file extension and executes the
 target program to produce a JSONL trace (one JSON object per execution step).
 The primary file and companions must all use the same supported extension. Tada
 copies them into a temporary flat workspace using only their basenames, then
@@ -35,15 +54,16 @@ generated manifest and chunk JSON, then writes the files to
 `dist/_traces/{Name}/sha256-{hash}/`. The rendered widget points at the
 hashed `manifest.json` path, so browsers fetch fresh trace data when a rebuild
 produces different trace artifacts. Results, including the generated files, are
-cached for the full primary and companion file set and are invalidated when any
-traced source changes.
+cached for the full primary and companion file set and are invalidated when the
+text of any traced source changes after variable substitution. Changing only a
+file's modification time does not re-run the trace.
 
 The manifest shape is `{ totalSteps, chunkSize, primaryFile, sources }`, where
 each source entry is `{ file, source, lineToSteps }`. Chunk entries are
 `{ file, line, output, svg }`, so each execution step names the source file that
 owns the active line.
 
-If the runtime needed for a trace backend is not available, `renderTrace` logs a
+If the runtime needed for a trace backend is not available, Tada logs a
 warning and emits a disabled widget for that source file. Java traces require
 `javac`; Python traces require Python. On Windows, Tada first tries `python`,
 then `python3`, then the same commands through PowerShell. The disabled

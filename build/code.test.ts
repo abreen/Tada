@@ -336,8 +336,8 @@ describe('renderCodeWithComments', () => {
     ).toThrow();
   });
 
-  test('does not substitute <%= %> by itself (templating happens in renderCodePageAsset)', () => {
-    const source = '# Supplied as part of <%= vars.fullCourseName %>\n';
+  test('does not substitute {{ }} by itself (substitution happens in renderCodePageAsset)', () => {
+    const source = '# Supplied as part of {{ fullCourseName }}\n';
     const html = renderCodeWithComments(source, 'text', {
       base: '',
       basePath: '/',
@@ -349,9 +349,9 @@ describe('renderCodeWithComments', () => {
       vars: { fullCourseName: 'CS 0' },
     } as SiteVariables);
 
-    // renderCodeWithComments itself does not template; the caller
-    // (renderCodePageAsset) is expected to template first.
-    expect(html).toContain('&lt;%=');
+    // renderCodeWithComments itself does not substitute variables; the
+    // caller (renderCodePageAsset) is expected to substitute first.
+    expect(html).toContain('{{ fullCourseName }}');
   });
 });
 

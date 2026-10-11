@@ -18,8 +18,8 @@ other pages. The current item uses the plain-text `title`, while the existing
 heading retains its inline Markdown formatting. Missing or empty lists render
 no breadcrumb navigation.
 
-Each entry requires a nonempty string `label` and `url`. Labels and URLs are
-Lodash-processed with the existing front matter template context before
+Each entry requires a nonempty string `label` and `url`.
+[Site variables](variables.md) in labels and URLs are substituted before
 validation. Labels render as escaped plain text, without Markdown formatting.
 Malformed lists or entries fail the build with a file-specific diagnostic that
 identifies the entry (numbered from 1) when applicable. `parent` and

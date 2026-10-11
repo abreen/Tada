@@ -17,6 +17,8 @@ import { tocPlugin } from '../toc-plugin';
 import columnsPlugin from '../columns-plugin';
 import katexPlugin from './katex';
 import markdownPartialsPlugin from './markdown-partials';
+import { hiddenCodeBlock } from './html-comments';
+import { toDisplayPath } from './paths';
 import type { RenderDependencyCollector, SiteVariables } from '../types';
 
 const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
@@ -30,7 +32,10 @@ interface CreateMarkdownOptions {
   literateJavaOutputPaths?: ReadonlySet<string>;
   sourceUrlPath?: string;
   validTargets?: ReadonlySet<string>;
-  templateParams?: Record<string, unknown>;
+  /** Site variables for author content; partials are only expanded when given */
+  vars?: Record<string, unknown>;
+  /** Renders a ```trace fence; trace blocks are an error when omitted */
+  renderTrace?: (sourceFile: string, companionFiles: string[]) => string;
   preserveHtmlComments?: boolean;
   dependencyCollector?: RenderDependencyCollector;
 }
@@ -66,10 +71,10 @@ export function createMarkdown(
     .use(columnsPlugin)
     .use(katexPlugin);
 
-  if (filePath && options.templateParams) {
+  if (filePath && options.vars) {
     markdown.use(markdownPartialsPlugin, {
       filePath,
-      templateParams: options.templateParams,
+      vars: options.vars,
       preserveHtmlComments: options.preserveHtmlComments,
       dependencyCollector: options.dependencyCollector,
     });
@@ -668,24 +673,17 @@ export function createMarkdown(
   markdown.core.ruler.push('hidden_fence', state => {
     for (let i = state.tokens.length - 1; i >= 0; i--) {
       const token = state.tokens[i];
-      if (token.type !== 'html_block') {
-        continue;
-      }
-
-      const src = token.content.trim();
-      if (!src.startsWith('<!---') || !src.endsWith('-->')) {
-        continue;
-      }
-
-      const inner = src.slice(5, -3).trim();
-      const fenceMatch = inner.match(/^```\w*\n?([\s\S]*?)```$/m);
-      if (!fenceMatch) {
+      const code =
+        token.type === 'html_block'
+          ? hiddenCodeBlock(token.content)
+          : undefined;
+      if (code === undefined) {
         continue;
       }
 
       token.type = 'hidden_fence';
       token.tag = 'code';
-      token.content = fenceMatch[1];
+      token.content = code;
     }
   });
 
@@ -704,6 +702,10 @@ export function createMarkdown(
     const code = token.content;
     let useLang: string;
 
+    if (lang === 'trace') {
+      return renderTraceFence(code);
+    }
+
     if (isPlainTextLanguage(lang)) {
       useLang = 'text';
     } else if (isBundledLanguage(lang)) {
@@ -721,6 +723,22 @@ export function createMarkdown(
 
     return highlightCode(code, useLang);
   };
+
+  // The first line names the program to trace, other lines name companion files
+  function renderTraceFence(code: string): string {
+    const displayPath = filePath ? toDisplayPath(filePath) : 'Markdown';
+    if (!options.renderTrace) {
+      throw new Error(`${displayPath}: trace blocks are not supported here`);
+    }
+    const [sourceFile, ...companionFiles] = code
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '');
+    if (!sourceFile) {
+      throw new Error(`${displayPath}: trace block must name a source file`);
+    }
+    return options.renderTrace(sourceFile, companionFiles);
+  }
 
   return markdown;
 }

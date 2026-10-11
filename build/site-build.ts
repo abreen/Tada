@@ -1,6 +1,5 @@
-import path from 'path';
 import { compileTemplates, config } from './templates';
-import { getProjectDir, toPosix } from './utils/paths';
+import { toDisplayPath } from './utils/paths';
 import { makeLogger } from './log';
 import { getRuntimeBundledShikiLanguages } from './site-variables';
 import { initHighlighter } from './utils/shiki-highlighter';
@@ -182,7 +181,7 @@ export function renderSources(
     } catch (error) {
       const { message } = diagnosticFromError(error);
       // Every page error names its file.
-      const relPath = toPosix(path.relative(getProjectDir(), filePath));
+      const relPath = toDisplayPath(filePath);
       diagnostics.push({
         message:
           message.includes(filePath) || message.includes(relPath)

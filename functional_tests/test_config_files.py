@@ -20,11 +20,11 @@ def rewrite_config_variant(site_dir, old_name, new_name):
 class TestConfigFileVariants:
     def test_dev_build_interpolates_yaml_nav_values_safely(self, tmp_path):
         site = init_site(tmp_path, bare=True)
-        set_site_config(site, {'title': 'CS 101: Intro'})
+        set_site_config(site, {'vars': {'courseName': 'CS 101: Intro'}})
         (site / NAV_CONFIG_FILE).write_text(
             '\n'.join(
                 [
-                    '- title: Welcome to <%= site.title %>',
+                    '- title: Welcome to {{ courseName }}',
                     '  links:',
                     '    - text: Home',
                     '      internal: /index.html',
@@ -37,6 +37,37 @@ class TestConfigFileVariants:
 
         assert result.returncode == 0, f'dev build failed: {result.stderr}'
         assert 'Welcome to CS 101: Intro' in (site / 'dist' / 'index.html').read_text()
+
+    def test_unquoted_nav_variable_fails_build(self, tmp_path):
+        site = init_site(tmp_path, bare=True)
+        set_site_config(site, {'vars': {'courseName': 'CS 101'}})
+        (site / NAV_CONFIG_FILE).write_text(
+            '- title: {{ courseName }}\n  links:\n    - text: Home\n      internal: /index.html\n'
+        )
+
+        result = run_tada('dev', cwd=str(site))
+
+        assert result.returncode != 0
+        assert f'{NAV_CONFIG_FILE}: a value for "title" starts with an unquoted' in (
+            result.stdout + result.stderr
+        )
+
+    def test_unquoted_nav_variable_with_more_text_fails_build(self, tmp_path):
+        site = init_site(tmp_path, bare=True)
+        set_site_config(site, {'vars': {'courseName': 'CS 101'}})
+        (site / NAV_CONFIG_FILE).write_text(
+            '- title: Home\n'
+            '  links:\n'
+            '    - text: {{ courseName }} home\n'
+            '      internal: /index.html\n'
+        )
+
+        result = run_tada('dev', cwd=str(site))
+
+        assert result.returncode != 0
+        assert f'{NAV_CONFIG_FILE}: a value for "text" starts with an unquoted' in (
+            result.stdout + result.stderr
+        )
 
     def test_dev_build_accepts_site_dev_json(self, tmp_path):
         site = init_site(tmp_path, bare=True)

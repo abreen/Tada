@@ -2,7 +2,7 @@ import path from 'path';
 import { createEmptyAuthorScripts } from '../author-scripts';
 import { describe, expect, test } from 'bun:test';
 import type { TraceCache } from '../build-types';
-import { invalidateTraceCacheForBatch, pruneTraceCache } from './compiler';
+import { pruneTraceCache } from './compiler';
 import type { TadaSourceRecord } from '../source-records';
 
 function makeTraceCache(paths: string[]): TraceCache {
@@ -19,7 +19,8 @@ function makeTraceCache(paths: string[]): TraceCache {
           },
         ],
         totalSteps: 1,
-        sourceMtims: { [filePath]: 1 },
+        sourcePaths: [filePath],
+        sourceHash: '',
       },
     ]),
   );
@@ -38,87 +39,6 @@ describe('pruneTraceCache', () => {
     pruneTraceCache(cache, new Map([[page.sourcePath, page]]));
 
     expect([...cache.keys()]).toEqual([used]);
-  });
-});
-
-describe('invalidateTraceCacheForBatch', () => {
-  test('invalidates cache entries for changed trace source paths', () => {
-    const javaPath = path.resolve('/site/content/labs/TraceDemo.java');
-    const pythonPath = path.resolve('/site/content/labs/trace_demo.py');
-    const markdownPath = path.resolve('/site/content/labs/index.md');
-    const cache = makeTraceCache([javaPath, pythonPath, markdownPath]);
-
-    invalidateTraceCacheForBatch(
-      cache,
-      new Set([javaPath, pythonPath, markdownPath]),
-    );
-
-    expect(cache.has(javaPath)).toBe(false);
-    expect(cache.has(pythonPath)).toBe(false);
-    expect(cache.has(markdownPath)).toBe(true);
-  });
-
-  test('invalidates cache entries for removed Java paths', () => {
-    const oldJavaPath = path.resolve('/site/content/labs/OldTrace.java');
-    const newJavaPath = path.resolve('/site/content/labs/NewTrace.java');
-    const cache = makeTraceCache([oldJavaPath, newJavaPath]);
-
-    invalidateTraceCacheForBatch(cache, new Set([oldJavaPath, newJavaPath]));
-
-    expect(cache.has(oldJavaPath)).toBe(false);
-    expect(cache.has(newJavaPath)).toBe(false);
-  });
-
-  test('invalidates cache entries for removed Python paths', () => {
-    const oldPythonPath = path.resolve('/site/content/labs/trace_demo.py');
-    const newPythonPath = path.resolve('/site/content/labs/new_trace.py');
-    const cache = makeTraceCache([oldPythonPath, newPythonPath]);
-
-    invalidateTraceCacheForBatch(
-      cache,
-      new Set([oldPythonPath, newPythonPath]),
-    );
-
-    expect(cache.has(oldPythonPath)).toBe(false);
-    expect(cache.has(newPythonPath)).toBe(false);
-  });
-
-  test('invalidates cache entries when a companion source changes', () => {
-    const primaryPath = path.resolve('/site/content/labs/Demo.java');
-    const companionPath = path.resolve('/site/content/lib/Bag.java');
-    const otherPath = path.resolve('/site/content/labs/Other.java');
-    const cache: TraceCache = new Map([
-      [
-        JSON.stringify([primaryPath, companionPath]),
-        {
-          artifactId: 'sha256-test',
-          files: [],
-          highlightedSources: [
-            { file: 'Demo.java', highlightedSource: '<pre>demo</pre>' },
-            { file: 'Bag.java', highlightedSource: '<pre>bag</pre>' },
-          ],
-          totalSteps: 1,
-          sourceMtims: { [primaryPath]: 1, [companionPath]: 1 },
-        },
-      ],
-      [
-        JSON.stringify([otherPath]),
-        {
-          artifactId: 'sha256-other',
-          files: [],
-          highlightedSources: [
-            { file: 'Other.java', highlightedSource: '<pre>other</pre>' },
-          ],
-          totalSteps: 1,
-          sourceMtims: { [otherPath]: 1 },
-        },
-      ],
-    ]);
-
-    invalidateTraceCacheForBatch(cache, new Set([companionPath]));
-
-    expect(cache.has(JSON.stringify([primaryPath, companionPath]))).toBe(false);
-    expect(cache.has(JSON.stringify([otherPath]))).toBe(true);
   });
 });
 

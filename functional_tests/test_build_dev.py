@@ -403,11 +403,18 @@ class TestDevBuildDefaultContent:
         html = page.read_text()
         assert 'nested Markdown partial' in html
 
-    def test_template_variables_resolve_in_partials(self, built_dev_site):
+    def test_site_variables_resolve_in_partials(self, built_dev_site):
         page = built_dev_site / 'dist' / 'lectures' / '02' / 'index.html'
         html = page.read_text()
-        # _pr1.md uses <%= page.title %> which should resolve to "Lecture 2"
-        assert 'Lecture 2' in html
+        # _pr1.md and subdir/_foobar.md use {{ foobar }}, which is 123
+        assert 'The value of <code>foobar</code> from this partial is 123.' in html
+        assert 'Nested partials can use site variables too: <code>foobar</code> is 123.' in html
+        assert '{{ foobar }}' not in html
+
+    def test_home_page_includes_coverage_partial(self, built_dev_site):
+        html = (built_dev_site / 'dist' / 'index.html').read_text()
+        assert 'easy reading by people and LLMs' in html
+        assert not (built_dev_site / 'dist' / '_coverage.html').exists()
 
 
 class TestPageMetadataText:

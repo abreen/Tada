@@ -85,7 +85,7 @@ A static site generator. The successor to Presto.
 
 ### Experimental features
 
-- Interactive execution traces via `renderTrace()`
+- Interactive execution traces via fenced `trace` code blocks
   * Supports Java and Python source files
   * Renders step-by-step source highlighting, output, and memory diagrams
 
@@ -109,7 +109,7 @@ A static site generator. The successor to Presto.
 > pages. You can also turn off `features.search` in the config to disable
 > search entirely.
 
-If you plan to use `renderTrace()` to generate traces of Java or Python code,
+If you plan to use trace blocks to generate traces of Java or Python code,
 the appropriate compiler/interpreter must be installed.
 
 ## Installation
@@ -336,7 +336,7 @@ vars:
 | `scripts` | *Optional*, list of scripts in `src/` that every page loads (see [Scripts](#scripts)) |
 | `faviconColor` | *Optional*, background color for generated favicons (defaults to `themeColor`) |
 | `faviconFontWeight` | *Optional*, font weight used for generated favicon text (default `700`) |
-| `vars` | Arbitrary key/value variables exposed to templates/content as `vars.*` (e.g., `<%= vars.staffEmail %>`) |
+| `vars` | Arbitrary key/value variables inserted into content with `{{ name }}` (e.g., `{{ staffEmail }}`) |
 
 ### Custom logo and favicon
 
@@ -434,8 +434,8 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
 | `scripts` | Scripts in `src/` to compile and run on this page (see [Scripts](#scripts)) |
 
-You may also add arbitrary fields in a page's front matter, and access them
-using Lodash syntax (see below).
+Other fields are ignored with a warning. To reuse a value across pages, add it
+to `vars` in the site config instead (see below).
 
 ### Scripts
 
@@ -473,13 +473,22 @@ builds don't need it. The starter site's Lectures page is an example.
 
 ### Variable substitution
 
-Plain text content (e.g., HTML and Markdown) are processed using [Lodash
-templates][lodash].
+Use `{{ name }}` to insert a variable from the `vars` property of the site
+config, or `{{ a.b }}` for a nested value:
 
-- Site config values are available under `site` (e.g., `site.title`)
-- Page variables (from front matter) are available under `page`
-- Custom variables from the `"vars"` property of the config are available
-  under `vars` (e.g., `<%= vars.staffEmail %>`)
+```
+Email the course staff at {{ staffEmail }}.
+```
+
+Variables are replaced everywhere in Markdown and HTML pages, partials, front
+matter values, `nav` and `authors` config values, and source code files whose
+extension is listed in `extensionToShikiLanguage`, including inside code
+blocks. Referencing an undefined variable fails the build. When a code sample
+needs literal double braces (Vue, Jinja, Python f-strings), write `\{{ name }}`.
+In YAML, quote a value that starts with a variable: `title: "{{ courseName }}"`.
+
+Only `vars` is available. Other config fields (like `title`) and front matter
+fields can't be inserted, and there are no conditionals or loops.
 
 ### Markdown partials
 
@@ -528,7 +537,6 @@ which results in:
 
 
 [inter]: https://fonts.google.com/specimen/Inter
-[lodash]: https://lodash.info/doc/template
 [front-matter]: https://www.npmjs.com/package/front-matter
 [pagefind]: https://pagefind.app/
 [jep467]: https://openjdk.org/jeps/467

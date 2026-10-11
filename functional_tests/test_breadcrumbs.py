@@ -18,7 +18,7 @@ class TestBreadcrumbs:
             'breadcrumbs:\n'
             '  - label: "Home & <Notes>"\n'
             '    url: /index.html?view=full#intro\n'
-            '  - label: "<%= site.title %> lectures"\n'
+            '  - label: "{{ courseName }} lectures"\n'
             '    url: ./index.html\n'
         )
         (lectures / 'first.md').write_text(f'---\n{trail}---\n\nContent.\n')
@@ -28,7 +28,7 @@ class TestBreadcrumbs:
 
     @pytest.mark.parametrize('base_path', ['/', '/course'])
     def test_ordered_trails_and_url_rewriting(self, site_dir, base_path):
-        set_site_config(site_dir, {'basePath': base_path, 'title': 'Course'})
+        set_site_config(site_dir, {'basePath': base_path, 'vars': {'courseName': 'Course'}})
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode == 0, result.stdout + result.stderr
         for name in ['first.html', 'second.html']:

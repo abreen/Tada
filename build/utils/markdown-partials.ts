@@ -1,11 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { compileTemplate } from '../lodash-template';
+import { substituteContent } from '../variables';
 import type MarkdownIt from 'markdown-it';
 import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
 import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
 import { extensionIsMarkdown, isPartial } from './file-types';
-import { stripHtmlComments } from './html-comments';
 import type { RenderDependencyCollector } from '../types';
 
 const MAX_INCLUDE_DEPTH = 10;
@@ -25,7 +24,7 @@ interface MarkdownPartialsEnv {
 
 interface MarkdownPartialsOptions {
   filePath: string;
-  templateParams: Record<string, unknown>;
+  vars: Record<string, unknown>;
   preserveHtmlComments?: boolean;
   dependencyCollector?: RenderDependencyCollector;
 }
@@ -77,20 +76,15 @@ function renderPartialContent(
     );
   }
 
-  const raw = fs.readFileSync(resolvedPath, 'utf-8');
-  const content = options.preserveHtmlComments ? raw : stripHtmlComments(raw);
-
-  try {
-    return {
+  return {
+    resolvedPath,
+    content: substituteContent(
+      fs.readFileSync(resolvedPath, 'utf-8'),
+      options.vars,
       resolvedPath,
-      content: compileTemplate(content)(options.templateParams),
-    };
-  } catch (err) {
-    throw new Error(
-      `${resolvedPath}: Lodash template error in partial: ${(err as Error).message}`,
-      { cause: err },
-    );
-  }
+      options.preserveHtmlComments,
+    ),
+  };
 }
 
 function tokenizePartialContent(

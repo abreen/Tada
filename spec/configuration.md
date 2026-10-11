@@ -82,7 +82,8 @@ Generated development and production site configs explicitly include
 - **scripts**: optional list of scripts in `src/` that every page loads,
   before the scripts a page lists in its front matter; see
   [Author Scripts](author-scripts.md)
-- **vars**: arbitrary key-value pairs accessible in templates as `vars.*`
+- **vars**: arbitrary key-value pairs inserted into author content with
+  `{{ name }}` (see [Site Variables](variables.md))
 
 ## Custom serif fonts
 

@@ -12,14 +12,12 @@ export function parseFrontMatterAndContent(
   ext: string,
 ): ParsedContent {
   const { frontMatter, content } = parseFrontMatter(raw, ext);
+  return { pageVariables: parseFrontMatterYaml(frontMatter ?? ''), content };
+}
 
+export function parseFrontMatterYaml(text: string): Record<string, unknown> {
   // Add delimiters to satisfy the front-matter library
-  const result = fm(`---\n${frontMatter}\n---\n`);
-
-  return {
-    pageVariables: result.attributes as Record<string, unknown>,
-    content,
-  };
+  return fm(`---\n${text}\n---\n`).attributes as Record<string, unknown>;
 }
 
 function parseFrontMatterPlainText(rawContent: string): RawParsedFrontMatter {

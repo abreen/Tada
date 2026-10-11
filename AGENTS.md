@@ -87,5 +87,5 @@ The pre-commit hook runs the code formatter. Do not run formatting commands manu
 
 ## Security threat model
 
-When generating a site, the author's content is trusted. Authors can write raw HTML/JavaScript on their pages and use Lodash expressions in content, front matter, and configuration files.
+When generating a site, the author's content is trusted. Authors can write raw HTML/JavaScript on their pages and insert `{{ name }}` site variables in content, front matter, and configuration files. Lodash is only used by Tada's internal templates.
 Do not report security problems that assume an author is a malicious actor.

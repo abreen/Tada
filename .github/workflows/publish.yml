@@ -220,7 +220,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y mupdf-tools openjdk-25-jdk-headless yq
+        sudo apt-get install -y mupdf-tools openjdk-25-jdk-headless
 
     - name: Set up Java 25
       run: |
@@ -256,12 +256,17 @@ jobs:
         --prod-base https://abreen.io
         --prod-base-path /Tada
 
-    - name: Customize production site config
+    - name: Add test coverage to the home page
+      env:
+        COVERAGE_PERCENT: ${{ steps.coverage.outputs.percent }}
       run: |
-        yq --yaml-output --in-place --arg pct '${{ steps.coverage.outputs.percent }}' '
-          .vars.testCoveragePercent = ($pct | tonumber) |
-          .vars.testCoverageUrl = "/coverage/index.html"
-        ' example/site.prod.yaml
+        cat > example/content/_coverage.md <<EOF
+        - ${COVERAGE_PERCENT}% of Tada's code is covered by
+          automated tests (unit tests, [Playwright](https://playwright.dev/) browser
+          tests, and functional, black-box tests which exercise functionality using the
+          CLI). See [the test coverage metrics](/coverage/index.html).
+        EOF
+        cat init/content/_coverage.md >> example/content/_coverage.md
 
     - name: Copy coverage report into public
       run: cp -r coverage/report/ example/public/coverage/

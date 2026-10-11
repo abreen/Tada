@@ -1,7 +1,7 @@
 #
 # rectangle.py
 #
-# Here's vars.foobar: <%= vars.foobar %>
+# Here's the foobar site variable: {{ foobar }}
 #
 class Rectangle:
     """A rectangle with integer side lengths.

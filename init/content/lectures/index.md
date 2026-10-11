@@ -1,7 +1,7 @@
 ---
 title: Lectures
 author: alex
-description: An example page for <%= site.title %>.
+description: An example page listing lectures.
 scripts: [lectures/timezone.ts]
 ---
 

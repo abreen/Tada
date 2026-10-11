@@ -18,7 +18,9 @@ Selection sort is a well-known comparison-based sorting algorithm.
 
 ---
 
-<%= renderTrace('selection_sort.py') %>
+```trace
+selection_sort.py
+```
 
 ---
 

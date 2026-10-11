@@ -50,16 +50,15 @@ Links to code files elsewhere on the site are automatically rewritten to point
 to the generated HTML page instead of the raw source file
 (see [Link Processing](link-processing.md)).
 
-## Template substitution
+## Variable substitution
 
-Mapped source code files are run through the Lodash template engine before the
-code page is rendered and before the downloadable copy is written. Template
-holes use the same `<%= %>`, `<% %>`, and `<%- %>` delimiters as the rest of
-Tada and have access to `vars` and `site`. This lets authors interpolate site
-configuration values directly into their source code, for example a course name
-embedded in a header comment. ES template literal syntax such as `${HOME}` is
-literal text, so shell, JavaScript, and Kotlin sources that use it render and
-download unchanged.
+[Site variables](variables.md) (`{{ name }}`) in mapped source code files are
+substituted anywhere in the file, code and comments alike, before the code page
+is rendered and before the downloadable copy is written. This lets authors
+insert site configuration values directly into their source code, for example a
+course name embedded in a header comment. Double braces that belong to the
+code, such as a Python f-string's `{{x}}`, are escaped with a backslash. ES
+template literal syntax such as `${HOME}` is literal text.
 
 Substitution runs before Java prose link rewriting, so an interpolated value
 may contain a Markdown link that is then rewritten to a full URL as usual.

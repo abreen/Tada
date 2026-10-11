@@ -2,9 +2,14 @@ import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import path from 'path';
 import { createFsModuleMock } from '../test-helpers';
 import type { TraceCache } from '../build-types';
+import type { SiteVariables } from '../types';
 
 const files = new Map<string, string>();
-const fileMtims = new Map<string, number>();
+
+const siteVariables = {
+  vars: { courseName: 'Intro to CS' },
+  extensionToShikiLanguage: { java: 'java', py: 'python' },
+} as unknown as SiteVariables;
 
 const fsMock = {
   existsSync(filePath: string) {
@@ -17,24 +22,10 @@ const fsMock = {
     }
     return content;
   },
-  statSync(filePath: string, options?: { throwIfNoEntry?: boolean }) {
-    const resolved = path.resolve(filePath);
-    if (!files.has(resolved)) {
-      if (options?.throwIfNoEntry === false) {
-        return undefined;
-      }
-      throw new Error(`Missing file: ${filePath}`);
-    }
-    return { mtimeMs: fileMtims.get(resolved) ?? 1 };
-  },
   mkdtempSync(prefix: string) {
     return `${prefix}mock`;
   },
-  copyFileSync(sourcePath: string, targetPath: string) {
-    const content = files.get(path.resolve(sourcePath));
-    if (content === undefined) {
-      throw new Error(`Missing file: ${sourcePath}`);
-    }
+  writeFileSync(targetPath: string, content: string) {
     files.set(path.resolve(targetPath), content);
   },
   rmSync() {},
@@ -42,30 +33,35 @@ const fsMock = {
 
 mock.module('fs', () => createFsModuleMock(fsMock));
 
+function htmlText(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#x27;', "'")
+    .replaceAll('&amp;', '&');
+}
+
 let bridgeConstructorReturnValues: typeof import('./trace-core').bridgeConstructorReturnValues;
 let renderTraceWidgetHtml: typeof import('./trace-core').renderTraceWidgetHtml;
 let createTraceHelpers: typeof import('./trace').createTraceHelpers;
-let isTraceSourceFile: typeof import('./trace').isTraceSourceFile;
+let traceSourceHash: typeof import('./trace').traceSourceHash;
 let parseIgnoreFields: typeof import('./trace-java').parseIgnoreFields;
 let hasExplicitTopLevelTypeDeclaration: typeof import('./trace-java').hasExplicitTopLevelTypeDeclaration;
 
 beforeAll(async () => {
   ({ bridgeConstructorReturnValues, renderTraceWidgetHtml } =
     await import('./trace-core'));
-  ({ createTraceHelpers, isTraceSourceFile } = await import('./trace'));
+  ({ createTraceHelpers, traceSourceHash } = await import('./trace'));
   ({ parseIgnoreFields, hasExplicitTopLevelTypeDeclaration } =
     await import('./trace-java'));
 });
 
 beforeEach(() => {
   files.clear();
-  fileMtims.clear();
 });
 
-function writeVirtualFile(filePath: string, content: string, mtime = 1): void {
-  const resolved = path.resolve(filePath);
-  files.set(resolved, content);
-  fileMtims.set(resolved, mtime);
+function writeVirtualFile(filePath: string, content: string): void {
+  files.set(path.resolve(filePath), content);
 }
 
 describe('traces', () => {
@@ -204,27 +200,6 @@ public class Demo {
     expect(steps[1].heap).not.toHaveProperty('obj_1');
   });
 
-  test('treats only .java and .py files as trace sources', () => {
-    expect(isTraceSourceFile('/tmp/TraceDemo.java')).toBe(true);
-    expect(isTraceSourceFile('/tmp/trace_demo.py')).toBe(true);
-    expect(isTraceSourceFile('/tmp/index.md')).toBe(false);
-  });
-
-  test('renderTrace requires companionFiles to be an array', () => {
-    writeVirtualFile('/site/content/labs/Main.java', 'class Main {}');
-    const helpers = createTraceHelpers({
-      filePath: '/site/content/labs/index.md',
-      contentDir: '/site/content',
-      applyBasePath: value => value,
-      cache: new Map(),
-      toolAvailability: { java: false, python: false },
-    });
-
-    expect(() =>
-      helpers.renderTrace('Main.java', 'Helper.java' as unknown as string[]),
-    ).toThrow('companionFiles must be an array');
-  });
-
   test('renderTrace rejects companion files with different extensions', () => {
     writeVirtualFile('/site/content/labs/Main.java', 'class Main {}');
     writeVirtualFile('/site/content/labs/helper.py', 'value = 1');
@@ -232,6 +207,7 @@ public class Demo {
       filePath: '/site/content/labs/index.md',
       contentDir: '/site/content',
       applyBasePath: value => value,
+      siteVariables,
       cache: new Map(),
       toolAvailability: { java: false, python: false },
     });
@@ -248,6 +224,7 @@ public class Demo {
       filePath: '/site/content/labs/index.md',
       contentDir: '/site/content',
       applyBasePath: value => value,
+      siteVariables,
       cache: new Map(),
       toolAvailability: { java: false, python: false },
     });
@@ -267,6 +244,7 @@ public class Demo {
       filePath: '/site/content/labs/index.md',
       contentDir: '/site/content',
       applyBasePath: value => value,
+      siteVariables,
       cache: new Map(),
       toolAvailability: { java: false, python: false },
       dependencyCollector: { traceFiles },
@@ -279,7 +257,7 @@ public class Demo {
 
   test('renderTrace re-emits cached trace files under each page directory', () => {
     const primary = path.resolve('/site/content/shared/Main.java');
-    writeVirtualFile(primary, 'class Main {}', 7);
+    writeVirtualFile(primary, 'class Main {}');
     const cache: TraceCache = new Map([
       [
         JSON.stringify([primary]),
@@ -293,7 +271,8 @@ public class Demo {
             { file: 'Main.java', highlightedSource: '<pre>Main</pre>' },
           ],
           totalSteps: 1,
-          sourceMtims: { [primary]: 7 },
+          sourcePaths: [primary],
+          sourceHash: traceSourceHash([{ source: 'class Main {}' }]),
         },
       ],
     ]);
@@ -307,6 +286,7 @@ public class Demo {
         filePath: page,
         contentDir: '/site/content',
         applyBasePath: value => value,
+        siteVariables,
         cache,
         toolAvailability: { java: true, python: true },
         dependencyCollector: { traceOutputs },
@@ -325,6 +305,99 @@ public class Demo {
         ]),
       );
     }
+  });
+
+  test('renderTrace substitutes variables in traced files', () => {
+    writeVirtualFile(
+      '/site/content/labs/demo.py',
+      '# For {{ courseName }}\nname = "{{ courseName }}"\nf"\\{{x}}"\n',
+    );
+    const helpers = createTraceHelpers({
+      filePath: '/site/content/labs/index.md',
+      contentDir: '/site/content',
+      applyBasePath: value => value,
+      cache: new Map(),
+      toolAvailability: { java: false, python: false },
+      siteVariables,
+    });
+
+    const text = htmlText(helpers.renderTrace('demo.py'));
+    expect(text).toContain('# For Intro to CS');
+    expect(text).toContain('name = "Intro to CS"');
+    expect(text).toContain('f"{{x}}"');
+  });
+
+  test('renderTrace leaves unmapped traced files unprocessed', () => {
+    writeVirtualFile(
+      '/site/content/labs/demo.py',
+      'name = "{{ courseName }}"\nf"{{x}}"\n',
+    );
+    const helpers = createTraceHelpers({
+      filePath: '/site/content/labs/index.md',
+      contentDir: '/site/content',
+      applyBasePath: value => value,
+      cache: new Map(),
+      toolAvailability: { java: false, python: false },
+      siteVariables: {
+        ...siteVariables,
+        extensionToShikiLanguage: { java: 'java' },
+      },
+    });
+
+    const text = htmlText(helpers.renderTrace('demo.py'));
+    expect(text).toContain('name = "{{ courseName }}"');
+    expect(text).toContain('f"{{x}}"');
+  });
+
+  test('renderTrace leaves traced files outside the content directory unprocessed', () => {
+    writeVirtualFile('/site/public/demo.py', 'name = "{{ courseName }}"\n');
+    const helpers = createTraceHelpers({
+      filePath: '/site/content/labs/index.md',
+      contentDir: '/site/content',
+      applyBasePath: value => value,
+      siteVariables,
+      cache: new Map(),
+      toolAvailability: { java: false, python: false },
+    });
+
+    const text = htmlText(helpers.renderTrace('../../public/demo.py'));
+    expect(text).toContain('name = "{{ courseName }}"');
+  });
+
+  test('renderTrace reuses a cached trace while the source text is unchanged', () => {
+    const primary = path.resolve('/site/content/labs/Main.java');
+    writeVirtualFile(primary, 'class Main {}');
+    const cache: TraceCache = new Map([
+      [
+        JSON.stringify([primary]),
+        {
+          artifactId: 'sha256-cached',
+          files: [{ name: 'manifest.json', content: '{"totalSteps":1}' }],
+          highlightedSources: [
+            { file: 'Main.java', highlightedSource: '<pre>Main</pre>' },
+          ],
+          totalSteps: 1,
+          sourcePaths: [primary],
+          sourceHash: traceSourceHash([{ source: 'class Main {}' }]),
+        },
+      ],
+    ]);
+    const helpers = createTraceHelpers({
+      filePath: '/site/content/labs/index.md',
+      contentDir: '/site/content',
+      applyBasePath: value => value,
+      siteVariables,
+      cache,
+      toolAvailability: { java: true, python: true },
+    });
+
+    expect(helpers.renderTrace('Main.java')).toContain('sha256-cached');
+  });
+
+  test('traceSourceHash changes when substituted text changes', () => {
+    expect(traceSourceHash([{ source: 'a' }])).not.toBe(
+      traceSourceHash([{ source: 'b' }]),
+    );
   });
 
   test('rendered widget omits output block until the client has output', () => {

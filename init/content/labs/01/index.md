@@ -4,7 +4,7 @@ breadcrumbs:
     url: /labs/index.html
 title: Lab 1
 author: alex
-description: A lab page for <%= site.title %> demonstrating the trace feature.
+description: A lab page demonstrating the trace feature.
 ---
 
 In this lab, we'll examine memory diagrams.
@@ -13,13 +13,17 @@ In this lab, we'll examine memory diagrams.
 
 A simple program with an array, recursion, and a string.
 
-<%= renderTrace('TraceDemo.java') %>
+```trace
+TraceDemo.java
+```
 
 ### Python version
 
 Here's a similar trace, but of a Python script:
 
-<%= renderTrace('trace_demo.py') %>
+```trace
+trace_demo.py
+```
 
 ## Binary search tree
 
@@ -33,4 +37,6 @@ the nodes as a standard binary tree. Without the hint, the parent references
 confuse the algorithm and lead to a more awkward layout.
 !!!
 
-<%= renderTrace('SearchTreeDemo.java') %>
+```trace
+SearchTreeDemo.java
+```

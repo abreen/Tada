@@ -13,6 +13,11 @@ export function getProjectDir(): string {
   return globals.cwd();
 }
 
+/** A path relative to the project directory, for messages */
+export function toDisplayPath(filePath: string): string {
+  return toPosix(path.relative(getProjectDir(), filePath));
+}
+
 export function getContentDir(): string {
   return path.resolve(getProjectDir(), 'content');
 }
