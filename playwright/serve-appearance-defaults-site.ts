@@ -60,18 +60,23 @@ writeFileSync(
 );
 
 const configPath = path.join(siteDir, 'site.dev.yaml');
-const config = readFileSync(configPath, 'utf-8')
-  .replace('basePath: /', 'basePath: /custom')
-  .replace('defaultFont: sans', 'defaultFont: serif')
-  .replace('defaultContrast: standard', 'defaultContrast: high')
-  .replace(
-    'extensionToShikiLanguage: \n  {}',
-    'extensionToShikiLanguage:\n  py: python',
-  )
-  .replace('shikiLanguages: \n  []', 'shikiLanguages:\n  - python');
+// Edit the parsed config rather than its text so the edits do not depend on
+// how Bun.YAML.stringify formats the file written by `tada init`
+const config = Bun.YAML.stringify(
+  {
+    ...(Bun.YAML.parse(readFileSync(configPath, 'utf-8')) as object),
+    basePath: '/custom',
+    defaultFont: 'serif',
+    defaultContrast: 'high',
+    extensionToShikiLanguage: { py: 'python' },
+    shikiLanguages: ['python'],
+  },
+  null,
+  2,
+);
 writeFileSync(
   configPath,
-  `${config}${installCustomFontFixtures(repoDir, siteDir)}\nlogo: logo.svg\nbanner: Layout test banner\n`,
+  `${config}\n${installCustomFontFixtures(repoDir, siteDir)}\nlogo: logo.svg\nbanner: Layout test banner\n`,
 );
 writeFileSync(
   path.join(siteDir, 'content', 'index.md'),
