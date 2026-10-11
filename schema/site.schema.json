@@ -77,6 +77,7 @@
       },
       "additionalProperties": false
     },
+    "scripts": { "type": "array", "items": { "type": "string" } },
     "vars": { "type": "object" },
     "extensionToShikiLanguage": {
       "type": "object",

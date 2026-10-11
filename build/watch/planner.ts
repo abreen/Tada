@@ -1,6 +1,13 @@
 import path from 'path';
-import type { SourceEntry, TadaProjectScan } from '../source-model';
+import {
+  PAGE_RENDER_KINDS,
+  type SourceEntry,
+  type TadaProjectScan,
+} from '../source-model';
 import type { TadaSnapshot } from '../site-build';
+import type { AuthorScriptOutputs, AuthorScripts } from '../author-scripts';
+import type { SiteVariables } from '../types';
+import { isInside } from '../utils/paths';
 
 export interface TadaIncrementalWatchPlan {
   kind: 'incremental';
@@ -21,7 +28,8 @@ function sameSourceEntry(a: SourceEntry, b: SourceEntry | undefined): boolean {
     a.kind === b.kind &&
     a.renderKind === b.renderKind &&
     sameItems(a.outputs, b.outputs) &&
-    sameItems(a.targets, b.targets)
+    sameItems(a.targets, b.targets) &&
+    JSON.stringify(a.scripts) === JSON.stringify(b.scripts)
   );
 }
 
@@ -123,4 +131,68 @@ export function createTadaWatchPlan({
     }
   }
   return { kind: 'incremental', scan, renderSources, removeSources };
+}
+
+/**
+ * Pages to re-render after `src/` was recompiled: those that list a script
+ * whose outputs were added, removed, or renamed. A changed site-wide script
+ * affects every page.
+ */
+export function getScriptDependentSources(
+  scan: TadaProjectScan,
+  siteVariables: SiteVariables,
+  previous: ReadonlyMap<string, AuthorScriptOutputs>,
+  next: ReadonlyMap<string, AuthorScriptOutputs>,
+): Set<string> {
+  const changed = new Set(
+    [...previous.keys(), ...next.keys()].filter(
+      script =>
+        JSON.stringify(previous.get(script)) !==
+        JSON.stringify(next.get(script)),
+    ),
+  );
+  const everyPage = (siteVariables.scripts ?? []).some(script =>
+    changed.has(script),
+  );
+  const sources = new Set<string>();
+  for (const [source, entry] of scan.sources) {
+    if (!PAGE_RENDER_KINDS.has(entry.renderKind)) {
+      continue;
+    }
+    if (
+      everyPage ||
+      (Array.isArray(entry.scripts) &&
+        entry.scripts.some(script => changed.has(script)))
+    ) {
+      sources.add(source);
+    }
+  }
+  return sources;
+}
+
+/**
+ * Whether watch mode must recompile the scripts in `src/`: after any change
+ * there, since imports such as Sass partials are not tracked one by one, or
+ * when the site config and pages list different scripts than last time.
+ */
+export function shouldRecompileScripts({
+  paths,
+  srcDir,
+  scripts,
+  compiled,
+}: {
+  paths: ReadonlySet<string>;
+  srcDir: string;
+  scripts: readonly string[];
+  compiled: AuthorScripts;
+}): boolean {
+  const srcChanged = [...paths].some(
+    changed => changed === srcDir || isInside(srcDir, changed),
+  );
+  const requested = new Set(compiled.requested);
+  return (
+    srcChanged ||
+    scripts.length !== requested.size ||
+    scripts.some(script => !requested.has(script))
+  );
 }

@@ -1,0 +1,19 @@
+// Styles for the time zone chooser. Tada compiles Sass imported by a script
+// and adds it to the pages that list the script. Use Tada's CSS custom
+// properties, such as --fg-color and --theme-color, to match the site theme.
+
+.time-zone-chooser select {
+  font: inherit;
+  color: var(--fg-color);
+  accent-color: var(--theme-color);
+}
+
+time[title] {
+  text-decoration: underline dotted;
+}
+
+@media print {
+  .time-zone-chooser {
+    display: none;
+  }
+}

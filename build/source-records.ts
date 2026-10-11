@@ -15,6 +15,7 @@ import type {
   TraceToolAvailability,
 } from './types';
 import type { TadaProjectScan } from './source-model';
+import type { AuthorScripts } from './author-scripts';
 
 import type { TraceCache } from './build-types';
 
@@ -89,6 +90,7 @@ export function createContentRecord({
   siteVariables,
   scan,
   assetFiles,
+  authorScripts,
   isWatchMode,
   traceCache,
   traceToolAvailability,
@@ -98,6 +100,7 @@ export function createContentRecord({
   siteVariables: SiteVariables;
   scan: TadaProjectScan;
   assetFiles: string[];
+  authorScripts: AuthorScripts;
   isWatchMode: boolean;
   traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
@@ -119,6 +122,7 @@ export function createContentRecord({
           contentDir: scan.contentDir,
           siteVariables,
           assetFiles,
+          authorScripts,
           isWatchMode,
           skipExecution: skipLiterateJavaExecution,
           validInternalTargets: scan.validTargets,
@@ -139,6 +143,7 @@ export function createContentRecord({
           generatedPageTargets: scan.generatedPageTargets,
           codePageSourceTargets: scan.codePageSourceTargets,
           assetFiles,
+          authorScripts,
           isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
@@ -157,6 +162,7 @@ export function createContentRecord({
           generatedPageTargets: scan.generatedPageTargets,
           codePageSourceTargets: scan.codePageSourceTargets,
           assetFiles,
+          authorScripts,
           isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,

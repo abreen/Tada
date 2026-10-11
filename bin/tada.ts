@@ -420,15 +420,14 @@ async function initCommand(args: string[]): Promise<void> {
       }),
     );
 
-    // Copy content/ and public/ from the package
-    copyDirRecursive(
-      path.join(packageDir, 'init/content'),
-      path.join(projectDir, 'content'),
-    );
-    copyDirRecursive(
-      path.join(packageDir, 'init/public'),
-      path.join(projectDir, 'public'),
-    );
+    // Copy content/, public/, and src/ from the package
+    for (const dir of ['content', 'public', 'src']) {
+      copyDirRecursive(
+        path.join(packageDir, 'init', dir),
+        path.join(projectDir, dir),
+      );
+    }
+    writeScriptTooling(projectDir);
   }
 
   console.log(`\nGenerated a new site in ${projectDir}`);
@@ -436,6 +435,38 @@ async function initCommand(args: string[]): Promise<void> {
   console.log(`  cd ${dirname}`);
   console.log(`  tada dev`);
   console.log(`  tada serve`);
+}
+
+// Lets editors type-check scripts in src/ against `@abreen/tada` after
+// `bun install`. Builds don't need it: type imports are removed when compiling.
+function writeScriptTooling(projectDir: string): void {
+  const packageManifest = {
+    private: true,
+    devDependencies: { '@abreen/tada': packageJson.version },
+  };
+  const tsconfig = {
+    compilerOptions: {
+      target: 'ESNext',
+      lib: ['ESNext', 'DOM', 'DOM.Iterable'],
+      module: 'ESNext',
+      moduleResolution: 'bundler',
+      verbatimModuleSyntax: true,
+      // Tada compiles imported .scss and .css files, not TypeScript
+      noUncheckedSideEffectImports: false,
+      strict: true,
+      noEmit: true,
+      skipLibCheck: true,
+    },
+    include: ['src'],
+  };
+  fs.writeFileSync(
+    path.join(projectDir, 'package.json'),
+    JSON.stringify(packageManifest, null, 2) + '\n',
+  );
+  fs.writeFileSync(
+    path.join(projectDir, 'tsconfig.json'),
+    JSON.stringify(tsconfig, null, 2) + '\n',
+  );
 }
 
 function cleanCommand(args: string[]): void {

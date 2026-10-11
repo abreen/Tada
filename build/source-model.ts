@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parseFrontMatterAndContent } from './utils/front-matter';
+import { collectScriptEntries } from './author-scripts';
 import { getExtensionToShikiLanguage } from './site-variables';
 import {
   extensionIsMarkdown,
@@ -25,11 +26,20 @@ export type TadaSourceRenderKind =
   | 'content-copy'
   | 'public-copy';
 
+/** Render kinds that produce a page */
+export const PAGE_RENDER_KINDS: ReadonlySet<TadaSourceRenderKind> = new Set([
+  'plain-text-page',
+  'code-page',
+  'literate-java',
+]);
+
 export interface SourceEntry {
   readonly kind: 'content' | 'public';
   readonly renderKind: TadaSourceRenderKind;
   readonly outputs: ReadonlySet<string>;
   readonly targets: ReadonlySet<string>;
+  /** A page's front matter `scripts` value, as written */
+  readonly scripts?: unknown;
 }
 
 export interface TadaProjectScan {
@@ -54,10 +64,7 @@ export function* sourcePaths(
     if (kind && entry.kind !== kind) {
       continue;
     }
-    if (
-      pagesOnly &&
-      ['skip', 'content-copy', 'public-copy'].includes(entry.renderKind)
-    ) {
+    if (pagesOnly && !PAGE_RENDER_KINDS.has(entry.renderKind)) {
       continue;
     }
     yield filePath;
@@ -102,9 +109,14 @@ function createSourceEntry(
     buildContent,
   );
   const rootDir = kind === 'content' ? scan.contentDir : scan.publicDir;
+  const scripts =
+    renderKind === 'plain-text-page' || renderKind === 'literate-java'
+      ? readFrontMatterSummary(filePath).scripts
+      : undefined;
   return {
     kind,
     renderKind,
+    ...(scripts === undefined ? {} : { scripts }),
     outputs:
       kind === 'public'
         ? new Set([toPosix(path.relative(rootDir, filePath))])
@@ -143,11 +155,7 @@ export function indexSources(
       }
       outputProducers.get(output)!.add(filePath);
     }
-    if (
-      ['plain-text-page', 'code-page', 'literate-java'].includes(
-        entry.renderKind,
-      )
-    ) {
+    if (PAGE_RENDER_KINDS.has(entry.renderKind)) {
       for (const output of entry.outputs) {
         if (output.endsWith('.html')) {
           addGeneratedRouteAliases(generatedPageTargets, `/${output}`);
@@ -201,6 +209,17 @@ export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
   return indexSources(roots, sources);
 }
 
+/** Every well-formed script path the site config or a page lists */
+export function getScriptEntries(
+  scan: TadaProjectScan,
+  siteVariables: SiteVariables,
+): string[] {
+  return collectScriptEntries(
+    siteVariables.scripts,
+    [...scan.sources.values()].map(entry => entry.scripts),
+  );
+}
+
 export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
   return [...scan.outputProducers]
     .filter(([, producers]) => producers.size > 1)
@@ -208,34 +227,47 @@ export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
     .sort();
 }
 
-// Front matter `skip` results, reused while a file's size and modification
-// time are unchanged, so watch rescans read only edited pages.
-const skipCache = new Map<
+interface FrontMatterSummary {
+  skip: boolean;
+  scripts?: unknown;
+}
+
+// Front matter fields the scan needs, reused while a file's size and
+// modification time are unchanged, so watch rescans read only edited pages.
+const frontMatterCache = new Map<
   string,
-  { size: number; mtimeMs: number; skip: boolean }
+  { size: number; mtimeMs: number; summary: FrontMatterSummary }
 >();
 
-export function shouldSkipContentFile(filePath: string): boolean {
+function readFrontMatterSummary(filePath: string): FrontMatterSummary {
   const ext = path.extname(filePath).toLowerCase();
   if (!(extensionIsMarkdown(ext) || ext === '.html')) {
-    return false;
+    return { skip: false };
   }
 
   const { size, mtimeMs } = fs.statSync(filePath);
-  const cached = skipCache.get(filePath);
+  const cached = frontMatterCache.get(filePath);
   if (cached && cached.size === size && cached.mtimeMs === mtimeMs) {
-    return cached.skip;
+    return cached.summary;
   }
 
   const raw = fs.readFileSync(filePath, 'utf-8');
-  let skip = false;
+  let summary: FrontMatterSummary = { skip: false };
   try {
-    skip = parseFrontMatterAndContent(raw, ext).pageVariables?.skip === true;
+    const { pageVariables } = parseFrontMatterAndContent(raw, ext);
+    summary = {
+      skip: pageVariables?.skip === true,
+      scripts: pageVariables?.scripts,
+    };
   } catch {
     // Not skipped: rendering the page reports the error for this file.
   }
-  skipCache.set(filePath, { size, mtimeMs, skip });
-  return skip;
+  frontMatterCache.set(filePath, { size, mtimeMs, summary });
+  return summary;
+}
+
+export function shouldSkipContentFile(filePath: string): boolean {
+  return readFrontMatterSummary(filePath).skip;
 }
 
 export function getProcessedExts(codeExtensions: string[]): Set<string> {

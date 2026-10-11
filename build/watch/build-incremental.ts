@@ -8,17 +8,21 @@ import {
 } from '../site-build';
 import type { TraceCache } from '../build-types';
 import type { TraceToolAvailability } from '../types';
+import type { AuthorScripts } from '../author-scripts';
 import type { TadaIncrementalWatchPlan } from './planner';
 import type { CompileOutcome } from './types';
 
 export async function buildIncremental({
   plan,
   snapshot,
+  authorScripts = snapshot.authorScripts,
   traceCache,
   traceToolAvailability,
 }: {
   plan: TadaIncrementalWatchPlan;
   snapshot: TadaSnapshot;
+  /** Recompiled `src/` scripts; the snapshot's if `src/` didn't change */
+  authorScripts?: AuthorScripts;
   traceCache: TraceCache;
   traceToolAvailability: TraceToolAvailability;
 }): Promise<CompileOutcome> {
@@ -39,6 +43,7 @@ export async function buildIncremental({
     siteVariables,
     scan: plan.scan,
     assetFiles: snapshot.assetFiles,
+    authorScripts,
     isWatchMode: true,
     traceCache,
     traceToolAvailability,
@@ -52,6 +57,7 @@ export async function buildIncremental({
     scan: plan.scan,
     assetFiles: snapshot.assetFiles,
     generatedOutputs: snapshot.generatedOutputs,
+    authorScripts,
     records,
     diagnostics: rendered.diagnostics,
   });

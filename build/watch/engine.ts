@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import chokidar from 'chokidar';
+import { isInside } from '../utils/paths';
 import type {
   WatchBuildResult,
   WatchClock,
@@ -92,16 +93,6 @@ export function runWatchEngine<Meta>(
       }
       throw error;
     }
-  }
-
-  function isInside(root: string, filePath: string): boolean {
-    const relative = path.relative(root, filePath);
-    return (
-      relative !== '' &&
-      relative !== '..' &&
-      !relative.startsWith(`..${path.sep}`) &&
-      !path.isAbsolute(relative)
-    );
   }
 
   /**

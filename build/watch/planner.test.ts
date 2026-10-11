@@ -1,6 +1,12 @@
 import path from 'path';
-import { expect, test } from 'bun:test';
-import { createTadaWatchPlan, diffAuthorKeys } from './planner';
+import { createEmptyAuthorScripts } from '../author-scripts';
+import { describe, expect, test } from 'bun:test';
+import {
+  createTadaWatchPlan,
+  diffAuthorKeys,
+  getScriptDependentSources,
+  shouldRecompileScripts,
+} from './planner';
 import { indexSources, type SourceEntry } from '../source-model';
 import { createSnapshot, type TadaSnapshot } from '../site-build';
 import type { TadaSourceRecord } from '../source-records';
@@ -58,6 +64,7 @@ function snapshot(records: TadaSourceRecord[]) {
   return createSnapshot({
     siteVariables,
     assetFiles: [],
+    authorScripts: createEmptyAuthorScripts(),
     authorsData: {},
     scan: scan(records),
     records: new Map(
@@ -251,4 +258,176 @@ test('route ownership changes invalidate links even when the pathname stays vali
       inbound.sourcePath,
     ),
   ).toBe(true);
+});
+
+describe('getScriptDependentSources', () => {
+  const pages = indexSources(
+    {
+      contentDir: source('content'),
+      publicDir: source('public'),
+      distDir: source('dist'),
+      processedExts: new Set(['md', 'ts']),
+    },
+    new Map<string, SourceEntry>([
+      [
+        source('content/a.md'),
+        {
+          kind: 'content',
+          renderKind: 'plain-text-page',
+          outputs: new Set(['a.html']),
+          targets: new Set(),
+          scripts: ['a.ts'],
+        },
+      ],
+      [
+        source('content/b.md'),
+        {
+          kind: 'content',
+          renderKind: 'plain-text-page',
+          outputs: new Set(['b.html']),
+          targets: new Set(),
+          scripts: ['b.ts'],
+        },
+      ],
+      [
+        source('content/Demo.ts'),
+        {
+          kind: 'content',
+          renderKind: 'code-page',
+          outputs: new Set(['Demo.ts.html']),
+          targets: new Set(),
+        },
+      ],
+      [
+        source('content/image.png'),
+        {
+          kind: 'content',
+          renderKind: 'content-copy',
+          outputs: new Set(['image.png']),
+          targets: new Set(),
+        },
+      ],
+    ]),
+  );
+  const entries = (
+    list: Record<string, { js: string; css: string[] }>,
+  ): Map<string, { js: string; css: string[] }> =>
+    new Map(Object.entries(list));
+  const a = { js: '_scripts/a.js', css: [] };
+  const b = { js: '_scripts/b.js', css: [] };
+
+  test('re-renders nothing when no script outputs changed', () => {
+    expect(
+      getScriptDependentSources(
+        pages,
+        siteVariables,
+        entries({ 'a.ts': a, 'b.ts': b }),
+        entries({ 'a.ts': a, 'b.ts': b }),
+      ),
+    ).toEqual(new Set());
+  });
+
+  test('re-renders the pages that list a script whose outputs changed', () => {
+    expect(
+      getScriptDependentSources(
+        pages,
+        siteVariables,
+        entries({ 'a.ts': a, 'b.ts': b }),
+        entries({ 'a.ts': { ...a, css: ['_scripts/a.css'] }, 'b.ts': b }),
+      ),
+    ).toEqual(new Set([source('content/a.md')]));
+  });
+
+  test('re-renders a page whose script now exists', () => {
+    expect(
+      getScriptDependentSources(
+        pages,
+        siteVariables,
+        entries({ 'a.ts': a }),
+        entries({ 'a.ts': a, 'b.ts': b }),
+      ),
+    ).toEqual(new Set([source('content/b.md')]));
+  });
+
+  test('re-renders every page when a site-wide script changed', () => {
+    expect(
+      getScriptDependentSources(
+        pages,
+        { ...siteVariables, scripts: ['site.ts'] },
+        entries({}),
+        entries({ 'site.ts': a }),
+      ),
+    ).toEqual(
+      new Set([
+        source('content/a.md'),
+        source('content/b.md'),
+        source('content/Demo.ts'),
+      ]),
+    );
+  });
+});
+
+describe('shouldRecompileScripts', () => {
+  const srcDir = source('src');
+  const compiled = {
+    // missing.ts was asked for but does not exist, so it has no entry
+    requested: ['a.ts', 'missing.ts'],
+    outputs: new Map(),
+    entries: new Map([['a.ts', { js: '_scripts/a.js', css: [] }]]),
+  };
+
+  test('skips recompiling when nothing in src/ or the script lists changed', () => {
+    expect(
+      shouldRecompileScripts({
+        paths: new Set([source('content/page.md')]),
+        srcDir,
+        scripts: ['missing.ts', 'a.ts'],
+        compiled,
+      }),
+    ).toBe(false);
+  });
+
+  test('recompiles after a change in src/', () => {
+    expect(
+      shouldRecompileScripts({
+        paths: new Set([path.join(srcDir, 'lib', 'helper.ts')]),
+        srcDir,
+        scripts: ['a.ts', 'missing.ts'],
+        compiled,
+      }),
+    ).toBe(true);
+  });
+
+  test('recompiles when the src/ directory itself changed', () => {
+    expect(
+      shouldRecompileScripts({
+        paths: new Set([srcDir]),
+        srcDir,
+        scripts: ['a.ts', 'missing.ts'],
+        compiled,
+      }),
+    ).toBe(true);
+  });
+
+  test('recompiles when a page lists a different script', () => {
+    expect(
+      shouldRecompileScripts({
+        paths: new Set([source('content/page.md')]),
+        srcDir,
+        scripts: ['a.ts', 'b.ts'],
+        compiled,
+      }),
+    ).toBe(true);
+  });
+
+  test('ignores a file whose name only starts like src/', () => {
+    expect(
+      shouldRecompileScripts({
+        paths: new Set([source('src-notes.md')]),
+        srcDir,
+        scripts: ['a.ts', 'missing.ts'],
+        compiled,
+      }),
+    ).toBe(false);
+  });
 });

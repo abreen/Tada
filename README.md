@@ -77,6 +77,12 @@ A static site generator. The successor to Presto.
   * Clear loading indicators for slow requests
   * Also detects a new version of the current page and supplies a reload button
 
+- Your own TypeScript and Sass, compiled with the site
+  * List scripts from `src/` in a page's front matter instead of writing `<script>` tags
+  * Each script mounts and unmounts with its page, even across client-side
+    navigation
+  * Minified, content-hashed, and code-split in production builds
+
 ### Experimental features
 
 - Interactive execution traces via `renderTrace()`
@@ -327,6 +333,7 @@ vars:
 | `internalDomains` | Domain names treated as internal by link processing (not marked external) |
 | `extensionToShikiLanguage` | *Optional*, map from source-file extension to the Shiki language used for generated code pages and copied-source processing |
 | `shikiLanguages` | *Optional*, list of Shiki languages permitted in code blocks |
+| `scripts` | *Optional*, list of scripts in `src/` that every page loads (see [Scripts](#scripts)) |
 | `faviconColor` | *Optional*, background color for generated favicons (defaults to `themeColor`) |
 | `faviconFontWeight` | *Optional*, font weight used for generated favicon text (default `700`) |
 | `vars` | Arbitrary key/value variables exposed to templates/content as `vars.*` (e.g., `<%= vars.staffEmail %>`) |
@@ -425,9 +432,44 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `slides` | Set to `true` on Markdown pages to treat top-level `---` as slide separators and add presentation controls |
 | `breadcrumbs` | Ordered ancestor links with `label` and `url`; the page title completes the trail |
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
+| `scripts` | Scripts in `src/` to compile and run on this page (see [Scripts](#scripts)) |
 
 You may also add arbitrary fields in a page's front matter, and access them
 using Lodash syntax (see below).
+
+### Scripts
+
+Put your site's own TypeScript, JavaScript, and Sass in `src/`, then list the
+scripts a page needs in its front matter, as paths relative to `src/`:
+
+```
+---
+title: Lectures
+scripts: [lectures/timezone.ts]
+---
+```
+
+Tada compiles listed scripts and everything they import. Nothing in `src/` is
+published as-is, so `.ts` and `.js` files in `content/` can still be course
+material. A script's default export runs each time its page is shown, and it
+can clean up when the visitor leaves:
+
+```ts
+import './timezone.scss';
+import type { Mount } from '@abreen/tada';
+
+const mount: Mount = ({ window, signal }) => {
+  window.addEventListener('resize', () => {}, { signal });
+};
+export default mount;
+```
+
+Imported stylesheets are added to the page's `<head>`, so they work without
+JavaScript. Scripts can't import images or other files: put them in
+`content/` or `public/` and refer to them by URL, such as
+`url(/images/paper.png)` in a stylesheet (Tada adds the base path). In styles, use Tada's CSS custom properties (e.g. `var(--theme-color)`) to
+match the site theme. Run `bun install` in your site for editor type checking;
+builds don't need it. The starter site's Lectures page is an example.
 
 ### Variable substitution
 

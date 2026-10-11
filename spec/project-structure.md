@@ -11,12 +11,19 @@ content/              Pages and assets
   index.md            Home page (required)
   ...
 public/               Static files copied to output as-is
+src/                  Scripts and styles compiled with the site (optional)
+package.json          Lists @abreen/tada for editor types (optional)
+tsconfig.json         TypeScript settings for src/ (optional)
 ```
 
 The `content/` directory contains pages (Markdown, HTML, or source code files)
 and assets (images, PDFs, etc.). Processed files become HTML pages; everything
 else is copied unchanged. The `public/` directory is also copied to the output
-root. If two sources would produce the same output path, the build stops with an
+root. The optional `src/` directory holds the site's own TypeScript,
+JavaScript, and Sass. Pages list scripts from it in front matter, and Tada
+compiles them into `_scripts/`; nothing in `src/` is copied as-is (see
+[Author Scripts](author-scripts.md)). If two sources would produce the same
+output path, the build stops with an
 output conflict (see [Build errors](build-pipeline.md#build-errors)). This
 includes two content pages (such as `about.md` and `about.html`), a code page
 and an HTML page (`demo.py` and `demo.py.html`), content and public files with

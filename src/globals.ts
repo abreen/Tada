@@ -19,6 +19,8 @@ export interface Globals {
   importModule: ImportModuleFunction;
   isDocumentHidden: (document: Document) => boolean;
   now: () => number;
+  /** Logs an error in every build, for problems in a site's own code */
+  reportError: (message: string, error: unknown) => void;
   setLocationHash: LocationMutationFunction;
   setLocationHref: LocationMutationFunction;
 }
@@ -44,6 +46,9 @@ export const globals: Globals = {
   },
   now() {
     return Date.now();
+  },
+  reportError(message, error) {
+    console.error(message, error);
   },
   setLocationHash(window, value) {
     window.location.hash = value;

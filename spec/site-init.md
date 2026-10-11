@@ -18,11 +18,13 @@ and uses defaults or values provided as arguments.
 
 A bare mode creates a minimal site with just a single home page and an empty
 public directory. The normal mode copies starter content, navigation, and author
-data from the package. The starter content includes an example of author
-JavaScript: the Lectures page loads `public/timezone.js`, which lets visitors
-convert the page's `<time>` elements to another time zone and remembers the
-choice in local storage. Without JavaScript, the chooser stays hidden and the
-authored times show with a `<noscript>` note. Bare-mode config files also start with
+data from the package. The starter content includes an example of an
+author script: the Lectures page lists `src/lectures/timezone.ts` in its
+`scripts` front matter (see [Author Scripts](author-scripts.md)). It lets
+visitors convert the page's `<time>` elements to another time zone and
+remembers the choice in local storage, and it imports
+`src/lectures/timezone.scss` for its styles. Without JavaScript, the chooser
+stays hidden and the authored times show with a `<noscript>` note. Bare-mode config files also start with
 `extensionToShikiLanguage: {}` and `shikiLanguages: []`, so source-code pages
 and Markdown fence highlighting remain opt-in.
 
@@ -32,3 +34,12 @@ automatically extracted from the production base URL. Both site configs
 explicitly include `defaultFont: sans` and `defaultContrast: standard` so their
 initial appearance is easy to discover and change. Starter nav and author data
 files are also generated as YAML by default.
+
+The normal mode also writes a `package.json` that is private and lists the current
+Tada version of `@abreen/tada` in `devDependencies`, and a `tsconfig.json` that
+covers `src/` with strict type checking. Running `bun install` lets editors
+resolve `import type { Mount } from '@abreen/tada'`; builds don't need it. The
+`tsconfig.json` turns off `noUncheckedSideEffectImports` because Tada, not
+TypeScript, resolves imported `.scss` and `.css` files. Bare mode creates no
+`src/` directory, `package.json`, or `tsconfig.json`, because TypeScript reports
+an error for a `tsconfig.json` with no files to check.

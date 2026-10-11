@@ -1,3 +1,6 @@
+      <% for (const scriptPath of authorScriptPaths) { %>
+      <link rel="modulepreload" href="<%- scriptPath %>" data-tada-script>
+      <% } %>
     </div>
   </body>
 </html>

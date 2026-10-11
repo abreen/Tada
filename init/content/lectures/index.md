@@ -2,6 +2,7 @@
 title: Lectures
 author: alex
 description: An example page for <%= site.title %>.
+scripts: [lectures/timezone.ts]
 ---
 
 <p class="time-zone-chooser" hidden>
@@ -19,14 +20,13 @@ description: An example page for <%= site.title %>.
   </label>
 </p>
 <noscript><p>Times shown in ET.</p></noscript>
-<script src="/timezone.js" defer></script>
 
 One-hour lectures are held weekly at <time datetime="17:40">5:40 PM</time>.
 Each lecture is recorded and made available by password-protected link.
 Return to this page to access the recordings.
 
-The time zone chooser above is an example of custom JavaScript: see
-`public/timezone.js` in your site.
+The time zone chooser above is an example of a script for your site: see
+`src/lectures/timezone.ts`, which this page lists in its front matter.
 
 <details>
 <summary>More details</summary>

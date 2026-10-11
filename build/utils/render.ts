@@ -39,6 +39,11 @@ import {
 import { applySourceTemplate } from './source-template';
 import pkg from '../../package.json' with { type: 'json' };
 import { parseFrontMatterAndContent } from './front-matter';
+import {
+  getPageAuthorAssets,
+  getPageScripts,
+  type PageAuthorAssets,
+} from '../author-scripts';
 import { createMarkdown } from './markdown';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
 import {
@@ -102,6 +107,7 @@ interface TemplateParametersInput {
   subPath: string;
   isWatchMode: boolean;
   bannerHtml?: string;
+  authorAssets?: PageAuthorAssets;
 }
 
 function resolveAuthor(
@@ -167,9 +173,13 @@ function createTemplateParameters({
   subPath,
   isWatchMode,
   bannerHtml,
+  authorAssets,
 }: TemplateParametersInput): Record<string, unknown> {
   const applyBasePath = createApplyBasePath(siteVariables);
   return {
+    authorScriptPaths: (authorAssets?.js ?? []).map(file =>
+      normalizeOutputPath('/' + file),
+    ),
     vars: siteVariables.vars || {},
     ...createTemplateGlobals(pageVariables, siteVariables, subPath),
     site: siteVariables,
@@ -202,6 +212,7 @@ export function injectAssetTags(
   html: string,
   assetFiles: string[],
   siteVariables: SiteVariables,
+  authorAssets: PageAuthorAssets = { js: [], css: [] },
 ): string {
   const jsAssets = assetFiles.filter(f => f.endsWith('.js'));
   const cssAssets = assetFiles.filter(f => f.endsWith('.css'));
@@ -219,6 +230,21 @@ export function injectAssetTags(
         `<link href="${normalizeOutputPath('/' + asset)}" rel="stylesheet">`,
     )
     .join('');
+  // After Tada's stylesheet, so author rules win specificity ties
+  const authorStylesheetTags = authorAssets.css
+    .map(
+      file =>
+        `<link href="${normalizeOutputPath('/' + file)}" rel="stylesheet" data-tada-style>`,
+    )
+    .join('');
+  // Start downloading author scripts while the page parses; the runtime mounts
+  // them from markers in the page content
+  const authorScriptTags = authorAssets.js
+    .map(
+      file =>
+        `<link rel="modulepreload" href="${normalizeOutputPath('/' + file)}">`,
+    )
+    .join('');
 
   const fontPreloadTags = getDefaultFontPreloadFiles(siteVariables)
     .map(preload => {
@@ -232,8 +258,8 @@ export function injectAssetTags(
 
   return insertAfterCharsetMeta(
     html,
-    `${fontPreloadTags}${stylesheetTags}`,
-  ).replace('</head>', `${scriptTags}</head>`);
+    `${fontPreloadTags}${stylesheetTags}${authorStylesheetTags}`,
+  ).replace('</head>', `${scriptTags}${authorScriptTags}</head>`);
 }
 
 export function injectKatexStylesheet(html: string): string {
@@ -245,12 +271,19 @@ export function preparePageTemplateHtml({
   templateHtml,
   assetFiles,
   siteVariables,
+  authorAssets,
 }: {
   templateHtml: string;
   assetFiles: string[];
   siteVariables: SiteVariables;
+  authorAssets?: PageAuthorAssets;
 }): string {
-  let html = injectAssetTags(templateHtml, assetFiles, siteVariables);
+  let html = injectAssetTags(
+    templateHtml,
+    assetFiles,
+    siteVariables,
+    authorAssets,
+  );
   if (templateHtml.includes('class="katex"')) {
     html = injectKatexStylesheet(html);
   }
@@ -267,6 +300,7 @@ export function renderPlainTextPageAsset({
   siteVariables,
   validInternalTargets,
   assetFiles,
+  authorScripts,
   isWatchMode,
   literateJavaOutputPaths,
   generatedPageTargets,
@@ -298,6 +332,11 @@ export function renderPlainTextPageAsset({
     );
   }
 
+  const authorAssets = getPageAuthorAssets(
+    authorScripts,
+    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
+    filePath,
+  );
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,
@@ -305,6 +344,7 @@ export function renderPlainTextPageAsset({
     subPath,
     isWatchMode,
     bannerHtml: renderSiteBanner(siteVariables),
+    authorAssets,
   });
 
   const templateHtml = render(
@@ -313,7 +353,12 @@ export function renderPlainTextPageAsset({
   ) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: preparePageTemplateHtml({ templateHtml, assetFiles, siteVariables }),
+    html: preparePageTemplateHtml({
+      templateHtml,
+      assetFiles,
+      siteVariables,
+      authorAssets,
+    }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,
@@ -337,6 +382,7 @@ export function renderCodePageAsset({
   contentDir,
   siteVariables,
   assetFiles,
+  authorScripts,
   isWatchMode,
   validInternalTargets,
   literateJavaOutputPaths,
@@ -379,6 +425,12 @@ export function renderCodePageAsset({
     tocHtml,
   };
 
+  // Code pages have no front matter, so they load only site-wide scripts
+  const authorAssets = getPageAuthorAssets(
+    authorScripts,
+    getPageScripts(siteVariables.scripts, undefined, filePath),
+    filePath,
+  );
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,
@@ -386,12 +438,18 @@ export function renderCodePageAsset({
     subPath,
     isWatchMode,
     bannerHtml: renderSiteBanner(siteVariables),
+    authorAssets,
   });
 
   const templateHtml = render('code.html', templateParameters) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: preparePageTemplateHtml({ templateHtml, assetFiles, siteVariables }),
+    html: preparePageTemplateHtml({
+      templateHtml,
+      assetFiles,
+      siteVariables,
+      authorAssets,
+    }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,
@@ -641,6 +699,7 @@ export function renderLiterateJavaPageAsset({
   contentDir,
   siteVariables,
   assetFiles,
+  authorScripts,
   isWatchMode,
   skipExecution,
   validInternalTargets,
@@ -786,6 +845,11 @@ export function renderLiterateJavaPageAsset({
     );
   }
 
+  const authorAssets = getPageAuthorAssets(
+    authorScripts,
+    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
+    filePath,
+  );
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,
@@ -793,12 +857,18 @@ export function renderLiterateJavaPageAsset({
     subPath,
     isWatchMode,
     bannerHtml: renderSiteBanner(siteVariables),
+    authorAssets,
   });
 
   const templateHtml = render('literate.html', templateParameters) as string;
   const finalized = finalizeHtmlPage({
     filePath,
-    html: preparePageTemplateHtml({ templateHtml, assetFiles, siteVariables }),
+    html: preparePageTemplateHtml({
+      templateHtml,
+      assetFiles,
+      siteVariables,
+      authorAssets,
+    }),
     siteVariables,
     sourceUrlPath,
     validInternalTargets,

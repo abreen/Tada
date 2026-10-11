@@ -1,7 +1,11 @@
+import json
+import re
+
 import pytest
 from conftest import (
     AUTHORS_CONFIG_FILE,
     NAV_CONFIG_FILE,
+    PACKAGE_DIR,
     SITE_DEV_CONFIG_FILE,
     SITE_PROD_CONFIG_FILE,
     load_structured_file,
@@ -61,7 +65,21 @@ class TestInitDefault:
     def test_copies_public_directory(self, site_dir):
         public_dir = site_dir / 'public'
         assert public_dir.is_dir()
-        assert (public_dir / 'timezone.js').is_file()
+        assert not (public_dir / 'timezone.js').exists()
+
+    def test_copies_src_directory(self, site_dir):
+        lectures = site_dir / 'src' / 'lectures'
+        assert (lectures / 'timezone.ts').is_file()
+        assert (lectures / 'timezone.scss').is_file()
+
+    def test_writes_script_tooling(self, site_dir):
+        package = json.loads((site_dir / 'package.json').read_text(encoding='utf-8'))
+        tada_package = json.loads((PACKAGE_DIR / 'package.json').read_text(encoding='utf-8'))
+        assert package['private'] is True
+        assert package['devDependencies'] == {'@abreen/tada': tada_package['version']}
+        tsconfig = json.loads((site_dir / 'tsconfig.json').read_text(encoding='utf-8'))
+        assert tsconfig['include'] == ['src']
+        assert tsconfig['compilerOptions']['noEmit'] is True
 
     def test_copies_nested_content(self, site_dir):
         assert (site_dir / 'content' / 'lectures' / 'index.md').exists()
@@ -84,6 +102,11 @@ class TestInitDefault:
         assert '<span class="logo logo-emoji" aria-hidden="true">🎉</span>' in html
         assert 'rel="icon"' not in html
         assert not (dist / 'favicon.svg').exists()
+        lectures = (dist / 'lectures' / 'index.html').read_text(encoding='utf-8')
+        # Hinted in the head and listed in the content, as the same file
+        [script] = set(re.findall(r'href="/(_scripts/lectures/timezone-[a-z0-9]+\.js)"', lectures))
+        assert (dist / script).is_file()
+        assert 'data-tada-style' in lectures
 
     def test_stdout_contains_success_message(self, tmp_path):
         result = run_tada('init', 'mysite', '--no-interactive', cwd=str(tmp_path))
@@ -114,6 +137,12 @@ class TestInitBare:
         assert (content_dir / 'index.md').exists()
         all_files = [f for f in content_dir.rglob('*') if f.is_file()]
         assert len(all_files) == 1
+
+    def test_writes_no_script_tooling(self, site_dir):
+        # A tsconfig.json for a missing src/ directory makes tsc report errors
+        assert not (site_dir / 'package.json').exists()
+        assert not (site_dir / 'tsconfig.json').exists()
+        assert not (site_dir / 'src').exists()
 
     def test_creates_empty_public(self, site_dir):
         public_dir = site_dir / 'public'

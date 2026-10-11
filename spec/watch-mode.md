@@ -94,6 +94,14 @@ Editing an `authors.*` config source rebuilds only page sources whose `author`
 front matter depends on author entries whose data changed. But adding or
 deleting an `authors.*` config source triggers a full rebuild.
 
+### Script source change
+
+Any change in `src/` recompiles every listed script, because imports such as
+Sass partials are not tracked one by one. A page or site config change that
+starts or stops listing a script also recompiles them. Pages are re-rendered
+only when the output files of a script they load change; see
+[Author Scripts](author-scripts.md#watch-mode).
+
 ### Adding a file
 
 Adding a page source, content asset source, partial source, or public source
@@ -128,7 +136,7 @@ output appears at its new location.
 An output path can change between a file and a directory. Tada deletes the old
 output before writing the new one.
 
-Watch mode watches `content/` and `public/` by polling. The watcher tracks
+Watch mode watches `content/`, `public/`, and `src/` by polling. The watcher tracks
 entries by name, so it can miss a directory being replaced by a file of the same
 name. When the removal of the directory's contents is reported, watch mode
 checks each parent of a removed path once changes settle and resubscribes any

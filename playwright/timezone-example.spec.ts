@@ -1,7 +1,7 @@
 import { test, expect } from './test-fixtures';
 
-// The starter content's Lectures page loads public/timezone.js, an example of
-// author JavaScript
+// The starter content's Lectures page lists src/lectures/timezone.ts in its
+// front matter, an example of a script compiled with the site
 test.describe('starter time zone example', () => {
   test('without JS, the chooser stays hidden and authored times show', async ({
     browser,
@@ -44,5 +44,26 @@ test.describe('starter time zone example', () => {
     await page.getByLabel('Show times in').selectOption('America/New_York');
     await expect(time).toHaveText('5:40 PM');
     await expect(time).not.toHaveAttribute('title');
+  });
+
+  test('the chooser still works after navigating away and back', async ({
+    page,
+  }) => {
+    await page.goto('/lectures/index.html');
+    const time = page.locator('time[datetime="17:40"]');
+
+    await page.locator('header details > summary').click();
+    await page.locator('header details nav a[href="/index.html"]').click();
+    await expect(page).toHaveURL(/\/index\.html$/);
+    await page.locator('header details > summary').click();
+    await page
+      .locator('header details nav a[href="/lectures/index.html"]')
+      .click();
+    await expect(page).toHaveURL(/lectures\/index\.html/);
+
+    const select = page.getByLabel('Show times in');
+    await expect(select).toBeEnabled();
+    await select.selectOption('UTC');
+    await expect(time).toContainText('UTC');
   });
 });

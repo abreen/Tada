@@ -25,7 +25,7 @@ export async function generateSiteAssets(
     isFeatureEnabled(siteVariables, 'favicon') && !siteVariables.favicon;
   const [bundles, reloadClient, favicons] = await Promise.all([
     bundle(siteVariables, { mode }),
-    isWatchMode ? bundleReloadClient() : new Map<string, string>(),
+    isWatchMode ? bundleReloadClient() : new Map<string, string | Uint8Array>(),
     generateFaviconFiles
       ? generateFavicons(siteVariables)
       : new Map<string, string | Uint8Array>(),

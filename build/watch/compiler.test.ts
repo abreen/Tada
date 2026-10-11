@@ -1,4 +1,5 @@
 import path from 'path';
+import { createEmptyAuthorScripts } from '../author-scripts';
 import { describe, expect, test } from 'bun:test';
 import type { TraceCache } from '../build-types';
 import { invalidateTraceCacheForBatch, pruneTraceCache } from './compiler';
@@ -126,6 +127,7 @@ function emptySnapshot() {
     createSnapshot({
       siteVariables: {} as import('../types').SiteVariables,
       assetFiles: [],
+      authorScripts: createEmptyAuthorScripts(),
       authorsData: undefined,
       records: new Map(),
       scan: {

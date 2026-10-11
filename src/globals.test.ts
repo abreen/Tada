@@ -22,6 +22,7 @@ export function createGlobals(overrides: Partial<Globals> = {}): Globals {
     now() {
       return 0;
     },
+    reportError() {},
     setLocationHash(window, value) {
       window.location.hash = value;
     },

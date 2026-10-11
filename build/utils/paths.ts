@@ -29,6 +29,11 @@ export function getPublicDir(): string {
   return path.resolve(getProjectDir(), 'public');
 }
 
+/** The site's own scripts and styles, compiled into `_scripts/` */
+export function getSrcDir(): string {
+  return path.resolve(getProjectDir(), 'src');
+}
+
 export function createApplyBasePath(
   siteVariables: SiteVariables,
 ): (subPath: string) => string {
@@ -39,6 +44,17 @@ export function createApplyBasePath(
     }
     return base + subPath;
   };
+}
+
+/** Whether `filePath` is inside `dir`, not counting `dir` itself */
+export function isInside(dir: string, filePath: string): boolean {
+  const relative = path.relative(dir, filePath);
+  return (
+    relative !== '' &&
+    relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
 }
 
 export function toPosix(p: string): string {

@@ -79,6 +79,9 @@ Generated development and production site configs explicitly include
   Shiki language used for generated code pages
 - **shikiLanguages**: optional list of bundled Shiki languages allowed in
   Markdown fences; plain-text fences (`text`, `txt`, `plain`) work without it
+- **scripts**: optional list of scripts in `src/` that every page loads,
+  before the scripts a page lists in its front matter; see
+  [Author Scripts](author-scripts.md)
 - **vars**: arbitrary key-value pairs accessible in templates as `vars.*`
 
 ## Custom serif fonts

@@ -67,6 +67,94 @@ function updateHead(document: Document, newDoc: Document): void {
       document.head.appendChild(link.cloneNode(true));
     }
   }
+
+  // Stylesheets from the site's src/ scripts belong to the pages that load
+  // them, so they don't style the next page. The new page's were loaded
+  // turned off before the swap (see loadAuthorStylesheets).
+  for (const link of document.querySelectorAll<HTMLLinkElement>(
+    `link[data-tada-style][media="${DISABLED_MEDIA}"]`,
+  )) {
+    link.removeAttribute('media');
+  }
+  const newAuthorHrefs = new Set(
+    Array.from(newDoc.querySelectorAll('link[data-tada-style]')).map(link =>
+      link.getAttribute('href'),
+    ),
+  );
+  for (const link of document.querySelectorAll('link[data-tada-style]')) {
+    if (!newAuthorHrefs.has(link.getAttribute('href'))) {
+      link.remove();
+    }
+  }
+}
+
+const DISABLED_MEDIA = 'not all';
+
+// How long navigation waits for the new page's stylesheets from src/ scripts
+const AUTHOR_STYLESHEET_TIMEOUT = 3000;
+
+/**
+ * Adds the new page's stylesheets from src/ scripts and waits for them to
+ * load, turned off until updateHead turns them on, so the new content never
+ * shows unstyled. A stylesheet that fails or takes too long to load does not
+ * hold up navigation. If the navigation is abandoned, its stylesheets are
+ * removed.
+ */
+async function loadAuthorStylesheets(
+  window: Window,
+  newDoc: Document,
+  signal: AbortSignal,
+): Promise<void> {
+  const { document } = window;
+  // Stylesheets still turned off belong to another navigation
+  const existing = new Set(
+    Array.from(
+      document.querySelectorAll(
+        `link[data-tada-style]:not([media="${DISABLED_MEDIA}"])`,
+      ),
+    ).map(link => link.getAttribute('href')),
+  );
+  const pending: HTMLLinkElement[] = [];
+  const loads: Promise<void>[] = [];
+  for (const link of newDoc.querySelectorAll('link[data-tada-style]')) {
+    if (existing.has(link.getAttribute('href'))) {
+      continue;
+    }
+    const added = link.cloneNode(true) as HTMLLinkElement;
+    added.media = DISABLED_MEDIA;
+    loads.push(
+      new Promise(resolve => {
+        added.addEventListener('load', () => resolve(), { once: true });
+        added.addEventListener('error', () => resolve(), { once: true });
+      }),
+    );
+    pending.push(added);
+    document.head.appendChild(added);
+  }
+  if (pending.length === 0) {
+    return;
+  }
+
+  let timer: number | undefined;
+  let onAbort: (() => void) | undefined;
+  await Promise.race([
+    Promise.all(loads),
+    new Promise<void>(resolve => {
+      timer = window.setTimeout(resolve, AUTHOR_STYLESHEET_TIMEOUT);
+    }),
+    new Promise<void>(resolve => {
+      onAbort = resolve;
+      signal.addEventListener('abort', onAbort, { once: true });
+    }),
+  ]);
+  window.clearTimeout(timer);
+  signal.removeEventListener('abort', onAbort!);
+
+  if (signal.aborted) {
+    for (const link of pending) {
+      link.remove();
+    }
+  }
 }
 
 // Parsed and imported scripts are marked as already started, so browsers
@@ -349,8 +437,6 @@ export async function navigateToUrl(
     return;
   }
 
-  stopLoading();
-
   const DOMParserCtor = (window as unknown as { DOMParser: typeof DOMParser })
     .DOMParser;
   const parser = new DOMParserCtor();
@@ -362,11 +448,19 @@ export async function navigateToUrl(
     .querySelector('meta[name="generator"]')
     ?.getAttribute('content');
   if (!currentGenerator || !newGenerator || newGenerator !== currentGenerator) {
+    stopLoading();
     globals.setLocationHref(window, url);
     return;
   }
 
   const parsed = new URL(url);
+
+  // The loading indicator stays on while the new page's stylesheets load
+  await loadAuthorStylesheets(window, newDoc, controller.signal);
+  stopLoading();
+  if (!isActiveNavigation(controller)) {
+    return;
+  }
 
   const doSwap = (): boolean => {
     if (!isActiveNavigation(controller)) {

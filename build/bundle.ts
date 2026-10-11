@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { compileTemplate } from './lodash-template';
 import * as sass from 'sass';
 import { getPackageDir, toPosix } from './utils/paths';
@@ -95,13 +96,26 @@ function createThemeImporter(themeScss: string): sass.Importer<'sync'> {
   };
 }
 
-function createScssPlugin(themeScss: string) {
-  const importers = [createThemeImporter(themeScss)];
+/**
+ * Compiles imported `.scss` files with the given Sass importers. `checkLoaded`
+ * receives each compiled file and every file Sass read for it, and can throw
+ * to fail the build.
+ */
+export function createScssPlugin(
+  importers: sass.Importer<'sync'>[] = [],
+  checkLoaded?: (scssPath: string, loadedPaths: string[]) => void,
+) {
   return {
     name: 'scss',
     setup(build: PluginBuilder) {
       build.onLoad({ filter: /\.scss$/ }, args => {
         const result = sass.compile(args.path, { importers });
+        checkLoaded?.(
+          args.path,
+          result.loadedUrls
+            .filter(url => url.protocol === 'file:')
+            .map(url => fileURLToPath(url)),
+        );
         return { contents: result.css, loader: 'css' as const };
       });
     },
@@ -114,33 +128,81 @@ function getCoverageBundlePlugin(): BunBuildPlugin | null {
   );
 }
 
-async function buildToMemory(
-  options: Parameters<typeof Bun.build>[0],
-): Promise<Map<string, string>> {
-  const result = await Bun.build(options);
-  if (!result.success) {
-    const messages = result.logs
-      .filter(log => log.level === 'error')
-      .map(log => log.message || String(log));
-    throw new Error(`Bundle failed:\n${messages.join('\n')}`);
+/** Normalizes an output path reported by Bun, such as `./a/./b.js` */
+export function normalizeBundlePath(outputPath: string): string {
+  return path.posix.normalize(toPosix(outputPath));
+}
+
+/** A failed Bun.build, with one message per error */
+export class BundleError extends Error {
+  constructor(readonly messages: string[]) {
+    super(`Bundle failed:\n${messages.join('\n')}`);
   }
-  const outputs = new Map<string, string>();
+}
+
+// Names the file and position of a build error, such as a syntax error
+function formatBuildLog(log: Bun.BuildOutput['logs'][number]): string {
+  const message = log.message || String(log);
+  const position = 'position' in log ? log.position : null;
+  if (!position?.file) {
+    return message;
+  }
+  // Errors from plugins have no line
+  return position.line > 0
+    ? `${position.file}:${position.line}:${position.column}: ${message}`
+    : `${position.file}: ${message}`;
+}
+
+/** Runs Bun.build and throws its errors as a BundleError */
+export async function runBuild(
+  options: Parameters<typeof Bun.build>[0],
+): Promise<Bun.BuildOutput> {
+  const result = await Bun.build({ ...options, throw: false });
+  if (!result.success) {
+    throw new BundleError(
+      result.logs.filter(log => log.level === 'error').map(formatBuildLog),
+    );
+  }
+  return result;
+}
+
+// Text outputs stay strings; anything else, such as an imported image, keeps
+// its exact bytes
+function isTextOutput(output: Bun.BuildArtifact): boolean {
+  return /^text\/|javascript|json/.test(output.type);
+}
+
+/** Reads each build output, keyed by normalized output path */
+export async function readBuildOutputs(
+  result: Bun.BuildOutput,
+): Promise<Map<string, string | Uint8Array>> {
+  const outputs = new Map<string, string | Uint8Array>();
   for (const output of result.outputs) {
     outputs.set(
-      path.posix.normalize(toPosix(output.path)),
-      await output.text(),
+      normalizeBundlePath(output.path),
+      isTextOutput(output)
+        ? await output.text()
+        : new Uint8Array(await output.arrayBuffer()),
     );
   }
   return outputs;
+}
+
+async function buildToMemory(
+  options: Parameters<typeof Bun.build>[0],
+): Promise<Map<string, string | Uint8Array>> {
+  return readBuildOutputs(await runBuild(options));
 }
 
 /** Bundles Tada's client CSS and JavaScript, keyed by output path */
 export function bundle(
   siteVariables: SiteVariables,
   { mode = 'development' }: { mode?: string } = {},
-): Promise<Map<string, string>> {
+): Promise<Map<string, string | Uint8Array>> {
   const isDev = mode === 'development';
-  const plugins = [createScssPlugin(renderThemeScss(siteVariables))];
+  const plugins = [
+    createScssPlugin([createThemeImporter(renderThemeScss(siteVariables))]),
+  ];
   const coverageBundlePlugin = getCoverageBundlePlugin();
   if (coverageBundlePlugin) {
     plugins.push(coverageBundlePlugin);
@@ -158,7 +220,9 @@ export function bundle(
 }
 
 /** Bundles the watch-mode reload client, keyed by output path */
-export function bundleReloadClient(): Promise<Map<string, string>> {
+export function bundleReloadClient(): Promise<
+  Map<string, string | Uint8Array>
+> {
   return buildToMemory({
     entrypoints: [
       path.resolve(getPackageDir(), 'build/watch-reload-client.ts'),

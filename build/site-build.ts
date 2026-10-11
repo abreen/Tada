@@ -7,7 +7,15 @@ import { initHighlighter } from './utils/shiki-highlighter';
 import { generateSiteAssets } from './site-assets';
 import { getPdfSources } from './pagefind';
 import { checkTraceToolAvailability } from './utils/trace';
-import { scanProject, sourcePaths, type TadaProjectScan } from './source-model';
+import {
+  getScriptEntries,
+  scanProject,
+  sourcePaths,
+  type TadaProjectScan,
+} from './source-model';
+import { bundleAuthorScripts, type AuthorScripts } from './author-scripts';
+import { BundleError } from './bundle';
+import { getSrcDir } from './utils/paths';
 import {
   createContentRecord,
   createPublicRecord,
@@ -36,7 +44,9 @@ export const GENERATED_SOURCE = 'tada';
 export interface TadaSnapshot {
   siteVariables: SiteVariables;
   assetFiles: string[];
+  /** Files Tada generates itself, not including author scripts */
   generatedOutputs: ReadonlyMap<string, OutputContent>;
+  authorScripts: AuthorScripts;
   authorsData: unknown;
   records: ReadonlyMap<string, TadaSourceRecord>;
   outputs: ReadonlyMap<string, OutputFile>;
@@ -48,7 +58,12 @@ export interface TadaSnapshot {
 
 type SnapshotInputs = Pick<
   TadaSnapshot,
-  'siteVariables' | 'assetFiles' | 'authorsData' | 'records' | 'scan'
+  | 'siteVariables'
+  | 'assetFiles'
+  | 'authorScripts'
+  | 'authorsData'
+  | 'records'
+  | 'scan'
 > & { generatedOutputs?: ReadonlyMap<string, OutputContent> };
 
 export type SiteBuildResult =
@@ -59,6 +74,7 @@ export interface RenderContext {
   siteVariables: SiteVariables;
   scan: TadaProjectScan;
   assetFiles: string[];
+  authorScripts: AuthorScripts;
   isWatchMode: boolean;
   traceCache: TraceCache;
   traceToolAvailability: TraceToolAvailability;
@@ -67,7 +83,10 @@ export interface RenderContext {
 export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
   const generatedOutputs = inputs.generatedOutputs ?? new Map();
   const outputs = new Map<string, OutputFile>();
-  for (const [outputPath, content] of generatedOutputs) {
+  for (const [outputPath, content] of [
+    ...generatedOutputs,
+    ...inputs.authorScripts.outputs,
+  ]) {
     outputs.set(outputPath, { sourcePath: GENERATED_SOURCE, content });
   }
   const fileDependents = new Map<string, Set<string>>();
@@ -151,6 +170,7 @@ export function renderSources(
               siteVariables: context.siteVariables,
               scan: context.scan,
               assetFiles: context.assetFiles,
+              authorScripts: context.authorScripts,
               isWatchMode: context.isWatchMode,
               traceCache: context.traceCache,
               traceToolAvailability: context.traceToolAvailability,
@@ -180,6 +200,7 @@ export function finishBuild({
   scan,
   assetFiles,
   generatedOutputs,
+  authorScripts,
   records,
   diagnostics,
 }: {
@@ -187,13 +208,19 @@ export function finishBuild({
   scan: TadaProjectScan;
   assetFiles: string[];
   generatedOutputs: ReadonlyMap<string, OutputContent>;
+  authorScripts: AuthorScripts;
   records: ReadonlyMap<string, TadaSourceRecord>;
   diagnostics: BuildDiagnostic[];
 }): SiteBuildResult {
   const allDiagnostics = [
     ...diagnostics,
     ...validateProjectConfigLinks(scan.validTargets),
-    ...findOutputConflicts(scan, siteVariables, generatedOutputs, records),
+    ...findOutputConflicts(
+      scan,
+      siteVariables,
+      new Map([...generatedOutputs, ...authorScripts.outputs]),
+      records,
+    ),
   ];
   if (allDiagnostics.length > 0) {
     return { ok: false, diagnostics: allDiagnostics };
@@ -204,11 +231,48 @@ export function finishBuild({
       siteVariables,
       assetFiles,
       generatedOutputs,
+      authorScripts,
       authorsData: config('authors'),
       scan,
       records,
     }),
   };
+}
+
+/**
+ * Compiles the scripts in `src/` that the site config and pages list, as
+ * returned by getScriptEntries
+ */
+export async function buildAuthorScripts(
+  entries: string[],
+  siteVariables: SiteVariables,
+  mode: 'development' | 'production',
+): Promise<
+  | { ok: true; value: AuthorScripts }
+  | { ok: false; diagnostics: BuildDiagnostic[] }
+> {
+  if (entries.length > 0) {
+    log.info`Compiling ${entries.length} ${entries.length === 1 ? 'script' : 'scripts'} in src/`;
+  }
+  try {
+    return {
+      ok: true,
+      value: await bundleAuthorScripts(
+        entries,
+        getSrcDir(),
+        mode,
+        siteVariables.basePath,
+      ),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      diagnostics:
+        error instanceof BundleError
+          ? error.messages.map(message => ({ message }))
+          : [diagnosticFromError(error)],
+    };
+  }
 }
 
 /** Builds every source and generated file in memory. Nothing is written. */
@@ -236,7 +300,18 @@ export async function buildSite({
 
   compileTemplates(siteVariables);
   await ensureHighlighter(siteVariables);
-  const assets = await generateSiteAssets(siteVariables, { mode, isWatchMode });
+  // Independent bundles, so they build at the same time
+  const [assets, authorScripts] = await Promise.all([
+    generateSiteAssets(siteVariables, { mode, isWatchMode }),
+    buildAuthorScripts(
+      getScriptEntries(scan, siteVariables),
+      siteVariables,
+      mode,
+    ),
+  ]);
+  if (!authorScripts.ok) {
+    return { ok: false, diagnostics: authorScripts.diagnostics };
+  }
 
   const pageCount = [...sourcePaths(scan, 'content', true)].length;
   if (pageCount > 0) {
@@ -252,6 +327,7 @@ export async function buildSite({
     siteVariables,
     scan,
     assetFiles: assets.assetFiles,
+    authorScripts: authorScripts.value,
     isWatchMode,
     traceCache,
     traceToolAvailability,
@@ -261,6 +337,7 @@ export async function buildSite({
     scan,
     assetFiles: assets.assetFiles,
     generatedOutputs: assets.outputs,
+    authorScripts: authorScripts.value,
     records,
     diagnostics,
   });

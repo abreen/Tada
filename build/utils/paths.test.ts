@@ -21,6 +21,7 @@ let getPublicDir: typeof import('./paths').getPublicDir;
 let createApplyBasePath: typeof import('./paths').createApplyBasePath;
 let normalizeOutputPath: typeof import('./paths').normalizeOutputPath;
 let toUrlPath: typeof import('./paths').toUrlPath;
+let isInside: typeof import('./paths').isInside;
 
 beforeAll(async () => {
   ({
@@ -32,6 +33,7 @@ beforeAll(async () => {
     createApplyBasePath,
     normalizeOutputPath,
     toUrlPath,
+    isInside,
   } = await import('./paths'));
 });
 
@@ -133,5 +135,25 @@ describe('toUrlPath', () => {
 
   test('preserves forward slashes as segment separators', () => {
     expect(toUrlPath('a/b/c/d.html')).toBe('a/b/c/d.html');
+  });
+});
+
+describe('isInside', () => {
+  const root = path.resolve('/virtual/project/src');
+
+  test('is true for paths inside the directory', () => {
+    expect(isInside(root, path.join(root, 'a.ts'))).toBe(true);
+    expect(isInside(root, path.join(root, 'lectures', 'a.ts'))).toBe(true);
+  });
+
+  test('is false for the directory itself and paths outside it', () => {
+    expect(isInside(root, root)).toBe(false);
+    expect(isInside(root, path.dirname(root))).toBe(false);
+    expect(isInside(root, path.join(path.dirname(root), 'src-notes.md'))).toBe(
+      false,
+    );
+    expect(isInside(root, path.join(root, '..', 'public', 'a.png'))).toBe(
+      false,
+    );
   });
 });

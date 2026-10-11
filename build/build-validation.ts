@@ -4,7 +4,13 @@ import { makeLogger } from './log';
 import { config, getConfigFileName } from './templates';
 import { validateConfigLinks } from './validate-config-links';
 import { validateCustomFontOverrides } from './custom-fonts';
-import { getProjectDir, SEARCH_INDEX_DIR, toPosix } from './utils/paths';
+import {
+  getProjectDir,
+  getSrcDir,
+  SEARCH_INDEX_DIR,
+  toPosix,
+} from './utils/paths';
+import { scriptExists, validateSiteScripts } from './author-scripts';
 import { sameOutputContent } from './output-publication';
 import { isFeatureEnabled } from './features';
 import type { OutputContent, SiteVariables } from './types';
@@ -73,6 +79,9 @@ export function validateConfig(
       publicDir: scan.publicDir,
       publicFiles,
     }),
+    ...validateSiteScripts(siteVariables.scripts, script =>
+      scriptExists(getSrcDir(), script),
+    ),
   ]);
   for (const outputPath of assertNoOutputPathConflicts(scan)) {
     const sources = [...scan.outputProducers.get(outputPath)!]

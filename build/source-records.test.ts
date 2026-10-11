@@ -1,5 +1,6 @@
 import type fs from 'fs';
 import path from 'path';
+import { createEmptyAuthorScripts } from './author-scripts';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { createGlobals } from './globals.test';
 import { createFsModuleMock } from './test-helpers';
@@ -99,6 +100,7 @@ describe('createContentRecord', () => {
       siteVariables,
       scan,
       assetFiles: [],
+      authorScripts: createEmptyAuthorScripts(),
       isWatchMode: false,
     });
 
@@ -124,6 +126,7 @@ describe('createContentRecord', () => {
       siteVariables,
       scan,
       assetFiles: [],
+      authorScripts: createEmptyAuthorScripts(),
       isWatchMode: false,
     });
 

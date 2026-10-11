@@ -1,5 +1,6 @@
 import type { BundledLanguage } from 'shiki';
 import type { TraceCache } from './build-types';
+import type { AuthorScripts } from './author-scripts';
 
 /** An explicitly authored ancestor in a page's breadcrumb trail. */
 export interface BreadcrumbEntry {
@@ -63,6 +64,8 @@ export interface SiteVariables {
   shikiLanguages?: BundledLanguage[];
   tintHue?: number;
   tintAmount?: number;
+  /** Scripts in `src/` that every page loads */
+  scripts?: string[];
   vars?: Record<string, unknown>;
 }
 
@@ -113,6 +116,8 @@ export interface RenderPlainTextOptions {
   generatedPageTargets?: ReadonlySet<string>;
   codePageSourceTargets?: ReadonlySet<string>;
   assetFiles: string[];
+  /** Compiled `src/` scripts the page can load */
+  authorScripts: AuthorScripts;
   isWatchMode: boolean;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
@@ -131,6 +136,8 @@ export interface RenderCodePageOptions {
   contentDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
+  /** Compiled `src/` scripts the page can load */
+  authorScripts: AuthorScripts;
   isWatchMode: boolean;
   validInternalTargets: ReadonlySet<string>;
   generatedPageTargets?: ReadonlySet<string>;
@@ -145,6 +152,8 @@ export interface RenderLiterateJavaOptions {
   contentDir: string;
   siteVariables: SiteVariables;
   assetFiles: string[];
+  /** Compiled `src/` scripts the page can load */
+  authorScripts: AuthorScripts;
   isWatchMode: boolean;
   skipExecution?: boolean;
   validInternalTargets: ReadonlySet<string>;

@@ -1,6 +1,11 @@
 import path from 'path';
 import { getProjectConfigDir } from '../templates';
-import { getContentDir, getDistDir, getPublicDir } from '../utils/paths';
+import {
+  getContentDir,
+  getDistDir,
+  getPublicDir,
+  getSrcDir,
+} from '../utils/paths';
 import type { CompileOutcome, WatchTarget, WatchBuildResult } from './types';
 import type { TadaBuildMeta, TraceCache } from '../build-types';
 import type { TraceToolAvailability } from '../types';
@@ -12,12 +17,22 @@ import {
 import { loadProjectConfig } from '../config-loader';
 import { getKeptOutputPrefixes } from '../pagefind';
 import { getDevSiteVariables } from '../site-variables';
-import { scanProject } from '../source-model';
-import { buildSite, createBuildMeta, type TadaSnapshot } from '../site-build';
+import { getScriptEntries, scanProject } from '../source-model';
+import {
+  buildAuthorScripts,
+  buildSite,
+  createBuildMeta,
+  type TadaSnapshot,
+} from '../site-build';
 import { buildIncremental } from './build-incremental';
 import type { TadaSourceRecord } from '../source-records';
 import { checkTraceToolAvailability, isTraceSourceFile } from '../utils/trace';
-import { createTadaWatchPlan, diffAuthorKeys } from './planner';
+import {
+  createTadaWatchPlan,
+  diffAuthorKeys,
+  getScriptDependentSources,
+  shouldRecompileScripts,
+} from './planner';
 import {
   getWatchConfigFilePaths,
   classifyWatchConfigPath,
@@ -82,6 +97,7 @@ export class TadaWatchCompiler {
     return [
       { path: contentDir, chokidar: { usePolling: true } },
       { path: publicDir, chokidar: { usePolling: true } },
+      { path: getSrcDir(), chokidar: { usePolling: true } },
       {
         path: projectConfigDir,
         chokidar: { depth: 0 },
@@ -150,9 +166,39 @@ export class TadaWatchCompiler {
       return this.buildFull({ siteVariables: snapshot.siteVariables, scan });
     }
 
+    let authorScripts = snapshot.authorScripts;
+    const scripts = getScriptEntries(scan, snapshot.siteVariables);
+    if (
+      shouldRecompileScripts({
+        paths,
+        srcDir: getSrcDir(),
+        scripts,
+        compiled: authorScripts,
+      })
+    ) {
+      const compiled = await buildAuthorScripts(
+        scripts,
+        snapshot.siteVariables,
+        'development',
+      );
+      if (!compiled.ok) {
+        return compiled;
+      }
+      authorScripts = compiled.value;
+      for (const source of getScriptDependentSources(
+        scan,
+        snapshot.siteVariables,
+        snapshot.authorScripts.entries,
+        authorScripts.entries,
+      )) {
+        plan.renderSources.add(source);
+      }
+    }
+
     return buildIncremental({
       plan,
       snapshot,
+      authorScripts,
       traceCache: this.traceCache,
       traceToolAvailability: this.traceToolAvailability,
     });

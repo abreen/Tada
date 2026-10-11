@@ -3,6 +3,7 @@ import path from 'path';
 import { installCustomFontFixtures } from './custom-font-fixtures';
 import { installPageLayoutFixtures } from './page-layout-fixtures';
 import { installBreadcrumbFixtures } from './breadcrumb-fixtures';
+import { installAuthorModuleFixtures } from './author-module-fixtures';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
@@ -66,7 +67,7 @@ if (devConfigWithoutFooter === devConfig) {
 }
 writeFileSync(
   devConfigPath,
-  `${devConfigWithoutFooter}${installCustomFontFixtures(repoDir, siteDir)}`,
+  `${devConfigWithoutFooter}${installCustomFontFixtures(repoDir, siteDir)}${installAuthorModuleFixtures(siteDir)}`,
 );
 
 writeFileSync(

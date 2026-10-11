@@ -8,6 +8,7 @@ import {
   test,
 } from 'bun:test';
 import path from 'path';
+import { createEmptyAuthorScripts } from '../author-scripts';
 import { createFsModuleMock } from '../test-helpers';
 import { DEFAULT_FONT_PRELOAD_FILES } from '../generate-fonts';
 import type { SiteVariables } from '../types';
@@ -15,6 +16,7 @@ import { initHighlighter } from './shiki-highlighter';
 
 const files = new Map<string, string>();
 let renderedPageVariables: Record<string, unknown> = {};
+let renderedParams: Record<string, unknown> = {};
 let mockedCodeHtml = '<div class="code-body">rendered code</div>';
 const originalCode = { ...(await import('./code')) };
 const originalTemplates = { ...(await import('../templates')) };
@@ -56,6 +58,7 @@ mock.module('../templates', () => ({
   },
   render(_fileName: string, params?: Record<string, unknown>) {
     renderedPageVariables = params?.page as Record<string, unknown>;
+    renderedParams = params ?? {};
     const content = typeof params?.content === 'string' ? params.content : '';
     return `<html><head><meta charset="UTF-8"></head><body>${content}</body></html>`;
   },
@@ -142,6 +145,7 @@ function renderMarkdownPage({
     siteVariables,
     validInternalTargets,
     assetFiles: [],
+    authorScripts: createEmptyAuthorScripts(),
     literateJavaOutputPaths: new Set(),
     dependencyCollector,
   });
@@ -163,6 +167,38 @@ describe('preparePageTemplateHtml', () => {
     expect(result).toContain('<link href="/styles.css" rel="stylesheet">');
     expect(result).toContain('<script defer src="/app.js"></script>');
     expect(result).toContain('href="/katex/katex.min.css"');
+  });
+
+  test('hints author scripts in the head so they download early', () => {
+    const result = preparePageTemplateHtml({
+      templateHtml: '<html><head><meta charset="UTF-8"></head></html>',
+      assetFiles: [],
+      siteVariables,
+      authorAssets: { js: ['_scripts/site.js', '_scripts/a.js'], css: [] },
+    });
+    const head = result.slice(0, result.indexOf('</head>'));
+    const positions = [
+      '<link rel="modulepreload" href="/_scripts/site.js">',
+      '<link rel="modulepreload" href="/_scripts/a.js">',
+    ].map(tag => head.indexOf(tag));
+    expect(positions).not.toContain(-1);
+    expect(positions).toEqual(positions.toSorted((a, b) => a - b));
+  });
+
+  test('injects author stylesheets after Tada stylesheets', () => {
+    const result = preparePageTemplateHtml({
+      templateHtml: '<html><head><meta charset="UTF-8"></head></html>',
+      assetFiles: ['index.bundle.css'],
+      siteVariables,
+      authorAssets: { js: [], css: ['_scripts/site.css', '_scripts/a.css'] },
+    });
+    const positions = [
+      '<link href="/index.bundle.css" rel="stylesheet">',
+      '<link href="/_scripts/site.css" rel="stylesheet" data-tada-style>',
+      '<link href="/_scripts/a.css" rel="stylesheet" data-tada-style>',
+    ].map(tag => result.indexOf(tag));
+    expect(positions).not.toContain(-1);
+    expect(positions).toEqual(positions.toSorted((a, b) => a - b));
   });
 
   test('injects head tags after the charset meta tag without inlining CSS', () => {
@@ -331,6 +367,7 @@ describe('renderCodePageAsset', () => {
       isWatchMode: false,
       siteVariables,
       assetFiles: ['app.js', 'styles.css'],
+      authorScripts: createEmptyAuthorScripts(),
       validInternalTargets: new Set(),
       literateJavaOutputPaths: new Set(),
     });
@@ -355,6 +392,7 @@ describe('renderCodePageAsset', () => {
       isWatchMode: false,
       siteVariables,
       assetFiles: ['app.js', 'styles.css'],
+      authorScripts: createEmptyAuthorScripts(),
       validInternalTargets: new Set(),
       literateJavaOutputPaths: new Set(),
     });
@@ -366,6 +404,52 @@ describe('renderCodePageAsset', () => {
 });
 
 describe('renderPlainTextPageAsset', () => {
+  const authorScripts = {
+    requested: [],
+    outputs: new Map(),
+    entries: new Map([
+      ['site.ts', { js: '_scripts/site.js', css: [] }],
+      ['page.ts', { js: '_scripts/page.js', css: ['_scripts/page.css'] }],
+    ]),
+  };
+
+  function renderWithScripts(source: string) {
+    const contentDir = path.resolve('/virtual/content');
+    const filePath = path.join(contentDir, 'scripts.md');
+    writeFile(filePath, source);
+    const [asset] = renderPlainTextPageAsset({
+      filePath,
+      contentDir,
+      siteVariables: { ...siteVariables, scripts: ['site.ts'] },
+      isWatchMode: false,
+      validInternalTargets: new Set(),
+      assetFiles: [],
+      authorScripts,
+    });
+    return asset.content.toString();
+  }
+
+  test('loads site-wide scripts, then front matter scripts', () => {
+    const html = renderWithScripts(
+      '---\ntitle: Scripts\nscripts: [page.ts]\n---\n\nBody\n',
+    );
+    expect(renderedParams.authorScriptPaths).toEqual([
+      '/_scripts/site.js',
+      '/_scripts/page.js',
+    ]);
+    expect(html).toContain(
+      '<link href="/course/_scripts/page.css" rel="stylesheet" data-tada-style>',
+    );
+  });
+
+  test('fails for a script that is not in src/', () => {
+    expect(() =>
+      renderWithScripts(
+        '---\ntitle: Scripts\nscripts: [missing.ts]\n---\n\nBody\n',
+      ),
+    ).toThrow('scripts.md: script "missing.ts" not found in src/');
+  });
+
   test.each(['.MD', '.mD', '.MARKDOWN', '.MarkDown'])(
     'parses front matter and Markdown for a %s page while preserving its output basename',
     extension => {
@@ -382,6 +466,7 @@ describe('renderPlainTextPageAsset', () => {
         isWatchMode: false,
         validInternalTargets: new Set(),
         assetFiles: [],
+        authorScripts: createEmptyAuthorScripts(),
       });
       expect(renderedPageVariables.title).toBe('Mixed case');
       expect(asset.content).toContain('<strong>Rendered Markdown</strong>');
@@ -769,6 +854,7 @@ describe('renderPlainTextPageAsset', () => {
           siteVariables,
           validInternalTargets: new Set(),
           assetFiles: [],
+          authorScripts: createEmptyAuthorScripts(),
           literateJavaOutputPaths: new Set(),
         }),
       ).toThrow('slides mode is only supported on Markdown pages');
@@ -801,6 +887,7 @@ describe('renderPlainTextPageAsset', () => {
       siteVariables,
       validInternalTargets: new Set(['/docs/index.html', '/index.html']),
       assetFiles: [],
+      authorScripts: createEmptyAuthorScripts(),
       literateJavaOutputPaths: new Set(),
       dependencyCollector,
     });
@@ -840,6 +927,7 @@ describe('renderPlainTextPageAsset', () => {
           '/docs/topic/index.html',
         ]),
         assetFiles: [],
+        authorScripts: createEmptyAuthorScripts(),
         literateJavaOutputPaths: new Set(),
         dependencyCollector,
       }),
@@ -966,6 +1054,7 @@ public class Pair {}
     siteVariables,
     validInternalTargets: new Set(['/labs/index.html', '/labs/00/index.html']),
     assetFiles: [],
+    authorScripts: createEmptyAuthorScripts(),
     literateJavaOutputPaths: new Set(),
     dependencyCollector,
   });

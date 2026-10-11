@@ -7,6 +7,7 @@ import mountPrint from '../print';
 import mountSlides from '../slides';
 import mountAppearancePicker from '../appearance-picker';
 import { scheduleTask } from '../util';
+import { mountAuthorScripts } from './author-scripts';
 
 const PER_PAGE_COMPONENTS: Record<
   string,
@@ -23,6 +24,9 @@ const PER_PAGE_COMPONENTS: Record<
 
 let cleanups: (() => void)[] = [];
 let appearancePickerMounted = false;
+// Advances on each teardown, so components and author scripts that would mount
+// after the visitor left their page are not mounted, or are undone right away
+let generation = 0;
 
 // Navigation calls this during the swap so the new transition snapshot shows
 // enabled switches with the visitor's preferences, rather than build defaults.
@@ -43,6 +47,10 @@ export function mountAppearancePickerForPage(window: Window): void {
 export async function mountPerPageComponents(
   window: Window,
 ): Promise<() => void> {
+  // Read before waiting, so a navigation in the meantime is noticed: the
+  // visitor's next page then mounts its own components
+  const mountGeneration = generation;
+  const isCurrent = () => generation === mountGeneration;
   mountAppearancePickerForPage(window);
 
   const entries = Object.entries(PER_PAGE_COMPONENTS);
@@ -50,10 +58,18 @@ export async function mountPerPageComponents(
   const mountPromises = entries.map(([name, mount]) => {
     return new Promise<void>((resolve, reject) => {
       scheduleTask(window, async () => {
+        if (!isCurrent()) {
+          resolve();
+          return;
+        }
         try {
           const cleanup = await mount(window);
           if (typeof cleanup === 'function') {
-            cleanups.push(cleanup);
+            if (isCurrent()) {
+              cleanups.push(cleanup);
+            } else {
+              cleanup();
+            }
           }
           resolve();
         } catch (err) {
@@ -67,6 +83,7 @@ export async function mountPerPageComponents(
   });
 
   await Promise.allSettled(mountPromises);
+  mountAuthorScripts(window, isCurrent, unmount => cleanups.push(unmount));
 
   return teardownPerPageComponents;
 }
@@ -81,4 +98,5 @@ export function teardownPerPageComponents(): void {
   }
   cleanups = [];
   appearancePickerMounted = false;
+  generation++;
 }

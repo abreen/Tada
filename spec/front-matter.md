@@ -60,6 +60,10 @@ results; choose one per file.
   page title is appended automatically
 - **skip**: set to `true` to exclude the page from the build
 - **stdin**: input string sent to a literate Java program's stdin at build time (see [Literate Java](literate-java.md))
+- **scripts**: list of scripts in `src/` to compile and run on the page, as
+  paths relative to `src/` (see [Author Scripts](author-scripts.md)); the build
+  fails if it is not a list of valid paths to existing files. `scripts:` with
+  no value means no scripts
 
 Title and description support inline Markdown formatting. The rendered HTML is
 used for the page heading, and a plain-text version is used for `<title>`,

@@ -7,7 +7,9 @@ written until all of them succeed.
    syntax highlighter
 2. **Generate**: bundle CSS and JavaScript with filenames containing the Tada
    package version, compile the KaTeX stylesheet, generate favicons and the web
-   manifest (if enabled), and reference the bundled fonts
+   manifest (if enabled), and reference the bundled fonts; then compile the
+   scripts in `src/` that the site config and pages list (see
+   [Author Scripts](author-scripts.md))
 3. **Render**: turn every source into outputs: Markdown, HTML, and code pages
    become HTML, and other files in `content/` and `public/` are referenced for
    copying
