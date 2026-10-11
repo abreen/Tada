@@ -349,7 +349,10 @@ describe('search UI', () => {
     expect(importModule.mock.calls[1]?.[0]).toBe(
       '/pagefind/pagefind.js?tada-pagefind-refresh=1',
     );
-    expect(pagefind.options).toHaveBeenCalledWith({ basePath: '/pagefind/' });
+    expect(pagefind.options).toHaveBeenCalledWith({
+      basePath: '/pagefind/',
+      highlightParam: 'pagefind-highlight',
+    });
     expect(pagefind.init).toHaveBeenCalledTimes(2);
     expect(pagefind.search).toHaveBeenLastCalledWith('alpha');
     expect(win.document.querySelector('.results-count')?.textContent).toBe(
@@ -361,5 +364,64 @@ describe('search UI', () => {
     expect(
       win.document.querySelector('a.result')?.hasAttribute('data-tada-page'),
     ).toBe(false);
+  });
+
+  test('keeps the highlight parameter on page links but not PDF links', async () => {
+    const pageData = {
+      meta: { title: 'Notes', template: 'default' },
+      url: '/notes.html?pagefind-highlight=odd',
+      excerpt: 'An <mark>odd</mark> number',
+      score: 2,
+      sub_results: [
+        {
+          title: 'Tabs',
+          url: '/notes.html?pagefind-highlight=odd#tabs',
+          excerpt: 'An <mark>odd</mark> number',
+        },
+      ],
+    };
+    const pdfPage = (page: number) => ({
+      meta: { title: 'slides.pdf', page: String(page) },
+      url: `/slides.pdf?pagefind-highlight=odd#page=${page}`,
+      excerpt: `<mark>odd</mark> on page ${page}`,
+      score: 1,
+    });
+    const pagefind = {
+      destroy: mock(async () => {}),
+      init: mock(async () => {}),
+      options: mock(async () => {}),
+      search: mock(async () => ({
+        results: [pageData, pdfPage(2), pdfPage(3)].map(data => ({
+          data: async () => data,
+        })),
+      })),
+    };
+    mockGlobals({ importModule: async () => pagefind });
+
+    const win = createSearchWindow();
+    mount(win);
+    // Replace the Pagefind instance cached by earlier tests
+    win.dispatchEvent(new win.Event(PAGE_UPDATE_REFRESH_EVENT));
+    await flush();
+    const input = win.document.querySelector(
+      'input.quick-search',
+    ) as HTMLInputElement;
+    input.dispatchEvent(new win.Event('focus'));
+    input.value = 'odd';
+    input.dispatchEvent(new win.Event('input', { bubbles: true }));
+    await flush();
+
+    const hrefs = Array.from(
+      win.document.querySelectorAll('a.result, a.sub-result'),
+      link => link.getAttribute('href'),
+    );
+    expect(hrefs).toContain('/notes.html?pagefind-highlight=odd');
+    expect(hrefs).toContain('/notes.html?pagefind-highlight=odd#tabs');
+    const pdfHrefs = hrefs.filter(href => href?.includes('.pdf'));
+    expect(pdfHrefs.length).toBeGreaterThan(0);
+    for (const href of pdfHrefs) {
+      expect(href).not.toContain('pagefind-highlight');
+    }
+    expect(pdfHrefs).toContain('/slides.pdf#page=2');
   });
 });

@@ -38,5 +38,11 @@ are in `src/util.ts`.
   chooses fullscreen from a `Full screen` checkbox, opens from slide-heading
   presentation buttons via a local custom event, and shows one slide at a time
   with keyboard and click navigation (see [Slides Mode](slides.md))
+- **Tabs**: applies the WAI-ARIA tabs pattern to build-time tab groups, with
+  arrow key navigation and selection of the tab containing the URL's target
+  (see [Tabs](tabs.md))
+- **Search highlighting**: on a page opened from a search result, highlights
+  the searched words with an animated highlighter sweep and opens the tab
+  containing the first match (see [Search Highlighting](search-highlighting.md))
 - **Traces**: widget that renders execution traces generated at build time and
   renders a stack and heap memory diagram (see [Traces](traces.md))

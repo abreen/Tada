@@ -432,6 +432,20 @@ public class Demo {
     );
   });
 
+  test('rendered widget is left out of the search index', () => {
+    const html = renderTraceWidgetHtml({
+      highlightedSources: [
+        { file: 'Test.java', highlightedSource: '<pre>class Test {}</pre>' },
+      ],
+      manifestUrl: '/_traces/Test/manifest.json',
+      totalSteps: 3,
+    });
+
+    expect(html).toMatch(
+      /^<div class="trace-widget"[^>]* data-pagefind-ignore[ >]/,
+    );
+  });
+
   test('rendered widget disables controls until the client mounts', () => {
     const html = renderTraceWidgetHtml({
       highlightedSources: [

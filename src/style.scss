@@ -16,10 +16,12 @@
 @use 'code';
 @use 'literate';
 @use 'header';
+@use 'highlight';
 @use 'print';
 @use 'question';
 @use 'search';
 @use 'slides';
+@use 'tabs';
 @use 'toc';
 @use 'trace';
 @use 'appearance-picker';

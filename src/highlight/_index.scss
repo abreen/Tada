@@ -1,0 +1,33 @@
+// Search terms on a page opened from a search result. The ink is a background
+// image so it can sweep on: across an element that wraps, the background is
+// laid out as one strip over every line fragment, so growing it runs along the
+// first line and continues onto the next, like a highlighter.
+mark.search-highlight {
+  padding: 0;
+  color: inherit;
+  background-color: transparent;
+  background-image: linear-gradient(
+    var(--search-highlight-color),
+    var(--search-highlight-color)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  border-radius: 0.15em;
+}
+
+@keyframes search-highlight-sweep {
+  from {
+    background-size: 0% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  mark.search-highlight[data-sweep='pending'] {
+    background-size: 0% 100%;
+  }
+
+  mark.search-highlight[data-sweep='run'] {
+    animation: search-highlight-sweep var(--search-highlight-duration)
+      var(--search-highlight-delay) cubic-bezier(0.3, 0, 0.3, 1) both;
+  }
+}

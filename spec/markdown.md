@@ -102,10 +102,27 @@ Second column content.
 
 The three `+++` lines act as opening fence, column separator, and closing fence.
 Each column's content is parsed as full Markdown (headings, lists, code blocks,
-etc.). Delimiter lines inside fenced code blocks (backticks or tildes) or
-indented code blocks remain literal code, including `+++`. An unclosed code
+etc.). Delimiter lines inside fenced code blocks (backticks or tildes),
+indented code blocks, or raw HTML blocks that keep their lines verbatim
+(`<pre>`, `<script>`, `<style>`, `<textarea>`, and comments) remain literal,
+including `+++`. An unclosed code
 fence consumes the remaining content rather than supplying column boundaries.
 The output is a CSS Grid container with two equal-width columns.
+
+## Tabs
+
+Show alternative content in a tabbed view:
+
+```
+[Java|
+Content in the first tab.
+]
+[Python|
+Content in the second tab.
+]
+```
+
+Consecutive tabs form one group. See [Tabs](tabs.md).
 
 ## Superlinks
 

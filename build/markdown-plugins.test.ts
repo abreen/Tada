@@ -1,12 +1,15 @@
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, spyOn, test } from 'bun:test';
 import MarkdownIt from 'markdown-it';
+import ParserBlock from 'markdown-it/lib/parser_block.mjs';
 import deflist from 'markdown-it-deflist';
 import footnote from 'markdown-it-footnote';
+import markdownItAnchor from 'markdown-it-anchor';
 import deflistIdPlugin from './deflist-id-plugin';
 import externalLinksPlugin from './external-links-plugin';
 import headingSubtitlePlugin from './heading-subtitle-plugin';
 import superlinkPlugin from './superlink-plugin';
 import columnsPlugin from './columns-plugin';
+import tabsPlugin from './tabs-plugin';
 import { createMarkdown } from './utils/markdown';
 import { stripHtmlComments, injectKatexStylesheet } from './utils/render';
 import { initHighlighter } from './utils/shiki-highlighter';
@@ -1165,8 +1168,36 @@ describe('katex plugin', () => {
   });
 });
 
+// Lines read by every block parser, including the ones that locate code
+function countParsedLines(render: () => void): number {
+  const parse = spyOn(ParserBlock.prototype, 'parse');
+  try {
+    render();
+    return parse.mock.calls.reduce(
+      (sum, [src]) => sum + src.split('\n').length,
+      0,
+    );
+  } finally {
+    parse.mockRestore();
+  }
+}
+
 describe('columns plugin', () => {
   const md = new MarkdownIt().use(columnsPlugin);
+
+  test('finds code in time proportional to the document', () => {
+    const source = Array.from(
+      { length: 200 },
+      (_, i) => `Paragraph ${i}.\n\n+++\nLeft ${i}.\n+++\nRight ${i}.\n+++\n`,
+    ).join('\n');
+    const lines = source.split('\n').length;
+    const html = { value: '' };
+    const parsed = countParsedLines(() => {
+      html.value = md.render(source);
+    });
+    expect(html.value.match(/class="columns"/g)).toHaveLength(200);
+    expect(parsed).toBeLessThan(lines * 10);
+  });
 
   test('basic two-column layout', () => {
     const html = md.render('+++\nCol 1\n+++\nCol 2\n+++\n');
@@ -1249,6 +1280,228 @@ describe('columns plugin', () => {
   test('empty columns produce no content errors', () => {
     const html = md.render('+++\n+++\n+++\n');
     expect(html).toContain('<div class="columns">');
+  });
+});
+
+describe('tabs plugin', () => {
+  const md = new MarkdownIt().use(tabsPlugin);
+
+  test('finds code in time proportional to the document', () => {
+    const source = Array.from(
+      { length: 200 },
+      (_, i) => `Paragraph ${i}.\n\n[Tab ${i}|\n\nContent ${i}.\n\n]\n`,
+    ).join('\n');
+    const lines = source.split('\n').length;
+    const html = { value: '' };
+    const parsed = countParsedLines(() => {
+      html.value = md.render(source);
+    });
+    expect(html.value.match(/class="tabs"/g)).toHaveLength(200);
+    expect(parsed).toBeLessThan(lines * 10);
+  });
+
+  test('scans openers without a closing line in time proportional to the document', () => {
+    const source = Array.from(
+      { length: 200 },
+      (_, i) => `[Not a tab ${i}|\n\nText ${i}.\n`,
+    ).join('\n');
+    const lines = source.split('\n').length;
+    const html = { value: '' };
+    const parsed = countParsedLines(() => {
+      html.value = md.render(source);
+    });
+    expect(html.value).not.toContain('class="tabs"');
+    expect(parsed).toBeLessThan(lines * 10);
+  });
+
+  test('renders a group with a tab list and labeled panels', () => {
+    const html = md.render(
+      "[Tab 1|\n\nHere's the content.\n\n]\n[Tab 2|\n\nSecond.\n\n]\n",
+    );
+    expect(html).toBe(
+      [
+        '<div class="tabs" id="tabs-1">',
+        '<div class="tabs-list">',
+        '<button type="button" class="tabs-tab" id="tabs-1-tab-1" data-selected="" disabled="">Tab 1</button>',
+        '<button type="button" class="tabs-tab" id="tabs-1-tab-2" disabled="">Tab 2</button>',
+        '</div>',
+        '<div class="tabs-panels">',
+        '<div class="tabs-panel" id="tabs-1-panel-1" data-selected="">',
+        '<p class="tabs-panel-label" data-pagefind-ignore="">Tab 1</p>',
+        "<p>Here's the content.</p>",
+        '</div>',
+        '<div class="tabs-panel" id="tabs-1-panel-2">',
+        '<p class="tabs-panel-label" data-pagefind-ignore="">Tab 2</p>',
+        '<p>Second.</p>',
+        '</div>',
+        '</div>',
+        '</div>',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  test('allows empty panels', () => {
+    const html = md.render('[A|\n\n]\n[B|\n]\n[C|\n\n\n]\n');
+    expect(html.match(/class="tabs-tab"/g)).toHaveLength(3);
+    expect(html.match(/class="tabs-panel"/g)).toHaveLength(3);
+    expect(html.match(/class="tabs"/g)).toHaveLength(1);
+  });
+
+  test('blank lines between blocks keep one group', () => {
+    const html = md.render('[A|\na\n]\n\n\n[B|\nb\n]\n');
+    expect(html.match(/class="tabs"/g)).toHaveLength(1);
+    expect(html).toContain('id="tabs-1-panel-2"');
+  });
+
+  test('other content between blocks starts a new group', () => {
+    const html = md.render('[A|\na\n]\n\nBetween.\n\n[B|\nb\n]\n');
+    expect(html.match(/class="tabs"/g)).toHaveLength(2);
+    expect(html).toContain('<p>Between.</p>');
+    expect(html).toContain('id="tabs-1-tab-1"');
+    expect(html).toContain('id="tabs-2-tab-1"');
+    expect(html).not.toContain('tabs-1-tab-2');
+  });
+
+  test('a single tab is a group', () => {
+    const html = md.render('[Only|\ntext\n]\n');
+    expect(html).toContain('id="tabs-1-tab-1"');
+    expect(html).toContain('<p>text</p>');
+  });
+
+  test('labels accept inline Markdown and are trimmed', () => {
+    const html = md.render('[  *Java* `main`  |\nx\n]\n');
+    expect(html).toContain(
+      'disabled=""><em>Java</em> <code>main</code></button>',
+    );
+    expect(html).toContain(
+      '<p class="tabs-panel-label" data-pagefind-ignore=""><em>Java</em> <code>main</code></p>',
+    );
+  });
+
+  test('panels contain full Markdown', () => {
+    const html = md.render('[A|\n## Heading\n\n- item\n\n```js\nx\n```\n]\n');
+    expect(html).toContain('<h2>Heading</h2>');
+    expect(html).toContain('<li>item</li>');
+    expect(html).toContain('<code class="language-js">x\n</code>');
+  });
+
+  test('groups nest inside panels', () => {
+    const html = md.render(
+      '[Outer 1|\n[Inner 1|\ni1\n]\n[Inner 2|\ni2\n]\n]\n[Outer 2|\no2\n]\n',
+    );
+    expect(html.match(/class="tabs"/g)).toHaveLength(2);
+    expect(html).toMatch(
+      /id="tabs-1-panel-1"[^]*<div class="tabs" id="tabs-2">[^]*<p>i2<\/p>\n<\/div>\n<\/div>\n<\/div>\n<\/div>\n<div class="tabs-panel" id="tabs-1-panel-2">/,
+    );
+    expect(html).toContain('<p>o2</p>');
+  });
+
+  test.each([
+    ['backticks', '```text\n]\n[X|\n```'],
+    ['tildes', '~~~text\n]\n~~~'],
+    ['indented code', '    ]\n    [X|'],
+  ])('preserves literal delimiters in %s', (_name, code) => {
+    const content = `Before.\n\n${code}\n\nAfter.\n`;
+    expect(md.render(`[A|\n${content}]\n`)).toContain(
+      `<p class="tabs-panel-label" data-pagefind-ignore="">A</p>\n${md.render(content)}</div>`,
+    );
+  });
+
+  test('an unclosed tab is ordinary text', () => {
+    const html = md.render('[A|\ntext\n');
+    expect(html).not.toContain('class="tabs"');
+    expect(html).toBe('<p>[A|\ntext</p>\n');
+  });
+
+  test('an unclosed code fence cannot supply the closing line', () => {
+    const html = md.render('[A|\n```text\n]\n');
+    expect(html).not.toContain('class="tabs"');
+  });
+
+  test.each([
+    ['empty label', '[|\nx\n]\n'],
+    ['blank label', '[  |\nx\n]\n'],
+    ['footnote-like label', '[^1|\nx\n]\n'],
+    ['text after the bar', '[A| more\nx\n]\n'],
+    ['indented open line', '    [A|\nx\n]\n'],
+  ])('ignores %s', (_name, source) => {
+    expect(md.render(source)).not.toContain('class="tabs"');
+  });
+
+  test('a table row starting with a link stays in its tab', () => {
+    const table = '| A | B |\n| - | - |\n[x](u) | y |\n';
+    const html = md.render(`[Tab|\n\n${table}\n]\n`);
+    expect(html).toContain('class="tabs"');
+    expect(html).toContain(`${md.render(table)}</div>`);
+  });
+
+  test.each([
+    ['a link', '[x](u) |'],
+    ['an unbalanced bracket', '[a]b|'],
+  ])('a line starting with %s does not open a tab', (_name, line) => {
+    expect(md.render(`${line}\ntext\n]\n`)).not.toContain('class="tabs"');
+  });
+
+  test('labels may contain balanced and escaped brackets', () => {
+    const html = md.render('[Array[int] \\] `]`|\nx\n]\n');
+    expect(html).toContain('disabled="">Array[int] ] <code>]</code></button>');
+  });
+
+  test('preserves literal delimiters in raw <pre> HTML', () => {
+    const pre = '<pre>\n[1,\n]\n</pre>\n';
+    const html = new MarkdownIt({ html: true })
+      .use(tabsPlugin)
+      .render(`[A|\n${pre}]\n`);
+    expect(html).toContain('class="tabs"');
+    expect(html).toContain(`${pre}</div>`);
+  });
+
+  test('tab buttons show link text without the link', () => {
+    const html = md.render('[See [docs](u)|\nx\n]\n');
+    expect(html).toContain('disabled="">See docs</button>');
+    expect(html).toContain(
+      'data-pagefind-ignore="">See <a href="u">docs</a></p>',
+    );
+  });
+
+  test('a footnote reference in a label is parsed once', () => {
+    const html = new MarkdownIt()
+      .use(footnote)
+      .use(tabsPlugin)
+      .render('[Java[^1]|\nx\n]\n\n[^1]: Note.\n');
+    expect(html.match(/id="fnref1"/g)).toHaveLength(1);
+    expect(html.match(/href="#fnref1"/g)).toHaveLength(1);
+    expect(html).toContain('disabled="">Java</button>');
+  });
+
+  test('group ids skip ids used by headings', () => {
+    const html = new MarkdownIt()
+      .use(markdownItAnchor, { tabIndex: false })
+      .use(tabsPlugin)
+      .render('## Tabs 1\n\n## Tabs 2 Tab 1\n\n[A|\na\n]\n[B|\nb\n]\n');
+    expect(html).toContain('<h2 id="tabs-1">');
+    expect(html).toContain('<h2 id="tabs-2-tab-1">');
+    expect(html).toContain('<div class="tabs" id="tabs-3">');
+    expect(html).toContain('id="tabs-3-tab-2"');
+    expect(html).toContain('id="tabs-3-panel-2"');
+  });
+
+  test('a tab in a list item closes inside it', () => {
+    const html = md.render('- [A|\n  a\n  ]\n- b\n');
+    expect(html).toContain('<li>\n<div class="tabs"');
+    expect(html).toContain('<li>b</li>');
+  });
+
+  test('a closing line after the end of a list item does not close its tab', () => {
+    const html = md.render('- [A|\n  a\n- b\n  ]\n');
+    expect(html).not.toContain('class="tabs"');
+    expect(html).toContain('<li>b\n]</li>');
+  });
+
+  test('ids are unique per render', () => {
+    expect(md.render('[A|\na\n]\n')).toContain('id="tabs-1"');
+    expect(md.render('[A|\na\n]\n')).toContain('id="tabs-1"');
   });
 });
 

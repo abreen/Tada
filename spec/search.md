@@ -56,6 +56,10 @@ reduced motion get the same immediate visual state change. When a search result
 starts page navigation, the panel closes immediately so its exit motion does
 not overlap the page View Transition.
 
+Result links carry the search words in a `pagefind-highlight` query parameter,
+so the destination page highlights them and opens any tab that hides the first
+match (see [Search Highlighting](search-highlighting.md)).
+
 Pressing Escape while a result is focused dismisses the results and returns
 focus to the search field. Pressing Escape again returns focus to the element
 that was focused before the search field.

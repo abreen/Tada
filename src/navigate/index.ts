@@ -15,6 +15,7 @@ import {
 } from './runtime';
 import { globals } from '../globals';
 import { getHashTarget } from '../hash-target';
+import { revealInTabs } from '../tabs';
 
 function findAnchor(event: MouseEvent): HTMLAnchorElement | null {
   const target = event.target as HTMLElement | null;
@@ -88,7 +89,12 @@ export default function mountNavigate(window: Window): () => void {
       closeHeaderDetails(window.document);
       if (url.hash) {
         if (url.hash === window.location.hash) {
-          getHashTarget(window.document, url.hash)?.scrollIntoView();
+          // No hashchange follows, so reveal a target hidden in a tab here
+          const target = getHashTarget(window.document, url.hash);
+          if (target) {
+            revealInTabs(window, target);
+            target.scrollIntoView();
+          }
         } else {
           globals.setLocationHash(window, url.hash);
         }

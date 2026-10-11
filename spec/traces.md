@@ -113,6 +113,11 @@ remains visible so those fields can be inspected.
 The diagram reads colors from CSS custom properties and re-renders on color
 scheme changes.
 
+The widget is excluded from the search index (`data-pagefind-ignore`), so its
+source listing, step counter, and no-JavaScript notice never produce search
+results or [search highlights](search-highlighting.md). A traced file in
+`content/` remains searchable through its own code page.
+
 ## Slides Mode
 
 When a trace widget appears on a page that uses [Slides Mode](slides.md),

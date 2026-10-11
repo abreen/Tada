@@ -2,7 +2,8 @@ import { defineConfig } from '@playwright/test';
 
 // Chromium runs every spec. WebKit and Firefox run the specs where engines
 // differ most: client-side navigation, history and scroll restoration, and
-// fragment targets, plus a few layout and font specs on WebKit.
+// fragment targets (including tabs and search highlights, which reveal hidden
+// content for them), plus a few layout and font specs on WebKit.
 const webkitSpecs = [
   'author-byline',
   'breadcrumbs',
@@ -15,7 +16,9 @@ const webkitSpecs = [
   'navigation-same-page',
   'navigation-scroll',
   'navigation-target',
+  'search-highlight',
   'search-recovery',
+  'tabs',
   'toc-highlight',
   'trace-navigation',
 ];
@@ -27,7 +30,9 @@ const firefoxSpecs = [
   'navigation-same-page',
   'navigation-scroll',
   'navigation-target',
+  'search-highlight',
   'search-recovery',
+  'tabs',
   'toc-highlight',
   'trace-navigation',
 ];

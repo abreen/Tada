@@ -15,6 +15,7 @@ import externalLinksPlugin from '../external-links-plugin';
 import superlinkPlugin from '../superlink-plugin';
 import { tocPlugin } from '../toc-plugin';
 import columnsPlugin from '../columns-plugin';
+import tabsPlugin from '../tabs-plugin';
 import katexPlugin from './katex';
 import markdownPartialsPlugin from './markdown-partials';
 import { hiddenCodeBlock } from './html-comments';
@@ -38,6 +39,8 @@ interface CreateMarkdownOptions {
   renderTrace?: (sourceFile: string, companionFiles: string[]) => string;
   preserveHtmlComments?: boolean;
   dependencyCollector?: RenderDependencyCollector;
+  /** Prefix of tab group IDs, for Markdown rendered apart from the page */
+  tabsIdPrefix?: string;
 }
 
 interface MultipleChoiceOption {
@@ -69,6 +72,7 @@ export function createMarkdown(
     .use(superlinkPlugin, siteVariables)
     .use(tocPlugin)
     .use(columnsPlugin)
+    .use(tabsPlugin, { idPrefix: options.tabsIdPrefix })
     .use(katexPlugin);
 
   if (filePath && options.vars) {

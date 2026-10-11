@@ -1,8 +1,9 @@
 import { getElement, applyBasePath } from '../util';
-import { getPdfPageNumber, groupPdfResults } from './pdf-utils';
+import { getPdfBaseUrl, getPdfPageNumber, groupPdfResults } from './pdf-utils';
 import type { Result } from './pdf-utils';
 import { PAGE_UPDATE_REFRESH_EVENT } from '../page-update';
 import { globals } from '../globals';
+import { HIGHLIGHT_PARAM, removeHighlightParam } from '../highlight/param';
 
 interface PagefindSubResult {
   title?: string;
@@ -30,7 +31,10 @@ interface PagefindSearchResult {
 interface Pagefind {
   destroy(): Promise<void>;
   init(): Promise<void>;
-  options(options: { basePath: string }): Promise<void>;
+  options(options: {
+    basePath?: string;
+    highlightParam?: string;
+  }): Promise<void>;
   search(query: string): Promise<{ results: PagefindSearchResult[] }>;
 }
 
@@ -46,6 +50,12 @@ type State = {
 };
 
 type SearchState = Pick<State, 'results' | 'totalResults'> | null;
+
+/** PDFs cannot highlight search terms, so their links omit them */
+function linkUrl(url: string): string {
+  const withoutTerms = removeHighlightParam(url);
+  return getPdfBaseUrl(withoutTerms) != null ? withoutTerms : url;
+}
 
 async function doSearch(query: string, window: Window): Promise<SearchState> {
   if (pagefind == null) {
@@ -75,17 +85,18 @@ async function doSearch(query: string, window: Window): Promise<SearchState> {
       })
       .map((s: PagefindSubResult) => ({
         title: s.title ?? '',
-        url: s.url,
+        url: linkUrl(s.url),
         excerpt: s.excerpt ?? '',
       }));
+    const url = linkUrl(d.url);
     return {
       title,
       titleHtml: d.meta?.title_html ?? null,
-      url: d.url,
+      url,
       excerpt: d.excerpt ?? '',
       score: d.score ?? 0,
       subResults,
-      pageNumber: getPdfPageNumber(d.url, d.meta?.page),
+      pageNumber: getPdfPageNumber(url, d.meta?.page),
       template: d.meta?.template ?? null,
     };
   });
@@ -281,9 +292,16 @@ export default (window: Window) => {
       if (generation !== pagefindLoadGeneration) {
         return false;
       }
-      if (generation > 0) {
-        await loadedPagefind.options({ basePath: applyBasePath('/pagefind/') });
-      }
+      // Result links carry the search terms so the destination page can
+      // highlight them. The first load finds its base path from its own URL.
+      await loadedPagefind.options(
+        generation > 0
+          ? {
+              basePath: applyBasePath('/pagefind/'),
+              highlightParam: HIGHLIGHT_PARAM,
+            }
+          : { highlightParam: HIGHLIGHT_PARAM },
+      );
       if (generation !== pagefindLoadGeneration) {
         return false;
       }

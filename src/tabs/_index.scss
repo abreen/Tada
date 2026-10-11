@@ -1,0 +1,262 @@
+@use '../mixins' as *;
+
+// Rounded like the plain <details> border in content
+.tabs {
+  --tabs-border-width: 1px;
+  --tabs-radius: calc(var(--mono-border-radius) + 0.125em);
+  --tabs-padding-x: var(--gap);
+  --tabs-padding-y: 2px;
+  --tabs-gap: 6px;
+
+  // Concave corners where the active tab meets the panel; no larger than the
+  // gap, so they never reach a neighboring tab
+  --tabs-flare-radius: var(--tabs-gap);
+
+  margin-bottom: 1rem;
+}
+
+// The tab list needs the client component; without JS every panel is shown,
+// stacked under its own label
+.tabs-list {
+  display: none;
+}
+
+.tabs-panels {
+  border: var(--tabs-border-width) solid var(--fg2-color);
+  border-radius: var(--tabs-radius);
+}
+
+.tabs-panel {
+  min-width: 0;
+  padding: var(--details-padding);
+
+  > :first-child,
+  > .tabs-panel-label + * {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Like the footnotes title
+.tabs-panel-label {
+  @include user-select(none);
+
+  margin: 0 0 0.5em;
+  font-style: italic;
+  color: var(--fg2-color);
+}
+
+:root:not(.js) .tabs-panel + .tabs-panel {
+  border-top: var(--tabs-border-width) solid var(--fg2-color);
+}
+
+.js {
+  .tabs-list {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: var(--tabs-gap);
+    align-items: flex-end;
+
+    // The list overlaps the panel's top border, so the active tab can cover
+    // it. The overlap stays inside the list's own box, so scrolling a long
+    // tab list cannot clip it.
+    margin-bottom: calc(-1 * var(--tabs-border-width));
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  // The first tab is flush with the panel's left border and sits in its
+  // corner, so the corner is square
+  .tabs-panels {
+    border-top-left-radius: 0;
+  }
+
+  // An until-found panel is still rendered; without padding it takes no space
+  // Print shows every panel, so it keeps their padding
+  @media not print {
+    .tabs-panel[hidden] {
+      padding: 0;
+    }
+  }
+
+  .tabs-panel:focus-visible {
+    outline: 2px solid var(--theme-color);
+    outline-offset: -2px;
+    border-radius: calc(var(--tabs-radius) - var(--tabs-border-width));
+  }
+
+  .tabs-panel-label {
+    display: none;
+  }
+
+  // Before the component mounts, show the build-time selection
+  .tabs:not([data-mounted]) > .tabs-panels > .tabs-panel:not([data-selected]) {
+    display: none;
+  }
+}
+
+.tabs-tab {
+  position: relative;
+  flex: none;
+  padding: var(--tabs-padding-y) var(--tabs-padding-x);
+  margin: 0 0 var(--tabs-border-width);
+  font: inherit;
+  font-size: var(--font-size-smaller);
+  line-height: var(--line-height);
+  color: var(--fg2-color);
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--bg2-color);
+
+  // Transparent, so a tab keeps its width when it becomes active. An inactive
+  // tab stops at the panel's top border instead of covering it; the margin
+  // keeps its label level with the active tab's.
+  border: var(--tabs-border-width) solid transparent;
+  border-bottom: 0;
+  border-radius: var(--tabs-radius) var(--tabs-radius) 0 0;
+
+  @include user-select(none);
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-color);
+    outline-offset: -4px;
+  }
+
+  &:not([data-selected]):active {
+    color: var(--link-active-color);
+  }
+
+  code {
+    font-size: 0.9em;
+  }
+}
+
+@media (hover: hover) {
+  .tabs-tab:not([data-selected], :disabled):hover {
+    color: var(--fg-color);
+  }
+
+  // Overrides the global button hover; clicking the active tab does nothing
+  .tabs-tab[data-selected]:hover {
+    cursor: default;
+    background: var(--bg-color);
+  }
+}
+
+// Overrides the global button press colors, which are !important
+.tabs-tab[data-selected]:active {
+  color: var(--fg-color) !important;
+  background: var(--bg-color) !important;
+}
+
+// Every tab rests on the panel's top border. The active tab joins the panel:
+// the border runs up its sides and across its top, and its background covers
+// the panel's top border beneath it.
+.tabs-tab[data-selected] {
+  // Extra padding instead of a transparent bottom border: a solid side border
+  // meeting a transparent bottom border is mitered, which would cut a notch
+  // into the panel's border at the tab's bottom corners
+  padding-bottom: calc(var(--tabs-padding-y) + var(--tabs-border-width));
+  margin-bottom: 0;
+  color: var(--fg-color);
+  cursor: default;
+  background: var(--bg-color);
+  border-color: var(--fg2-color);
+  border-bottom: 0;
+  border-radius: var(--tabs-radius) var(--tabs-radius) 0 0;
+
+  // Each flare sits just outside a bottom corner, over the tab's side border
+  // and the panel's top border. Inside the curve it is transparent; outside
+  // it, the panel background hides both straight borders.
+  &::before,
+  &::after {
+    --r: var(--tabs-flare-radius);
+
+    position: absolute;
+    bottom: 0;
+    box-sizing: border-box;
+    width: var(--r);
+    height: var(--r);
+    pointer-events: none;
+    content: '';
+  }
+
+  &::before {
+    right: 100%;
+    background: radial-gradient(
+      circle at 0 0,
+      transparent calc(var(--r) - 1.25px),
+      var(--fg2-color) calc(var(--r) - 0.75px),
+      var(--fg2-color) calc(var(--r) - 0.25px),
+      var(--bg-color) calc(var(--r) + 0.25px)
+    );
+  }
+
+  &::after {
+    left: 100%;
+    background: radial-gradient(
+      circle at 100% 0,
+      transparent calc(var(--r) - 1.25px),
+      var(--fg2-color) calc(var(--r) - 0.75px),
+      var(--fg2-color) calc(var(--r) - 0.25px),
+      var(--bg-color) calc(var(--r) + 0.25px)
+    );
+  }
+
+  // The first tab is flush with the panel's left border, which continues
+  // straight up its side
+  &:first-child::before {
+    content: none;
+  }
+}
+
+@media print {
+  .js .tabs-list {
+    display: none;
+  }
+
+  // No tab sits in the corner, so it is rounded again. Black, like <details>
+  // in print.
+  .js .tabs-panels,
+  .tabs-panels {
+    display: block;
+    border-color: #000;
+    border-top-left-radius: var(--tabs-radius);
+  }
+
+  .tabs-panel[hidden],
+  .js
+    .tabs:not([data-mounted])
+    > .tabs-panels
+    > .tabs-panel:not([data-selected]) {
+    display: block !important;
+    content-visibility: visible !important;
+  }
+
+  .tabs-panel-label,
+  .js .tabs-panel-label {
+    display: block;
+    color: #000;
+  }
+
+  .tabs-panel + .tabs-panel,
+  :root:not(.js) .tabs-panel + .tabs-panel {
+    border-top: var(--tabs-border-width) solid #000;
+  }
+}

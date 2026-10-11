@@ -248,7 +248,10 @@ function renderSiteBanner(siteVariables: SiteVariables): string {
     return '';
   }
 
-  return createMarkdown(siteVariables).render(siteVariables.banner);
+  // Rendered apart from the page, so its tab groups need their own IDs
+  return createMarkdown(siteVariables, { tabsIdPrefix: 'banner-tabs' }).render(
+    siteVariables.banner,
+  );
 }
 
 // `<meta charset>` is the first element in `<head>` so browsers find it within

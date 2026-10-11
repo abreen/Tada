@@ -498,6 +498,29 @@ describe('renderPlainTextPageAsset', () => {
     );
   });
 
+  test('numbers tab groups in the banner apart from those in the page', () => {
+    const contentDir = path.resolve('/virtual/content');
+    const filePath = path.join(contentDir, 'tabs.md');
+    writeFile(filePath, '---\ntitle: Tabs\n---\n\n[A|\n\nPage\n\n]\n');
+    renderPlainTextPageAsset({
+      filePath,
+      contentDir,
+      siteVariables: { ...siteVariables, banner: '[B|\n\nBanner\n\n]\n' },
+      isWatchMode: false,
+      validInternalTargets: new Set(),
+      assetFiles: [],
+      authorScripts,
+    });
+    const ids = (html: unknown) =>
+      Array.from(String(html).matchAll(/ id="([^"]+)"/g), match => match[1]);
+    const bannerIds = ids(renderedParams.bannerHtml);
+    expect(bannerIds).not.toHaveLength(0);
+    expect(ids(renderedParams.content)).not.toContain(bannerIds[0]);
+    expect(
+      ids(renderedParams.content).filter(id => bannerIds.includes(id)),
+    ).toEqual([]);
+  });
+
   test('fails for a script that is not in src/', () => {
     expect(() =>
       renderWithScripts(

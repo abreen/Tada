@@ -5,6 +5,8 @@ import mountCode from '../code';
 import mountTrace from '../trace';
 import mountPrint from '../print';
 import mountSlides from '../slides';
+import mountTabs from '../tabs';
+import mountHighlight from '../highlight';
 import mountAppearancePicker from '../appearance-picker';
 import { scheduleTask } from '../util';
 import { mountAuthorScripts } from './author-scripts';
@@ -19,6 +21,8 @@ const PER_PAGE_COMPONENTS: Record<
   code: mountCode,
   trace: mountTrace,
   slides: mountSlides,
+  tabs: mountTabs,
+  highlight: mountHighlight,
   print: mountPrint,
 };
 

@@ -84,6 +84,37 @@ A second paragraph with **emphasis** and [a link](./slides.html).
 `,
 );
 
+writeFileSync(
+  path.join(siteDir, 'content', 'tabs.md'),
+  `---
+title: Tabs
+---
+
+[Link to the Python heading](#python-details)
+
+${'Filler before the tabs.\n\n'.repeat(40)}
+[Java|
+
+Java content with [a link](./questions.html).
+
+]
+[Python|
+
+### Python details
+
+Python content.
+
+]
+[Rust|
+
+Rust content.
+
+Ferris is the Rust mascot.
+
+]
+`,
+);
+
 mkdirSync(path.dirname(slidesPath), { recursive: true });
 mkdirSync(traceDir, { recursive: true });
 mkdirSync(resetTraceDir, { recursive: true });

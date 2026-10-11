@@ -311,6 +311,39 @@ static boolean isOdd(int n) {
 ```
 +++
 
+### Tabs
+
+Use
+
+```
+[Java|
+Content in the first tab...
+]
+[Python|
+Content in the second tab...
+]
+```
+
+to show alternative versions of the same content in tabs. Readers switch tabs
+with a click or with the arrow keys:
+
+[Java|
+```java
+static boolean isOdd(int n) {
+  return n % 2 == 1;
+}
+```
+]
+[Python|
+```python
+def is_odd(n):
+    return n % 2 == 1
+```
+]
+[Prose|
+A number is *odd* when dividing it by two leaves a remainder of one.
+]
+
 ### Superlinks
 
 Use

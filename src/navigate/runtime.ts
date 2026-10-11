@@ -7,6 +7,7 @@ import {
 import { globals } from '../globals';
 import { getHashTarget } from '../hash-target';
 import { swapHeaderTitle } from '../header';
+import { setScrollRestored } from './restored-scroll';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
@@ -295,6 +296,7 @@ export function initNavigation(window: Window): void {
   scrollByIndex.clear();
   scrollByLocation.clear();
   window.history.scrollRestoration = 'manual';
+  setScrollRestored(false);
   currentPath = window.location.pathname + window.location.search;
   scrollByIndex.set(historyIndex, window.scrollY);
   scrollByLocation.set(getLocationKey(window), window.scrollY);
@@ -485,6 +487,7 @@ export async function navigateToUrl(
       window.history.pushState({ navIndex: historyIndex }, '', urlWithoutHash);
     }
 
+    setScrollRestored(typeof scrollTarget === 'number');
     if (typeof scrollTarget === 'string') {
       const urlWithHash = parsed.pathname + parsed.search + '#' + scrollTarget;
       globals.replaceLocation(window, urlWithHash);

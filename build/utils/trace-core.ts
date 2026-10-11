@@ -305,5 +305,7 @@ export function renderTraceWidgetHtml({
       return `<div class="trace-source" data-trace-source-file="${escapeAttr(source.file)}"${hidden}>${source.highlightedSource}</div>`;
     })
     .join('');
-  return `<div class="${wrapperClass}"${wrapperAttrs}><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0"></div><div class="trace-source-wrapper">${sourcePanels}</div></div></div></div>`;
+  // The traced program's own code page is searchable; matches inside the
+  // widget would lead to text the search highlighter must not touch
+  return `<div class="${wrapperClass}"${wrapperAttrs} data-pagefind-ignore><noscript><p>This interactive trace requires JavaScript.</p></noscript><div class="trace-body"><div class="trace-toolbar"><div class="trace-controls" role="toolbar" aria-label="Trace navigation">${controls}</div></div><div class="trace-content"><div class="trace-diagram"></div><div class="trace-resizer" role="separator" aria-label="Resize trace panes" aria-orientation="horizontal" tabindex="0"></div><div class="trace-source-wrapper">${sourcePanels}</div></div></div></div>`;
 }
