@@ -116,7 +116,6 @@ function renderToc(source: string): { html: string; toc: string } {
     title: 'Test',
     titlePostfix: '',
     themeColor: 'steelblue',
-    defaultTimeZone: 'America/New_York',
     features: { search: false, favicon: false, footer: false, pickers: false },
   });
   const env: Record<string, unknown> = {};

@@ -223,11 +223,6 @@ An example of `monospace` text.
 !!! warning
 Beware of this rule.
 
-A time zone chooser for testing styles (see the "time zone chooser" section
-below):
-
-<%= renderTimeZoneChooser() %>
-
 A `<time>` element for testing styles: <time datetime="15:00">3 pm</time>
 
 Testing [internal link style](./markdown.html)  
@@ -353,65 +348,6 @@ or grid of links:
 [Fifth][You are here](markdown.html)
 
 +++
-
----
-
-## Additional features
-
-These features aren't Markdown-specific, but are included here for reference.
-
-### Time zone chooser
-
-Allows the user to see times in their local time zone.
-
-Insert the time zone chooser using Lodash templates, calling the
-`renderTimeZoneChooser()` function (made available on any page as a global):
-
-```
-<%= '\x3C%= renderTimeZoneChooser() %\x3E' %>
-```
-
-To produce:
-
-<%= renderTimeZoneChooser() %>
-
-Then, wrap your times in `<time datetime="...">` elements and they will be
-updated when the user makes a time zone selection.
-
-Use
-
-```html
-Here's an example time: <time datetime="17:30">5:30 pm</time>
-```
-
-To produce:
-
-Here's an example time: <time datetime="17:30">5:30 pm</time>
-
-Time ranges work since the `datetime` attribute should be specified in 24-hour
-time, like this:
-
-Here's a time range:
-<time datetime="12:45">12:45</time>--<time datetime="13:45">1:45 pm</time>
-
-- When a `<time>` element is adjusted,
-  * the selected time zone abbreviation is shown after its AM/PM period (or
-    after the final endpoint of a time range),
-  * hovering over the text produces a tooltip telling the user the original time
-    and time zone, and
-  * if the time adjustment crosses a day boundary, *(next day)* or *(prev. day)*
-    is shown after the adjusted time.
-- Whichever style is used for AM/PM (`am`, `a.m.`, `AM`, etc.) is maintained
-  when the time is adjusted.
-- The selected time zone is saved in the browser's storage for the site, so
-  it will persist through refreshes, navigations, and browser restarts.
-- On any page where you use a `<time>` element, you should include the
-  time zone chooser somewhere so the user can adjust it.
-- The default time zone is set in the config file under `site.defaultTimeZone`.
-- With JavaScript disabled, the chooser is hidden and a fallback message
-  is shown (e.g., *Times shown in ET.*).
-
-
 
 [^example-footnote]: Footnotes render inside a numbered list at the bottom of
                      the page.

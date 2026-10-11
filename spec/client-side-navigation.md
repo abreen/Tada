@@ -76,6 +76,22 @@ HTML GET. The `tada:navigation` event includes `{ path, validators }` for clicks
 Back/Forward, and in-place refreshes. Per-page components are torn down and
 re-mounted on every navigation.
 
+## Author scripts
+
+`<script>` elements in page content run each time the page is shown, both on a
+cold load and after a client-side navigation. After the swap, the navigator
+replaces each script in the new content with a fresh copy carrying the same
+attributes and text, because browsers never run scripts that arrive through
+parsed HTML. External scripts without `async` run in document order. A `defer`
+attribute delays a script until parsing finishes on a cold load; after a
+navigation the content is already in place when the script runs.
+
+Classic scripts share one global scope across runs, so a script that runs again
+after navigating away and back should wrap its code in a function or block to
+avoid redeclaring `const` and `let` names. Code that must outlive one page can
+listen for the `tada:navigation` event on `window`. The starter content's
+`public/timezone.js` is an example.
+
 ## Scroll and `:target`
 
 All scrolling is instant. On a forward navigation the page jumps to the

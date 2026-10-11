@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "required": ["base", "title", "defaultTimeZone", "themeColor"],
+  "required": ["base", "title", "themeColor"],
   "properties": {
     "features": {
       "type": "object",
@@ -59,7 +59,6 @@
       "maximum": 1000,
       "default": 700
     },
-    "defaultTimeZone": { "type": "string" },
     "defaultFont": {
       "type": "string",
       "enum": ["sans", "serif"],

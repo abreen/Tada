@@ -253,7 +253,7 @@ test('late startup leaves a changed initial fragment at the visitor scroll posit
   page,
 }) => {
   await holdInitialPerPageMounts(page);
-  await page.goto('/markdown.html#time-zone-chooser');
+  await page.goto('/markdown.html#superlinks');
   await expectInitialMountHeld(page);
   const initialUrl = page.url();
   await clickAndWaitForScroll(page, page.locator('nav.toc ol a').first());
@@ -270,7 +270,7 @@ test('startup aligns an unchanged initial fragment on cold load and reload', asy
   page,
 }) => {
   await holdInitialPerPageMounts(page);
-  await page.goto('/markdown.html#time-zone-chooser');
+  await page.goto('/markdown.html#superlinks');
   for (const reload of [false, true]) {
     if (reload) {
       await page.reload();
@@ -282,7 +282,7 @@ test('startup aligns an unchanged initial fragment on cold load and reload', asy
     await expect
       .poll(() =>
         page
-          .locator('#time-zone-chooser')
+          .locator('#superlinks')
           .evaluate(
             element =>
               element.getBoundingClientRect().top >= window.innerHeight,
@@ -292,7 +292,7 @@ test('startup aligns an unchanged initial fragment on cold load and reload', asy
     await releaseInitialMount(page);
     await expect
       .poll(() =>
-        page.locator('#time-zone-chooser').evaluate(element => {
+        page.locator('#superlinks').evaluate(element => {
           const rect = element.getBoundingClientRect();
           return rect.top >= 0 && rect.top < window.innerHeight;
         }),

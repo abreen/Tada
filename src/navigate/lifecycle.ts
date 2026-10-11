@@ -1,7 +1,6 @@
 import mountTableOfContents from '../toc';
 import mountAnchor from '../anchor';
 import mountQuestion from '../question';
-import mountTimeZone from '../timezone';
 import mountCode from '../code';
 import mountTrace from '../trace';
 import mountPrint from '../print';
@@ -16,7 +15,6 @@ const PER_PAGE_COMPONENTS: Record<
   toc: mountTableOfContents,
   anchor: mountAnchor,
   question: mountQuestion,
-  timeZone: mountTimeZone,
   code: mountCode,
   trace: mountTrace,
   slides: mountSlides,

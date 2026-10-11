@@ -69,12 +69,30 @@ function updateHead(document: Document, newDoc: Document): void {
   }
 }
 
+// Parsed and imported scripts are marked as already started, so browsers
+// never run them. Replacing each with a fresh element runs it like a cold load.
+function runAuthorScripts(document: Document, container: Element): void {
+  for (const script of container.querySelectorAll('script')) {
+    const fresh = document.createElement('script');
+    for (const { name, value } of script.attributes) {
+      fresh.setAttribute(name, value);
+    }
+    // Keep external scripts in document order, as on a cold load
+    if (fresh.src && !script.hasAttribute('async')) {
+      fresh.async = false;
+    }
+    fresh.textContent = script.textContent;
+    script.replaceWith(fresh);
+  }
+}
+
 function swapContent(document: Document, newDoc: Document): void {
   const newContainer = newDoc.querySelector('.container');
   const oldContainer = document.querySelector('.container');
   if (newContainer && oldContainer) {
     const imported = document.importNode(newContainer, true);
     oldContainer.replaceChildren(...imported.childNodes);
+    runAuthorScripts(document, oldContainer);
   }
 
   document.body.className = newDoc.body.className;

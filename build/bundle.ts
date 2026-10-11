@@ -6,7 +6,6 @@ import { getPackageDir, toPosix } from './utils/paths';
 import { deriveTheme } from './utils/derive-theme';
 import type { PluginBuilder } from 'bun';
 import type { SiteVariables } from './types';
-import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import pkg from '../package.json' with { type: 'json' };
 import {
   getSerifFontStack,
@@ -74,8 +73,6 @@ function createDefine(
   return {
     __SITE_BASE_PATH__: JSON.stringify(siteVariables.basePath),
     __SITE_TITLE_POSTFIX__: JSON.stringify(siteVariables.titlePostfix),
-    __SITE_DEFAULT_TIMEZONE__: JSON.stringify(siteVariables.defaultTimeZone),
-    __SITE_TIMEZONES__: JSON.stringify(timezones),
     __IS_DEV__: JSON.stringify(isDev),
   };
 }

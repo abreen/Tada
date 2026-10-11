@@ -42,17 +42,7 @@ async function runInDirectory(args: string[], cwd: string): Promise<void> {
 }
 
 rmSync(siteDir, { recursive: true, force: true });
-await runTada(
-  [
-    'init',
-    siteDir,
-    '--bare',
-    '--no-interactive',
-    '--default-time-zone',
-    'America/New_York',
-  ],
-  repoDir,
-);
+await runTada(['init', siteDir, '--bare', '--no-interactive'], repoDir);
 
 writeFileSync(
   path.join(siteDir, 'public', 'logo.svg'),

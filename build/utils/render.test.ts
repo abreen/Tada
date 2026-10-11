@@ -110,7 +110,6 @@ const siteVariables = {
   title: 'Course',
   titlePostfix: ' - Course',
   themeColor: 'black',
-  defaultTimeZone: 'America/New_York',
   defaultFont: 'sans',
   defaultContrast: 'standard',
   features: { search: true, favicon: true, footer: true, pickers: true },

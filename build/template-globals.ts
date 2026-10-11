@@ -1,6 +1,5 @@
 import { encodePublicAssetPath } from './custom-fonts';
 import { isEmojiSymbol } from './utils/symbol';
-import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import type { SiteVariables } from './types';
 
 const MONTHS = [
@@ -28,7 +27,6 @@ interface TemplateGlobals {
   encodeAuthoredUrl: (value: string) => string;
   encodePublicAssetPath: (value: string) => string;
   isEmojiSymbol: (value: string | null | undefined) => boolean;
-  renderTimeZoneChooser: () => string;
 }
 
 export default function createTemplateGlobals(
@@ -36,20 +34,6 @@ export default function createTemplateGlobals(
   siteVariables: SiteVariables,
   subPath: string,
 ): TemplateGlobals {
-  const defaultTz = timezones.find(
-    t => t.value === siteVariables.defaultTimeZone,
-  )!;
-  const options = timezones
-    .map(tz => {
-      const label =
-        tz.value === 'UTC' ? tz.label : `${tz.label} (${tz.abbreviation})`;
-      const selected = tz.value === defaultTz.value ? ' selected' : '';
-      return `<option value="${tz.value}"${selected}>${label}</option>`;
-    })
-    .join('');
-  const renderTimeZoneChooser = () =>
-    `<span class="time-zone-label" hidden>Times shown in </span><select class="time-zone" hidden disabled aria-label="Time zone">${options}</select><noscript>Times shown in ${defaultTz.abbreviation}.</noscript>`;
-
   return {
     isHomePage: subPath === 'index',
     isoDate,
@@ -59,7 +43,6 @@ export default function createTemplateGlobals(
     encodeAuthoredUrl,
     encodePublicAssetPath,
     isEmojiSymbol,
-    renderTimeZoneChooser,
   };
 }
 

@@ -75,7 +75,6 @@ function siteWith(overrides: Partial<SiteVariables>): SiteVariables {
     title: 'Test',
     titlePostfix: ' - Test',
     themeColor: 'tomato',
-    defaultTimeZone: 'America/New_York',
     features: { search: true, favicon: true, footer: true, pickers: true },
     ...overrides,
   };
@@ -126,7 +125,6 @@ describe('site config schema', () => {
           base: 'https://example.edu',
           basePath: '/old/26summer',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
         },
         'site.prod.yaml',
@@ -143,7 +141,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           banner: '**Scheduled maintenance** tonight.',
         },
@@ -161,7 +158,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           banner: ['Scheduled maintenance'],
         },
@@ -179,7 +175,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           defaultFont: 'serif',
           defaultContrast: 'high',
@@ -198,7 +193,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           features: { pickers },
         },
@@ -216,7 +210,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           features: { pickers: 'yes' },
         },
@@ -234,7 +227,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           fontOverrides: {
             serif: {
@@ -269,7 +261,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           fontOverrides: {
             serif: { tuning: { scale: 1.1 } },
@@ -375,7 +366,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           fontOverrides,
         },
@@ -396,7 +386,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           [key]: value,
         },
@@ -414,7 +403,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           codeLanguages: { java: 'java' },
         },
@@ -432,7 +420,6 @@ describe('site config schema', () => {
         {
           base: 'https://example.edu',
           title: 'Test',
-          defaultTimeZone: 'America/New_York',
           themeColor: 'tomato',
           features: { search: true, code: true },
         },

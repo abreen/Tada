@@ -44,8 +44,7 @@ which sets `--mask-icon` and `--mask-icon-size`. Pseudo-elements consume the
 ## Inline SVG icons
 
 Some icons are inline SVG elements and repeat the same stroke attributes: the
-animated header menu (24px), the time zone reset button (24px), and the trace
-navigation buttons (16px). The slide annotation and eraser cursors are 24px
+animated header menu (24px) and the trace navigation buttons (16px). The slide annotation and eraser cursors are 24px
 two-tone SVGs that interpolate `$icon-stroke-width`.
 
 ## Adding an icon

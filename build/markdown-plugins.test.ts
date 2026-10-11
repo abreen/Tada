@@ -482,7 +482,6 @@ describe('superlink-plugin', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
       } as SiteVariables,
       { validatorOptions: { enabled: false } },
     );
@@ -580,7 +579,6 @@ describe('custom markdown containers', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
       } as SiteVariables,
       { validatorOptions: { enabled: false } },
     );
@@ -787,7 +785,6 @@ describe('markdown slide segmentation', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
       } as SiteVariables,
       {
         filePath: 'content/slides.md',
@@ -977,7 +974,6 @@ describe('markdown fence languages', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
       } as SiteVariables,
       { validatorOptions: { enabled: false }, filePath: 'content/page.md' },
     );
@@ -1045,7 +1041,6 @@ describe('hidden_fence rule', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
       } as SiteVariables,
       { validatorOptions: { enabled: false } },
     );
@@ -1126,7 +1121,6 @@ describe('katex plugin', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
       } as SiteVariables,
       { validatorOptions: { enabled: false } },
     );
@@ -1281,7 +1275,6 @@ describe('footnote rendering', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
       } as SiteVariables,
       { validatorOptions: { enabled: false } },
     );

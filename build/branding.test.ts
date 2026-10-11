@@ -66,7 +66,6 @@ test('schema accepts optional strings and rejects other types', async () => {
   const config = {
     base: 'https://example.com',
     title: 'Test',
-    defaultTimeZone: 'UTC',
     themeColor: 'tomato',
   };
   expect(validator(config)).toBe(true);

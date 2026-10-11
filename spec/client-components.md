@@ -18,8 +18,6 @@ are in `src/util.ts`.
   [Search](search.md))
 - **Q&A toggle**: reveals answers in question-and-answer blocks on click and
   handles multiple choice selections
-- **Time zone chooser**: a dropdown that reformats all `<time>` elements to
-  the selected zone, persisted in local storage (see [Time Zones](time-zones.md))
 - **Appearance pickers**: page-bottom segmented controls that independently
   switch fonts between sans-serif and serif and neutral colors between standard
   and high contrast, persisted in local storage (see

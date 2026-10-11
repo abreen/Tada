@@ -8,7 +8,6 @@ exist. The command prompts for:
   single emoji)
 - Theme color (any CSS color format)
 - Background tint hue (0 to 360 degrees) and amount (0 to 100%)
-- Default time zone (one of the zones in `src/timezone/timezones.json`)
 - Production base URL and base path
 
 Default answers are provided for all prompts; the defaults are the title
@@ -17,16 +16,13 @@ when the symbol is text. Generated favicons cannot draw emoji, so an emoji
 symbol sets `features.favicon: false` in both configs instead. Non-interactive mode skips prompts
 and uses defaults or values provided as arguments.
 
-The time zone must be one of the zones listed in `src/timezone/timezones.json`,
-the same list that builds accept for `defaultTimeZone`. The prompt re-asks and
-the `--default-time-zone` flag fails for any other value. The default is the
-system time zone when it is in that list; otherwise init uses `UTC` and prints a
-one-line note such as
-`System time zone Europe/Berlin is not supported; using UTC`.
-
 A bare mode creates a minimal site with just a single home page and an empty
 public directory. The normal mode copies starter content, navigation, and author
-data from the package. Bare-mode config files also start with
+data from the package. The starter content includes an example of author
+JavaScript: the Lectures page loads `public/timezone.js`, which lets visitors
+convert the page's `<time>` elements to another time zone and remembers the
+choice in local storage. Without JavaScript, the chooser stays hidden and the
+authored times show with a `<noscript>` note. Bare-mode config files also start with
 `extensionToShikiLanguage: {}` and `shikiLanguages: []`, so source-code pages
 and Markdown fence highlighting remain opt-in.
 

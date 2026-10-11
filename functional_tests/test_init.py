@@ -1,5 +1,3 @@
-import os
-
 import pytest
 from conftest import (
     AUTHORS_CONFIG_FILE,
@@ -63,6 +61,7 @@ class TestInitDefault:
     def test_copies_public_directory(self, site_dir):
         public_dir = site_dir / 'public'
         assert public_dir.is_dir()
+        assert (public_dir / 'timezone.js').is_file()
 
     def test_copies_nested_content(self, site_dir):
         assert (site_dir / 'content' / 'lectures' / 'index.md').exists()
@@ -245,7 +244,7 @@ class TestInitInteractive:
 
     def test_all_defaults(self, tmp_path):
         """Pressing Enter for every question uses default values."""
-        result = run_tada('init', 'testsite', cwd=str(tmp_path), input='\n' * 8)
+        result = run_tada('init', 'testsite', cwd=str(tmp_path), input='\n' * 7)
         assert result.returncode == 0, f'init failed: {result.stderr}'
         site = tmp_path / 'testsite'
         dev = load_structured_file(site / SITE_DEV_CONFIG_FILE)
@@ -263,7 +262,6 @@ class TestInitInteractive:
                     'tomato',  # themeColor
                     '200',  # tintHue
                     '50',  # tintAmount
-                    'America/New_York',  # defaultTimeZone
                     'https://school.edu',  # prodBase
                     '/my-course',  # prodBasePath
                 ]
@@ -277,7 +275,6 @@ class TestInitInteractive:
         prod = load_structured_file(site / SITE_PROD_CONFIG_FILE)
         assert dev['title'] == 'My Course'
         assert dev['symbol'] == 'MC 1'
-        assert dev['defaultTimeZone'] == 'America/New_York'
         assert prod['base'] == 'https://school.edu'
         assert prod['basePath'] == '/my-course'
         assert prod['internalDomains'] == ['school.edu']
@@ -293,7 +290,6 @@ class TestInitInteractive:
                     'tomato',  # themeColor
                     '20',  # tintHue
                     '100',  # tintAmount
-                    'America/New_York',  # defaultTimeZone
                     'https://example.edu',  # prodBase
                     '/',  # prodBasePath
                 ]
@@ -308,7 +304,7 @@ class TestInitInteractive:
 
     def test_bare_interactive(self, tmp_path):
         """Interactive mode with --bare creates a minimal site."""
-        result = run_tada('init', 'testsite', '--bare', cwd=str(tmp_path), input='\n' * 8)
+        result = run_tada('init', 'testsite', '--bare', cwd=str(tmp_path), input='\n' * 7)
         assert result.returncode == 0, f'init failed: {result.stderr}'
         site = tmp_path / 'testsite'
         content_files = [f for f in (site / 'content').rglob('*') if f.is_file()]
@@ -317,74 +313,12 @@ class TestInitInteractive:
 
     def test_prompts_are_shown(self, tmp_path):
         """Each question's prompt text appears on stdout."""
-        result = run_tada('init', 'testsite', cwd=str(tmp_path), input='\n' * 8)
+        result = run_tada('init', 'testsite', cwd=str(tmp_path), input='\n' * 7)
         assert result.returncode == 0
         assert 'Site title' in result.stdout
         assert 'Logo symbol' in result.stdout
         assert 'Theme color' in result.stdout
         assert 'Production base URL' in result.stdout
-
-
-def _env_with_tz(tz):
-    return {**os.environ, 'TZ': tz}
-
-
-class TestInitTimeZone:
-    """The default time zone must be one that builds accept."""
-
-    def test_unsupported_system_zone_falls_back_to_utc_and_builds(self, tmp_path):
-        result = run_tada(
-            'init',
-            'testsite',
-            '--bare',
-            '--no-interactive',
-            cwd=str(tmp_path),
-            env=_env_with_tz('Europe/Berlin'),
-        )
-        assert result.returncode == 0, result.stderr
-        assert 'System time zone Europe/Berlin is not supported; using UTC' in result.stdout
-        site = tmp_path / 'testsite'
-        for config_file in (SITE_DEV_CONFIG_FILE, SITE_PROD_CONFIG_FILE):
-            assert load_structured_file(site / config_file)['defaultTimeZone'] == 'UTC'
-
-        result = run_tada('dev', cwd=str(site), env=_env_with_tz('Europe/Berlin'))
-        assert result.returncode == 0, result.stdout + result.stderr
-        assert (site / 'dist' / 'index.html').is_file()
-
-    def test_supported_system_zone_is_default(self, tmp_path):
-        result = run_tada(
-            'init',
-            'testsite',
-            '--bare',
-            '--no-interactive',
-            cwd=str(tmp_path),
-            env=_env_with_tz('America/Chicago'),
-        )
-        assert result.returncode == 0, result.stderr
-        assert 'not supported' not in result.stdout
-        dev = load_structured_file(tmp_path / 'testsite' / SITE_DEV_CONFIG_FILE)
-        assert dev['defaultTimeZone'] == 'America/Chicago'
-
-    def test_unsupported_flag_value_exits_1(self, tmp_path):
-        result = run_tada(
-            'init',
-            'testsite',
-            '--no-interactive',
-            '--default-time-zone',
-            'Europe/Berlin',
-            cwd=str(tmp_path),
-        )
-        assert result.returncode == 1
-        assert 'Error: --default-time-zone:' in result.stderr
-        assert not (tmp_path / 'testsite').exists()
-
-    def test_interactive_reprompts_for_unsupported_zone(self, tmp_path):
-        answers = '\n' * 5 + 'Europe/Berlin\nAsia/Tokyo\n' + '\n' * 2
-        result = run_tada('init', 'testsite', '--bare', cwd=str(tmp_path), input=answers)
-        assert result.returncode == 0, result.stderr
-        assert 'Error:' in result.stderr
-        dev = load_structured_file(tmp_path / 'testsite' / SITE_DEV_CONFIG_FILE)
-        assert dev['defaultTimeZone'] == 'Asia/Tokyo'
 
 
 class TestInitErrors:

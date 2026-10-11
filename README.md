@@ -89,9 +89,6 @@ A static site generator. The successor to Presto.
   * Hold Shift while annotating to erase
 
 
-
-- Time zone chooser (automatically adjusts `<datetime>` elements)
-
 ## Prerequisites
 
 - [Bun](https://bun.com/)
@@ -156,7 +153,6 @@ Create a new Tada site in a new directory. Prompts for:
 - **Theme color**: CSS color, e.g. `hsl(195 70% 40%)` (defaults to `darkturquoise`)
 - **Background tint hue**: hue (0-360) for background/foreground tinting (defaults to `190`)
 - **Background tint amount**: percentage (0-100) of tint to apply (defaults to `100`)
-- **Default time zone**: for `<time>` elements (defaults to your system zone)
 - **Production base URL**: e.g. `https://example.edu`
 - **Production base path**: e.g. `/cs101` (defaults to `/`)
 
@@ -166,7 +162,7 @@ You can also override specific defaults with flags:
     tada init mysite --no-interactive --prod-base https://example.edu --prod-base-path /cs101
 
 Available flags: `--title`, `--symbol`, `--theme-color`, `--tint-hue`,
-`--tint-amount`, `--default-time-zone`, `--prod-base`, `--prod-base-path`.
+`--tint-amount`, `--prod-base`, `--prod-base-path`.
 
 ### `tada dev`
 
@@ -297,7 +293,6 @@ base: https://example.edu
 basePath: /cs0
 internalDomains:
   - example.edu
-defaultTimeZone: America/New_York
 extensionToShikiLanguage:
   java: java
   py: python

@@ -1,9 +1,5 @@
-import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 import type { SiteConfigInput, SiteVariables } from '../build/types';
 import { isValidSymbol } from '../build/utils/symbol';
-
-const SUPPORTED_TIME_ZONES: readonly string[] = timezones.map(tz => tz.value);
-const FALLBACK_TIME_ZONE = 'UTC';
 
 export function validateSymbol(value: string): string | null {
   if (!value) {
@@ -60,42 +56,12 @@ export function validateBasePath(value: string): string | null {
   return null;
 }
 
-export function validateTimeZone(value: string): string | null {
-  if (!value) {
-    return 'Time zone is required';
-  }
-  if (!SUPPORTED_TIME_ZONES.includes(value)) {
-    return `Must be one of the supported time zones: ${SUPPORTED_TIME_ZONES.join(', ')}`;
-  }
-  return null;
-}
-
-/**
- * Picks the default time zone for `tada init`: the system zone when builds
- * support it, otherwise UTC with a note explaining the fallback.
- */
-export function resolveDefaultTimeZone(systemTimeZone: string | undefined): {
-  timeZone: string;
-  note: string | null;
-} {
-  if (systemTimeZone && validateTimeZone(systemTimeZone) === null) {
-    return { timeZone: systemTimeZone, note: null };
-  }
-  return {
-    timeZone: FALLBACK_TIME_ZONE,
-    note: systemTimeZone
-      ? `System time zone ${systemTimeZone} is not supported; using ${FALLBACK_TIME_ZONE}`
-      : `System time zone is unknown; using ${FALLBACK_TIME_ZONE}`,
-  };
-}
-
 export function createSiteConfig({
   title,
   symbol,
   themeColor,
   tintHue,
   tintAmount,
-  defaultTimeZone,
   base,
   basePath,
   internalDomains,
@@ -111,7 +77,6 @@ export function createSiteConfig({
     base,
     basePath,
     internalDomains,
-    defaultTimeZone,
     defaultFont: 'sans',
     defaultContrast: 'standard',
     extensionToShikiLanguage,

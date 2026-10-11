@@ -20,8 +20,7 @@ Templates can access:
 - **isHomePage**: true when rendering the home page
 
 Utility functions are available for formatting dates, rendering other templates,
-loading project config files, generating CSS class strings, and rendering the
-time zone chooser.
+loading project config files, and generating CSS class strings.
 
 Templates output plain-text values (page title and description, author name,
 breadcrumb labels and the current breadcrumb title, nav section titles and link text, site title and symbol,

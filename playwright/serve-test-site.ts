@@ -14,7 +14,6 @@ const coveragePreload = path.join(
 const siteDir = path.join(repoDir, 'playwright', '.test-site');
 const slidesPath = path.join(siteDir, 'content', 'slides.md');
 const resetSlidesPath = path.join(siteDir, 'content', 'slides-reset.md');
-const timezonesPath = path.join(siteDir, 'content', 'timezones.md');
 const externalLinkWrappingPath = path.join(
   siteDir,
   'content',
@@ -54,8 +53,6 @@ await runTada([
   // Long enough for the header title to truncate in narrow layouts
   '--title',
   'Introduction to Computer Science',
-  '--default-time-zone',
-  'America/New_York',
 ]);
 
 const devConfigPath = path.join(siteDir, 'site.dev.yaml');
@@ -247,42 +244,48 @@ slides: true
 `,
 );
 writeFileSync(
-  timezonesPath,
-  `---
-title: Timezones
----
-
-<%= renderTimeZoneChooser() %>
-
-<%= renderTimeZoneChooser() %>
-
-Default meeting: <time datetime="17:40">5:40 PM</time>
-
-Lowercase meeting: <time datetime="18:40">6:40 pm</time>
-
-Previous-day meeting: <time datetime="01:30">1:30 AM</time>
-
-Next-day meeting: <time datetime="23:30">11:30 PM</time>
-
-Plain same-period meeting: <time datetime="17:40">5:40</time>
-
-Twenty-four-hour meeting: <time id="time-24h" datetime="17:40">17:40</time>
-
-Midnight meeting: <time id="time-midnight" datetime="00:00">00:00</time>
-
-Twenty-four-hour period-changing meeting: <time datetime="11:30">11:30</time>
-
-Time range: <time datetime="12:45">12:45</time>--<time datetime="13:45">1:45 PM</time>
-`,
-);
-
-writeFileSync(
   externalLinkWrappingPath,
   `---
 title: External Link Wrapping
 ---
 
 August 5, 3:15-5:15 pm, [Science Center](https://example.com), hall A.
+`,
+);
+
+writeFileSync(
+  path.join(siteDir, 'content', 'author-scripts-start.md'),
+  `---
+title: Author Scripts Start
+---
+
+[Go to the author scripts page](author-scripts.html)
+`,
+);
+writeFileSync(
+  path.join(siteDir, 'content', 'author-scripts.md'),
+  `---
+title: Author Scripts
+---
+
+<p id="inline-marker">inline did not run</p>
+<p id="external-marker">external did not run</p>
+
+<script>
+  window.inlineRuns = (window.inlineRuns || 0) + 1;
+  document.getElementById('inline-marker').textContent =
+    'inline ran ' + window.inlineRuns;
+</script>
+<script src="/author-script.js"></script>
+
+[Back to the start page](author-scripts-start.html)
+`,
+);
+writeFileSync(
+  path.join(siteDir, 'public', 'author-script.js'),
+  `window.externalRuns = (window.externalRuns || 0) + 1;
+document.getElementById('external-marker').textContent =
+  'external ran ' + window.externalRuns;
 `,
 );
 

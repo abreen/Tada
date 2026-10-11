@@ -4,11 +4,29 @@ author: alex
 description: An example page for <%= site.title %>.
 ---
 
-<%= renderTimeZoneChooser() %>
+<p class="time-zone-chooser" hidden>
+  <label>
+    Show times in
+    <select disabled>
+      <option value="America/New_York">Eastern Time (ET)</option>
+      <option value="America/Chicago">Central Time (CT)</option>
+      <option value="America/Denver">Mountain Time (MT)</option>
+      <option value="America/Los_Angeles">Pacific Time (PT)</option>
+      <option value="Europe/London">London (UK)</option>
+      <option value="Asia/Tokyo">Tokyo (JST)</option>
+      <option value="UTC">UTC</option>
+    </select>
+  </label>
+</p>
+<noscript><p>Times shown in ET.</p></noscript>
+<script src="/timezone.js" defer></script>
 
 One-hour lectures are held weekly at <time datetime="17:40">5:40 PM</time>.
 Each lecture is recorded and made available by password-protected link.
 Return to this page to access the recordings.
+
+The time zone chooser above is an example of custom JavaScript: see
+`public/timezone.js` in your site.
 
 <details>
 <summary>More details</summary>

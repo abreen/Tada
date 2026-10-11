@@ -21,16 +21,10 @@ describe('parseConfigText', () => {
   test('parses legacy JSON objects', () => {
     expect(
       parseConfigText(
-        JSON.stringify({
-          title: 'Intro to Computer Science',
-          defaultTimeZone: 'America/New_York',
-        }),
+        JSON.stringify({ title: 'Intro to Computer Science' }),
         'site.dev.json',
       ),
-    ).toEqual({
-      title: 'Intro to Computer Science',
-      defaultTimeZone: 'America/New_York',
-    });
+    ).toEqual({ title: 'Intro to Computer Science' });
   });
 
   test('parses JSON surrogate pair escapes', () => {

@@ -7,7 +7,6 @@ import { getProjectDir } from './utils/paths';
 import { isEmojiSymbol } from './utils/symbol';
 import type { PlainTextLanguage, SiteVariables } from './types';
 import siteSchema from '../schema/site.schema.json' with { type: 'json' };
-import timezones from '../src/timezone/timezones.json' with { type: 'json' };
 
 const configDir = getProjectDir();
 
@@ -145,12 +144,6 @@ function getSiteVariables(env: SiteEnv): SiteVariables {
   }
 
   doValidation(isValid, variables, fileName);
-
-  if (!timezones.some(t => t.value === variables.defaultTimeZone)) {
-    throw new Error(
-      `${fileName}: defaultTimeZone "${variables.defaultTimeZone}" is not a valid time zone`,
-    );
-  }
 
   return variables;
 }

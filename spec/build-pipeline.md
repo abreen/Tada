@@ -44,7 +44,7 @@ project-relative path of the file at fault:
 ```
 content/about.md: broken internal link "/x.html"
 content/about.md, public/about.html: both write about.html
-site.dev.yaml: defaultTimeZone "Mars/Olympus" is not supported
+site.dev.yaml: shikiLanguages[0] "klingon" is not a supported Shiki language
 ```
 
 ## Writing output

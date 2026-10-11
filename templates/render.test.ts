@@ -14,7 +14,7 @@ import * as configLoader from '../build/config-loader';
 import createTemplateGlobals from '../build/template-globals';
 import type { SiteVariables } from '../build/types';
 
-const site = { defaultTimeZone: 'America/New_York' } as SiteVariables;
+const site = {} as SiteVariables;
 const templateSources: Record<string, string> = {
   '_heading.html': HEADING,
   '_author.html': AUTHOR,

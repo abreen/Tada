@@ -8,7 +8,6 @@ const siteVariables = {
   title: 'My Course',
   titlePostfix: ' - My Course',
   themeColor: 'steelblue',
-  defaultTimeZone: 'America/New_York',
   internalDomains: [],
   extensionToShikiLanguage: { java: 'java', py: 'python' },
   shikiLanguages: ['java', 'python'],

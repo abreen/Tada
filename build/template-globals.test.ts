@@ -8,7 +8,6 @@ const baseSite: SiteVariables = {
   title: 'Test',
   titlePostfix: ' - Test',
   themeColor: 'hsl(195 70% 40%)',
-  defaultTimeZone: 'America/New_York',
   features: { search: true, favicon: true, footer: true, pickers: true },
 };
 
@@ -34,15 +33,6 @@ describe('createTemplateGlobals', () => {
   test('includes encodeAuthoredUrl helper', () => {
     const g = makeGlobals();
     expect(g.encodeAuthoredUrl).toBe(encodeAuthoredUrl);
-  });
-
-  test('renderTimeZoneChooser includes hidden disabled select, inline script, and noscript', () => {
-    const g = makeGlobals('index', { defaultTimeZone: 'America/New_York' });
-    const html = g.renderTimeZoneChooser();
-    expect(html).toContain(
-      '<select class="time-zone" hidden disabled aria-label="Time zone">',
-    );
-    expect(html).toContain('<noscript>Times shown in ET.</noscript>');
   });
 });
 

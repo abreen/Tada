@@ -204,7 +204,6 @@ describe('renderCodeWithComments', () => {
       title: 'Test',
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
-      defaultTimeZone: 'America/New_York',
       features: { search: true, favicon: true, footer: true, pickers: true },
     } as SiteVariables);
 
@@ -224,7 +223,6 @@ describe('renderCodeWithComments', () => {
       title: 'Test',
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
-      defaultTimeZone: 'America/New_York',
       features: { search: true, favicon: true, footer: true, pickers: true },
     } as SiteVariables);
 
@@ -248,7 +246,6 @@ describe('renderCodeWithComments', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
         features: { search: true, favicon: true, footer: true, pickers: true },
       } as SiteVariables,
       'lectures/01',
@@ -273,7 +270,6 @@ describe('renderCodeWithComments', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
         features: { search: true, favicon: true, footer: true, pickers: true },
       } as SiteVariables,
       'lectures/01',
@@ -297,7 +293,6 @@ describe('renderCodeWithComments', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
         features: { search: true, favicon: true, footer: true, pickers: true },
       } as SiteVariables,
       'lectures/01',
@@ -317,7 +312,6 @@ describe('renderCodeWithComments', () => {
       title: 'Test',
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
-      defaultTimeZone: 'America/New_York',
       features: { search: true, favicon: true, footer: true, pickers: true },
     } as SiteVariables);
 
@@ -337,7 +331,6 @@ describe('renderCodeWithComments', () => {
         title: 'Test',
         titlePostfix: ' - Test',
         themeColor: 'steelblue',
-        defaultTimeZone: 'America/New_York',
         features: { search: true, favicon: true, footer: true, pickers: true },
       } as SiteVariables),
     ).toThrow();
@@ -352,7 +345,6 @@ describe('renderCodeWithComments', () => {
       title: 'Test',
       titlePostfix: ' - Test',
       themeColor: 'steelblue',
-      defaultTimeZone: 'America/New_York',
       features: { search: true, favicon: true, footer: true, pickers: true },
       vars: { fullCourseName: 'CS 0' },
     } as SiteVariables);
@@ -373,7 +365,6 @@ describe('rewriteProseLinks', () => {
     title: 'Test',
     titlePostfix: ' - Test',
     themeColor: 'steelblue',
-    defaultTimeZone: 'America/New_York',
     features: { search: true, favicon: true, footer: true, pickers: true },
   } as SiteVariables;
 

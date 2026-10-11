@@ -52,7 +52,6 @@ export interface SiteVariables {
   faviconColor?: string;
   faviconFontWeight?: number;
   internalDomains?: string[];
-  defaultTimeZone: string;
   defaultFont?: 'sans' | 'serif';
   defaultContrast?: 'standard' | 'high';
   fontOverrides?: FontOverrides;
@@ -328,7 +327,6 @@ export interface SiteConfigInput {
   themeColor: string;
   tintHue: string;
   tintAmount: string;
-  defaultTimeZone: string;
   base: string;
   basePath: string;
   internalDomains: string[];

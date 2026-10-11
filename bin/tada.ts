@@ -10,8 +10,6 @@ import {
   validateHue,
   validateUrl,
   validateBasePath,
-  validateTimeZone,
-  resolveDefaultTimeZone,
   createSiteConfig,
 } from './validators';
 import {
@@ -30,10 +28,6 @@ import {
 import { isEmojiSymbol } from '../build/utils/symbol';
 
 const { version } = packageJson;
-
-const DEFAULT_TIME_ZONE = resolveDefaultTimeZone(
-  Intl.DateTimeFormat().resolvedOptions().timeZone,
-);
 
 const packageDir = path.resolve(import.meta.dir, '..');
 
@@ -105,11 +99,6 @@ const INIT_QUESTIONS: Record<string, InitQuestion> = {
       return null;
     },
   },
-  defaultTimeZone: {
-    prompt: 'Default time zone',
-    defaultValue: DEFAULT_TIME_ZONE.timeZone,
-    validate: validateTimeZone,
-  },
   prodBase: {
     prompt: 'Production base URL',
     defaultValue: 'https://example.edu',
@@ -136,8 +125,7 @@ function printUsage() {
         '       [--bare]            (Create a minimal site with one page)',
       );
       console.log('       [--title, --symbol, --theme-color, --tint-hue,');
-      console.log('        --tint-amount, --default-time-zone, --prod-base,');
-      console.log('        --prod-base-path]');
+      console.log('        --tint-amount, --prod-base, --prod-base-path]');
       continue;
     } else if (cmd === 'watch') {
       console.log(`  ${cmd.padEnd(18)} ${desc}`);
@@ -194,7 +182,6 @@ const FLAG_TO_KEY: Record<string, string> = {
   'theme-color': 'themeColor',
   'tint-hue': 'tintHue',
   'tint-amount': 'tintAmount',
-  'default-time-zone': 'defaultTimeZone',
   'prod-base': 'prodBase',
   'prod-base-path': 'prodBasePath',
 };
@@ -223,8 +210,6 @@ async function initCommand(args: string[]): Promise<void> {
           type: 'string',
           default: INIT_QUESTIONS.tintAmount.defaultValue,
         },
-        // No parseArgs default, so an omitted flag can be told apart
-        'default-time-zone': { type: 'string' },
         'prod-base': {
           type: 'string',
           default: INIT_QUESTIONS.prodBase.defaultValue,
@@ -270,13 +255,6 @@ async function initCommand(args: string[]): Promise<void> {
   }
 
   const config: Record<string, string> = {};
-
-  const usesDefaultTimeZone =
-    !noInteractive || values['default-time-zone'] === undefined;
-  if (usesDefaultTimeZone && DEFAULT_TIME_ZONE.note) {
-    console.log(DEFAULT_TIME_ZONE.note);
-  }
-  values['default-time-zone'] ??= DEFAULT_TIME_ZONE.timeZone;
 
   if (noInteractive) {
     for (const [flag, key] of Object.entries(FLAG_TO_KEY)) {
@@ -328,7 +306,6 @@ async function initCommand(args: string[]): Promise<void> {
     themeColor,
     tintHue,
     tintAmount,
-    defaultTimeZone,
     prodBase,
     prodBasePath,
   } = config;
@@ -354,7 +331,6 @@ async function initCommand(args: string[]): Promise<void> {
     themeColor,
     tintHue,
     tintAmount,
-    defaultTimeZone,
     base: 'http://localhost:8080',
     basePath: '/',
     internalDomains: ['localhost'],
@@ -369,7 +345,6 @@ async function initCommand(args: string[]): Promise<void> {
     themeColor,
     tintHue,
     tintAmount,
-    defaultTimeZone,
     base: prodBase,
     basePath: prodBasePath,
     internalDomains: [prodDomain],

@@ -12,7 +12,6 @@ const siteVariables = {
   title: 'Test',
   titlePostfix: ' - Test',
   themeColor: 'steelblue',
-  defaultTimeZone: 'America/New_York',
   features: { search: true, favicon: true, footer: true, pickers: true },
 } as SiteVariables;
 

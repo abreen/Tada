@@ -22,7 +22,6 @@ const lintThemeSiteVariables: SiteVariables = {
   title: 'Lint',
   titlePostfix: ' - Lint',
   themeColor: 'steelblue',
-  defaultTimeZone: 'America/New_York',
   features: { search: true, favicon: true, footer: true, pickers: true },
   tintHue: 20,
   tintAmount: 100,

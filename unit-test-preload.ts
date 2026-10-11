@@ -9,8 +9,6 @@ const DEFAULT_BUNDLE_GLOBALS = {
   __IS_DEV__: false,
   __SITE_BASE_PATH__: '/',
   __SITE_TITLE_POSTFIX__: '',
-  __SITE_DEFAULT_TIMEZONE__: 'UTC',
-  __SITE_TIMEZONES__: [] as TimeZone[],
 };
 
 Object.assign(globalThis, DEFAULT_BUNDLE_GLOBALS);
