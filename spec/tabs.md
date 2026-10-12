@@ -31,6 +31,11 @@ Content in the second tab.
   as a table row starting with a link (`[a](b) | c |`) does not open a tab.
 - The tab button shows the label without links or footnote references, since a
   button cannot contain links. The panel's label keeps them.
+- The button's label is wrapped in a `tabs-tab-label` span, trimmed with
+  `text-box: trim-both cap alphabetic`, so the tab centers its capitals instead
+  of relying on the font's ascent and descent, which Chromium rounds to whole
+  pixels on low-resolution displays. Browsers without `text-box` center the
+  line as before.
 - Opening and closing lines must be indented less than four columns, like
   other block syntax. Inside fenced or indented code, and inside raw HTML
   blocks that keep their lines verbatim (such as `<pre>`), they stay literal.
@@ -50,8 +55,8 @@ reachable by links:
 <div class="tabs-track">
 <button type="button" class="tabs-scroll tabs-scroll-start" tabindex="-1" aria-hidden="true" hidden=""></button>
 <div class="tabs-list">
-<button type="button" class="tabs-tab" id="tabs-1-tab-1" data-selected="" disabled="">Java</button>
-<button type="button" class="tabs-tab" id="tabs-1-tab-2" disabled="">Python</button>
+<button type="button" class="tabs-tab" id="tabs-1-tab-1" data-selected="" disabled=""><span class="tabs-tab-label">Java</span></button>
+<button type="button" class="tabs-tab" id="tabs-1-tab-2" disabled=""><span class="tabs-tab-label">Python</span></button>
 </div>
 <button type="button" class="tabs-scroll tabs-scroll-end" tabindex="-1" aria-hidden="true" hidden=""></button>
 </div>
@@ -178,7 +183,11 @@ since animating them would lay out or repaint the page on every frame.
 
 The indicator is drawn as two round end caps over a middle strip, and moving
 or resizing it changes only their transforms, so browsers animate it without
-laying out the page.
+laying out the page. The middle strip is two solid rectangles (the ring color
+under the fill), not a strip with borders, since Chromium blurs the borders of
+scaled content while it animates. The indicator's position and size are
+snapped to device pixels, so no edge shifts by a pixel when the browser moves
+it to a layer of its own to animate it.
 
 When a touch goes down on the tab list, the indicator slides onto the tab under
 it (or the nearest tab), exactly as if the tab were clicked, so lifting the

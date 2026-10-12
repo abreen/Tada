@@ -237,7 +237,10 @@
   position: relative;
   z-index: 1;
   flex: none;
-  padding: 0.125em var(--gap);
+
+  // A line of text and a little more, with the label centered in it
+  height: calc((var(--line-height) + 0.25) * 1em);
+  padding: 0 var(--gap);
   margin: 0;
   font: inherit;
   font-size: var(--font-size-small);
@@ -271,6 +274,15 @@
   }
 }
 
+// Trimmed to the top of its capitals and its baseline, so the tab centers the
+// capitals exactly. Otherwise the line's own ascent and descent place the
+// text, and Chromium rounds them to whole pixels at 1x, which leaves the
+// label up to a pixel low.
+.tabs-tab-label {
+  display: block;
+  text-box: trim-both cap alphabetic;
+}
+
 @media (hover: hover) {
   .tabs-tab:not([data-selected], :disabled):hover,
   .tabs-scroll:not(:disabled):hover {
@@ -299,16 +311,17 @@
 }
 
 // Like the appearance picker's indicator, sized to the selected tab by the
-// client component. The pill is drawn in three pieces so that sliding and
-// resizing it changes only transforms, which browsers animate without laying
-// out the page: two round end caps over a middle strip, which is scaled
-// to fill the gap between them. Each piece extends past the selected tab's box
-// by the ring's width and draws the ring as its border. The container spans
-// the selected tab's box.
+// client component. The pill is drawn in pieces so that sliding and resizing
+// it changes only transforms, which browsers animate without laying out the
+// page: two round end caps over a middle strip, which is scaled to fill the
+// gap between them. The caps extend past the selected tab's box by the ring's
+// width and draw the ring as their border. The middle strip is a solid ring
+// color rectangle as large as the caps, under a solid fill rectangle the size
+// of the tab. The container spans the selected tab's box, with the height
+// snapped to device pixels by the client component.
 .tabs-indicator {
   position: absolute;
   top: var(--tabs-list-padding);
-  bottom: var(--tabs-list-padding);
   left: 0;
   pointer-events: none;
 
@@ -318,7 +331,7 @@
     bottom: calc(-1 * var(--control-border-width));
     box-sizing: border-box;
     background: var(--bg-color);
-    border: var(--control-border-width) solid var(--fg2-color);
+    border: 0 solid var(--fg2-color);
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -337,27 +350,40 @@
   }
 }
 
-// Its width is set by the client component, which scales it to fit
-.tabs-indicator > .tabs-indicator-middle {
+// Their width is set by the client component, which scales them to fit
+.tabs-indicator > .tabs-indicator-ring,
+.tabs-indicator > .tabs-indicator-fill {
   left: 0;
-  border-right-width: 0;
-  border-left-width: 0;
   transform-origin: 0 0;
 }
 
+.tabs-indicator > .tabs-indicator-ring {
+  background: var(--fg2-color);
+}
+
+.tabs-indicator > .tabs-indicator-fill {
+  top: 0;
+  bottom: 0;
+}
+
 // Each cap is half as wide as it is tall, so its round end is a semicircle
+.tabs-indicator > .tabs-indicator-start,
+.tabs-indicator > .tabs-indicator-end {
+  aspect-ratio: 1 / 2;
+  border-top-width: var(--control-border-width);
+  border-bottom-width: var(--control-border-width);
+}
+
 .tabs-indicator > .tabs-indicator-start {
   left: calc(-1 * var(--control-border-width));
-  aspect-ratio: 1 / 2;
-  border-right-width: 0;
+  border-left-width: var(--control-border-width);
   border-radius: 999px 0 0 999px;
 }
 
 // Moved to the tab's right edge by the client component
 .tabs-indicator > .tabs-indicator-end {
-  left: var(--control-border-width);
-  aspect-ratio: 1 / 2;
-  border-left-width: 0;
+  left: 0;
+  border-right-width: var(--control-border-width);
   border-radius: 0 999px 999px 0;
 }
 

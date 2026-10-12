@@ -16,7 +16,8 @@ const indicatorCovers = (page: Page, name: string) =>
       piece.getBoundingClientRect(),
     );
     const ring = parseFloat(
-      getComputedStyle(indicator.children[1]).borderTopWidth,
+      getComputedStyle(indicator.querySelector('.tabs-indicator-start')!)
+        .borderTopWidth,
     );
     const left = Math.min(...pieces.map(piece => piece.left)) + ring;
     const right = Math.max(...pieces.map(piece => piece.right)) - ring;

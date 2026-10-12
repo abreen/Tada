@@ -35,6 +35,14 @@ const EDGE_SCROLL_SPEED = 0.6;
 // The width of the indicator's middle strip, which is scaled to fit
 const MIDDLE_WIDTH = 100;
 
+// How far the middle strip's ring and fill reach under each end cap, so that
+// their edges, softened while they slide between pixels, are always hidden
+// under the cap's opaque part. The ring stays close to the cap's flat side,
+// where the cap is nearly full height, and the fill reaches further, within
+// the cap's ring, so its edge never shows the ring color under it.
+const RING_OVERLAP = 2;
+const FILL_OVERLAP = 4;
+
 interface Box {
   x: number;
   width: number;
@@ -52,42 +60,75 @@ function tabBox(list: HTMLElement, tab: HTMLElement): Box {
 
 interface Indicator {
   element: HTMLElement;
-  middle: HTMLElement;
+  // The middle strip's ring and its fill inside it
+  ring: HTMLElement;
+  fill: HTMLElement;
   end: HTMLElement;
 }
 
-/** Builds the indicator from its end caps and the middle strip under them */
+/**
+ * Builds the indicator from its end caps and the middle strip under them. The
+ * strip's ring and fill are separate solid rectangles: Chromium redraws
+ * scaled content at a resolution of its choosing while it animates, which
+ * would blur a border drawn on the strip, but scales a solid color exactly.
+ */
 function createIndicator(document: Document): Indicator {
   const element = document.createElement('span');
   element.className = 'tabs-indicator';
   element.setAttribute('aria-hidden', 'true');
   element.hidden = true;
-  const [middle, , end] = ['middle', 'start', 'end'].map(piece => {
+  const [ring, fill, , end] = ['ring', 'fill', 'start', 'end'].map(piece => {
     const span = document.createElement('span');
     span.className = `tabs-indicator-${piece}`;
     element.append(span);
     return span;
   });
-  middle.style.width = `${MIDDLE_WIDTH}px`;
-  return { element, middle, end };
+  ring.style.width = `${MIDDLE_WIDTH}px`;
+  fill.style.width = `${MIDDLE_WIDTH}px`;
+  return { element, ring, fill, end };
 }
 
 /**
  * Moves the indicator to the box, sliding unless animate is false. Only
  * transforms change, so the browser can animate them without layout.
+ *
+ * The box is snapped to device pixels. A browser draws an animating transform
+ * in a layer of its own, which it lines up with device pixels differently
+ * than the page, so an edge between pixels would jump when the animation
+ * starts and ends, and would differ between the pieces.
  */
-function positionIndicator(indicator: Indicator, box: Box, animate: boolean) {
-  const { element, middle, end } = indicator;
+function positionIndicator(
+  window: Window,
+  indicator: Indicator,
+  box: Box,
+  animate: boolean,
+) {
+  const { element, ring, fill, end } = indicator;
+  const ratio = window.devicePixelRatio || 1;
+  const snap = (value: number) => Math.round(value * ratio) / ratio;
+  const x = snap(box.x);
+  const width = snap(box.x + box.width) - x;
+  const height = snap(box.height);
   if (!animate) {
     element.setAttribute('data-instant', '');
   }
-  element.style.transform = `translateX(${box.x}px)`;
-  // The middle overlaps each cap, which is half as wide as the tab is tall,
-  // by 1px so no seam shows between them
-  const cap = box.height / 2;
-  const span = Math.max(0, box.width - 2 * cap + 2);
-  middle.style.transform = `translateX(${cap - 1}px) scaleX(${span / MIDDLE_WIDTH})`;
-  end.style.transform = `translateX(calc(${box.width}px - 100%))`;
+  element.style.height = `${height}px`;
+  element.style.transform = `translateX(${x}px)`;
+  // The middle spans the gap between the caps, which are half as wide as the
+  // tab is tall, and reaches under each one
+  const cap = height / 2;
+  const stretch = (strip: HTMLElement, overlap: number) => {
+    const span = Math.max(0, width - 2 * cap + 2 * overlap);
+    strip.style.transform = `translateX(${cap - overlap}px) scaleX(${span / MIDDLE_WIDTH})`;
+  };
+  stretch(ring, RING_OVERLAP);
+  stretch(fill, FILL_OVERLAP);
+  // In pixels, not a percentage of the cap, so that every piece's transition
+  // can run off the main thread in step with the others. Snapped like the
+  // start cap, whose position the browser snaps: the cap is half the height,
+  // which may be an odd number of pixels, and a flat side between pixels would
+  // blend its background into its ring, lightening the ring there.
+  end.style.transform = `translateX(${snap(width - cap)}px)`;
   element.hidden = false;
   if (!animate) {
     // Commit the new position before transitions are re-enabled
@@ -207,7 +248,7 @@ export default (window: Window) => {
     // enough to show the tab clear of the fades, measuring the tab once
     const showSelected = (smooth: boolean) => {
       const box = tabBox(list, tabs[selected]);
-      positionIndicator(indicator, box, smooth);
+      positionIndicator(window, indicator, box, smooth);
       const edge = edgeWidth();
       const left = list.scrollLeft;
       const width = list.clientWidth;
@@ -314,6 +355,7 @@ export default (window: Window) => {
       const t = j === i ? 0 : (center - centers[i]) / (centers[j] - centers[i]);
       const width = boxes[i].width + (boxes[j].width - boxes[i].width) * t;
       positionIndicator(
+        window,
         indicator,
         { x: center - width / 2, width, height: boxes[i].height },
         true,

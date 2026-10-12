@@ -219,7 +219,8 @@ function tabsRule(
   listOpen.attrs = [['class', 'tabs-list']];
   const buttonLabels = tabs.map((tab, index) => {
     const tabOpen = state.push('tabs_tab_open', 'button', 1);
-    tabOpen.block = true;
+    // Block tokens would put line breaks around the label
+    tabOpen.block = false;
     tabOpen.map = [tab.openLine, tab.openLine + 1];
     tabOpen.attrs = [
       ['type', 'button'],
@@ -231,8 +232,13 @@ function tabsRule(
     }
     tabOpen.attrs.push(['disabled', '']);
     meta.tabs.push(tabOpen);
+    // Wrapped so its text can be centered by its capitals (see the styles)
+    const labelOpen = state.push('tabs_tab_label_open', 'span', 1);
+    labelOpen.block = false;
+    labelOpen.attrs = [['class', 'tabs-tab-label']];
     // Filled from the panel's label once it is parsed (see copyButtonLabels)
     const buttonLabel = pushInline('', [tab.openLine, tab.openLine + 1]);
+    state.push('tabs_tab_label_close', 'span', -1).block = false;
     state.push('tabs_tab_close', 'button', -1).block = true;
     return buttonLabel;
   });

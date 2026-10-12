@@ -1324,8 +1324,8 @@ describe('tabs plugin', () => {
         '<div class="tabs-track">',
         '<button type="button" class="tabs-scroll tabs-scroll-start" tabindex="-1" aria-hidden="true" hidden=""></button>',
         '<div class="tabs-list">',
-        '<button type="button" class="tabs-tab" id="tabs-1-tab-1" data-selected="" disabled="">Tab 1</button>',
-        '<button type="button" class="tabs-tab" id="tabs-1-tab-2" disabled="">Tab 2</button>',
+        '<button type="button" class="tabs-tab" id="tabs-1-tab-1" data-selected="" disabled=""><span class="tabs-tab-label">Tab 1</span></button>',
+        '<button type="button" class="tabs-tab" id="tabs-1-tab-2" disabled=""><span class="tabs-tab-label">Tab 2</span></button>',
         '</div>',
         '<button type="button" class="tabs-scroll tabs-scroll-end" tabindex="-1" aria-hidden="true" hidden=""></button>',
         '</div>',
@@ -1376,7 +1376,7 @@ describe('tabs plugin', () => {
   test('labels accept inline Markdown and are trimmed', () => {
     const html = md.render('[  *Java* `main`  |\nx\n]\n');
     expect(html).toContain(
-      'disabled=""><em>Java</em> <code>main</code></button>',
+      'disabled=""><span class="tabs-tab-label"><em>Java</em> <code>main</code></span></button>',
     );
     expect(html).toContain(
       '<p class="tabs-panel-label" data-pagefind-ignore=""><em>Java</em> <code>main</code></p>',
@@ -1449,7 +1449,9 @@ describe('tabs plugin', () => {
 
   test('labels may contain balanced and escaped brackets', () => {
     const html = md.render('[Array[int] \\] `]`|\nx\n]\n');
-    expect(html).toContain('disabled="">Array[int] ] <code>]</code></button>');
+    expect(html).toContain(
+      'disabled=""><span class="tabs-tab-label">Array[int] ] <code>]</code></span></button>',
+    );
   });
 
   test('preserves literal delimiters in raw <pre> HTML', () => {
@@ -1463,7 +1465,9 @@ describe('tabs plugin', () => {
 
   test('tab buttons show link text without the link', () => {
     const html = md.render('[See [docs](u)|\nx\n]\n');
-    expect(html).toContain('disabled="">See docs</button>');
+    expect(html).toContain(
+      'disabled=""><span class="tabs-tab-label">See docs</span></button>',
+    );
     expect(html).toContain(
       'data-pagefind-ignore="">See <a href="u">docs</a></p>',
     );
@@ -1476,7 +1480,9 @@ describe('tabs plugin', () => {
       .render('[Java[^1]|\nx\n]\n\n[^1]: Note.\n');
     expect(html.match(/id="fnref1"/g)).toHaveLength(1);
     expect(html.match(/href="#fnref1"/g)).toHaveLength(1);
-    expect(html).toContain('disabled="">Java</button>');
+    expect(html).toContain(
+      'disabled=""><span class="tabs-tab-label">Java</span></button>',
+    );
   });
 
   test('group ids skip ids used by headings', () => {
