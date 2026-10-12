@@ -10,12 +10,15 @@
   --tabs-list-padding: 6px;
   --tabs-gap: 4px;
 
+  // A tab's small text and vertical padding
+  --tabs-tab-height: calc(var(--font-size-small) * (var(--line-height) + 0.25));
+
   margin-bottom: 1rem;
 }
 
 // The tab list needs the client component; without JS every panel is shown,
 // stacked under its own label
-.tabs-list {
+.tabs-track {
   display: none;
 }
 
@@ -88,52 +91,115 @@
     }
   }
 
-  // Like the appearance picker, but a perfectly round pill
-  .tabs-list {
-    position: relative;
+  // Like the appearance picker, but a perfectly round pill. It holds the tab
+  // list between buttons that scroll it, which take their own space beside
+  // the tabs.
+  .tabs-track {
     display: flex;
     grid-row: 1;
     grid-column: 2;
+    align-items: center;
+    min-width: 0;
+    background: var(--bg2-color);
+    border-radius: 999px;
+  }
+
+  // Tabs that do not fit scroll horizontally. The client component shows the
+  // scroll buttons, since a touch on the tabs drags the indicator instead.
+  .tabs-list {
+    --tabs-fade-start: 0px;
+    --tabs-fade-end: 0px;
+
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
     gap: var(--tabs-gap);
+    min-width: 0;
     padding: var(--tabs-list-padding);
     overflow-x: auto;
     scrollbar-width: none;
-    background: var(--bg2-color);
-    border-radius: 999px;
 
     &::-webkit-scrollbar {
       display: none;
     }
+
+    // The tabs fade out toward an end with more tabs hidden past it
+    &[data-more-start] {
+      --tabs-fade-start: 1.5em;
+    }
+
+    &[data-more-end] {
+      --tabs-fade-end: 1.5em;
+    }
+
+    &[data-more-start],
+    &[data-more-end] {
+      $fade: linear-gradient(
+        to right,
+        transparent,
+        #000 var(--tabs-fade-start),
+        #000 calc(100% - var(--tabs-fade-end)),
+        transparent
+      );
+
+      -webkit-mask-image: $fade;
+      mask-image: $fade;
+    }
   }
 
-  // The top border is drawn beside the tab list instead. Border-box, so the
-  // client component can animate its measured height.
+  // Shown at both ends of the track while its tabs do not all fit, so the
+  // tabs between them keep their width; the one at the end reached is
+  // disabled
+  .tabs-scroll {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--tabs-tab-height);
+    height: var(--tabs-tab-height);
+    padding: 0;
+    margin: 0;
+    color: var(--fg2-color);
+    touch-action: manipulation;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    -webkit-tap-highlight-color: transparent;
+
+    &[hidden] {
+      display: none;
+    }
+
+    &::after {
+      width: 1.25em;
+      height: 1.25em;
+      content: '';
+
+      @include contained-mask(var(--icon-breadcrumb-separator));
+    }
+  }
+
+  // The tab list's own padding separates each button from the tabs
+  .tabs-scroll-start {
+    margin-left: var(--tabs-list-padding);
+
+    &::after {
+      transform: scaleX(-1);
+    }
+  }
+
+  .tabs-scroll-end {
+    margin-right: var(--tabs-list-padding);
+  }
+
+  // The top border is drawn beside the tab list instead
   .tabs-panels {
-    position: relative;
-    box-sizing: border-box;
     grid-row: 2;
     grid-column: 1 / -1;
     min-width: 0;
     border-top: 0;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
-  }
-
-  // A panel fading out after another tab is selected, over the new panel
-  .tabs-panel[data-leaving] {
-    position: absolute;
-    inset: 0 0 auto;
-  }
-
-  // Like a view transition's crossfade: within the isolated box, the two
-  // panels' pixels add up, so content in the same place in both (like a code
-  // block's background) stays fully opaque instead of dimming halfway through
-  .tabs-panels[data-crossfading] {
-    isolation: isolate;
-
-    > .tabs-panel:not([hidden]) {
-      mix-blend-mode: plus-lighter;
-    }
   }
 
   // An until-found panel is still rendered; without padding it takes no space
@@ -206,7 +272,8 @@
 }
 
 @media (hover: hover) {
-  .tabs-tab:not([data-selected], :disabled):hover {
+  .tabs-tab:not([data-selected], :disabled):hover,
+  .tabs-scroll:not(:disabled):hover {
     color: var(--fg-color);
   }
 
@@ -232,22 +299,66 @@
 }
 
 // Like the appearance picker's indicator, sized to the selected tab by the
-// client component
+// client component. The pill is drawn in three pieces so that sliding and
+// resizing it changes only transforms, which browsers animate without laying
+// out the page: two round end caps over a middle strip, which is scaled
+// to fill the gap between them. Each piece extends past the selected tab's box
+// by the ring's width and draws the ring as its border. The container spans
+// the selected tab's box.
 .tabs-indicator {
   position: absolute;
   top: var(--tabs-list-padding);
   bottom: var(--tabs-list-padding);
   left: 0;
   pointer-events: none;
-  background: var(--bg-color);
-  border-radius: 999px;
-  box-shadow: 0 0 0 var(--control-border-width) var(--fg2-color);
+
+  > span {
+    position: absolute;
+    top: calc(-1 * var(--control-border-width));
+    bottom: calc(-1 * var(--control-border-width));
+    box-sizing: border-box;
+    background: var(--bg-color);
+    border: var(--control-border-width) solid var(--fg2-color);
+  }
 
   @media (prefers-reduced-motion: no-preference) {
-    transition:
-      transform 200ms cubic-bezier(0.2, 0, 0, 1),
-      width 200ms cubic-bezier(0.2, 0, 0, 1);
+    &,
+    > span {
+      transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+    }
   }
+}
+
+// Positioned without sliding
+.tabs-indicator[data-instant] {
+  &,
+  > span {
+    transition: none;
+  }
+}
+
+// Its width is set by the client component, which scales it to fit
+.tabs-indicator > .tabs-indicator-middle {
+  left: 0;
+  border-right-width: 0;
+  border-left-width: 0;
+  transform-origin: 0 0;
+}
+
+// Each cap is half as wide as it is tall, so its round end is a semicircle
+.tabs-indicator > .tabs-indicator-start {
+  left: calc(-1 * var(--control-border-width));
+  aspect-ratio: 1 / 2;
+  border-right-width: 0;
+  border-radius: 999px 0 0 999px;
+}
+
+// Moved to the tab's right edge by the client component
+.tabs-indicator > .tabs-indicator-end {
+  left: var(--control-border-width);
+  aspect-ratio: 1 / 2;
+  border-left-width: 0;
+  border-radius: 0 999px 999px 0;
 }
 
 // Tabs are above the indicator, so none may cover it with the global button
@@ -255,6 +366,18 @@
 // global press colors
 .tabs-indicator:not([hidden]) ~ .tabs-tab {
   background: transparent;
+}
+
+// Once mounted, a touch or pen on the tab list drags the indicator, so the
+// browser must not scroll or zoom from it
+.js .tabs[data-mounted] > .tabs-track > .tabs-list {
+  touch-action: none;
+  -webkit-touch-callout: none;
+
+  > .tabs-tab {
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 // Once shown, the indicator draws the selected tab's fill, even while hovered
@@ -268,6 +391,24 @@
   }
 }
 
+// The indicator follows the finger. The tab where the drag started stays
+// pressed after it is no longer selected, so it drops the global press colors.
+.tabs-list[data-dragging] {
+  > .tabs-indicator,
+  > .tabs-indicator > span {
+    transition: none;
+  }
+
+  > .tabs-tab:active {
+    color: var(--fg2-color) !important;
+    background: transparent !important;
+  }
+
+  > .tabs-tab[data-selected]:active {
+    color: var(--fg-color) !important;
+  }
+}
+
 @media print {
   .js .tabs {
     display: block;
@@ -278,7 +419,7 @@
     }
   }
 
-  .js .tabs-list {
+  .js .tabs-track {
     display: none;
   }
 

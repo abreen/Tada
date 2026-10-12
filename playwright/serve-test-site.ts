@@ -115,6 +115,30 @@ Ferris is the Rust mascot.
 `,
 );
 
+// More tabs than fit on one row in a narrow viewport
+writeFileSync(
+  path.join(siteDir, 'content', 'tabs-many.md'),
+  `---
+title: Many Tabs
+---
+
+${[
+  'Java',
+  'Python',
+  'Rust',
+  'Go',
+  'Kotlin',
+  'Swift',
+  'TypeScript',
+  'Haskell',
+  'Elixir',
+  'Clojure',
+]
+  .map(label => `[${label}|\n\n${label} content.\n\n]`)
+  .join('\n')}
+`,
+);
+
 mkdirSync(path.dirname(slidesPath), { recursive: true });
 mkdirSync(traceDir, { recursive: true });
 mkdirSync(resetTraceDir, { recursive: true });

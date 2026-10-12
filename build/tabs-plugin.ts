@@ -193,6 +193,26 @@ function tabsRule(
   ];
   open.meta = meta;
 
+  // The track holds the tab list between buttons that scroll it, which the
+  // client component shows when the tabs do not fit. Keyboard and screen
+  // reader users move through the tabs with the arrow keys instead.
+  const trackOpen = state.push('tabs_track_open', 'div', 1);
+  trackOpen.block = true;
+  trackOpen.attrs = [['class', 'tabs-track']];
+  const pushScrollButton = (side: string) => {
+    const button = state.push('tabs_scroll_open', 'button', 1);
+    button.block = true;
+    button.attrs = [
+      ['type', 'button'],
+      ['class', `tabs-scroll tabs-scroll-${side}`],
+      ['tabindex', '-1'],
+      ['aria-hidden', 'true'],
+      ['hidden', ''],
+    ];
+    state.push('tabs_scroll_close', 'button', -1).block = true;
+  };
+  pushScrollButton('start');
+
   // Build-time tab buttons stay disabled until the client component mounts
   const listOpen = state.push('tabs_list_open', 'div', 1);
   listOpen.block = true;
@@ -217,6 +237,8 @@ function tabsRule(
     return buttonLabel;
   });
   state.push('tabs_list_close', 'div', -1).block = true;
+  pushScrollButton('end');
+  state.push('tabs_track_close', 'div', -1).block = true;
 
   const panelsOpen = state.push('tabs_panels_open', 'div', 1);
   panelsOpen.block = true;

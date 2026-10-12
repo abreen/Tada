@@ -1321,9 +1321,13 @@ describe('tabs plugin', () => {
     expect(html).toBe(
       [
         '<div class="tabs" id="tabs-1">',
+        '<div class="tabs-track">',
+        '<button type="button" class="tabs-scroll tabs-scroll-start" tabindex="-1" aria-hidden="true" hidden=""></button>',
         '<div class="tabs-list">',
         '<button type="button" class="tabs-tab" id="tabs-1-tab-1" data-selected="" disabled="">Tab 1</button>',
         '<button type="button" class="tabs-tab" id="tabs-1-tab-2" disabled="">Tab 2</button>',
+        '</div>',
+        '<button type="button" class="tabs-scroll tabs-scroll-end" tabindex="-1" aria-hidden="true" hidden=""></button>',
         '</div>',
         '<div class="tabs-panels">',
         '<div class="tabs-panel" id="tabs-1-panel-1" data-selected="">',
