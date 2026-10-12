@@ -1,4 +1,11 @@
-import { test, expect, type Locator, type Page } from './test-fixtures';
+import {
+  test,
+  expect,
+  centerOf,
+  touch,
+  type Locator,
+  type Page,
+} from './test-fixtures';
 
 async function getKnobTransform(locator: Locator) {
   return locator.evaluate(
@@ -661,4 +668,213 @@ test.describe('appearance pickers', () => {
     await page.emulateMedia({ media: 'print' });
     await expect(page.locator('.appearance-pickers')).toBeHidden();
   });
+});
+
+test.describe('dragging an appearance switch knob by touch', () => {
+  test.use({ hasTouch: true });
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'touch input uses CDP',
+  );
+
+  const contrastOptions = (page: Page) => ({
+    control: page.getByRole('switch', { name: 'Use high contrast' }),
+    standard: page.locator('.contrast-picker-option-standard'),
+    high: page.locator('.contrast-picker-option-high'),
+  });
+
+  test('dragging the knob chooses each option it crosses into', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    const { control, standard, high } = contrastOptions(page);
+    await expect(control).toBeEnabled();
+
+    // Like the tabs, the option is chosen while the finger is still down
+    const finger = await touch(page, await centerOf(standard));
+    await finger.moveTo(await centerOf(high));
+    await expect(control).toHaveAttribute('data-holding', 'end');
+    await expect(control).toHaveAttribute('aria-checked', 'true');
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+    await finger.moveTo(await centerOf(standard));
+    await expect(control).toHaveAttribute('aria-checked', 'false');
+    await finger.moveTo(await centerOf(high));
+    await expect(control).toHaveAttribute('aria-checked', 'true');
+    await finger.lift();
+
+    await expect(control).toHaveAttribute('aria-checked', 'true');
+    await expect(control).not.toHaveAttribute('data-holding');
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-contrast-preference',
+      'high',
+    );
+    expect(
+      await page.evaluate(() => localStorage.getItem('contrastPreference')),
+    ).toBe('high');
+  });
+
+  test('a tap chooses the option under the finger instead of toggling', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    const { control, standard, high } = contrastOptions(page);
+    await expect(control).toBeEnabled();
+
+    for (const [option, checked] of [
+      [high, 'true'],
+      [high, 'true'],
+      [standard, 'false'],
+      [standard, 'false'],
+    ] as const) {
+      const finger = await touch(page, await centerOf(option));
+      await finger.lift();
+      // The click that follows the tap does not toggle the switch again
+      await page.waitForTimeout(100);
+      await expect(control).toHaveAttribute('aria-checked', checked);
+    }
+  });
+
+  test('a tap between the options toggles the switch', async ({ page }) => {
+    await page.goto('/index.html');
+    const { control } = contrastOptions(page);
+    await expect(control).toBeEnabled();
+
+    // iOS VoiceOver activates a control by tapping its center, which is the
+    // gap between the switch's options
+    for (const checked of ['true', 'false']) {
+      const finger = await touch(page, await centerOf(control));
+      await finger.lift();
+      await expect(control).toHaveAttribute('aria-checked', checked);
+    }
+  });
+
+  test('a key press right after a tap still toggles the switch', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    const { control, high } = contrastOptions(page);
+    await expect(control).toBeEnabled();
+    await control.focus();
+
+    const finger = await touch(page, await centerOf(high));
+    await finger.lift();
+    await expect(control).toHaveAttribute('aria-checked', 'true');
+    // Only the click that follows the tap is ignored
+    await page.keyboard.press('Space');
+    await expect(control).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('a touch shows no press colors until a mouse or key press', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    const { control, high } = contrastOptions(page);
+    await expect(control).toBeEnabled();
+
+    // A tap can stay :active after the finger lifts, which would show the
+    // press colors on the option the knob just left
+    const finger = await touch(page, await centerOf(high));
+    await finger.lift();
+    await expect(control).toHaveAttribute('data-touch', '');
+
+    await control.focus();
+    await page.keyboard.down('Shift');
+    await page.keyboard.up('Shift');
+    await expect(control).not.toHaveAttribute('data-touch');
+  });
+
+  test('a drag that wanders back and down keeps the preference and does not scroll', async ({
+    page,
+  }) => {
+    await page.goto('/layout-long.html');
+    const { control, standard, high } = contrastOptions(page);
+    await expect(control).toBeEnabled();
+    const from = await centerOf(standard);
+    const end = await centerOf(high);
+    // The switches are at the bottom of the page, which a finger moving down
+    // would scroll up
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeGreaterThan(0);
+
+    // A real finger rarely moves straight sideways
+    const finger = await touch(page, from);
+    await finger.moveTo({ x: end.x, y: from.y - 40 });
+    await expect(control).toHaveAttribute('data-holding', 'end');
+    await expect(control).toHaveAttribute('aria-checked', 'true');
+    await finger.moveTo({ x: from.x - 30, y: from.y + 60 });
+    await expect(control).toHaveAttribute('data-holding', 'start');
+    await expect(control).toHaveAttribute('aria-checked', 'false');
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+    await finger.lift();
+
+    await page.waitForTimeout(100);
+    await expect(control).toHaveAttribute('aria-checked', 'false');
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+  });
+
+  test('dragging the font knob applies the font once it loads', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    const control = page.getByRole('switch', { name: 'Use serif fonts' });
+    await expect(control).toBeEnabled();
+
+    const finger = await touch(
+      page,
+      await centerOf(page.locator('.font-picker-option-sans')),
+    );
+    await finger.moveTo(
+      await centerOf(page.locator('.font-picker-option-serif')),
+    );
+    await finger.lift();
+
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-font-preference',
+      'serif',
+    );
+    await expect(control).toHaveAttribute('aria-checked', 'true');
+    await expect(control).not.toHaveAttribute('data-pending');
+  });
+});
+
+test('the font knob stays on a font that is still loading', async ({
+  page,
+}) => {
+  let releaseFonts = () => {};
+  const fontsHeld = new Promise<void>(resolve => {
+    releaseFonts = resolve;
+  });
+  await page.route('**/custom-fonts/**', async route => {
+    await fontsHeld;
+    await route.continue();
+  });
+  await page.goto('/index.html');
+  const control = page.getByRole('switch', { name: 'Use serif fonts' });
+  await expect(control).toBeEnabled();
+  const knobBefore = await getKnobTransform(control);
+
+  // Waits out the knob's slide
+  const knobSettled = () =>
+    expect
+      .poll(() =>
+        control.evaluate(
+          element => element.getAnimations({ subtree: true }).length,
+        ),
+      )
+      .toBe(0);
+
+  await control.click();
+  await expect(control).toHaveAttribute('data-pending', '');
+  await expect(control).toHaveAttribute('aria-checked', 'false');
+  await knobSettled();
+  const knobPending = await getKnobTransform(control);
+  expect(knobPending).not.toBe(knobBefore);
+
+  releaseFonts();
+  await expect(control).toHaveAttribute('aria-checked', 'true');
+  await expect(control).not.toHaveAttribute('data-pending');
+  expect(await getKnobTransform(control)).toBe(knobPending);
 });

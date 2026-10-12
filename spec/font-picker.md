@@ -53,9 +53,13 @@ root attribute, switch state, and stored value remain unchanged until all
 three calls resolve. Italic and bold-italic faces are deliberately excluded and
 remain demand-loaded when content uses them.
 
-Activating the switch again while the alternate faces are pending cancels the
-pending intent, and the superseded request cannot apply later. There is no
-timeout or pending indicator. A rejected load or an empty match leaves the
+While the alternate faces are pending, the switch carries `data-pending` and its
+knob sits on the requested option, so a knob dragged there stays where the
+visitor left it; only the knob and the requested option's label (in the
+primary foreground color) reflect the request. Activating the switch again
+while the alternate faces are pending (or dragging the knob back to the applied
+option) cancels the pending intent, and the superseded request cannot apply
+later. There is no timeout. A rejected load or an empty match leaves the
 current preference applied; a click does not alter storage, while a stored
 override remains available for a later retry. When the Font Loading API is
 unavailable, selection retains the immediate behavior.
@@ -74,12 +78,48 @@ configured typography applied while it loads the stored pair's common faces,
 then applies the override atomically. Without a valid override, it leaves the
 build-rendered state untouched.
 
-The rounded switch follows the trace-control styling: a padded secondary
-background without an outer border and one neutral knob that slides between
-the endpoints separated by the trace controls' standard half-rem gap. Hover,
-focus, and active treatments do not move the knob; it moves only after the
-preference is applied. Keyboard focus outlines the complete switch track with
-the standard gap rather than outlining an individual endpoint.
+The switches share the [tab list](tabs.md)'s appearance and states, so the
+two components look and behave alike. Each is a pill-shaped track on the
+secondary background, padded by 6px, with a fully round border radius and no
+outer border. Its two endpoints are separated by a half-rem gap. A fully round
+knob filled with the page background and ringed by a 2px border in the
+secondary foreground color, like the selected tab, sits on the applied option
+(or the font being loaded) and slides between the endpoints. The option under
+the knob uses the primary foreground color and the other uses the secondary
+foreground color. On devices that hover, hovering the switch brightens the
+other option to the primary foreground color, and pressing it with a mouse or
+key fills that option with the global button press colors, like an unselected
+tab. The knob keeps its fill and position while hovered, focused, or pressed by
+a mouse or key; it moves only after the preference is applied or the font
+starts loading. Keyboard focus (`:focus-visible`) outlines the complete switch
+track with the standard gap rather than outlining an individual endpoint; a
+mouse click shows no outline.
+
+A touch or pen takes hold of the knob as soon as it goes down, like the tabs'
+indicator: the knob slides onto the option under the finger (or the nearer
+one, past either end of the track), choosing it, then follows the finger without a transition once it moves,
+clamped between the two options. Like a tab, each option is chosen as soon as
+the knob's center crosses into it, exactly as a click would choose it, so the
+contrast or font changes while the finger is still down (a font still loading
+applies once it loads). While held, the option nearer the knob uses the
+primary foreground color. After a touch or pen goes down, the switch carries
+`data-touch` and shows no hover or press colors until the next mouse press or
+key press, since a tap can stay `:active` after the finger lifts and would
+color the option the knob just left. When the finger lifts or the touch is
+canceled, the knob slides from the finger onto the chosen option; a tap on the
+option the knob is already on changes nothing. A press in the gap between the
+options toggles the switch like a click, since iOS VoiceOver activates a
+control by tapping its center. The first pointer click within
+400ms of the finger lifting is ignored, so it does not toggle the switch
+again; keyboard clicks are never ignored. The knob is measured once when the
+finger goes down and is updated at most once per frame through a custom
+property on the switch that only the knob's transform reads, so following the
+finger never lays out the page. A mounted switch (under `.js`) has
+`touch-action: none` (and `touchmove` is canceled while the knob is held), so a
+touch that starts there never scrolls the page. The component never focuses
+the switch on touch, though the browser may focus a tapped button itself. The
+mouse toggles the switch only by clicking. The tabs and the switches share
+this touch handling (`src/touch-drag.ts`).
 
 The font and contrast pickers are one page-local component. When enabled, they
 are re-mounted and synchronized after client-side navigation replaces the page

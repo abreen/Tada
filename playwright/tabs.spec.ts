@@ -1,4 +1,11 @@
-import { test, expect, visitorScrollBy, type Page } from './test-fixtures';
+import {
+  test,
+  expect,
+  centerOf,
+  touch,
+  visitorScrollBy,
+  type Page,
+} from './test-fixtures';
 
 // Whether the indicator's drawn pieces, inside the ring around them, span the
 // tab
@@ -463,45 +470,9 @@ test.describe('dragging the selection indicator by touch', () => {
     'touch input uses CDP',
   );
 
-  // The tabs are below the fold, and touches do not scroll them into view
-  const centerOf = async (page: Page, name: string) => {
-    const tab = page.getByRole('tab', { name });
-    await tab.scrollIntoViewIfNeeded();
-    const box = (await tab.boundingBox())!;
-    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  };
-
-  // Puts a finger down at the start, then moves it through each point in steps
-  const touch = async (page: Page, start: { x: number; y: number }) => {
-    const cdp = await page.context().newCDPSession(page);
-    let at = start;
-    await cdp.send('Input.dispatchTouchEvent', {
-      type: 'touchStart',
-      touchPoints: [at],
-    });
-    return {
-      async moveTo(to: { x: number; y: number }, steps = 8) {
-        const from = at;
-        for (let step = 1; step <= steps; step++) {
-          at = {
-            x: from.x + ((to.x - from.x) * step) / steps,
-            y: from.y + ((to.y - from.y) * step) / steps,
-          };
-          await cdp.send('Input.dispatchTouchEvent', {
-            type: 'touchMove',
-            touchPoints: [at],
-          });
-        }
-      },
-      async lift() {
-        await cdp.send('Input.dispatchTouchEvent', {
-          type: 'touchEnd',
-          touchPoints: [],
-        });
-        await cdp.detach();
-      },
-    };
-  };
+  // The tabs are below the fold
+  const tabCenter = (page: Page, name: string) =>
+    centerOf(page.getByRole('tab', { name }));
 
   test('dragging the selected tab selects each tab the finger crosses', async ({
     page,
@@ -511,12 +482,12 @@ test.describe('dragging the selection indicator by touch', () => {
     const python = page.getByRole('tab', { name: 'Python' });
     const rust = page.getByRole('tab', { name: 'Rust' });
 
-    const finger = await touch(page, await centerOf(page, 'Java'));
-    await finger.moveTo(await centerOf(page, 'Python'));
+    const finger = await touch(page, await tabCenter(page, 'Java'));
+    await finger.moveTo(await tabCenter(page, 'Python'));
     await expect(python).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('tabpanel', { name: 'Python' })).toBeVisible();
 
-    await finger.moveTo(await centerOf(page, 'Rust'));
+    await finger.moveTo(await tabCenter(page, 'Rust'));
     await expect(rust).toHaveAttribute('aria-selected', 'true');
     await finger.lift();
 
@@ -534,10 +505,10 @@ test.describe('dragging the selection indicator by touch', () => {
     const python = page.getByRole('tab', { name: 'Python' });
     const rust = page.getByRole('tab', { name: 'Rust' });
 
-    const finger = await touch(page, await centerOf(page, 'Python'));
+    const finger = await touch(page, await tabCenter(page, 'Python'));
     await expect(python).toHaveAttribute('aria-selected', 'true');
 
-    await finger.moveTo(await centerOf(page, 'Rust'));
+    await finger.moveTo(await tabCenter(page, 'Rust'));
     await expect(rust).toHaveAttribute('aria-selected', 'true');
     await finger.lift();
     await expect(rust).toHaveAttribute('aria-selected', 'true');
@@ -578,7 +549,7 @@ test.describe('dragging the selection indicator by touch', () => {
     }) => {
       await page.goto('/tabs-many.html');
       await expect(page.locator('.tabs')).toHaveAttribute('data-mounted', '');
-      const java = await centerOf(page, 'Java');
+      const java = await tabCenter(page, 'Java');
       const track = (await page.getByRole('tablist').boundingBox())!;
       const scrollY = await page.evaluate(() => window.scrollY);
 
@@ -601,8 +572,8 @@ test.describe('dragging the selection indicator by touch', () => {
   }) => {
     await page.goto('/tabs.html');
     await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
-    const finger = await touch(page, await centerOf(page, 'Java'));
-    await finger.moveTo(await centerOf(page, 'Rust'));
+    const finger = await touch(page, await tabCenter(page, 'Java'));
+    await finger.moveTo(await tabCenter(page, 'Rust'));
     await finger.lift();
     await expect(page.getByRole('tab', { name: 'Rust' })).toHaveAttribute(
       'aria-selected',
@@ -652,8 +623,8 @@ test.describe('dragging the selection indicator by touch', () => {
     await page.goto('/tabs.html');
     await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
     await page.getByRole('tab', { name: 'Java' }).focus();
-    const finger = await touch(page, await centerOf(page, 'Java'));
-    await finger.moveTo(await centerOf(page, 'Python'));
+    const finger = await touch(page, await tabCenter(page, 'Java'));
+    await finger.moveTo(await tabCenter(page, 'Python'));
     await finger.lift();
     await expect(page.getByRole('tab', { name: 'Python' })).toBeFocused();
   });
@@ -663,8 +634,8 @@ test.describe('dragging the selection indicator by touch', () => {
   }) => {
     await page.goto('/tabs.html');
     await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
-    const java = await centerOf(page, 'Java');
-    const python = await centerOf(page, 'Python');
+    const java = await tabCenter(page, 'Java');
+    const python = await tabCenter(page, 'Python');
     const scrollY = await page.evaluate(() => window.scrollY);
 
     // A real finger rarely moves straight sideways
@@ -688,8 +659,8 @@ test.describe('dragging the selection indicator by touch', () => {
   }) => {
     await page.goto('/tabs.html');
     await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
-    const java = await centerOf(page, 'Java');
-    const rust = await centerOf(page, 'Rust');
+    const java = await tabCenter(page, 'Java');
+    const rust = await tabCenter(page, 'Rust');
     await page.mouse.move(java.x, java.y);
     await page.mouse.down();
     await page.mouse.move(rust.x, rust.y, { steps: 8 });

@@ -1,6 +1,7 @@
 import {
   test as base,
   expect,
+  type Locator,
   type Page,
   type TestInfo,
 } from '@playwright/test';
@@ -99,4 +100,49 @@ export async function waitForClientMount(page: Page) {
   await expect(
     page.getByRole('switch', { name: 'Use serif fonts' }),
   ).toBeEnabled();
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+// Puts a finger down at the start; it then moves through each point in steps.
+// Real touches, which honor touch-action, need Chromium's DevTools protocol.
+export async function touch(page: Page, start: Point) {
+  const cdp = await page.context().newCDPSession(page);
+  let at = start;
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [at],
+  });
+  return {
+    async moveTo(to: Point, steps = 8) {
+      const from = at;
+      for (let step = 1; step <= steps; step++) {
+        at = {
+          x: from.x + ((to.x - from.x) * step) / steps,
+          y: from.y + ((to.y - from.y) * step) / steps,
+        };
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [at],
+        });
+      }
+    },
+    async lift() {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+      await cdp.detach();
+    },
+  };
+}
+
+// Where a finger would press the element. Touches do not scroll it into view.
+export async function centerOf(locator: Locator): Promise<Point> {
+  await locator.scrollIntoViewIfNeeded();
+  const box = (await locator.boundingBox())!;
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }

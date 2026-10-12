@@ -109,9 +109,11 @@ until then. Mounting applies the
   nearer the end, up to 600px per second), and the indicator keeps following
   the finger through the tabs that come into view, as it does if a smooth
   scroll is still moving the tabs when the finger goes down. The indicator
-  updates at most once per frame. A click that arrives within 400ms of a drag
-  lifting is ignored, since the drag already selected the tab under the
-  finger. The tab list has `touch-action: none` (and `touchmove` is canceled
+  updates at most once per frame, and once more as the finger lifts if a move
+  is not yet drawn. The first pointer click within 400ms of a drag lifting is
+  ignored, since the drag already selected the tab under the finger; keyboard
+  clicks are never ignored. The appearance pickers share this touch handling
+  (`src/touch-drag.ts`). The tab list has `touch-action: none` (and `touchmove` is canceled
   during a drag), so a touch that starts there never scrolls the page. A touch does not
   move focus, so no focus ring appears, unless a tab already had focus. The
   mouse selects only by clicking.
@@ -128,8 +130,9 @@ until then. Mounting applies the
 
 ## Appearance
 
-The tab list looks like the appearance pickers ([font](font-picker.md) and
-[contrast](contrast-picker.md)): a pill-shaped track on the secondary
+The tab list looks and behaves like the appearance pickers
+([font](font-picker.md) and [contrast](contrast-picker.md)), which share its
+colors, hover and press states, and touch dragging: a pill-shaped track on the secondary
 background, padded by 6px, with a fully round border radius. Tabs are
 borderless pills with secondary text in the small font size, like other
 buttons. The active tab is filled with the page background and ringed by a 2px

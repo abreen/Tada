@@ -273,10 +273,76 @@ describe('appearance picker', () => {
     fontSwitch.click();
     expect(requestedPreferences).toEqual(['serif']);
     expect(fontSwitch.getAttribute('aria-checked')).toBe('false');
+    // The knob shows the font being loaded
+    expect(fontSwitch.hasAttribute('data-pending')).toBe(true);
 
     fontSwitch.click();
     expect(cancelCount).toBe(1);
     expect(pending).toBeNull();
     expect(fontSwitch.getAttribute('aria-checked')).toBe('false');
+    expect(fontSwitch.hasAttribute('data-pending')).toBe(false);
+  });
+
+  test('the knob leaves the font being loaded once it is applied or fails', async () => {
+    const window = createPickers();
+    let pending: {
+      generation: number;
+      preference: 'sans' | 'serif';
+      promise: Promise<void>;
+    } | null = null;
+    let settle: (loaded: boolean) => void = () => {};
+    let generation = 0;
+    const fontLoader = {
+      supported: true,
+      get pending() {
+        return pending;
+      },
+      failedPreference: null,
+      request(preference: 'sans' | 'serif') {
+        pending = {
+          generation: ++generation,
+          preference,
+          promise: new Promise<void>((resolve, reject) => {
+            settle = loaded => (loaded ? resolve() : reject(new Error()));
+          }),
+        };
+        return pending;
+      },
+      isCurrent: (request: unknown) => request === pending,
+      complete: () => {
+        pending = null;
+      },
+      fail: () => {
+        pending = null;
+      },
+      cancel() {
+        pending = null;
+      },
+    };
+    (
+      window as typeof window & {
+        __tadaFontPreferenceLoader: typeof fontLoader;
+      }
+    ).__tadaFontPreferenceLoader = fontLoader;
+    mount(window);
+    const { document } = window;
+    const fontSwitch = document.querySelector<HTMLButtonElement>(
+      '[data-font-preference-switch]',
+    )!;
+
+    fontSwitch.click();
+    expect(fontSwitch.hasAttribute('data-pending')).toBe(true);
+    settle(false);
+    await Promise.resolve();
+    expect(fontSwitch.hasAttribute('data-pending')).toBe(false);
+    expect(document.documentElement.dataset.fontPreference).toBeUndefined();
+
+    fontSwitch.click();
+    expect(fontSwitch.hasAttribute('data-pending')).toBe(true);
+    settle(true);
+    await Promise.resolve();
+    expect(fontSwitch.hasAttribute('data-pending')).toBe(false);
+    expect(document.documentElement.dataset.fontPreference).toBe('serif');
+    expect(fontSwitch.getAttribute('aria-checked')).toBe('true');
   });
 });

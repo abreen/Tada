@@ -1,3 +1,5 @@
+import { mountKnobDrag } from './knob';
+
 type FontPreference = 'sans' | 'serif';
 type ContrastPreference = 'standard' | 'high';
 
@@ -174,26 +176,34 @@ function syncSwitch(
   selector: string,
   checked: boolean,
   title: string,
-): void {
+): HTMLButtonElement | null {
   const control = document.querySelector<HTMLButtonElement>(selector);
   if (!control) {
-    return;
+    return null;
   }
   control.disabled = false;
   control.setAttribute('aria-checked', String(checked));
   control.title = title;
+  return control;
 }
 
 function syncAppearance(
   document: Document,
   fontPreference: FontPreference,
   contrastPreference: ContrastPreference,
+  pendingFontPreference: FontPreference | null,
 ): void {
-  syncSwitch(
+  const fontSwitch = syncSwitch(
     document,
     '[data-font-preference-switch]',
     fontPreference === 'serif',
     fontPreference === 'serif' ? 'Use sans-serif fonts' : 'Use serif fonts',
+  );
+  // The knob moves to a font that is still loading, so it stays where the
+  // visitor put it; the switch's state changes once the font is applied
+  fontSwitch?.toggleAttribute(
+    'data-pending',
+    pendingFontPreference !== null && pendingFontPreference !== fontPreference,
   );
   syncSwitch(
     document,
@@ -237,8 +247,16 @@ export default function mountAppearancePicker(window: Window): () => void {
     fontPreference = requestedFontPreference;
     applyFontPreference(document, fontPreference);
   }
+  const sync = () =>
+    syncAppearance(
+      document,
+      fontPreference,
+      contrastPreference,
+      fontLoader?.pending?.preference ?? null,
+    );
+
   applyContrastPreference(document, contrastPreference);
-  syncAppearance(document, fontPreference, contrastPreference);
+  sync();
 
   const observedRequests = new Set<number>();
   const observeFontRequest = (request: FontPreferenceRequest) => {
@@ -256,12 +274,12 @@ export default function mountAppearancePicker(window: Window): () => void {
         } else {
           fontPreference = getAppliedFontPreference(document);
         }
-        syncAppearance(document, fontPreference, contrastPreference);
+        sync();
       },
       () => {
         fontLoader?.fail(request);
         fontPreference = getAppliedFontPreference(document);
-        syncAppearance(document, fontPreference, contrastPreference);
+        sync();
       },
     );
   };
@@ -270,42 +288,81 @@ export default function mountAppearancePicker(window: Window): () => void {
     observeFontRequest(fontLoader.pending);
   }
 
+  // Choosing the font being loaded keeps loading it, and choosing the applied
+  // font cancels the load
+  const chooseFont = (next: FontPreference) => {
+    fontPreference = getAppliedFontPreference(document);
+    if (fontLoader?.pending) {
+      if (fontLoader.pending.preference === next) {
+        return;
+      }
+      fontLoader.cancel();
+      saveFontPreference(storage, fontPreference, defaultFontPreference);
+    }
+    if (next !== fontPreference) {
+      const request = fontLoader?.request(next) ?? null;
+      if (request) {
+        observeFontRequest(request);
+      } else {
+        fontPreference = next;
+        saveFontPreference(storage, fontPreference, defaultFontPreference);
+        applyFontPreference(document, fontPreference);
+      }
+    }
+    sync();
+  };
+
+  const chooseContrast = (next: ContrastPreference) => {
+    if (next === contrastPreference) {
+      return;
+    }
+    contrastPreference = next;
+    saveContrastPreference(
+      storage,
+      contrastPreference,
+      defaultContrastPreference,
+    );
+    applyContrastPreference(document, contrastPreference);
+    sync();
+  };
+
+  // The knob is on the font being loaded, if any
+  const shownFont = () =>
+    fontLoader?.pending?.preference ?? getAppliedFontPreference(document);
+
+  // A click toggles the switch to the option the knob is not on
   const handleClick = (event: Event) => {
     const button = event.currentTarget as HTMLButtonElement;
 
     if (button.dataset.fontPreferenceSwitch !== undefined) {
-      fontPreference = getAppliedFontPreference(document);
-      if (fontLoader?.pending) {
-        fontLoader?.cancel();
-        saveFontPreference(storage, fontPreference, defaultFontPreference);
-        syncAppearance(document, fontPreference, contrastPreference);
-        return;
-      }
-      const nextFontPreference = fontPreference === 'serif' ? 'sans' : 'serif';
-      const request = fontLoader?.request(nextFontPreference) ?? null;
-      if (request) {
-        observeFontRequest(request);
-        return;
-      }
-      fontPreference = nextFontPreference;
-      saveFontPreference(storage, fontPreference, defaultFontPreference);
-      applyFontPreference(document, fontPreference);
+      chooseFont(shownFont() === 'serif' ? 'sans' : 'serif');
     } else if (button.dataset.contrastPreferenceSwitch !== undefined) {
-      contrastPreference = contrastPreference === 'high' ? 'standard' : 'high';
-      saveContrastPreference(
-        storage,
-        contrastPreference,
-        defaultContrastPreference,
-      );
-      applyContrastPreference(document, contrastPreference);
-    } else {
-      return;
+      chooseContrast(contrastPreference === 'high' ? 'standard' : 'high');
     }
-
-    syncAppearance(document, fontPreference, contrastPreference);
   };
 
+  // A touch or pen drags the knob and chooses each option it crosses into
+  const cleanups: (() => void)[] = [];
   for (const button of buttons) {
+    if (button.dataset.fontPreferenceSwitch !== undefined) {
+      cleanups.push(
+        mountKnobDrag(
+          window,
+          button,
+          () => (shownFont() === 'serif' ? 'end' : 'start'),
+          side => chooseFont(side === 'end' ? 'serif' : 'sans'),
+        ),
+      );
+    } else if (button.dataset.contrastPreferenceSwitch !== undefined) {
+      cleanups.push(
+        mountKnobDrag(
+          window,
+          button,
+          () => (contrastPreference === 'high' ? 'end' : 'start'),
+          side => chooseContrast(side === 'end' ? 'high' : 'standard'),
+        ),
+      );
+    }
     button.addEventListener('click', handleClick);
   }
 
@@ -313,5 +370,6 @@ export default function mountAppearancePicker(window: Window): () => void {
     for (const button of buttons) {
       button.removeEventListener('click', handleClick);
     }
+    cleanups.forEach(cleanup => cleanup());
   };
 }

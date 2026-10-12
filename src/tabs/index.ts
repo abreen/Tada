@@ -1,6 +1,7 @@
 import { globals } from '../globals';
 import { getHashTarget } from '../hash-target';
 import { isScrollRestored } from '../navigate/restored-scroll';
+import { mountTouchDrag } from '../touch-drag';
 import { prefersReducedMotion } from '../util';
 
 /** Dispatched (bubbling) on an element to select every tab containing it */
@@ -33,9 +34,6 @@ const EDGE_SCROLL_SPEED = 0.6;
 
 // The width of the indicator's middle strip, which is scaled to fit
 const MIDDLE_WIDTH = 100;
-
-// How long after a touch drag lifts its click is ignored, in milliseconds
-const CLICK_AFTER_DRAG = 400;
 
 interface Box {
   x: number;
@@ -172,7 +170,6 @@ export default (window: Window) => {
     // measured once when it goes down, so following the finger never forces
     // the browser to lay out the page.
     let drag: {
-      pointerId: number;
       offset: number;
       boxes: Box[];
       centers: number[];
@@ -186,9 +183,7 @@ export default (window: Window) => {
       maxScroll: number;
       // How close to either end of the track the finger scrolls it
       edge: number;
-      moved: boolean;
-      // The next frame's update, and when the last frame scrolled the track
-      frame: number | null;
+      // When the last frame scrolled the track
       lastTime: number | null;
     } | null = null;
 
@@ -336,9 +331,9 @@ export default (window: Window) => {
     // Once per frame while the finger moves or is held near one of the
     // track's ends, which scrolls the track (faster nearer the end) with the
     // indicator staying under the finger
-    const tick = (time: number) => {
+    const tick = (clientX: number, time: number) => {
       const current = drag!;
-      current.frame = null;
+      current.clientX = clientX;
       const x = current.clientX - current.origin;
       const { edge, width, maxScroll } = current;
       const depth =
@@ -360,15 +355,49 @@ export default (window: Window) => {
       const more =
         depth < 0 ? scrollLeft > 0 : depth > 0 && scrollLeft < maxScroll;
       current.lastTime = more ? time : null;
-      if (more) {
-        requestTick();
-      }
+      return more;
     };
-    const requestTick = () => {
-      if (drag && drag.frame === null) {
-        drag.frame = window.requestAnimationFrame(tick);
-      }
-    };
+
+    const touchDrag = mountTouchDrag(window, list, {
+      start(event) {
+        const boxes = tabs.map(tab => tabBox(list, tab));
+        const centers = boxes.map(box => box.x + box.width / 2);
+        const origin = list.getBoundingClientRect().left + list.clientLeft;
+        const scrollLeft = list.scrollLeft;
+        const x = event.clientX - origin + scrollLeft;
+        // The indicator slides exactly onto the tab under the finger (or the
+        // nearest one), and later follows the finger from there. Centering it
+        // on the finger would land between tabs, then slide again on release.
+        const distance = (box: Box) =>
+          Math.max(box.x - x, x - (box.x + box.width), 0);
+        const pressed = boxes.reduce(
+          (nearest, box, index) =>
+            distance(box) < distance(boxes[nearest]) ? index : nearest,
+          0,
+        );
+        drag = {
+          offset: x - centers[pressed],
+          boxes,
+          centers,
+          clientX: event.clientX,
+          origin,
+          width: list.clientWidth,
+          scrollLeft,
+          maxScroll: list.scrollWidth - list.clientWidth,
+          edge: edgeWidth(),
+          lastTime: null,
+        };
+        follow();
+        return true;
+      },
+      frame: tick,
+      // The tab where the drag went down may get a click after it lifts,
+      // which is ignored; the drag already selected the tab under the finger
+      end() {
+        drag = null;
+        showSelected(animate);
+      },
+    });
 
     list.addEventListener(
       'scroll',
@@ -378,112 +407,10 @@ export default (window: Window) => {
         // tabs under it; the indicator follows the finger over them
         if (drag && list.scrollLeft !== drag.scrollLeft) {
           drag.scrollLeft = list.scrollLeft;
-          requestTick();
+          touchDrag.request();
         }
       },
       { passive: true },
-    );
-
-    const stopDrag = () => {
-      if (drag?.frame != null) {
-        window.cancelAnimationFrame(drag.frame);
-      }
-      drag = null;
-      list.removeAttribute('data-dragging');
-    };
-
-    list.addEventListener('pointerdown', (event: PointerEvent) => {
-      if (event.pointerType === 'mouse' || !event.isPrimary) {
-        return;
-      }
-      // A pen and a finger are each primary
-      stopDrag();
-      const boxes = tabs.map(tab => tabBox(list, tab));
-      const centers = boxes.map(box => box.x + box.width / 2);
-      const origin = list.getBoundingClientRect().left + list.clientLeft;
-      const scrollLeft = list.scrollLeft;
-      const x = event.clientX - origin + scrollLeft;
-      // The indicator slides exactly onto the tab under the finger (or the
-      // nearest one), and later follows the finger from there. Centering it
-      // on the finger would land between tabs, then slide again on release.
-      const distance = (box: Box) =>
-        Math.max(box.x - x, x - (box.x + box.width), 0);
-      const pressed = boxes.reduce(
-        (nearest, box, index) =>
-          distance(box) < distance(boxes[nearest]) ? index : nearest,
-        0,
-      );
-      drag = {
-        pointerId: event.pointerId,
-        offset: x - centers[pressed],
-        boxes,
-        centers,
-        clientX: event.clientX,
-        origin,
-        width: list.clientWidth,
-        scrollLeft,
-        maxScroll: list.scrollWidth - list.clientWidth,
-        edge: edgeWidth(),
-        moved: false,
-        frame: null,
-        lastTime: null,
-      };
-      list.setPointerCapture?.(event.pointerId);
-      follow();
-    });
-
-    list.addEventListener('pointermove', (event: PointerEvent) => {
-      if (drag?.pointerId !== event.pointerId) {
-        return;
-      }
-      if (!drag.moved) {
-        drag.moved = true;
-        list.setAttribute('data-dragging', '');
-      }
-      drag.clientX = event.clientX;
-      requestTick();
-    });
-
-    // Safari can still start scrolling the page despite touch-action
-    list.addEventListener(
-      'touchmove',
-      event => {
-        if (drag) {
-          event.preventDefault();
-        }
-      },
-      { passive: false },
-    );
-
-    // The tab where a drag went down may get a click after it lifts; the drag
-    // already selected the tab under the finger
-    let ignoreClicksUntil = 0;
-    const endDrag = (event: PointerEvent) => {
-      if (drag?.pointerId !== event.pointerId) {
-        return;
-      }
-      stopDrag();
-      if (event.type === 'pointerup') {
-        ignoreClicksUntil = event.timeStamp + CLICK_AFTER_DRAG;
-      }
-      if (list.hasPointerCapture?.(event.pointerId)) {
-        list.releasePointerCapture(event.pointerId);
-      }
-      showSelected(animate);
-    };
-    list.addEventListener('pointerup', endDrag);
-    list.addEventListener('pointercancel', endDrag);
-    list.addEventListener('lostpointercapture', endDrag);
-
-    list.addEventListener(
-      'click',
-      event => {
-        if (event.timeStamp < ignoreClicksUntil) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      },
-      true,
     );
 
     list.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -533,7 +460,7 @@ export default (window: Window) => {
     resizeObserver.observe(list);
 
     teardowns.push(() => {
-      stopDrag();
+      touchDrag.teardown();
       resizeObserver.disconnect();
       indicator.element.remove();
     });

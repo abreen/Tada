@@ -25,7 +25,9 @@ The control is a button with `role="switch"`, the stable accessible name “Use
 high contrast,” and an `aria-checked` state. It is one keyboard tab stop; Space
 and Enter toggle it, and keyboard focus outlines the complete switch track. Its
 supplementary tooltip describes the next action as “Use high contrast” or “Use
-standard contrast” without changing the accessible name.
+standard contrast” without changing the accessible name. Its appearance, hover
+and press states, and touch dragging match the font switch; see
+[Font Picker](font-picker.md).
 The root `<html>` records the configured choice in
 `data-default-contrast-preference`; effective high contrast uses
 `data-contrast-preference="high"`. When the configured default is standard and
