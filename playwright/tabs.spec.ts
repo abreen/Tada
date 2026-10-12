@@ -676,3 +676,197 @@ test.describe('dragging the selection indicator by touch', () => {
     );
   });
 });
+
+test.describe('a stepper', () => {
+  const back = (page: Page) =>
+    page.locator('#tabs-1').getByRole('button', { name: 'Back' });
+  const next = (page: Page) =>
+    page.locator('#tabs-1').getByRole('button', { name: 'Next' });
+  const step = (page: Page, name: string) => page.getByRole('tab', { name });
+
+  test('Next and Back move between steps', async ({ page }) => {
+    await page.goto('/stepper.html');
+    await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
+    await expect(back(page)).toBeHidden();
+    await expect(next(page)).toBeEnabled();
+
+    await next(page).click();
+    await expect(step(page, '2. Configure')).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(
+      page.getByRole('tabpanel', { name: '2. Configure' }),
+    ).toBeVisible();
+    await expect(back(page)).toBeVisible();
+    await expect(page).toHaveURL(/\/stepper\.html$/);
+
+    await next(page).click();
+    await expect(step(page, '3. Run')).toHaveAttribute('aria-selected', 'true');
+    await expect(next(page)).toBeHidden();
+
+    await back(page).click();
+    await expect(step(page, '2. Configure')).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(next(page)).toBeVisible();
+  });
+
+  test('the buttons follow a tab selected another way', async ({ page }) => {
+    await page.goto('/stepper.html');
+    await step(page, '3. Run').click();
+    await expect(next(page)).toBeHidden();
+    await expect(back(page)).toBeVisible();
+  });
+
+  test('keyboard focus stays on a step button, or moves to the other one at an end', async ({
+    page,
+  }) => {
+    await page.goto('/stepper.html');
+    await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
+    await next(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(step(page, '2. Configure')).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(next(page)).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await expect(step(page, '3. Run')).toHaveAttribute('aria-selected', 'true');
+    await expect(back(page)).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await expect(step(page, '1. Install')).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(next(page)).toBeFocused();
+  });
+
+  test('a press that never became a click does not count for a later key press', async ({
+    page,
+  }) => {
+    await page.goto('/stepper.html');
+    await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
+    await step(page, '2. Configure').click();
+    // A touch that scrolled the page instead of clicking
+    await next(page).dispatchEvent('pointerdown', { pointerType: 'touch' });
+    await next(page).dispatchEvent('pointercancel', { pointerType: 'touch' });
+    await next(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(step(page, '3. Run')).toHaveAttribute('aria-selected', 'true');
+    await expect(back(page)).toBeFocused();
+  });
+
+  test('focus moves to the other step button when another tab hides the focused one', async ({
+    page,
+  }) => {
+    await page.goto('/stepper.html');
+    await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
+    await step(page, '2. Configure').click();
+    await next(page).focus();
+    // A click that does not focus the tab, like a mouse click in Safari
+    await step(page, '3. Run').dispatchEvent('click');
+    await expect(step(page, '3. Run')).toHaveAttribute('aria-selected', 'true');
+    await expect(next(page)).toBeHidden();
+    await expect(back(page)).toBeFocused();
+  });
+
+  test('announces the step reached with Back and Next', async ({ page }) => {
+    await page.goto('/stepper.html');
+    await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
+    const status = page.locator('#tabs-1').getByRole('status');
+    await expect(status).toHaveText('');
+    await expect(next(page)).toHaveAttribute(
+      'aria-controls',
+      'tabs-1-panel-1 tabs-1-panel-2 tabs-1-panel-3',
+    );
+    await next(page).click();
+    await expect(status).toHaveText('2. Configure');
+    await back(page).click();
+    await expect(status).toHaveText('1. Install');
+  });
+
+  test('announces a step reached again after another tab was selected', async ({
+    page,
+  }) => {
+    await page.goto('/stepper.html');
+    await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
+    const status = page.locator('#tabs-1').getByRole('status');
+    await next(page).click();
+    await expect(status).toHaveText('2. Configure');
+    // Screen readers speak a status only when its text changes
+    await step(page, '1. Install').click();
+    await expect(status).toHaveText('');
+    await next(page).click();
+    await expect(status).toHaveText('2. Configure');
+  });
+
+  test('Next at the bottom of a long step brings the steps into view', async ({
+    page,
+  }) => {
+    await page.goto('/stepper.html');
+    await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
+    await next(page).scrollIntoViewIfNeeded();
+    const tablist = page.getByRole('tablist');
+    await expect(tablist).not.toBeInViewport();
+    await next(page).click();
+    await expect(step(page, '2. Configure')).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(tablist).toBeInViewport();
+  });
+
+  test('a tap on Next does not focus anything', async ({ browser }) => {
+    test.skip(browser.browserType().name() !== 'chromium', 'touch uses CDP');
+    const context = await browser.newContext({ hasTouch: true });
+    try {
+      const page = await context.newPage();
+      await page.goto('/stepper.html');
+      await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
+      await step(page, '2. Configure').click();
+      await next(page).scrollIntoViewIfNeeded();
+      const finger = await touch(page, await centerOf(next(page)));
+      await finger.lift();
+      await expect(step(page, '3. Run')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      // Safari draws a focus ring around a button that script focuses
+      await expect(back(page)).not.toBeFocused();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('shows every step without the buttons without JavaScript', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    try {
+      const page = await context.newPage();
+      await page.goto('/stepper.html');
+      await expect(page.locator('.tabs-step-nav')).toBeHidden();
+      await expect(page.locator('.tabs-panel-label')).toHaveText([
+        '1. Install',
+        '2. Configure',
+        '3. Run',
+      ]);
+      await expect(page.getByText('Run content.')).toBeVisible();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('prints every step without the buttons', async ({ page }) => {
+    await page.goto('/stepper.html');
+    await expect(page.locator('#tabs-1')).toHaveAttribute('data-mounted', '');
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.locator('.tabs-step-nav')).toBeHidden();
+    await expect(page.getByText('Run content.')).toBeVisible();
+  });
+});

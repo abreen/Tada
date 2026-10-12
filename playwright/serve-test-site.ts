@@ -115,6 +115,30 @@ Ferris is the Rust mascot.
 `,
 );
 
+// Numbered tabs, with a first step taller than the viewport
+writeFileSync(
+  path.join(siteDir, 'content', 'stepper.md'),
+  `---
+title: Stepper
+---
+
+[1. Install|
+
+${'Install content.\n\n'.repeat(60)}
+]
+[2. Configure|
+
+Configure content.
+
+]
+[3. Run|
+
+Run content.
+
+]
+`,
+);
+
 // More tabs than fit on one row in a narrow viewport
 writeFileSync(
   path.join(siteDir, 'content', 'tabs-many.md'),

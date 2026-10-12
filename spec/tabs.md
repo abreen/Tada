@@ -85,9 +85,10 @@ because each label is already indexed as its tab button's text.
 
 ## Without JavaScript and in print
 
-The tab list is hidden. Every panel is shown, stacked inside one bordered box,
-each under its label and separated by a thin rule. Print always uses this
-layout, whether or not JavaScript ran.
+The tab list is hidden. Every panel is shown, stacked inside one bordered box
+(the same box as with JavaScript), each under its label and separated by a
+rule as thick as the box's border, in the same color. In print, the box and
+rules are black. Print always uses this layout, whether or not JavaScript ran.
 
 ## Behavior
 
@@ -145,9 +146,12 @@ border in the secondary foreground color, like the pickers' current option, so
 a strip of the track stays visible around it, even at either end. A focused
 tab's outline is drawn just outside the ring, still inside the track.
 
-The tab list is centered above the panel box. The box has a 1px border in the
-secondary foreground color and the same border radius as `<details>` in
-content. Its top edge runs along the tab list's horizontal midline and stops
+The tab list is centered above the panel box. The box has a 3px border in the
+secondary background color (the track's color). Its border radius is
+`var(--border-radius) + var(--details-padding) + 3px` (27px by default), so
+its corners are concentric with a stepper's buttons, which sit a panel's
+padding inside the border. Every tab group has this box, stepper or not. Its
+top edge runs along the tab list's horizontal midline and stops
 `var(--gap)` short of the tab list on each side, so the border never touches
 it. Because the lower half of the tab list sits inside the box, panels have
 half the usual top padding (except in print).
@@ -206,3 +210,101 @@ changes such as fonts loading or an enclosing panel being shown move the
 indicator instantly. Tabs are drawn above the indicator and have no
 background of their own while hovered or focused, so none covers it as it
 slides.
+
+## Steppers
+
+A group whose labels are numbered `1.`, `2.`, `3.`, ... in order, each number
+followed by a space or tab, is a stepper: a sequence of steps to follow rather
+than alternatives. There is no other syntax:
+
+```
+[1. Install|
+
+Install the package.
+
+]
+[2. Configure|
+
+Edit the configuration file.
+
+]
+```
+
+A stepper needs at least two tabs. A group with a single numbered tab, numbers
+that skip or do not start at 1, zero-padded numbers (`01.`), `1)` labels, a
+number without a space after the period (`1.A`), or any unnumbered tab is a
+plain tab group. Labels keep
+their numbers in the tab buttons and panel labels.
+
+A stepper behaves exactly like other tabs: the same tab list, indicator,
+keyboard and touch handling, find-in-page, search highlighting, and URL
+fragment handling. Arrow keys still wrap around. A stepper also has
+**← Back** and **Next →** buttons.
+
+### Generated HTML
+
+The group has the extra class `tabs-stepper`. After the last panel, inside
+`.tabs-panels`, one shared nav holds both buttons:
+
+```
+<div class="tabs tabs-stepper" id="tabs-1">
+...
+<div class="tabs-panels">
+<div class="tabs-panel" id="tabs-1-panel-1" data-selected="">...</div>
+<div class="tabs-panel" id="tabs-1-panel-2">...</div>
+<div class="tabs-step-nav" data-pagefind-ignore="">
+<button type="button" class="tabs-step tabs-step-back" disabled="" hidden=""><span aria-hidden="true">←</span> Back</button>
+<button type="button" class="tabs-step tabs-step-next" disabled="">Next <span aria-hidden="true">→</span></button>
+<span class="tabs-step-status visually-hidden" role="status"></span>
+</div>
+</div>
+</div>
+```
+
+The arrows are `aria-hidden`, so the buttons are named "Back" and "Next". The
+empty, visually hidden `role="status"` element announces the step that Back or
+Next reaches. The nav is excluded from the search index. The buttons stay disabled until the
+client component mounts. Back starts hidden, since the first step is
+selected.
+
+### Behavior
+
+- Back and Next select the step before or after the selected one, exactly as
+  if its tab were clicked: the indicator slides and the panel is replaced at
+  once. The URL does not change.
+- Both buttons have `aria-controls` listing every panel. Screen readers
+  announce the step that Back or Next reaches: the status element's text
+  becomes the step's tab label (such as "2. Configure"). Selecting a step
+  another way empties it, since the tab itself is announced then, and screen
+  readers speak a status only when its text changes, so a step reached again
+  with Back or Next is still announced.
+- Back is hidden on the first step and Next on the last, however the step was
+  selected.
+- After a step changes, the page scrolls just enough to show the tab list
+  (as the arrow keys do), such as after clicking Next at the bottom of a step
+  taller than the viewport. The page does not move if the tab list is already
+  in view.
+- Focus stays on the clicked button. A focused step button that is hidden
+  (Next on the last step, Back on the first), however the step was selected
+  (a tab click, find-in-page, the URL's target), passes focus to the other
+  button, so focus never drops to the page. Focus moves only if the hidden
+  button had it, and never when a touch or pen pressed a step button, since
+  Safari would draw a focus ring around a button focused by script. A click
+  with no `detail` (from the keyboard) always counts as a keyboard click. A
+  pointer click's type is taken from its own `pointerdown` on the button, not
+  from the click, since iOS Safari 18.2 reports a touch's click as a mouse's.
+
+### Appearance
+
+The buttons use the default button style, with `touch-action: manipulation`
+so tapping Next quickly never zooms the page, and no tap highlight. Before the
+client component mounts, they are disabled but not dimmed, so they do not
+change when it mounts. The nav is in the panel box's bottom corners, below the panel's
+own bottom padding and lined up with its content, with Back on the left and
+Next on the right. Next stays on the right when Back is hidden. A focused
+panel's outline has square bottom corners, since the nav sits below it.
+
+### Without JavaScript and in print
+
+The nav is hidden. Every step is shown, stacked under its numbered label, as
+for any tab group, so the steps read in order. Print always uses this layout.

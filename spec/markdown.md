@@ -122,7 +122,8 @@ Content in the second tab.
 ]
 ```
 
-Consecutive tabs form one group. See [Tabs](tabs.md).
+Consecutive tabs form one group. Tabs labeled `1.`, `2.`, `3.`, ... form a
+stepper with Back and Next buttons. See [Tabs](tabs.md).
 
 ## Superlinks
 

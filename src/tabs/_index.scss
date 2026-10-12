@@ -1,9 +1,12 @@
 @use '../mixins' as *;
 
-// Rounded like the plain <details> border in content
+// The box's corners are concentric with a stepper's buttons, which sit a
+// panel's padding inside the border
 .tabs {
-  --tabs-border-width: 1px;
-  --tabs-radius: calc(var(--mono-border-radius) + 0.125em);
+  --tabs-border-width: 3px;
+  --tabs-radius: calc(
+    var(--border-radius) + var(--details-padding) + var(--tabs-border-width)
+  );
 
   // Like the appearance picker's track, which leaves a strip of track around
   // the selected tab's ring and focus outline
@@ -23,7 +26,7 @@
 }
 
 .tabs-panels {
-  border: var(--tabs-border-width) solid var(--fg2-color);
+  border: var(--tabs-border-width) solid var(--bg2-color);
   border-radius: var(--tabs-radius);
 }
 
@@ -51,7 +54,7 @@
 }
 
 :root:not(.js) .tabs-panel + .tabs-panel {
-  border-top: var(--tabs-border-width) solid var(--fg2-color);
+  border-top: var(--tabs-border-width) solid var(--bg2-color);
 }
 
 .js {
@@ -74,7 +77,7 @@
       // The line is centered on the tab list's midline
       height: calc(50% + var(--tabs-border-width) / 2);
       content: '';
-      border: 0 solid var(--fg2-color);
+      border: 0 solid var(--bg2-color);
       border-top-width: var(--tabs-border-width);
     }
 
@@ -435,7 +438,54 @@
   }
 }
 
+// A stepper's Back and Next buttons, in the panel box's bottom corners, below
+// the panel's own padding. They need the client component; without JS every
+// step is shown.
+.tabs-step-nav {
+  display: none;
+}
+
+.js .tabs-step-nav {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 var(--details-padding) var(--details-padding);
+}
+
+// The nav is below the panel, so the panel's outline has square corners
+.js .tabs-stepper > .tabs-panels > .tabs-panel:focus-visible {
+  border-radius: 0;
+}
+
+// Default buttons. Tapping Next quickly must not zoom the page.
+.tabs-step {
+  margin: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+
+  @include user-select(none);
+
+  &[hidden] {
+    display: none;
+  }
+
+  // Disabled only until the client component mounts, so it looks the same
+  &:disabled {
+    cursor: default;
+    opacity: 1;
+  }
+}
+
+// Stays on the right when Back is hidden
+.tabs-step-next {
+  margin-left: auto;
+}
+
 @media print {
+  .tabs-step-nav,
+  .js .tabs-step-nav {
+    display: none;
+  }
+
   .js .tabs {
     display: block;
 
@@ -449,7 +499,7 @@
     display: none;
   }
 
-  // Black, like <details> in print
+  // The same box and rules between panels, black like <details> in print
   .js .tabs-panels,
   .tabs-panels {
     display: block;

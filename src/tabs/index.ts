@@ -164,6 +164,19 @@ export default (window: Window) => {
         ':scope > .tabs-panels > .tabs-panel',
       ),
     );
+    // A stepper's Back and Next buttons
+    const stepNav = group.querySelector<HTMLElement>(
+      ':scope > .tabs-panels > .tabs-step-nav',
+    );
+    const stepBack = stepNav?.querySelector<HTMLButtonElement>(
+      ':scope > .tabs-step-back',
+    );
+    const stepNext = stepNav?.querySelector<HTMLButtonElement>(
+      ':scope > .tabs-step-next',
+    );
+    const stepStatus = stepNav?.querySelector<HTMLElement>(
+      ':scope > .tabs-step-status',
+    );
     if (
       !track ||
       !list ||
@@ -180,7 +193,9 @@ export default (window: Window) => {
       tabs.findIndex(tab => tab.hasAttribute('data-selected')),
     );
 
-    const update = () => {
+    // Focus moves off a step button hidden by a new selection, unless a touch
+    // or pen pressed a step button (see below)
+    const update = (moveStepFocus = true) => {
       tabs.forEach((tab, index) => {
         const isSelected = index === selected;
         tab.setAttribute('aria-selected', String(isSelected));
@@ -199,6 +214,30 @@ export default (window: Window) => {
           panel.setAttribute('hidden', HIDDEN);
         }
       });
+      // There is no step before the first or after the last. A focused button
+      // that is hidden passes focus to the other one, however the step was
+      // selected, so focus never drops to the page.
+      // Back and Next announce the step they reach after this. Screen readers
+      // speak a status only when its text changes, so a step reached again
+      // after another tab was selected must replace an empty status.
+      if (stepStatus) {
+        stepStatus.textContent = '';
+      }
+      if (stepBack && stepNext) {
+        const focused = document.activeElement;
+        stepBack.hidden = selected === 0;
+        stepNext.hidden = selected === tabs.length - 1;
+        if (moveStepFocus) {
+          for (const [button, other] of [
+            [stepBack, stepNext],
+            [stepNext, stepBack],
+          ]) {
+            if (focused === button && button.hidden) {
+              other.focus({ preventScroll: true });
+            }
+          }
+        }
+      }
     };
 
     // Slides between tabs like the appearance pickers' indicator. Until it is
@@ -262,10 +301,10 @@ export default (window: Window) => {
     // While the indicator slides, the new panel replaces the old one at once.
     // Animating the panels would lay out or repaint the page on every frame.
     // Selecting the selected tab again still brings it into view.
-    const select = (index: number) => {
+    const select = (index: number, moveStepFocus = true) => {
       if (index !== selected) {
         selected = index;
-        update();
+        update(moveStepFocus);
       }
       // A drag moves the indicator and scrolls the track itself
       if (!drag) {
@@ -286,6 +325,43 @@ export default (window: Window) => {
       panel.addEventListener('beforematch', () => select(index));
       revealers.set(panel, () => select(index));
     });
+
+    // Back and Next select the step before or after, like clicking its tab,
+    // announce it, and bring the tab list into view, such as after a long
+    // step. Focus stays on the button, or moves to the other one when the step
+    // reached has no step past it (see update). Focus never moves for a touch
+    // or pen, which some browsers focus the button for; Safari would draw a
+    // focus ring around a button focused by a touch.
+    if (stepNav && stepBack && stepNext) {
+      const panelIds = panels.map(panel => panel.id).join(' ');
+      // The pointer type of the latest press on a step button. A click reports
+      // its own, but iOS Safari 18.2 reports a touch's click as a mouse's.
+      let pressType = '';
+      for (const [button, direction] of [
+        [stepBack, -1],
+        [stepNext, 1],
+      ] as const) {
+        button.disabled = false;
+        button.setAttribute('aria-controls', panelIds);
+        button.addEventListener('pointerdown', event => {
+          pressType = event.pointerType;
+        });
+        button.addEventListener('click', event => {
+          // A click from a keyboard has no detail. A pointer's click follows
+          // its own press on this button, so the press is never stale.
+          const byTouch =
+            event.detail > 0 && pressType !== '' && pressType !== 'mouse';
+          select(
+            Math.min(Math.max(selected + direction, 0), tabs.length - 1),
+            !byTouch,
+          );
+          if (stepStatus) {
+            stepStatus.textContent = tabs[selected].textContent;
+          }
+          track.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+        });
+      }
+    }
 
     group.addEventListener(TABS_REVEAL_EVENT, event => {
       const index = panels.findIndex(panel =>

@@ -1513,6 +1513,70 @@ describe('tabs plugin', () => {
     expect(md.render('[A|\na\n]\n')).toContain('id="tabs-1"');
     expect(md.render('[A|\na\n]\n')).toContain('id="tabs-1"');
   });
+
+  describe('steppers', () => {
+    test('renders numbered tabs as a stepper with Back and Next buttons', () => {
+      const html = md.render(
+        '[1. Install|\n\nFirst.\n\n]\n[2. Configure|\n\nSecond.\n\n]\n',
+      );
+      expect(html).toBe(
+        [
+          '<div class="tabs tabs-stepper" id="tabs-1">',
+          '<div class="tabs-track">',
+          '<button type="button" class="tabs-scroll tabs-scroll-start" tabindex="-1" aria-hidden="true" hidden=""></button>',
+          '<div class="tabs-list">',
+          '<button type="button" class="tabs-tab" id="tabs-1-tab-1" data-selected="" disabled=""><span class="tabs-tab-label">1. Install</span></button>',
+          '<button type="button" class="tabs-tab" id="tabs-1-tab-2" disabled=""><span class="tabs-tab-label">2. Configure</span></button>',
+          '</div>',
+          '<button type="button" class="tabs-scroll tabs-scroll-end" tabindex="-1" aria-hidden="true" hidden=""></button>',
+          '</div>',
+          '<div class="tabs-panels">',
+          '<div class="tabs-panel" id="tabs-1-panel-1" data-selected="">',
+          '<p class="tabs-panel-label" data-pagefind-ignore="">1. Install</p>',
+          '<p>First.</p>',
+          '</div>',
+          '<div class="tabs-panel" id="tabs-1-panel-2">',
+          '<p class="tabs-panel-label" data-pagefind-ignore="">2. Configure</p>',
+          '<p>Second.</p>',
+          '</div>',
+          '<div class="tabs-step-nav" data-pagefind-ignore="">',
+          '<button type="button" class="tabs-step tabs-step-back" disabled="" hidden=""><span aria-hidden="true">←</span> Back</button>',
+          '<button type="button" class="tabs-step tabs-step-next" disabled="">Next <span aria-hidden="true">→</span></button>',
+          '<span class="tabs-step-status visually-hidden" role="status"></span>',
+          '</div>',
+          '</div>',
+          '</div>',
+          '',
+        ].join('\n'),
+      );
+    });
+
+    test.each([
+      ['numbers that skip', '[1. A|\na\n]\n[3. B|\nb\n]\n'],
+      ['numbers that do not start at 1', '[2. A|\na\n]\n[3. B|\nb\n]\n'],
+      ['a single numbered tab', '[1. A|\na\n]\n'],
+      ['parenthesized numbers', '[1) A|\na\n]\n[2) B|\nb\n]\n'],
+      ['an unnumbered tab', '[1. A|\na\n]\n[B|\nb\n]\n'],
+      ['a number without a space', '[1.A|\na\n]\n[2.B|\nb\n]\n'],
+      ['zero-padded numbers', '[01. A|\na\n]\n[02. B|\nb\n]\n'],
+    ])('%s stay plain tabs', (_name, source) => {
+      const html = md.render(source);
+      expect(html).toContain('<div class="tabs" id="tabs-1">');
+      expect(html).not.toContain('tabs-stepper');
+      expect(html).not.toContain('tabs-step-nav');
+    });
+
+    test('a stepper nested in a step has its own buttons', () => {
+      const html = md.render(
+        '[1. Outer|\n[1. Inner|\ni1\n]\n[2. Inner|\ni2\n]\n]\n[2. Outer|\no2\n]\n',
+      );
+      expect(html.match(/class="tabs tabs-stepper"/g)).toHaveLength(2);
+      expect(html.match(/class="tabs-step-nav"/g)).toHaveLength(2);
+      expect(html).toMatch(
+        /<p>i2<\/p>\n<\/div>\n<div class="tabs-step-nav"[^]*?<\/div>\n<\/div>\n<\/div>\n<\/div>\n<div class="tabs-panel" id="tabs-1-panel-2">/,
+      );
+    });
+  });
 });
 
 describe('injectKatexStylesheet', () => {

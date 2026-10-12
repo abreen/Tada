@@ -8,6 +8,8 @@ import { findCodeLines } from './utils/block-code-lines';
 const OPEN_PATTERN = /^\[(.*)\|[ \t]*$/;
 // ]
 const CLOSE_PATTERN = /^\][ \t]*$/;
+// 1. Label
+const STEP_PATTERN = /^(\d+)\.[ \t]/;
 
 interface Tab {
   label: string;
@@ -70,6 +72,16 @@ function openLabel(state: StateBlock, line: number): string | null {
     return null;
   }
   return label;
+}
+
+/** Whether the tabs are numbered steps: 1., 2., 3., ... (not 01., 02., ...) */
+function isStepper(tabs: Tab[]): boolean {
+  return (
+    tabs.length >= 2 &&
+    tabs.every(
+      (tab, index) => STEP_PATTERN.exec(tab.label)?.[1] === String(index + 1),
+    )
+  );
 }
 
 function isClose(state: StateBlock, line: number): boolean {
@@ -135,6 +147,20 @@ export interface TabsPluginOptions {
   idPrefix?: string;
 }
 
+/**
+ * Back and Next buttons in the panel box's bottom corners. Without JS every
+ * step is shown, so they are hidden, and they stay disabled until the client
+ * component mounts. Back starts hidden, since the first step is selected. The
+ * arrows are decoration; the words name the buttons. The status announces the
+ * step they reach to screen readers.
+ */
+const STEP_NAV_HTML = `<div class="tabs-step-nav" data-pagefind-ignore="">
+<button type="button" class="tabs-step tabs-step-back" disabled="" hidden=""><span aria-hidden="true">←</span> Back</button>
+<button type="button" class="tabs-step tabs-step-next" disabled="">Next <span aria-hidden="true">→</span></button>
+<span class="tabs-step-status visually-hidden" role="status"></span>
+</div>
+`;
+
 function tabsRule(
   state: StateBlock,
   startLine: number,
@@ -173,6 +199,7 @@ function tabsRule(
   }
 
   const lastLine = tabs[tabs.length - 1].closeLine;
+  const stepper = isStepper(tabs);
   // IDs are assigned once heading IDs are known (see assignIds)
   const meta: GroupMeta = { tabs: [], panels: [] };
 
@@ -188,7 +215,7 @@ function tabsRule(
   open.block = true;
   open.map = [startLine, lastLine + 1];
   open.attrs = [
-    ['class', 'tabs'],
+    ['class', stepper ? 'tabs tabs-stepper' : 'tabs'],
     ['id', ''],
   ];
   open.meta = meta;
@@ -284,6 +311,10 @@ function tabsRule(
   });
   state.lineMax = oldLineMax;
 
+  if (stepper) {
+    state.push('tabs_step_nav', '', 0).block = true;
+  }
+
   state.push('tabs_panels_close', 'div', -1).block = true;
   state.push('tabs_close', 'div', -1).block = true;
 
@@ -373,6 +404,7 @@ export default function tabsPlugin(
   md.block.ruler.before('fence', 'tabs', tabsRule, {
     alt: ['paragraph', 'reference', 'blockquote', 'list'],
   });
+  md.renderer.rules.tabs_step_nav = () => STEP_NAV_HTML;
   md.core.ruler.push('tabs', state => {
     assignIds(state, idPrefix);
     copyButtonLabels(state);
