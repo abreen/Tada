@@ -48,6 +48,18 @@ export function applyBasePath(subPath: string): string {
   return applyBasePathWithBasePath(subPath, __SITE_BASE_PATH__);
 }
 
+export function prefersReducedMotion(window: Window): boolean {
+  if (typeof window.matchMedia !== 'function') {
+    return false;
+  }
+
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
 export function scheduleTask(win: Window, fn: () => void) {
   if (typeof win.requestIdleCallback === 'function') {
     win.requestIdleCallback(fn);

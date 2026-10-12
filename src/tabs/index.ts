@@ -1,5 +1,7 @@
+import { globals } from '../globals';
 import { getHashTarget } from '../hash-target';
 import { isScrollRestored } from '../navigate/restored-scroll';
+import { prefersReducedMotion } from '../util';
 
 /** Dispatched (bubbling) on an element to select every tab containing it */
 export const TABS_REVEAL_EVENT = 'tada:tabs-reveal';
@@ -25,10 +27,45 @@ export function revealInTabs(window: Window, element: Element): void {
 // Browsers without support treat the value as plain `hidden`.
 const HIDDEN = 'until-found';
 
+// Matches the indicator's transition in _index.scss
+const TRANSITION_TIMING: KeyframeAnimationOptions = {
+  duration: 200,
+  easing: 'cubic-bezier(0.2, 0, 0, 1)',
+};
+
+/** Moves the indicator under the tab, sliding unless animate is false */
+function positionIndicator(
+  indicator: HTMLElement,
+  list: HTMLElement,
+  tab: HTMLElement,
+  animate: boolean,
+) {
+  const listRect = list.getBoundingClientRect();
+  const tabRect = tab.getBoundingClientRect();
+  // The indicator scrolls with the tabs in a long list
+  const x = tabRect.left - listRect.left - list.clientLeft + list.scrollLeft;
+
+  if (!animate) {
+    indicator.style.transition = 'none';
+  }
+  indicator.style.transform = `translateX(${x}px)`;
+  indicator.style.width = `${tabRect.width}px`;
+  indicator.hidden = false;
+  if (!animate) {
+    // Commit the new position before transitions are re-enabled
+    void indicator.offsetWidth;
+    indicator.style.transition = '';
+  }
+}
+
 export default (window: Window) => {
   const document = window.document;
   // Selects the tab that owns a panel
   const revealers = new Map<HTMLElement, () => void>();
+  const resizeObservers: { disconnect(): void }[] = [];
+  const indicators: HTMLElement[] = [];
+  // Tabs selected while mounting, such as by the URL's target, do not slide
+  let animate = false;
 
   const groups = document.querySelectorAll<HTMLElement>('.tabs');
   groups.forEach(group => {
@@ -73,10 +110,120 @@ export default (window: Window) => {
       });
     };
 
+    // Slides between tabs like the appearance pickers' indicator. Until it is
+    // shown, the selected tab draws its own fill.
+    const indicator = document.createElement('span');
+    indicator.className = 'tabs-indicator';
+    indicator.setAttribute('aria-hidden', 'true');
+    indicator.hidden = true;
+    list.prepend(indicator);
+    indicators.push(indicator);
+    const moveIndicator = (animateMove: boolean) =>
+      positionIndicator(indicator, list, tabs[selected], animateMove);
+
+    // While the indicator slides, the panel box grows or shrinks from the old
+    // panel's height to the new one's, and the old panel fades out over the
+    // new one as it fades in
+    const panelBox = panels[0].parentElement!;
+    let resize: Animation | null = null;
+    let fades: Animation[] = [];
+    let leaving: HTMLElement | null = null;
+    const resizePanels = (from: number) => {
+      resize?.cancel();
+      const to = panelBox.getBoundingClientRect().height;
+      if (from === to) {
+        return;
+      }
+      // The new panel is laid out at its full height; the box clips it
+      panelBox.style.overflow = 'clip';
+      const animation = panelBox.animate(
+        [{ height: `${from}px` }, { height: `${to}px` }],
+        TRANSITION_TIMING,
+      );
+      resize = animation;
+      // A canceled animation was replaced, unless the height did not change
+      const done = () => {
+        if (resize === animation) {
+          resize = null;
+          panelBox.style.overflow = '';
+        }
+      };
+      animation.addEventListener('finish', done);
+      animation.addEventListener('cancel', done);
+    };
+
+    // Stops a crossfade; update() then hides the panel that was leaving
+    const endFade = () => {
+      fades.forEach(fade => fade.cancel());
+      fades = [];
+      panelBox.removeAttribute('data-crossfading');
+      if (leaving) {
+        leaving.removeAttribute('data-leaving');
+        leaving.inert = false;
+        leaving = null;
+      }
+    };
+
+    const crossfade = (
+      oldPanel: HTMLElement,
+      oldOpacity: number,
+      newPanel: HTMLElement,
+      newOpacity: number,
+    ) => {
+      // The old panel stays shown until it fades out, out of the way of
+      // clicks, focus, and assistive technology
+      oldPanel.removeAttribute('hidden');
+      oldPanel.inert = true;
+      oldPanel.setAttribute('data-leaving', '');
+      leaving = oldPanel;
+      panelBox.setAttribute('data-crossfading', '');
+      // Each fade holds its end value until endFade() cancels it, so the old
+      // panel cannot reappear before it is hidden
+      const fadeTiming = { ...TRANSITION_TIMING, fill: 'forwards' } as const;
+      const fadeOut = oldPanel.animate(
+        [{ opacity: oldOpacity }, { opacity: 0 }],
+        fadeTiming,
+      );
+      const fadeIn = newPanel.animate(
+        [{ opacity: newOpacity }, { opacity: 1 }],
+        fadeTiming,
+      );
+      fades = [fadeOut, fadeIn];
+      fadeOut.addEventListener('finish', () => {
+        if (leaving === oldPanel) {
+          endFade();
+          update();
+        }
+      });
+    };
+
+    const opacityOf = (panel: HTMLElement) =>
+      Number(window.getComputedStyle(panel).opacity);
+
     const select = (index: number) => {
-      if (index !== selected) {
-        selected = index;
-        update();
+      if (index === selected) {
+        return;
+      }
+      const smooth =
+        animate &&
+        !prefersReducedMotion(window) &&
+        typeof panelBox.animate === 'function';
+      // Mid-transition, these are the current animated values, so selecting
+      // another tab continues from them
+      const from = panelBox.getBoundingClientRect().height;
+      const oldPanel = panels[selected];
+      const newPanel = panels[index];
+      const oldOpacity = smooth ? opacityOf(oldPanel) : 1;
+      const newOpacity =
+        smooth && newPanel === leaving ? opacityOf(newPanel) : 0;
+
+      endFade();
+      selected = index;
+      update();
+      moveIndicator(animate);
+      if (smooth) {
+        crossfade(oldPanel, oldOpacity, newPanel, newOpacity);
+        resizePanels(from);
       }
     };
 
@@ -131,6 +278,16 @@ export default (window: Window) => {
     });
 
     update();
+    moveIndicator(false);
+
+    // Layout changes, such as fonts loading or an enclosing panel being shown,
+    // resize the tabs
+    const resizeObserver = globals.createResizeObserver(() =>
+      moveIndicator(false),
+    );
+    tabs.forEach(tab => resizeObserver.observe(tab));
+    resizeObservers.push(resizeObserver);
+
     group.setAttribute('data-mounted', '');
   });
 
@@ -153,9 +310,12 @@ export default (window: Window) => {
 
   // Navigation that restored a saved scroll position keeps it
   revealHashTarget(!isScrollRestored());
+  animate = true;
   window.addEventListener('hashchange', onHashChange);
 
   return () => {
     window.removeEventListener('hashchange', onHashChange);
+    resizeObservers.forEach(observer => observer.disconnect());
+    indicators.forEach(indicator => indicator.remove());
   };
 };

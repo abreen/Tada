@@ -5,6 +5,7 @@ import {
   teardownPerPageComponents,
 } from './lifecycle';
 import { globals } from '../globals';
+import { prefersReducedMotion } from '../util';
 import { getHashTarget } from '../hash-target';
 import { swapHeaderTitle } from '../header';
 import { setScrollRestored } from './restored-scroll';
@@ -276,18 +277,6 @@ function isAbortError(err: unknown): boolean {
 
 function isActiveNavigation(controller: AbortController): boolean {
   return currentAbortController === controller && !controller.signal.aborted;
-}
-
-function prefersReducedMotion(window: Window): boolean {
-  if (typeof window.matchMedia !== 'function') {
-    return false;
-  }
-
-  try {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return false;
-  }
 }
 
 export function initNavigation(window: Window): void {

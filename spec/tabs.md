@@ -107,16 +107,45 @@ until then. Mounting applies the
 
 ## Appearance
 
-The panel box has a 1px border in the secondary foreground color and the same
-border radius as `<details>` in content. The border continues up around the active tab, which shares the
-panel's background and covers the panel's top border beneath it; its sides
-curve out into the panel's top border with small concave corners, as wide as
-the gap between tabs (the first tab's left side runs straight into the panel's
-left border). Every tab rests on the panel's
-top border with rounded top corners and a flat bottom. The first tab is flush
-with the panel's left border, so the panel's top-left corner is square.
-Inactive tabs are borderless buttons on the secondary background with
-secondary text. A tab list wider than the panel scrolls
-horizontally.
+The tab list looks like the appearance pickers ([font](font-picker.md) and
+[contrast](contrast-picker.md)): a pill-shaped track on the secondary
+background, padded by 6px, with a fully round border radius. Tabs are
+borderless pills with secondary text in the small font size, like other
+buttons. The active tab is filled with the page background and ringed by a 2px
+border in the secondary foreground color, like the pickers' current option, so
+a strip of the track stays visible around it, even at either end. A focused
+tab's outline is drawn just outside the ring, still inside the track.
 
-Switching tabs has no animation or transition.
+The tab list is centered above the panel box. The box has a 1px border in the
+secondary foreground color and the same border radius as `<details>` in
+content. Its top edge runs along the tab list's horizontal midline and stops
+`var(--gap)` short of the tab list on each side, so the border never touches
+it. Because the lower half of the tab list sits inside the box, panels have
+half the usual top padding (except in print). A tab list wider than the panel
+scrolls horizontally inside its track.
+
+Before the client component mounts, the selected tab draws its own fill. Once
+mounted, an indicator (an `aria-hidden` element inside the tab list) draws it
+instead and slides to the newly selected tab, resizing to fit its label, over
+200ms with the appearance pickers' easing. At the same time, with the same
+duration and easing:
+
+- The panel box's height changes smoothly from the old panel's height to the
+  new one's, clipping the panels' content until it finishes.
+- The panels crossfade: the old panel stays shown over the new one, `inert`
+  (so it takes no clicks or focus and is hidden from assistive technology),
+  and fades out as the new panel fades in. Then it is hidden as usual. Like
+  a view transition's crossfade, the two panels blend with
+  `mix-blend-mode: plus-lighter` in an isolated panel box, so content in the
+  same place in both, such as a code block's background, does not dim
+  halfway through.
+
+Selecting another tab midway continues from the box's current height and the
+panels' current opacity.
+
+Neither animates when the user prefers reduced motion. Tabs selected while the
+page loads (such as by the URL's target) do not animate either, and layout
+changes such as fonts loading or an enclosing panel being shown move the
+indicator instantly. Tabs are drawn above the indicator and have no
+background of their own while hovered or focused, so none covers it as it
+slides.

@@ -4,13 +4,11 @@
 .tabs {
   --tabs-border-width: 1px;
   --tabs-radius: calc(var(--mono-border-radius) + 0.125em);
-  --tabs-padding-x: var(--gap);
-  --tabs-padding-y: 2px;
-  --tabs-gap: 6px;
 
-  // Concave corners where the active tab meets the panel; no larger than the
-  // gap, so they never reach a neighboring tab
-  --tabs-flare-radius: var(--tabs-gap);
+  // Like the appearance picker's track, which leaves a strip of track around
+  // the selected tab's ring and focus outline
+  --tabs-list-padding: 6px;
+  --tabs-gap: 4px;
 
   margin-bottom: 1rem;
 }
@@ -54,34 +52,99 @@
 }
 
 .js {
+  // The tab list is centered above the panels. The two equal side columns hold
+  // the panel box's top border, which runs through the middle of the tab list
+  // and stops a gap short of it on each side.
+  .tabs {
+    display: grid;
+    grid-template-columns:
+      minmax(var(--tabs-radius), 1fr)
+      minmax(0, max-content)
+      minmax(var(--tabs-radius), 1fr);
+    column-gap: var(--gap);
+
+    &::before,
+    &::after {
+      grid-row: 1;
+      align-self: end;
+
+      // The line is centered on the tab list's midline
+      height: calc(50% + var(--tabs-border-width) / 2);
+      content: '';
+      border: 0 solid var(--fg2-color);
+      border-top-width: var(--tabs-border-width);
+    }
+
+    &::before {
+      grid-column: 1;
+      border-left-width: var(--tabs-border-width);
+      border-top-left-radius: var(--tabs-radius);
+    }
+
+    &::after {
+      grid-column: 3;
+      border-right-width: var(--tabs-border-width);
+      border-top-right-radius: var(--tabs-radius);
+    }
+  }
+
+  // Like the appearance picker, but a perfectly round pill
   .tabs-list {
     position: relative;
-    z-index: 1;
     display: flex;
+    grid-row: 1;
+    grid-column: 2;
     gap: var(--tabs-gap);
-    align-items: flex-end;
-
-    // The list overlaps the panel's top border, so the active tab can cover
-    // it. The overlap stays inside the list's own box, so scrolling a long
-    // tab list cannot clip it.
-    margin-bottom: calc(-1 * var(--tabs-border-width));
+    padding: var(--tabs-list-padding);
     overflow-x: auto;
     scrollbar-width: none;
+    background: var(--bg2-color);
+    border-radius: 999px;
 
     &::-webkit-scrollbar {
       display: none;
     }
   }
 
-  // The first tab is flush with the panel's left border and sits in its
-  // corner, so the corner is square
+  // The top border is drawn beside the tab list instead. Border-box, so the
+  // client component can animate its measured height.
   .tabs-panels {
+    position: relative;
+    box-sizing: border-box;
+    grid-row: 2;
+    grid-column: 1 / -1;
+    min-width: 0;
+    border-top: 0;
     border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  // A panel fading out after another tab is selected, over the new panel
+  .tabs-panel[data-leaving] {
+    position: absolute;
+    inset: 0 0 auto;
+  }
+
+  // Like a view transition's crossfade: within the isolated box, the two
+  // panels' pixels add up, so content in the same place in both (like a code
+  // block's background) stays fully opaque instead of dimming halfway through
+  .tabs-panels[data-crossfading] {
+    isolation: isolate;
+
+    > .tabs-panel:not([hidden]) {
+      mix-blend-mode: plus-lighter;
+    }
   }
 
   // An until-found panel is still rendered; without padding it takes no space
   // Print shows every panel, so it keeps their padding
   @media not print {
+    // The lower half of the tab list already sits inside the box, so less
+    // padding above the content keeps the box from looking top-heavy
+    .tabs-panel {
+      padding-top: calc(var(--details-padding) / 2);
+    }
+
     .tabs-panel[hidden] {
       padding: 0;
     }
@@ -90,7 +153,8 @@
   .tabs-panel:focus-visible {
     outline: 2px solid var(--theme-color);
     outline-offset: -2px;
-    border-radius: calc(var(--tabs-radius) - var(--tabs-border-width));
+    border-radius: 0 0 calc(var(--tabs-radius) - var(--tabs-border-width))
+      calc(var(--tabs-radius) - var(--tabs-border-width));
   }
 
   .tabs-panel-label {
@@ -105,23 +169,19 @@
 
 .tabs-tab {
   position: relative;
+  z-index: 1;
   flex: none;
-  padding: var(--tabs-padding-y) var(--tabs-padding-x);
-  margin: 0 0 var(--tabs-border-width);
+  padding: 0.125em var(--gap);
+  margin: 0;
   font: inherit;
-  font-size: var(--font-size-smaller);
+  font-size: var(--font-size-small);
   line-height: var(--line-height);
   color: var(--fg2-color);
   white-space: nowrap;
   cursor: pointer;
-  background: var(--bg2-color);
-
-  // Transparent, so a tab keeps its width when it becomes active. An inactive
-  // tab stops at the panel's top border instead of covering it; the margin
-  // keeps its label level with the active tab's.
-  border: var(--tabs-border-width) solid transparent;
-  border-bottom: 0;
-  border-radius: var(--tabs-radius) var(--tabs-radius) 0 0;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
 
   @include user-select(none);
 
@@ -133,13 +193,11 @@
     outline: none;
   }
 
+  // Just outside the selected tab's ring, within the list's padding, where the
+  // scrolling list cannot clip it
   &:focus-visible {
     outline: 2px solid var(--theme-color);
-    outline-offset: -4px;
-  }
-
-  &:not([data-selected]):active {
-    color: var(--link-active-color);
+    outline-offset: var(--control-border-width);
   }
 
   code {
@@ -165,79 +223,71 @@
   background: var(--bg-color) !important;
 }
 
-// Every tab rests on the panel's top border. The active tab joins the panel:
-// the border runs up its sides and across its top, and its background covers
-// the panel's top border beneath it.
+// Like the appearance picker's indicator
 .tabs-tab[data-selected] {
-  // Extra padding instead of a transparent bottom border: a solid side border
-  // meeting a transparent bottom border is mitered, which would cut a notch
-  // into the panel's border at the tab's bottom corners
-  padding-bottom: calc(var(--tabs-padding-y) + var(--tabs-border-width));
-  margin-bottom: 0;
   color: var(--fg-color);
   cursor: default;
   background: var(--bg-color);
-  border-color: var(--fg2-color);
-  border-bottom: 0;
-  border-radius: var(--tabs-radius) var(--tabs-radius) 0 0;
+  box-shadow: 0 0 0 var(--control-border-width) var(--fg2-color);
+}
 
-  // Each flare sits just outside a bottom corner, over the tab's side border
-  // and the panel's top border. Inside the curve it is transparent; outside
-  // it, the panel background hides both straight borders.
-  &::before,
-  &::after {
-    --r: var(--tabs-flare-radius);
+// Like the appearance picker's indicator, sized to the selected tab by the
+// client component
+.tabs-indicator {
+  position: absolute;
+  top: var(--tabs-list-padding);
+  bottom: var(--tabs-list-padding);
+  left: 0;
+  pointer-events: none;
+  background: var(--bg-color);
+  border-radius: 999px;
+  box-shadow: 0 0 0 var(--control-border-width) var(--fg2-color);
 
-    position: absolute;
-    bottom: 0;
-    box-sizing: border-box;
-    width: var(--r);
-    height: var(--r);
-    pointer-events: none;
-    content: '';
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      transform 200ms cubic-bezier(0.2, 0, 0, 1),
+      width 200ms cubic-bezier(0.2, 0, 0, 1);
   }
+}
 
-  &::before {
-    right: 100%;
-    background: radial-gradient(
-      circle at 0 0,
-      transparent calc(var(--r) - 1.25px),
-      var(--fg2-color) calc(var(--r) - 0.75px),
-      var(--fg2-color) calc(var(--r) - 0.25px),
-      var(--bg-color) calc(var(--r) + 0.25px)
-    );
-  }
+// Tabs are above the indicator, so none may cover it with the global button
+// hover or focus background as it slides; a pressed tab still shows the
+// global press colors
+.tabs-indicator:not([hidden]) ~ .tabs-tab {
+  background: transparent;
+}
 
-  &::after {
-    left: 100%;
-    background: radial-gradient(
-      circle at 100% 0,
-      transparent calc(var(--r) - 1.25px),
-      var(--fg2-color) calc(var(--r) - 0.75px),
-      var(--fg2-color) calc(var(--r) - 0.25px),
-      var(--bg-color) calc(var(--r) + 0.25px)
-    );
-  }
-
-  // The first tab is flush with the panel's left border, which continues
-  // straight up its side
-  &:first-child::before {
-    content: none;
+// Once shown, the indicator draws the selected tab's fill, even while hovered
+// or pressed
+.tabs-indicator:not([hidden]) ~ .tabs-tab[data-selected] {
+  &,
+  &:hover,
+  &:active {
+    background: transparent !important;
+    box-shadow: none;
   }
 }
 
 @media print {
+  .js .tabs {
+    display: block;
+
+    &::before,
+    &::after {
+      content: none;
+    }
+  }
+
   .js .tabs-list {
     display: none;
   }
 
-  // No tab sits in the corner, so it is rounded again. Black, like <details>
-  // in print.
+  // Black, like <details> in print
   .js .tabs-panels,
   .tabs-panels {
     display: block;
-    border-color: #000;
-    border-top-left-radius: var(--tabs-radius);
+    border: var(--tabs-border-width) solid #000;
+    border-radius: var(--tabs-radius);
   }
 
   .tabs-panel[hidden],
