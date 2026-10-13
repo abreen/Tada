@@ -147,10 +147,15 @@ a strip of the track stays visible around it, even at either end. A focused
 tab's outline is drawn just outside the ring, still inside the track.
 
 The tab list is centered above the panel box. The box has a 3px border in the
-secondary background color (the track's color). Its border radius is
-`var(--border-radius) + var(--details-padding) + 3px` (27px by default), so
-its corners are concentric with a stepper's buttons, which sit a panel's
-padding inside the border. Every tab group has this box, stepper or not. Its
+secondary background color (the track's color). Panels are padded by
+`--tabs-padding` (12px). The rounded boxes inside a panel, code blocks
+(`<pre>`) and a stepper's buttons, have a `--tabs-content-radius` of
+`var(--border-radius)` (12px). The box's border radius,
+`--tabs-radius`, is `--tabs-content-radius + --tabs-padding + 3px` (27px by
+default), so its corners are concentric with those boxes, which sit a panel's
+padding inside the border. Code blocks in a panel, at any depth, use this
+radius instead of the usual `--mono-border-radius`. Every tab group has this
+box, stepper or not. Its
 top edge runs along the tab list's horizontal midline and stops
 `var(--gap)` short of the tab list on each side, so the border never touches
 it. Because the lower half of the tab list sits inside the box, panels have

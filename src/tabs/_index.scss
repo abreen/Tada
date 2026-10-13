@@ -1,11 +1,14 @@
 @use '../mixins' as *;
 
-// The box's corners are concentric with a stepper's buttons, which sit a
-// panel's padding inside the border
+// The box's corners are concentric with the rounded boxes inside a panel, a
+// stepper's buttons and code blocks, which sit a panel's padding inside the
+// border
 .tabs {
   --tabs-border-width: 3px;
+  --tabs-padding: 12px;
+  --tabs-content-radius: var(--border-radius);
   --tabs-radius: calc(
-    var(--border-radius) + var(--details-padding) + var(--tabs-border-width)
+    var(--tabs-content-radius) + var(--tabs-padding) + var(--tabs-border-width)
   );
 
   // Like the appearance picker's track, which leaves a strip of track around
@@ -32,7 +35,12 @@
 
 .tabs-panel {
   min-width: 0;
-  padding: var(--details-padding);
+  padding: var(--tabs-padding);
+
+  // Concentric with the box's corners
+  pre {
+    border-radius: var(--tabs-content-radius);
+  }
 
   > :first-child,
   > .tabs-panel-label + * {
@@ -211,7 +219,7 @@
     // The lower half of the tab list already sits inside the box, so less
     // padding above the content keeps the box from looking top-heavy
     .tabs-panel {
-      padding-top: calc(var(--details-padding) / 2);
+      padding-top: calc(var(--tabs-padding) / 2);
     }
 
     .tabs-panel[hidden] {
@@ -448,7 +456,7 @@
 .js .tabs-step-nav {
   display: flex;
   justify-content: space-between;
-  padding: 0 var(--details-padding) var(--details-padding);
+  padding: 0 var(--tabs-padding) var(--tabs-padding);
 }
 
 // The nav is below the panel, so the panel's outline has square corners
