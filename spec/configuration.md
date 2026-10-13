@@ -39,7 +39,7 @@ error because the source of truth would be ambiguous.
 
 - `site.dev.yaml`
 - `site.prod.yaml`
-- `nav.yaml`
+- `nav.yaml` (when `--bare` is not specified)
 - `authors.yaml` (when `--bare` is not specified)
 
 Generated development and production site configs explicitly include

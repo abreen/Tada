@@ -3,6 +3,7 @@ import re
 import pytest
 from conftest import (
     AUTHORS_CONFIG_FILE,
+    HOME_NAV,
     NAV_CONFIG_FILE,
     SITE_DEV_CONFIG_FILE,
     init_site,
@@ -210,6 +211,12 @@ class TestWatchConfigBreakAndRecover:
 class TestWatchConfigFileDetection:
     """Deleting/moving & re-adding config files re-builds and doesn't crash."""
 
+    @pytest.fixture
+    def site_dir(self, tmp_path):
+        site = init_site(tmp_path, bare=True)
+        write_structured_file(site / NAV_CONFIG_FILE, HOME_NAV)
+        yield site
+
     def test_editing_nav_yaml_updates_nav_output(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
         before_html = index_html.read_text()
@@ -249,10 +256,6 @@ class TestWatchConfigFileDetection:
     def test_missing_nav_yaml_at_start_then_create_adds_menu(self, tmp_path):
         site_dir = init_site(tmp_path, bare=True)
 
-        nav_path = site_dir / NAV_CONFIG_FILE
-        nav_backup = nav_path.read_text()
-        nav_path.unlink()
-
         wp = WatchProcess(site_dir)
         try:
             wp.wait_for_initial_build()
@@ -261,7 +264,7 @@ class TestWatchConfigFileDetection:
             assert wp.proc.poll() is None
 
             before_mtime = index_html.stat().st_mtime
-            nav_path.write_text(nav_backup)
+            write_structured_file(site_dir / NAV_CONFIG_FILE, HOME_NAV)
 
             wp.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
             assert '<details' in index_html.read_text()

@@ -41,7 +41,6 @@ async function runTada(cmdArgs: string[], cwd = siteDir): Promise<void> {
 rmSync(siteDir, { recursive: true, force: true });
 mkdirSync(path.dirname(siteDir), { recursive: true });
 await runTada(['init', siteDir, '--bare', '--no-interactive'], repoDir);
-rmSync(path.join(siteDir, 'nav.yaml'));
 
 const configPath = path.join(siteDir, 'site.dev.yaml');
 const config = Bun.YAML.parse(readFileSync(configPath, 'utf-8')) as {

@@ -149,11 +149,8 @@ class TestInitBare:
         assert public_dir.is_dir()
         assert len(list(public_dir.rglob('*'))) == 0
 
-    def test_creates_minimal_nav(self, site_dir):
-        nav = load_structured_file(site_dir / NAV_CONFIG_FILE)
-        assert len(nav) == 1
-        assert len(nav[0]['links']) == 1
-        assert nav[0]['links'][0]['text'] == 'Home'
+    def test_creates_no_nav(self, site_dir):
+        assert not (site_dir / NAV_CONFIG_FILE).exists()
 
     def test_no_authors_json(self, site_dir):
         assert not (site_dir / AUTHORS_CONFIG_FILE).exists()

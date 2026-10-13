@@ -370,15 +370,6 @@ async function initCommand(args: string[]): Promise<void> {
       'title: Home\n\nWelcome to your new site.\n',
     );
     fs.mkdirSync(path.join(projectDir, 'public'), { recursive: true });
-    fs.writeFileSync(
-      getDefaultProjectConfigFilePath(projectDir, 'nav'),
-      stringifyYaml([
-        {
-          title: 'Navigation',
-          links: [{ text: 'Home', internal: '/index.html' }],
-        },
-      ]),
-    );
   } else {
     // Create nav and authors data files in the project root
     fs.writeFileSync(

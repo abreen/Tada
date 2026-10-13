@@ -17,7 +17,9 @@ symbol sets `features.favicon: false` in both configs instead. Non-interactive m
 and uses defaults or values provided as arguments.
 
 A bare mode creates a minimal site with just a single home page and an empty
-public directory. The normal mode copies starter content, navigation, and author
+public directory. It writes no nav file, so the header links the logo and site
+title to the home page (see
+[Without a nav file](navigation.md#without-a-nav-file)). The normal mode copies starter content, navigation, and author
 data from the package. The starter content includes an example of an
 author script: the Lectures page lists `src/lectures/timezone.ts` in its
 `scripts` front matter (see [Author Scripts](author-scripts.md)). It lets
@@ -32,8 +34,8 @@ The generated config files include `site.dev.yaml` (pointing at localhost) and
 `site.prod.yaml` (using the provided production URL). Internal domains are
 automatically extracted from the production base URL. Both site configs
 explicitly include `defaultFont: sans` and `defaultContrast: standard` so their
-initial appearance is easy to discover and change. Starter nav and author data
-files are also generated as YAML by default.
+initial appearance is easy to discover and change. The normal mode also generates
+starter nav and author data files as YAML by default.
 
 The normal mode also writes a `package.json` that is private and lists the current
 Tada version of `@abreen/tada` in `devDependencies`, and a `tsconfig.json` that

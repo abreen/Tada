@@ -2,6 +2,7 @@ import re
 
 from conftest import (
     AUTHORS_CONFIG_FILE,
+    HOME_NAV,
     NAV_CONFIG_FILE,
     SITE_DEV_CONFIG_FILE,
     SITE_PROD_CONFIG_FILE,
@@ -100,7 +101,7 @@ class TestConfigFileVariants:
 
     def test_dev_build_accepts_nav_json(self, tmp_path):
         site = init_site(tmp_path, bare=True)
-        rewrite_config_variant(site, NAV_CONFIG_FILE, 'nav.json')
+        write_structured_file(site / 'nav.json', HOME_NAV)
 
         result = run_tada('dev', cwd=str(site))
 
@@ -195,7 +196,8 @@ class TestConfigFileErrors:
 
     def test_duplicate_nav_variants_fail(self, tmp_path):
         site = init_site(tmp_path, bare=True)
-        write_structured_file(site / 'nav.json', load_structured_file(site / NAV_CONFIG_FILE))
+        write_structured_file(site / NAV_CONFIG_FILE, HOME_NAV)
+        write_structured_file(site / 'nav.json', HOME_NAV)
 
         result = run_tada('dev', cwd=str(site))
         output = result.stdout + result.stderr
@@ -205,7 +207,6 @@ class TestConfigFileErrors:
 
     def test_missing_nav_config_builds_header_without_menu(self, tmp_path):
         site = init_site(tmp_path, bare=True)
-        (site / NAV_CONFIG_FILE).unlink()
 
         result = run_tada('dev', cwd=str(site))
 
@@ -230,7 +231,6 @@ class TestConfigFileErrors:
 
     def test_missing_nav_config_without_search_builds_static_header(self, tmp_path):
         site = init_site(tmp_path, bare=True)
-        (site / NAV_CONFIG_FILE).unlink()
         set_site_config(site, {'features': {'search': False}})
 
         result = run_tada('dev', cwd=str(site))

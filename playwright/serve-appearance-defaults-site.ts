@@ -44,6 +44,21 @@ async function runInDirectory(args: string[], cwd: string): Promise<void> {
 rmSync(siteDir, { recursive: true, force: true });
 await runTada(['init', siteDir, '--bare', '--no-interactive'], repoDir);
 
+// Bare sites start without a nav; the branding test opens the header menu
+writeFileSync(
+  path.join(siteDir, 'nav.yaml'),
+  Bun.YAML.stringify(
+    [
+      {
+        title: 'Navigation',
+        links: [{ text: 'Home', internal: '/index.html' }],
+      },
+    ],
+    null,
+    2,
+  ),
+);
+
 writeFileSync(
   path.join(siteDir, 'public', 'logo.svg'),
   '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="24"><rect width="48" height="24" fill="red"/></svg>',

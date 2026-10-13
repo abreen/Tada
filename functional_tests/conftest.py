@@ -20,6 +20,8 @@ TADA_BIN = PACKAGE_DIR / 'bin' / 'tada.ts'
 SITE_DEV_CONFIG_FILE = 'site.dev.yaml'
 SITE_PROD_CONFIG_FILE = 'site.prod.yaml'
 NAV_CONFIG_FILE = 'nav.yaml'
+# A one-link nav for bare sites, which start without a nav file
+HOME_NAV = [{'title': 'Navigation', 'links': [{'text': 'Home', 'internal': '/index.html'}]}]
 AUTHORS_CONFIG_FILE = 'authors.yaml'
 
 

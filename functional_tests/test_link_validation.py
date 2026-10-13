@@ -1,8 +1,10 @@
+import copy
+
 import pytest
 from conftest import (
+    HOME_NAV,
     NAV_CONFIG_FILE,
     init_site,
-    load_structured_file,
     run_tada,
     write_structured_file,
 )
@@ -15,10 +17,9 @@ class TestBrokenNavLink:
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
 
-        nav_path = site / NAV_CONFIG_FILE
-        nav = load_structured_file(nav_path)
+        nav = copy.deepcopy(HOME_NAV)
         nav[0]['links'].append({'text': 'Missing', 'internal': '/nonexistent.html'})
-        write_structured_file(nav_path, nav)
+        write_structured_file(site / NAV_CONFIG_FILE, nav)
 
         yield site
 
@@ -152,12 +153,11 @@ class TestDisabledNavLinkSkipped:
     def site_dir(self, tmp_path):
         site = init_site(tmp_path, bare=True)
 
-        nav_path = site / NAV_CONFIG_FILE
-        nav = load_structured_file(nav_path)
+        nav = copy.deepcopy(HOME_NAV)
         nav[0]['links'].append(
             {'text': 'Coming Soon', 'internal': '/nonexistent.html', 'disabled': True}
         )
-        write_structured_file(nav_path, nav)
+        write_structured_file(site / NAV_CONFIG_FILE, nav)
 
         yield site
 

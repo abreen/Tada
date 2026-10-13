@@ -1,7 +1,7 @@
 # Navigation
 
 Site navigation is defined in `nav.yaml`/`nav.yml`/`nav.json` at the
-project root. `tada init` creates `nav.yaml` by default. The file is optional
+project root. `tada init` creates `nav.yaml` by default, but not with `--bare`. The file is optional
 (see [Without a nav file](#without-a-nav-file)). It is an array of sections,
 each with a title and a list of links.
 
