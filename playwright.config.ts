@@ -70,5 +70,17 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },
+    {
+      command: 'bun run playwright/serve-no-nav-site.ts',
+      url: 'http://localhost:8083/index.html',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    {
+      command: 'bun run playwright/serve-no-nav-site.ts --no-search',
+      url: 'http://localhost:8084/index.html',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
   ],
 });

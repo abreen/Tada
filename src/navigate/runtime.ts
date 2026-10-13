@@ -203,6 +203,15 @@ export function clearSearch(document: Document): void {
   }
 }
 
+// How far the header covers the top of the viewport; a static header that has
+// scrolled away covers none of it
+function getHeaderCoverage(document: Document): number {
+  const bottom = document
+    .querySelector('header')
+    ?.getBoundingClientRect().bottom;
+  return Math.max(0, bottom ?? 0);
+}
+
 export function closeHeaderDetails(document: Document): void {
   const details = document.querySelector(
     'header details',
@@ -528,8 +537,7 @@ export async function navigateToUrl(
     typeof transitionDoc.startViewTransition === 'function'
   ) {
     const titleEl = document.querySelector('.title-and-info');
-    const headerHeight =
-      document.querySelector('header')?.getBoundingClientRect().height ?? 0;
+    const headerHeight = getHeaderCoverage(document);
     const titleVisible =
       titleEl != null && titleEl.getBoundingClientRect().top >= headerHeight;
 
@@ -544,8 +552,7 @@ export async function navigateToUrl(
       }
 
       const newTitleEl = document.querySelector('.title-and-info');
-      const newHeaderHeight =
-        document.querySelector('header')?.getBoundingClientRect().height ?? 0;
+      const newHeaderHeight = getHeaderCoverage(document);
       const newTitleVisible =
         newTitleEl != null &&
         newTitleEl.getBoundingClientRect().top >= newHeaderHeight;

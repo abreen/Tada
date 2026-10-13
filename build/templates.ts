@@ -46,6 +46,12 @@ export function config(name: ProjectConfigName): unknown {
   return projectConfig[name];
 }
 
+// An empty nav file renders the same header as a missing one
+export function hasNav(): boolean {
+  const nav = config('nav');
+  return Array.isArray(nav) && nav.length > 0;
+}
+
 export function getConfigFileName(name: ProjectConfigName): string | undefined {
   return loadedProjectConfig[name]?.fileName;
 }

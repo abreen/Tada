@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"
+<html lang="en"<% if (!isHeaderFloating) { %> class="static-header"<% } %>
       data-default-font-preference="<%- site.defaultFont %>"
       data-default-contrast-preference="<%- site.defaultContrast %>"<% if (site.defaultFont === 'serif') { %>
       data-font-preference="serif"<% } %><% if (site.defaultContrast === 'high') { %>
@@ -188,6 +188,7 @@
 
   <body class="<%= page.template %><% if (page.tocHtml) { %> toc-is-active<% } %>" data-pagefind-meta="template:<%= page.template %>">
     <header data-pagefind-ignore>
+      <% if (isHeaderFloating) { %>
       <div class="header-controls">
         <div id="to-top-container" class="to-top-container"></div>
         <% if (site.features.search) { %>
@@ -201,11 +202,15 @@
         </div>
         <% } %>
       </div>
+      <% } %>
+      <% if (site.features.search) { %>
       <div id="quick-search-results" class="results-container" role="region"
            aria-label="Search results"
            aria-live="polite" aria-hidden="true" inert>
         <div class="results" style="display:none"></div>
       </div>
+      <% } %>
+      <% if (hasNav) { %>
       <details>
         <summary aria-label="Toggle site navigation">
           <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"
@@ -215,18 +220,17 @@
             <path class="menu-icon-line menu-icon-line-middle" d="M3 12h18" />
             <path class="menu-icon-line menu-icon-line-bottom" d="M3 18h18" />
           </svg>
-          <% if (site.logo) { %><img class="logo-image" src="/<%- encodePublicAssetPath(site.logo) %>" alt="" aria-hidden="true" /><% } else if (site.symbol) { %><span class="<%- isEmojiSymbol(site.symbol) ? 'logo logo-emoji' : 'logo' %>" aria-hidden="true"><%- site.symbol %></span><% } %>
-          <span class="header-title" aria-hidden="true">
-            <span class="header-title-reel">
-              <span class="site-title"><%- site.title %></span>
-              <span class="header-page-title"><%= page.titleHtml %></span>
-            </span>
-          </span>
+          <%= render('_header-brand.html') %>
         </summary>
         <div class="content">
           <%= render('_nav.html') %>
         </div>
       </details>
+      <% } else { %>
+      <div class="header-brand">
+        <%= render('_header-brand.html') %>
+      </div>
+      <% } %>
     </header>
     <div class="container">
       <% if (site.banner) { %>

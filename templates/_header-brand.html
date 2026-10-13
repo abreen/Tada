@@ -1,0 +1,11 @@
+<% if (site.logo) { %><img class="logo-image" src="/<%- encodePublicAssetPath(site.logo) %>" alt="" aria-hidden="true" /><% } else if (site.symbol) { %><span class="<%- isEmojiSymbol(site.symbol) ? 'logo logo-emoji' : 'logo' %>" aria-hidden="true"><%- site.symbol %></span><% } %>
+<span class="header-title"<% if (hasNav) { %> aria-hidden="true"<% } %>>
+  <% if (isHeaderFloating) { %>
+  <span class="header-title-reel">
+    <span class="site-title"><%- site.title %></span>
+    <span class="header-page-title"<% if (!hasNav) { %> aria-hidden="true"<% } %>><%= page.titleHtml %></span>
+  </span>
+  <% } else { %>
+  <span class="site-title"><%- site.title %></span>
+  <% } %>
+</span>

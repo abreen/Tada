@@ -64,6 +64,22 @@ html.navigation-loading * {
   animation-duration: $duration;
 }
 
+// A static header scrolls with the page and never changes between pages. Pin
+// it at its new position, showing only the incoming snapshot, instead of
+// sliding it there from where the old page had scrolled it.
+:root.static-header::view-transition-group(site-header),
+:root.static-header::view-transition-new(site-header) {
+  animation: none;
+}
+
+:root.static-header::view-transition-old(site-header) {
+  display: none;
+}
+
+:root.static-header::view-transition-new(site-header) {
+  mix-blend-mode: normal;
+}
+
 // The site-wide banner does not change between pages. Keep it out of the root
 // fade and pin its named transition layer in place without a crossfade.
 .site-banner {

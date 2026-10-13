@@ -12,8 +12,11 @@ The page retains 2rem of bottom padding and at least 6em of separation between
 content and the group. On long pages, the group follows the content in normal
 flow and scrolls with the page.
 
-This layout accounts for the fixed header, optional site banner, page heading,
-and responsive table of contents. On desktop the TOC sits beside the body and
+This layout accounts for the header, optional site banner, page heading,
+and responsive table of contents. Page content, the sticky TOC, and fragment
+scroll positions leave room for the header only while it is fixed; a static
+header (see [Navigation](navigation.md#without-a-nav-file)) is part of the page
+flow and reserves no extra space. On desktop the TOC sits beside the body and
 remains sticky, with a viewport-based maximum height and internal scrolling.
 On narrow screens the TOC precedes the body on default and literate pages;
 code-page TOCs remain hidden. The two-column desktop layout and the desktop

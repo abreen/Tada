@@ -7,3 +7,5 @@ well down the page, and keep it visible until they are back above that point.
 - It shows once the scroll position passes 1.5 viewports or 25% of the
   scrollable distance, whichever is farther.
 - Visibility is recalculated on scroll and on resize.
+- The button mounts into the header's `#to-top-container`. A static header
+  (no nav and no search) has no container, so nothing is mounted.

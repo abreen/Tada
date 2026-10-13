@@ -198,13 +198,42 @@ class TestConfigFileErrors:
         assert result.returncode != 0
         assert 'Multiple config files found for nav' in output
 
-    def test_missing_required_nav_config_fails(self, tmp_path):
+    def test_missing_nav_config_builds_header_without_menu(self, tmp_path):
         site = init_site(tmp_path, bare=True)
         (site / NAV_CONFIG_FILE).unlink()
 
         result = run_tada('dev', cwd=str(site))
-        output = result.stdout + result.stderr
 
-        assert result.returncode != 0
-        assert 'Missing required config file for nav' in output
-        assert 'nav.yaml, nav.yml, or nav.json' in output
+        assert result.returncode == 0, f'dev build failed: {result.stderr}'
+        html = (site / 'dist' / 'index.html').read_text()
+        assert '<details' not in html
+        assert 'menu-icon' not in html
+        assert 'class="header-brand"' in html
+        assert 'class="search quick-search"' in html
+        assert 'static-header' not in html
+
+    def test_empty_nav_config_builds_header_without_menu(self, tmp_path):
+        site = init_site(tmp_path, bare=True)
+        write_structured_file(site / NAV_CONFIG_FILE, [])
+
+        result = run_tada('dev', cwd=str(site))
+
+        assert result.returncode == 0, f'dev build failed: {result.stderr}'
+        html = (site / 'dist' / 'index.html').read_text()
+        assert '<details' not in html
+        assert 'class="header-brand"' in html
+
+    def test_missing_nav_config_without_search_builds_static_header(self, tmp_path):
+        site = init_site(tmp_path, bare=True)
+        (site / NAV_CONFIG_FILE).unlink()
+        set_site_config(site, {'features': {'search': False}})
+
+        result = run_tada('dev', cwd=str(site))
+
+        assert result.returncode == 0, f'dev build failed: {result.stderr}'
+        html = (site / 'dist' / 'index.html').read_text()
+        assert '<details' not in html
+        assert 'class="static-header"' in html
+        assert 'header-controls' not in html
+        assert 'to-top-container' not in html
+        assert 'class="header-brand"' in html

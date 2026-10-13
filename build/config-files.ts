@@ -15,7 +15,6 @@ export interface ResolvedProjectConfigFile<
   fileName: string;
   filePath: string;
   extension: ProjectConfigExtension;
-  required: boolean;
 }
 
 const CONFIG_FILE_EXTENSIONS = ['.yaml', '.yml', '.json'] as const;
@@ -31,12 +30,7 @@ const PROJECT_CONFIG_BASE_NAMES = {
   authors: 'authors',
 } as const satisfies Record<ProjectConfigName, ProjectConfigName>;
 
-const REQUIRED_PROJECT_CONFIG_NAMES = ['nav'] as const;
-const OPTIONAL_PROJECT_CONFIG_NAMES = ['authors'] as const;
-export const PROJECT_CONFIG_NAMES = [
-  ...REQUIRED_PROJECT_CONFIG_NAMES,
-  ...OPTIONAL_PROJECT_CONFIG_NAMES,
-] as const;
+export const PROJECT_CONFIG_NAMES = ['nav', 'authors'] as const;
 
 function joinWithOr(items: string[]): string {
   if (items.length <= 1) {
@@ -110,11 +104,8 @@ export function getDefaultProjectConfigFilePath(
 
 function resolveConfigFile<Name extends ConfigName = ConfigName>(
   projectDir: string,
-  {
-    name,
-    baseName,
-    required,
-  }: { name: Name; baseName: string; required: boolean },
+  name: Name,
+  baseName: string,
 ): ResolvedProjectConfigFile<Name> | undefined {
   const matches = getSupportedConfigFilePaths(projectDir, baseName).filter(
     filePath => fs.existsSync(filePath),
@@ -128,11 +119,6 @@ function resolveConfigFile<Name extends ConfigName = ConfigName>(
   }
 
   if (matches.length === 0) {
-    if (required) {
-      throw new Error(
-        `Missing required config file for ${baseName} (tried ${getSupportedConfigFileNamesText(baseName)})`,
-      );
-    }
     return undefined;
   }
 
@@ -144,7 +130,6 @@ function resolveConfigFile<Name extends ConfigName = ConfigName>(
     fileName,
     filePath,
     extension: getResolvedConfigExtension(fileName),
-    required,
   };
 }
 
@@ -153,21 +138,18 @@ export function resolveSiteConfigFile(
   env: SiteEnv,
 ): ResolvedProjectConfigFile<SiteConfigName> {
   const baseName = SITE_CONFIG_BASE_NAMES[env];
-  return resolveConfigFile(projectDir, {
-    name: baseName,
-    baseName,
-    required: true,
-  })!;
+  const resolved = resolveConfigFile(projectDir, baseName, baseName);
+  if (!resolved) {
+    throw new Error(
+      `Missing required config file for ${baseName} (tried ${getSupportedConfigFileNamesText(baseName)})`,
+    );
+  }
+  return resolved;
 }
 
 export function resolveProjectConfigFile(
   projectDir: string,
   name: ProjectConfigName,
 ): ResolvedProjectConfigFile<ProjectConfigName> | undefined {
-  const baseName = PROJECT_CONFIG_BASE_NAMES[name];
-  return resolveConfigFile(projectDir, {
-    name,
-    baseName,
-    required: name === 'nav',
-  });
+  return resolveConfigFile(projectDir, name, PROJECT_CONFIG_BASE_NAMES[name]);
 }

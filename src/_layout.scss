@@ -8,7 +8,7 @@ html {
   padding: 0;
   margin: 0;
   overflow-y: auto;
-  scroll-padding-top: calc(var(--header-collapsed-height) + var(--gap));
+  scroll-padding-top: calc(var(--header-offset) + var(--gap));
 }
 
 body {
@@ -23,7 +23,7 @@ body > .container {
   flex-direction: column;
   min-height: calc(100dvh - var(--header-collapsed-height) - var(--gap));
   padding: 0 var(--gap);
-  margin-top: calc(var(--header-collapsed-height) + var(--gap));
+  margin-top: calc(var(--header-offset) + var(--gap));
 }
 
 .main-content {
@@ -130,18 +130,18 @@ body.literate main table {
 
   body.toc-is-active nav.toc {
     position: sticky;
-    top: var(--header-collapsed-height);
+    top: var(--header-offset);
     box-sizing: border-box;
     align-self: start;
     width: var(--toc-width);
-    max-height: calc(100vh - var(--header-collapsed-height));
+    max-height: calc(100vh - var(--header-offset));
     margin-bottom: 0;
     overflow-y: auto;
   }
 
   body.code.toc-is-active nav.toc {
-    top: calc(var(--header-collapsed-height) + var(--gap));
-    max-height: calc(100vh - var(--header-collapsed-height) - var(--gap));
+    top: calc(var(--header-offset) + var(--gap));
+    max-height: calc(100vh - var(--header-offset) - var(--gap));
   }
 }
 

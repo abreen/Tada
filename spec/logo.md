@@ -3,7 +3,10 @@
 The optional top-level `logo` string replaces the header's text `symbol` with an
 image rendered at build time. Navigation works with JavaScript disabled. The
 image is decorative (`alt=""`, `aria-hidden="true"`); the navigation summary
-retains its accessible name, “Toggle site navigation”.
+retains its accessible name, “Toggle site navigation”. A site without a nav has
+no summary; the logo sits beside the site title in `.header-brand`, and the
+title remains the header's accessible text (see
+[Navigation](navigation.md#without-a-nav-file)).
 
 ```yaml
 logo: branding/logo.svg
@@ -22,7 +25,8 @@ converted; choose a browser-supported image format.
 Image logos have a 24px height, automatic width, a 96px maximum width, and
 `object-fit: contain`. They retain the symbol's spacing and pointer behavior,
 without its badge padding or background. With no logo, the symbol remains;
-with neither, the header shows the title and menu icon alone.
+with neither, the header shows the title (and the menu icon, if the site has
+a nav) alone.
 
 ## Emoji symbol
 

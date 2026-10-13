@@ -1,18 +1,16 @@
 import { expect, test } from 'bun:test';
-import template from 'lodash/template';
-import TOP from './_top.html' with { type: 'text' };
+import { renderTopTemplate } from './test-helpers';
 import { encodePublicAssetPath } from '../build/custom-fonts';
 import { isEmojiSymbol } from '../build/utils/symbol';
 
 function render(site: Record<string, unknown> = {}) {
-  return template(TOP)({
+  return renderTopTemplate({
     site: { features: { favicon: true }, title: 'Test', ...site },
     page: {},
     tadaVersion: 'test',
     isWatchMode: true,
     encodePublicAssetPath,
     isEmojiSymbol,
-    render: () => '',
   });
 }
 

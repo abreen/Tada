@@ -1,8 +1,9 @@
 # Navigation
 
 Site navigation is defined in `nav.yaml`/`nav.yml`/`nav.json` at the
-project root. `tada init` creates `nav.yaml` by default. The file is an array
-of sections, each with a title and a list of links.
+project root. `tada init` creates `nav.yaml` by default. The file is optional
+(see [Without a nav file](#without-a-nav-file)). It is an array of sections,
+each with a title and a list of links.
 
 Each link has display text and either an internal path or an external URL.
 External links open in a new tab with `rel="noopener noreferrer"`. Links can be
@@ -27,7 +28,8 @@ URL. A fragment selected by later navigation from a fragment-free load does not
 trigger startup alignment or overwrite a restored history scroll position.
 Without JavaScript, the browser's native fragment navigation remains available.
 
-The collapsed header always keeps the menu control and site logo visible. The
+With a nav, the collapsed header always keeps the menu control and site logo
+visible. The
 navigation summary (menu control, logo, and title area) and the trailing
 controls share one CSS grid row: the summary takes a flexible first column and
 the controls take a second column sized to their rendered content. The title
@@ -75,3 +77,30 @@ the navigation unless the visitor requests reduced motion.
 Directory-only links, including `/`, must reference `index.html` explicitly
 (for example, `/docs/index.html` instead of `/docs/`). If the corresponding
 index page exists, the build reports its expected path in the error.
+
+## Without a nav file
+
+A site may omit the nav file. An empty nav array is treated the same way. The
+header then has no `<details>` element, menu icon, or navigation wash: a
+`.header-brand` element shows the logo and site title instead of the summary,
+and the title is not hidden from assistive technology since no summary label
+replaces it. Neither the logo nor the title is a link. Adding or deleting the
+nav file in watch mode rebuilds every page with the matching header.
+
+When search is enabled, the header stays fixed at the top of the viewport. The
+search field and back-to-top button keep their places in the trailing controls
+column, and the title rolls to the page title while scrolling (see
+[Header Title](header-title.md)).
+
+When search is also disabled, the header is static. The root element gets the
+`static-header` class, the header sits in the normal page flow, and the logo
+and site title are centered at the top of each page with no background. It has
+no trailing controls: the back-to-top button is not rendered and its client
+component does not mount. The header scrolls away with the page, so it shows
+only the site title, with no page title reel. Page content, the sticky TOC,
+and fragment scroll positions no longer reserve space for a fixed header; the
+`--header-offset` custom property is `0px` instead of the collapsed header
+height. The header stays positioned, so the navigation loading bar still
+appears beneath it. During client-side navigation its View Transition layer is
+pinned at its new position and shows only the incoming snapshot, so it neither
+slides from where the old page scrolled it nor fades with the page.

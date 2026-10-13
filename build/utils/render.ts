@@ -7,7 +7,7 @@ import createTemplateGlobals from '../template-globals';
 import { getExtensionToShikiLanguage } from '../site-variables';
 import { getDefaultFontPreloadFiles } from '../generate-fonts';
 import { encodePublicAssetPath } from '../custom-fonts';
-import { config } from '../templates';
+import { config, hasNav } from '../templates';
 import { render } from '../templates';
 import {
   getProjectConfigBaseName,
@@ -228,6 +228,7 @@ function createTemplateParameters({
   authorAssets,
 }: TemplateParametersInput): Record<string, unknown> {
   const applyBasePath = createApplyBasePath(siteVariables);
+  const siteHasNav = hasNav();
   return {
     authorScriptPaths: (authorAssets?.js ?? []).map(file =>
       normalizeOutputPath('/' + file),
@@ -238,6 +239,9 @@ function createTemplateParameters({
     content,
     bannerHtml,
     isWatchMode,
+    hasNav: siteHasNav,
+    // Without a nav or search, the header scrolls away with the page
+    isHeaderFloating: siteHasNav || siteVariables.features.search,
     speculationRulesHrefMatches: `${applyBasePath('/')}*`,
     tadaVersion,
   };

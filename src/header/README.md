@@ -14,3 +14,7 @@ title and shows the title for the new scroll position without rolling.
 If JavaScript is turned off in the web browser, the `<details>` element is still
 functional and its disclosure content opens immediately, and the header shows
 only the site title.
+
+A site without a nav renders a `.header-brand` element instead of `<details>`.
+The component then rolls the title there, if the header has a title reel, and
+skips the menu dismissal behavior.

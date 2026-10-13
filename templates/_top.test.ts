@@ -1,7 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import _ from 'lodash';
-import { compileTemplate } from '../build/lodash-template';
-import TOP_TEMPLATE from './_top.html' with { type: 'text' };
+import { renderTopTemplate } from './test-helpers';
 import { isEmojiSymbol } from '../build/utils/symbol';
 
 function renderTop(
@@ -11,8 +9,9 @@ function renderTop(
   bannerHtml?: string,
   search = false,
   fontOverrides?: { serif?: object; serifMono?: object },
+  hasNav = true,
 ) {
-  return _.template(TOP_TEMPLATE)({
+  return renderTopTemplate({
     site: {
       defaultFont,
       defaultContrast,
@@ -23,11 +22,11 @@ function renderTop(
       titlePostfix: ' - Test site',
     },
     bannerHtml,
+    hasNav,
     page: { title: 'Page', titleHtml: 'Page', template: 'default' },
     tadaVersion: '0.0.0',
     isWatchMode: true,
     speculationRulesHrefMatches: '/*',
-    render: () => '',
   });
 }
 
@@ -66,8 +65,64 @@ describe('_top.html template', () => {
     );
   });
 
+  describe('without a nav', () => {
+    function renderWithoutNav(search: boolean) {
+      return renderTop(
+        'sans',
+        'standard',
+        undefined,
+        undefined,
+        search,
+        undefined,
+        false,
+      );
+    }
+
+    test('renders the logo and title without a menu when search is on', () => {
+      const html = renderWithoutNav(true);
+
+      expect(html).not.toContain('<details');
+      expect(html).not.toContain('<summary');
+      expect(html).not.toContain('menu-icon');
+      expect(html).toMatch(
+        /<div class="header-brand">\s*<span class="header-title">\s*<span class="header-title-reel">\s*<span class="site-title">Test site<\/span>\s*<span class="header-page-title" aria-hidden="true">Page<\/span>/,
+      );
+      expect(html).toContain('name="quick-search"');
+      expect(html).toContain('id="to-top-container"');
+      expect(html).not.toContain('static-header');
+    });
+
+    test('renders a static header with only the site title when search is off', () => {
+      const html = renderWithoutNav(false);
+      const openingTag = html.match(/<html[^>]*>/)?.[0];
+
+      expect(openingTag).toContain('class="static-header"');
+      expect(html).not.toContain('<details');
+      expect(html).not.toContain('menu-icon');
+      expect(html).not.toContain('header-controls');
+      expect(html).not.toContain('to-top-container');
+      expect(html).not.toContain('quick-search');
+      expect(html).not.toContain('header-title-reel');
+      expect(html).not.toContain('header-page-title');
+      expect(html).toMatch(
+        /<div class="header-brand">\s*<span class="header-title">\s*<span class="site-title">Test site<\/span>\s*<\/span>\s*<\/div>/,
+      );
+    });
+  });
+
+  test('keeps a floating header with a nav even when search is off', () => {
+    const html = renderTop('sans', 'standard');
+    const openingTag = html.match(/<html[^>]*>/)?.[0];
+
+    expect(openingTag).not.toContain('static-header');
+    expect(html).toContain('<details>');
+    expect(html).toContain('id="to-top-container"');
+    expect(html).not.toContain('header-brand');
+    expect(html).not.toContain('quick-search-results');
+  });
+
   test('renders the formatted page title like the h1', () => {
-    const html = compileTemplate(TOP_TEMPLATE)({
+    const html = renderTopTemplate({
       site: {
         defaultFont: 'sans',
         defaultContrast: 'standard',
@@ -83,7 +138,6 @@ describe('_top.html template', () => {
       tadaVersion: '0.0.0',
       isWatchMode: true,
       speculationRulesHrefMatches: '/*',
-      render: () => '',
     });
 
     expect(html).toContain(
@@ -215,7 +269,7 @@ describe('_top.html template', () => {
   });
 
   test('escapes plain-text page and site values', () => {
-    const html = compileTemplate(TOP_TEMPLATE)({
+    const html = renderTopTemplate({
       site: {
         defaultFont: 'sans',
         defaultContrast: 'standard',
@@ -234,7 +288,6 @@ describe('_top.html template', () => {
       isWatchMode: false,
       speculationRulesHrefMatches: '/*',
       isEmojiSymbol,
-      render: () => '',
     });
 
     expect(html).toContain(

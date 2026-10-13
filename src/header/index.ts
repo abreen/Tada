@@ -49,8 +49,8 @@ interface TitleRoll {
 
 let titleRoll: TitleRoll | null = null;
 
-function getTitleElements(summary: HTMLElement) {
-  const container = summary.querySelector<HTMLElement>('.header-title');
+function getTitleElements(titleBar: HTMLElement) {
+  const container = titleBar.querySelector<HTMLElement>('.header-title');
   const reel = container?.querySelector<HTMLElement>('.header-title-reel');
   const pageTitle = reel?.querySelector<HTMLElement>('.header-page-title');
   return container && reel && pageTitle ? { container, reel, pageTitle } : null;
@@ -58,9 +58,9 @@ function getTitleElements(summary: HTMLElement) {
 
 function mountTitleRoll(
   window: Window,
-  summary: HTMLElement,
+  titleBar: HTMLElement,
 ): TitleRoll | null {
-  const elements = getTitleElements(summary);
+  const elements = getTitleElements(titleBar);
   if (!elements) {
     return null;
   }
@@ -77,7 +77,7 @@ function mountTitleRoll(
     return {
       blockBottom: heading.block.getBoundingClientRect().bottom,
       titleTop: heading.title.getBoundingClientRect().top,
-      headerBottom: summary.getBoundingClientRect().bottom,
+      headerBottom: titleBar.getBoundingClientRect().bottom,
     };
   }
 
@@ -96,7 +96,7 @@ function mountTitleRoll(
   }
 
   const observer = globals.createIntersectionObserver(() => update(true), {
-    rootMargin: `${-summary.getBoundingClientRect().bottom}px 0px 0px 0px`,
+    rootMargin: `${-titleBar.getBoundingClientRect().bottom}px 0px 0px 0px`,
     threshold: [0, 1],
   });
 
@@ -138,12 +138,11 @@ export function swapHeaderTitle(newDoc: Document): void {
   titleRoll?.swap(newDoc);
 }
 
-export default (window: Window) => {
-  const header: HTMLElement = getElement(window.document, 'header');
-  const details = getElement(header, 'details') as HTMLDetailsElement;
-  const summary = getElement(details, 'summary') as HTMLElement;
-
-  titleRoll = mountTitleRoll(window, summary);
+/**
+ * Dismiss the open navigation on outside clicks, focus leaving it, and Escape.
+ */
+function mountMenu(window: Window, details: HTMLDetailsElement): () => void {
+  const summary = getElement(details, 'summary');
 
   function close() {
     details.open = false;
@@ -187,11 +186,26 @@ export default (window: Window) => {
   details.addEventListener('focusout', handleDetailsFocusOut);
 
   return () => {
-    titleRoll?.disconnect();
-    titleRoll = null;
     window.removeEventListener('keydown', handleWindowKeyDown);
     window.removeEventListener('click', handleWindowClick);
     details.removeEventListener('click', handleDetailsClick);
     details.removeEventListener('focusout', handleDetailsFocusOut);
+  };
+}
+
+export default (window: Window) => {
+  const header: HTMLElement = getElement(window.document, 'header');
+  // Without a nav, the logo and title sit in .header-brand instead of a summary
+  const titleBar = getElement(header, 'summary, .header-brand');
+
+  titleRoll = mountTitleRoll(window, titleBar);
+
+  const details = header.querySelector('details');
+  const unmountMenu = details ? mountMenu(window, details) : null;
+
+  return () => {
+    titleRoll?.disconnect();
+    titleRoll = null;
+    unmountMenu?.();
   };
 };

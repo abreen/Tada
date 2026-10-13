@@ -22,7 +22,8 @@ are in `src/util.ts`.
   switch fonts between sans-serif and serif and neutral colors between standard
   and high contrast, persisted in local storage (see
   [Font Picker](font-picker.md) and [Contrast Picker](contrast-picker.md))
-- **Scroll-to-top button**: appears when the user scrolls down the page
+- **Scroll-to-top button**: appears when the user scrolls down the page; not
+  rendered with a static header (no nav and no search)
 - **Print handler**: opens all collapsible details before printing
 - **Code scrollbar**: a sticky horizontal scrollbar for code pages, synced
   with the code body so wide code can be scrolled from the bottom of the viewport
@@ -30,7 +31,9 @@ are in `src/util.ts`.
   closes on outside clicks, Escape, and identified focus moves outside the menu,
   while unknown focus destinations remain open so Safari link clicks complete;
   rolls the title from the site title to the page title once the page heading
-  scrolls under the header (see [Header Title](header-title.md))
+  scrolls under a fixed header (see [Header Title](header-title.md)). Without
+  a nav, only the title roll applies (see
+  [Navigation](navigation.md#without-a-nav-file))
 - **Page update toast**: floating bottom toast that checks the current page
   for newer validators and offers an in-place refresh
 - **Slides**: page-local presentation mode for Markdown pages with

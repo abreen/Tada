@@ -255,8 +255,8 @@ Build-time site config lives in:
 
 - `site.dev.yaml` (used by `tada dev` / `tada watch`)
 - `site.prod.yaml` (used by `tada prod`)
-- `nav.yaml` (navigation structure)
-- `authors.yaml` (author data)
+- `nav.yaml` (navigation structure, optional)
+- `authors.yaml` (author data, optional)
 
 Tada also accepts `.yml` and `.json` for each of these files. Keep only one
 variant for each logical config name; for example, `nav.yaml` and `nav.json`
@@ -372,6 +372,11 @@ Defines the site navigation structure. The file contains an array of section
 objects. Each section contains an array of link objects (internal or external,
 and whether the link is disabled). You should specify at least two sections,
 but three or more sections are supported.
+
+The file is optional. Without it (or with an empty array), the header has no
+menu: it shows the logo and site title, plus the search field when search is
+enabled. If search is also turned off, the header is not fixed; it sits
+centered at the top of each page.
 
 ```yaml
 - title: Navigation

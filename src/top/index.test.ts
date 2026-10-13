@@ -31,7 +31,9 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-function create(html = '', url = 'http://localhost/') {
+const TO_TOP_CONTAINER = '<div id="to-top-container"></div>';
+
+function create(html = TO_TOP_CONTAINER, url = 'http://localhost/') {
   const dom = new JSDOM(`<body>${html}</body>`, { url });
   return dom.window;
 }
@@ -69,22 +71,22 @@ function isVisible(win: TestWindow) {
 }
 
 describe('top', () => {
-  test('creates a back-to-top link in the body', () => {
+  test('mounts a back-to-top link inside #to-top-container', () => {
     const win = create();
-    mount(win);
-
-    const link = win.document.querySelector('a.button');
-    expect(link).not.toBeNull();
-    expect(link!.getAttribute('href')).toBe('#');
-  });
-
-  test('mounts link inside #to-top-container when present', () => {
-    const win = create('<div id="to-top-container"></div>');
     mount(win);
 
     const container = win.document.getElementById('to-top-container')!;
     const link = container.querySelector('a.button');
     expect(link).not.toBeNull();
+    expect(link!.getAttribute('href')).toBe('#');
+  });
+
+  test('does nothing without #to-top-container', () => {
+    const win = create('');
+    const cleanup = mount(win);
+
+    expect(win.document.querySelector('a.button')).toBeNull();
+    expect(() => cleanup?.()).not.toThrow();
   });
 
   test('link starts hidden (no is-visible class)', () => {
@@ -176,7 +178,7 @@ describe('top', () => {
   });
 
   test('onclick scrolls to top', () => {
-    const win = create('', 'http://localhost/page');
+    const win = create(undefined, 'http://localhost/page');
     mount(win);
 
     const link = win.document.querySelector('a.button') as HTMLAnchorElement;
@@ -197,7 +199,7 @@ describe('top', () => {
   });
 
   test('onclick clears hash via fragment navigation when hash is present', () => {
-    const win = create('', 'http://localhost/page#section');
+    const win = create(undefined, 'http://localhost/page#section');
     mount(win);
 
     const link = win.document.querySelector('a.button') as HTMLAnchorElement;
@@ -227,7 +229,7 @@ describe('top', () => {
   });
 
   test('onclick clears hash through setLocationHash global when hash is present', () => {
-    const win = create('', 'http://localhost/page#section');
+    const win = create(undefined, 'http://localhost/page#section');
     const setLocationHash = mock((targetWindow: Window, hash: string) => {
       targetWindow.location.hash = hash;
     });
@@ -247,7 +249,7 @@ describe('top', () => {
   });
 
   test('onclick uses replaceState when no hash', () => {
-    const win = create('', 'http://localhost/page');
+    const win = create(undefined, 'http://localhost/page');
     mount(win);
 
     const link = win.document.querySelector('a.button') as HTMLAnchorElement;
@@ -275,7 +277,7 @@ describe('top', () => {
 
   test('onclick resets toc scroll position when toc exists', () => {
     const dom = new JSDOM(
-      `<body><nav class="toc" style="overflow:auto"></nav></body>`,
+      `<body>${TO_TOP_CONTAINER}<nav class="toc" style="overflow:auto"></nav></body>`,
       { url: 'http://localhost/' },
     );
     const win = dom.window;

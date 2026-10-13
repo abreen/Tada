@@ -279,6 +279,42 @@ describe('header title', () => {
     );
   });
 
+  test('rolls the title in a header without a nav', () => {
+    const win = new JSDOM(
+      `<body><header><div class="header-brand">
+        <span class="header-title">
+          <span class="header-title-reel">
+            <span class="site-title">Site</span>
+            <span class="header-page-title" aria-hidden="true">First</span>
+          </span>
+        </span>
+      </div></header><div class="container">${markdownHeading}</div></body>`,
+    ).window as unknown as Window & typeof globalThis;
+    cleanup = mount(win);
+
+    expect(observed).toEqual([
+      win.document.querySelector('.title-and-info')!,
+      win.document.querySelector('.title-and-info h1')!,
+    ]);
+
+    swapHeaderTitle(parse(`<body>${headerHtml('Second')}</body>`));
+    expect(win.document.querySelector('.header-page-title')!.textContent).toBe(
+      'Second',
+    );
+  });
+
+  test('mounts a static header that shows only the site title', () => {
+    const win = new JSDOM(
+      `<body><header><div class="header-brand">
+        <span class="header-title"><span class="site-title">Site</span></span>
+      </div></header><div class="container">${markdownHeading}</div></body>`,
+    ).window as unknown as Window & typeof globalThis;
+    cleanup = mount(win);
+
+    expect(observed).toEqual([]);
+    expect(() => swapHeaderTitle(parse('<body></body>'))).not.toThrow();
+  });
+
   test('does nothing without the title markup', () => {
     const win = create();
     cleanup = mount(win);

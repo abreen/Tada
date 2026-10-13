@@ -23,8 +23,8 @@ supported extensions. For example, site development config can live in
 
 Selection rules:
 
-- `site.dev`, `site.prod`, and `nav` are required
-- `authors` is optional
+- `site.dev` and `site.prod` are required
+- `nav` and `authors` are optional
 - if no required variant exists, the build fails
 - if more than one variant exists for the same logical config name, the build
   fails

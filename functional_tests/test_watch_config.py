@@ -225,22 +225,28 @@ class TestWatchConfigFileDetection:
         assert 'Docs' in after_html
         assert after_html != before_html
 
-    def test_deleting_nav_yaml_triggers_error_then_restore_recovers(self, watch, site_dir):
+    def test_deleting_nav_yaml_removes_menu_then_restore_recovers(self, watch, site_dir):
         index_html = site_dir / 'dist' / 'index.html'
         before_html = index_html.read_text()
+        assert '<details' in before_html
 
         nav_path = site_dir / NAV_CONFIG_FILE
         nav_backup = nav_path.read_text()
+        before_mtime = index_html.stat().st_mtime
         nav_path.unlink()
 
-        watch.wait_for_error()
+        watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
         assert watch.proc.poll() is None
+        without_nav_html = index_html.read_text()
+        assert '<details' not in without_nav_html
+        assert 'class="header-brand"' in without_nav_html
 
+        before_mtime = index_html.stat().st_mtime
         nav_path.write_text(nav_backup)
-        watch.wait_for_successful_rebuild()
+        watch.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
         assert index_html.read_text() == before_html
 
-    def test_missing_nav_yaml_at_start_then_create_recovers(self, tmp_path):
+    def test_missing_nav_yaml_at_start_then_create_adds_menu(self, tmp_path):
         site_dir = init_site(tmp_path, bare=True)
 
         nav_path = site_dir / NAV_CONFIG_FILE
@@ -250,14 +256,15 @@ class TestWatchConfigFileDetection:
         wp = WatchProcess(site_dir)
         try:
             wp.wait_for_initial_build()
-            assert not (site_dir / 'dist' / 'index.html').exists()
+            index_html = site_dir / 'dist' / 'index.html'
+            assert '<details' not in index_html.read_text()
             assert wp.proc.poll() is None
 
+            before_mtime = index_html.stat().st_mtime
             nav_path.write_text(nav_backup)
 
-            index_html = site_dir / 'dist' / 'index.html'
-            wp.wait_for_rebuild(index_html, 'exists')
-            assert index_html.exists()
+            wp.wait_for_rebuild(index_html, 'modified', before_mtime=before_mtime)
+            assert '<details' in index_html.read_text()
         finally:
             wp.stop()
 

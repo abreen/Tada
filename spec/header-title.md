@@ -2,6 +2,10 @@
 
 The collapsed header shows the site title next to the logo. Once the visitor
 scrolls past the page heading, the header shows the page title in its place.
+This applies to every fixed header, with or without a nav. A static header (no
+nav and no search; see
+[Navigation](navigation.md#without-a-nav-file)) scrolls away with the page and
+shows only the site title.
 
 ## Scrolling
 
@@ -36,15 +40,17 @@ and in-place refreshes, switch immediately.
 
 ## Rendering
 
-Both titles are rendered at build time in the navigation summary. The page
+Both titles are rendered at build time in the navigation summary, or in the
+`.header-brand` element when the site has no nav. The page
 title uses the same formatted HTML as the page's `h1` (`page.titleHtml`), so
 code page titles appear in a `<code>` element in the monospace font, and inline
 code in Markdown titles does too. Code in the header title has no inline code
 background or padding, matching the file title heading on code pages. Both
-titles truncate with an ellipsis to the width left by the header controls. The whole title area is hidden from assistive
+titles truncate with an ellipsis to the width left by the header controls. With a nav, the whole title area is hidden from assistive
 technology; the summary keeps its "Toggle site navigation" label, and clicking
 either title still toggles the navigation. Hovering the summary underlines the
-title that is showing.
+title that is showing. Without a nav, only the page title is hidden from
+assistive technology, and the title has no hover effect.
 
 ## Without JavaScript
 

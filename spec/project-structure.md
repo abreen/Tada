@@ -5,8 +5,8 @@ A Tada site has this layout:
 ```
 site.dev.yaml         Development config
 site.prod.yaml        Production config
-nav.yaml              Navigation links
-authors.yaml          Author metadata
+nav.yaml              Navigation links (optional)
+authors.yaml          Author metadata (optional)
 content/              Pages and assets
   index.md            Home page (required)
   ...

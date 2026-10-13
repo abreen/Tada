@@ -14,10 +14,11 @@ const SHOW_AFTER_FRACTION = 0.25;
 const LATENCY_MS = 50;
 
 export default (window: Window) => {
-  const mountParent =
-    (window.document.getElementById(
-      'to-top-container',
-    ) as HTMLElement | null) ?? window.document.body;
+  // A static header (no nav or search) scrolls away, so it has no container
+  const mountParent = window.document.getElementById('to-top-container');
+  if (!mountParent) {
+    return;
+  }
 
   function createLink(parent: HTMLElement): HTMLAnchorElement {
     const link = window.document.createElement('a');

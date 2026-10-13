@@ -21,5 +21,17 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
     },
+    {
+      command: 'bun run playwright/serve-no-nav-site.ts --coverage',
+      url: 'http://localhost:8083/index.html',
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: 'bun run playwright/serve-no-nav-site.ts --no-search --coverage',
+      url: 'http://localhost:8084/index.html',
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
   ],
 });
