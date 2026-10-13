@@ -1,0 +1,4 @@
+title: Leaflet
+symbol: MAP
+base: http://localhost:8080
+themeColor: darkturquoise

@@ -1,0 +1,12 @@
+{
+  "name": "tada-leaflet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  }
+}

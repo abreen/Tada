@@ -1,0 +1,6 @@
+$border-width: 4px;
+
+@mixin colored($color) {
+  border-left-color: $color;
+  background: color-mix(in srgb, $color 12%, transparent);
+}

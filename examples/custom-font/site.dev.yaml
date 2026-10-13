@@ -1,0 +1,11 @@
+title: Custom Font
+symbol: AA
+base: http://localhost:8080
+themeColor: darkturquoise
+defaultFont: serif
+fontOverrides:
+  serif:
+    regular: npm:@fontsource/literata/files/literata-latin-400-normal.woff2
+    italic: npm:@fontsource/literata/files/literata-latin-400-italic.woff2
+    bold: npm:@fontsource/literata/files/literata-latin-700-normal.woff2
+    boldItalic: npm:@fontsource/literata/files/literata-latin-700-italic.woff2

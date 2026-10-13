@@ -1,0 +1,21 @@
+// Tada's CSS custom properties, such as --theme-color, match the site theme
+@use 'callout';
+
+.callout {
+  padding: 0.5em 1em;
+  border-left: callout.$border-width solid;
+  border-radius: var(--border-radius);
+  @include callout.colored(var(--theme-color));
+
+  &.warning {
+    @include callout.colored(orange);
+  }
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}

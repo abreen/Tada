@@ -1,0 +1,5 @@
+title: Custom Sass
+symbol: CSS
+base: http://localhost:8080
+themeColor: darkturquoise
+scripts: [styles.ts]
