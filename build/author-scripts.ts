@@ -33,6 +33,9 @@ const SCRIPT_PATH_ERROR =
 const NPM_SCRIPT_ERROR =
   'must name an npm package, such as npm:name or npm:@scope/name/path';
 
+const OUTSIDE_SRC_SCRIPT_ERROR =
+  'its real path is outside src/, such as through a symbolic link; listed scripts must be in src/';
+
 /**
  * Starts the names of package scripts' entry modules, which Tada writes in
  * memory at the top of `src/`
@@ -460,7 +463,13 @@ export async function bundleAuthorScripts(
       packageEntries.set(entryPath, renderPackageEntry(script));
       scriptByRealPath.set(entryPath, script);
     } else {
-      scriptByRealPath.set(realPath(entryPath), script);
+      // Checked before building, since only some Bun versions name the
+      // output of such a script outside _scripts/
+      const entryRealPath = realPath(entryPath);
+      if (!isInside(realPath(srcDir), entryRealPath)) {
+        throw new Error(`src/${script}: ${OUTSIDE_SRC_SCRIPT_ERROR}`);
+      }
+      scriptByRealPath.set(entryRealPath, script);
     }
   }
   const isDev = mode === 'development';
@@ -508,15 +517,15 @@ export async function bundleAuthorScripts(
   // Entry points are reported relative to the working directory
   const scriptFor = (entryPoint: string) =>
     scriptByRealPath.get(realPath(path.resolve(entryPoint)));
-  // Bun names outputs by real paths, so a script in a directory that links
-  // outside src/ would be written outside _scripts/
+  // A backstop: Bun names outputs by real paths, so a file that links outside
+  // src/ could be written outside _scripts/
   for (const [outputPath, output] of Object.entries(
     result.metafile?.outputs ?? {},
   )) {
     if (!normalizeBundlePath(outputPath).startsWith(`${AUTHOR_SCRIPTS_DIR}/`)) {
       const script = output.entryPoint && scriptFor(output.entryPoint);
       throw new Error(
-        `${script ? `src/${script}` : outputPath}: its real path is outside src/, such as through a symbolic link; listed scripts must be in src/`,
+        `${script ? `src/${script}` : outputPath}: ${OUTSIDE_SRC_SCRIPT_ERROR}`,
       );
     }
   }

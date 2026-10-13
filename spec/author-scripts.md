@@ -39,8 +39,9 @@ fails the build, for example
 `src/lectures/clock.ts: "../../content/data.json" is outside src/`, since watch
 mode would not notice changes to it. `src/` and directories in it may be symbolic links, but a listed
 script's real path must be inside `src/`: Bun names compiled files by real
-paths, so a script reached through a link to a directory outside `src/` fails
-the build, for example `src/shared/clock.ts: its real path is outside src/`.
+paths, which depending on its version can lead outside `_scripts/`, so a script
+reached through a link to a directory outside `src/` fails the build before
+compiling, for example `src/shared/clock.ts: its real path is outside src/`.
 
 A script can import code, stylesheets, and JSON, TOML, YAML, or text files,
 whose contents become part of the bundle. Importing any other file, such as an
