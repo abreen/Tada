@@ -138,6 +138,10 @@ class TestInitBare:
         all_files = [f for f in content_dir.rglob('*') if f.is_file()]
         assert len(all_files) == 1
 
+    def test_home_page_uses_delimited_front_matter(self, site_dir):
+        text = (site_dir / 'content' / 'index.md').read_text()
+        assert text.startswith('---\ntitle: Home\n---\n\n')
+
     def test_writes_no_script_tooling(self, site_dir):
         # A tsconfig.json for a missing src/ directory makes tsc report errors
         assert not (site_dir / 'package.json').exists()
