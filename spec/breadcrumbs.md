@@ -18,7 +18,9 @@ other pages. The current item uses the plain-text `title`, while the existing
 heading retains its inline Markdown formatting. Missing or empty lists render
 no breadcrumb navigation.
 
-Each entry requires a nonempty string `label` and `url`.
+Each entry requires a nonempty string `label` and `url`. A nonempty list
+requires the page to have a `title`, which only the home page may omit (see
+[Front Matter](front-matter.md#home-page-without-a-title)).
 [Site variables](variables.md) in labels and URLs are substituted before
 validation. Labels render as escaped plain text, without Markdown formatting.
 Malformed lists or entries fail the build with a file-specific diagnostic that

@@ -95,3 +95,25 @@ test.describe('header without a nav or search', () => {
     expect(top).toBeLessThan(40);
   });
 });
+
+for (const [mode, site] of [
+  ['with search', SEARCH_SITE],
+  ['without search', STATIC_SITE],
+] as const) {
+  test(`the logo and site title link to the home page ${mode}`, async ({
+    page,
+  }) => {
+    await page.goto(`${site}/other.html`);
+
+    const homeLink = page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Tada', exact: true });
+    await expect(homeLink).toHaveAttribute('href', '/index.html');
+    await homeLink.click();
+
+    await expect(page).toHaveURL(`${site}/index.html`);
+    await expect(
+      page.getByRole('heading', { name: 'Long Page' }),
+    ).toBeVisible();
+  });
+}

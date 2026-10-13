@@ -30,7 +30,11 @@ let restore: () => void;
 
 function heading(page: Record<string, unknown>) {
   return render('_heading.html', {
-    page: { titleHtml: 'Recovered heading', ...page },
+    page: {
+      title: 'Recovered heading',
+      titleHtml: 'Recovered heading',
+      ...page,
+    },
     ...createTemplateGlobals(page, site, 'index'),
   });
 }

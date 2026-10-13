@@ -8,7 +8,7 @@ site.prod.yaml        Production config
 nav.yaml              Navigation links (optional)
 authors.yaml          Author metadata (optional)
 content/              Pages and assets
-  index.md            Home page (required)
+  index.md            Home page (required; or index.html)
   ...
 public/               Static files copied to output as-is
 src/                  Scripts and styles compiled with the site (optional)
@@ -17,7 +17,9 @@ tsconfig.json         TypeScript settings for src/ (optional)
 ```
 
 The `content/` directory contains pages (Markdown, HTML, or source code files)
-and assets (images, PDFs, etc.). Processed files become HTML pages; everything
+and assets (images, PDFs, etc.). It must contain a home page, `index.md` or
+`index.html`, or the build fails (see
+[Build errors](build-pipeline.md#build-errors)). Processed files become HTML pages; everything
 else is copied unchanged. The `public/` directory is also copied to the output
 root. The optional `src/` directory holds the site's own TypeScript,
 JavaScript, and Sass. Pages list scripts from it in front matter, and Tada

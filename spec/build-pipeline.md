@@ -29,7 +29,11 @@ A build stops when any of these happen. The rules are the same for
 1. **Config error.** `site.*`, `nav.*`, or `authors.*` is missing (when
    required), exists in more than one format, can't be parsed, or fails
    validation. This includes `logo`, `favicon`, and `fontOverrides` files that
-   are missing from `public/` or invalid.
+   are missing from `public/` or invalid. It also includes a missing home
+   page: `content/index.md` or `content/index.html` must render the root
+   `index.html`. A skipped page or a file in `public/` does not count. Search
+   indexing starts at the home page, and the header links to it when there is
+   no nav.
 2. **Output conflict.** Two sources would write the same output path. Sources
    are files in `content/` and `public/`, plus the files Tada generates: CSS and
    JavaScript bundles, bundled fonts, `katex/`, `pagefind/`, favicons and

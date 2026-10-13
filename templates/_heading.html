@@ -1,3 +1,4 @@
+<% if (page.title || page.published || page.author) { %>
 <div class="title-and-info" data-pagefind-body>
   <% if (page.breadcrumbs && page.breadcrumbs.length) { %>
   <nav class="breadcrumbs" aria-label="Breadcrumb" data-pagefind-ignore>
@@ -15,7 +16,9 @@
     </ol>
   </nav>
   <% } %>
+  <% if (page.title) { %>
   <h1 data-pagefind-weight="10" data-pagefind-meta="title_html[data-title-html]" data-title-html="<%- page.titleHtml %>"><%= page.titleHtml %></h1>
+  <% } %>
 
   <div class="info" data-pagefind-ignore>
     <% if (page.published) { %>
@@ -30,3 +33,4 @@
     <% } %>
   </div>
 </div>
+<% } %>

@@ -1,3 +1,5 @@
+import re
+
 from conftest import (
     AUTHORS_CONFIG_FILE,
     NAV_CONFIG_FILE,
@@ -9,6 +11,9 @@ from conftest import (
     set_site_config,
     write_structured_file,
 )
+
+# Without a nav, the logo and site title link to the home page
+HOME_LINK_PATTERN = re.compile(r'<a class="header-brand" href="/index\.html"[ >]')
 
 
 def rewrite_config_variant(site_dir, old_name, new_name):
@@ -208,7 +213,7 @@ class TestConfigFileErrors:
         html = (site / 'dist' / 'index.html').read_text()
         assert '<details' not in html
         assert 'menu-icon' not in html
-        assert 'class="header-brand"' in html
+        assert HOME_LINK_PATTERN.search(html)
         assert 'class="search quick-search"' in html
         assert 'static-header' not in html
 
@@ -221,7 +226,7 @@ class TestConfigFileErrors:
         assert result.returncode == 0, f'dev build failed: {result.stderr}'
         html = (site / 'dist' / 'index.html').read_text()
         assert '<details' not in html
-        assert 'class="header-brand"' in html
+        assert HOME_LINK_PATTERN.search(html)
 
     def test_missing_nav_config_without_search_builds_static_header(self, tmp_path):
         site = init_site(tmp_path, bare=True)
@@ -236,4 +241,4 @@ class TestConfigFileErrors:
         assert 'class="static-header"' in html
         assert 'header-controls' not in html
         assert 'to-top-container' not in html
-        assert 'class="header-brand"' in html
+        assert HOME_LINK_PATTERN.search(html)

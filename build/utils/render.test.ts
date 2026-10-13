@@ -1540,3 +1540,53 @@ describe('renderCopiedContentAsset', () => {
     );
   });
 });
+
+describe('home page title', () => {
+  const contentDir = '/virtual/content';
+
+  test('may be omitted on the root index.md', () => {
+    renderMarkdownPage({
+      contentDir,
+      relativePath: 'index.md',
+      source: '---\n---\n\nWelcome\n',
+    });
+
+    expect(renderedPageVariables.title).toBeUndefined();
+    expect(renderedPageVariables.titleHtml).toBeUndefined();
+  });
+
+  test('may be omitted on a root index.html content page', () => {
+    renderMarkdownPage({
+      contentDir,
+      relativePath: 'index.html',
+      source: '---\n---\n\n<p>Welcome</p>\n',
+    });
+
+    expect(renderedPageVariables.title).toBeUndefined();
+  });
+
+  test.each(['docs/index.md', 'page.md'])(
+    'is still required on %s',
+    relativePath => {
+      expect(() =>
+        renderMarkdownPage({
+          contentDir,
+          relativePath,
+          source: '---\n---\n\nBody\n',
+        }),
+      ).toThrow('missing required front matter field: "title"');
+    },
+  );
+
+  test('is required on the home page when it has breadcrumbs', () => {
+    expect(() =>
+      renderMarkdownPage({
+        contentDir,
+        relativePath: 'index.md',
+        source:
+          '---\nbreadcrumbs:\n  - label: Docs\n    url: /docs/index.html\n---\n\nBody\n',
+        validInternalTargets: new Set(['/docs/index.html']),
+      }),
+    ).toThrow('index.md: front matter "breadcrumbs" requires a "title"');
+  });
+});

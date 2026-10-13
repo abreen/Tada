@@ -85,7 +85,7 @@ describe('_top.html template', () => {
       expect(html).not.toContain('<summary');
       expect(html).not.toContain('menu-icon');
       expect(html).toMatch(
-        /<div class="header-brand">\s*<span class="header-title">\s*<span class="header-title-reel">\s*<span class="site-title">Test site<\/span>\s*<span class="header-page-title" aria-hidden="true">Page<\/span>/,
+        /<a class="header-brand" href="\/index.html">\s*<span class="header-title">\s*<span class="header-title-reel">\s*<span class="site-title">Test site<\/span>\s*<span class="header-page-title" aria-hidden="true">Page<\/span>/,
       );
       expect(html).toContain('name="quick-search"');
       expect(html).toContain('id="to-top-container"');
@@ -105,7 +105,7 @@ describe('_top.html template', () => {
       expect(html).not.toContain('header-title-reel');
       expect(html).not.toContain('header-page-title');
       expect(html).toMatch(
-        /<div class="header-brand">\s*<span class="header-title">\s*<span class="site-title">Test site<\/span>\s*<\/span>\s*<\/div>/,
+        /<a class="header-brand" href="\/index.html">\s*<span class="header-title">\s*<span class="site-title">Test site<\/span>\s*<\/span>\s*<\/a>/,
       );
     });
   });
@@ -119,6 +119,25 @@ describe('_top.html template', () => {
     expect(html).toContain('id="to-top-container"');
     expect(html).not.toContain('header-brand');
     expect(html).not.toContain('quick-search-results');
+  });
+
+  test('uses the site title alone for a page without a title', () => {
+    const html = renderTopTemplate({
+      site: {
+        defaultFont: 'sans',
+        defaultContrast: 'standard',
+        features: { favicon: false, search: false },
+        title: 'Test site',
+        titlePostfix: ' - Test site',
+      },
+      page: { template: 'default' },
+      tadaVersion: '0.0.0',
+      isWatchMode: true,
+      speculationRulesHrefMatches: '/*',
+    });
+
+    expect(html).toContain('<title>Test site</title>');
+    expect(html).toContain('<meta property="og:title" content="Test site" />');
   });
 
   test('renders the formatted page title like the h1', () => {

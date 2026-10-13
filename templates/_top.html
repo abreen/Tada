@@ -35,12 +35,12 @@
     <% if (page.description) { %>
     <meta name="description" content="<%- page.description %>" />
     <% } %>
-    <meta property="og:title" content="<%- page.title %>" />
+    <meta property="og:title" content="<%- page.title || site.title %>" />
     <% if (page.author) { %>
     <meta name="author" content="<%- page.author.name %>" />
     <meta property="og:author" content="<%- page.author.name %>" />
     <% } %>
-    <title><%- page.title %><%- site.titlePostfix %></title>
+    <title><% if (page.title) { %><%- page.title %><%- site.titlePostfix %><% } else { %><%- site.title %><% } %></title>
     <script>
       (() => {
       document.documentElement.classList.add('js');
@@ -227,9 +227,9 @@
         </div>
       </details>
       <% } else { %>
-      <div class="header-brand">
+      <a class="header-brand" href="/index.html">
         <%= render('_header-brand.html') %>
-      </div>
+      </a>
       <% } %>
     </header>
     <div class="container">

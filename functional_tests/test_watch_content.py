@@ -258,6 +258,20 @@ class TestWatchRemoveContent:
         watch.wait_for_rebuild(dist_asset, 'exists')
         assert dist_asset.read_bytes() == b'public-version'
 
+    def test_removing_home_page_reports_error_then_restore_recovers(self, watch, site_dir):
+        index_md = site_dir / 'content' / 'index.md'
+        index_backup = index_md.read_text()
+        index_md.unlink()
+
+        watch.wait_for_error()
+        assert watch.proc.poll() is None
+        output = watch.stdout_log_path.read_text()
+        assert 'content/index.md or content/index.html is required' in output
+
+        index_md.write_text(index_backup)
+        watch.wait_for_successful_rebuild()
+        assert (site_dir / 'dist' / 'index.html').exists()
+
 
 class TestWatchPublicFiles:
     """Editing/adding a file to public/ triggers a build."""

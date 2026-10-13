@@ -107,3 +107,23 @@ describe('breadcrumb trail', () => {
     },
   );
 });
+
+describe('untitled page heading', () => {
+  test('renders nothing for a page without a title, date, or author', () => {
+    const html = renderHeading({ page: {} });
+
+    expect(html.trim()).toBe('');
+  });
+
+  test('renders the date without a heading for an untitled page', () => {
+    const html = renderHeading({
+      page: { published: '2026-01-02' },
+      isoDate: () => '2026-01-02',
+      readableDate: () => 'January 2, 2026',
+    });
+
+    expect(html).toContain('<div class="title-and-info" data-pagefind-body>');
+    expect(html).toContain('January 2, 2026');
+    expect(html).not.toContain('<h1');
+  });
+});

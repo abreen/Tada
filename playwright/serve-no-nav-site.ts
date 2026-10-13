@@ -57,7 +57,12 @@ const paragraphs = Array.from(
 ).join('\n\n');
 writeFileSync(
   path.join(siteDir, 'content', 'index.md'),
-  `---\ntitle: Long Page\n---\n\n${paragraphs}\n\n## Target\n\nThe fragment target.\n\n${paragraphs}\n`,
+  `---\ntitle: Long Page\n---\n\n[Other page](/other.html)\n\n${paragraphs}\n\n## Target\n\nThe fragment target.\n\n${paragraphs}\n`,
+);
+
+writeFileSync(
+  path.join(siteDir, 'content', 'other.md'),
+  '---\ntitle: Other Page\n---\n\n[Home](/index.html)\n',
 );
 
 await runTada(['dev']);

@@ -9,7 +9,8 @@ Only pages reachable from the home page are indexed. Reachability is determined
 by traversal of internal `<a href>` links in generated HTML
 pages, starting from `index.html`.
 If a page is not reachable from `index.html`, it is not included in search
-results.
+results. A home page without a title is listed under the site title (see
+[Front Matter](front-matter.md#home-page-without-a-title)).
 
 PDF files in `content/` that are linked from reachable pages are also indexed.
 Linked files copied from `public/` are not added to the search index. Text is

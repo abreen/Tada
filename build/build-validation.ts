@@ -64,6 +64,25 @@ function projectRelative(scan: TadaProjectScan, sourcePath: string): string {
   return toPosix(path.relative(path.dirname(scan.contentDir), sourcePath));
 }
 
+/**
+ * The home page is where search indexing starts, and the header links to it
+ * when there is no nav, so a content page must render the root index.html.
+ */
+export function validateHomePage(scan: TadaProjectScan): BuildDiagnostic[] {
+  for (const sourcePath of scan.outputProducers.get('index.html') ?? []) {
+    const entry = scan.sources.get(sourcePath);
+    if (entry?.kind === 'content' && entry.renderKind === 'plain-text-page') {
+      return [];
+    }
+  }
+  return [
+    {
+      message:
+        'content/index.md or content/index.html is required: it is the home page',
+    },
+  ];
+}
+
 export function validateConfig(
   scan: TadaProjectScan,
   siteVariables: SiteVariables,
@@ -85,6 +104,7 @@ export function validateConfig(
       findScriptProblem(script, getSrcDir(), getProjectDir()),
     ),
   ]);
+  diagnostics.push(...validateHomePage(scan));
   for (const outputPath of assertNoOutputPathConflicts(scan)) {
     const sources = [...scan.outputProducers.get(outputPath)!]
       .map(sourcePath => projectRelative(scan, sourcePath))

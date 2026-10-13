@@ -61,16 +61,16 @@ class TestMissingFrontMatter:
     """Tests for required front matter field validation."""
 
     def test_missing_title_fails_build(self, site_dir):
-        """A markdown page without a title field should fail the build."""
-        (site_dir / 'content' / 'index.md').write_text('Some content.\n')
+        """A markdown page other than the home page needs a title field."""
+        (site_dir / 'content' / 'about.md').write_text('Some content.\n')
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode != 0
         output = (result.stdout + result.stderr).lower()
         assert 'title' in output
 
     def test_empty_title_fails_build(self, site_dir):
-        """A page with an empty title should fail the build."""
-        (site_dir / 'content' / 'index.md').write_text('---\ntitle:\n---\n\nSome content.\n')
+        """A page other than the home page with an empty title should fail the build."""
+        (site_dir / 'content' / 'about.md').write_text('---\ntitle:\n---\n\nSome content.\n')
         result = run_tada('dev', cwd=str(site_dir))
         assert result.returncode != 0
 

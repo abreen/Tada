@@ -4,7 +4,9 @@ import shutil
 import pytest
 from conftest import (
     PACKAGE_DIR,
+    SITE_DEV_CONFIG_FILE,
     assert_charset_declared_first,
+    load_structured_file,
     parse_head_metadata,
     run_tada,
     set_site_config,
@@ -439,8 +441,45 @@ class TestPageMetadataText:
         assert sorted(head.meta_attrs['og:title']) == ['content', 'property']
         assert sorted(head.meta_attrs['description']) == ['content', 'name']
 
+    def test_home_page_without_title_uses_site_title_and_omits_heading(self, site_dir):
+        (site_dir / 'content' / 'index.md').write_text('---\n---\n\nWelcome home.\n')
+        result = run_tada('dev', cwd=str(site_dir))
+        assert result.returncode == 0, result.stdout + result.stderr
+
+        html = (site_dir / 'dist' / 'index.html').read_text()
+        head = parse_head_metadata(html)
+        site_title = load_structured_file(site_dir / SITE_DEV_CONFIG_FILE)['title']
+        assert head.title == site_title
+        assert head.meta['og:title'] == site_title
+        assert 'title-and-info' not in html
+        assert '<h1' not in html
+        assert 'Welcome home.' in html
+
 
 class TestDevBuildErrors:
+    @pytest.mark.parametrize('replacement', [None, 'public/index.html'])
+    def test_missing_home_page_fails(self, site_dir, replacement):
+        (site_dir / 'content' / 'index.md').unlink()
+        (site_dir / 'content' / 'about.md').write_text('---\ntitle: About\n---\n\nAbout.\n')
+        if replacement:
+            (site_dir / replacement).write_text('<p>Hand-written home</p>\n')
+
+        result = run_tada('dev', cwd=str(site_dir))
+        output = result.stdout + result.stderr
+        assert result.returncode == 1
+        assert 'content/index.md or content/index.html is required: it is the home page' in output
+
+    @pytest.mark.parametrize('page_path', ['about.md', 'docs/index.md'])
+    def test_page_other_than_home_page_requires_title(self, site_dir, page_path):
+        page = site_dir / 'content' / page_path
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text('---\n---\n\nNo title.\n')
+
+        result = run_tada('dev', cwd=str(site_dir))
+        output = result.stdout + result.stderr
+        assert result.returncode == 1
+        assert 'missing required front matter field: "title"' in output
+
     def test_missing_config_exits_1(self, tmp_path):
         result = run_tada('dev', cwd=str(tmp_path))
         assert result.returncode == 1

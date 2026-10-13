@@ -82,10 +82,15 @@ index page exists, the build reports its expected path in the error.
 
 A site may omit the nav file. An empty nav array is treated the same way. The
 header then has no `<details>` element, menu icon, or navigation wash: a
-`.header-brand` element shows the logo and site title instead of the summary,
-and the title is not hidden from assistive technology since no summary label
-replaces it. Neither the logo nor the title is a link. Adding or deleting the
-nav file in watch mode rebuilds every page with the matching header.
+`.header-brand` link to the home page (`/index.html`, with `basePath` applied)
+shows the logo and site title instead of the summary. It is the way back to
+the home page, which may have no title of its own (see
+[Front Matter](front-matter.md#home-page-without-a-title)). The site title is
+the link's accessible name; the decorative logo and any page title are hidden
+from assistive technology. Like the summary, hovering it underlines the title
+that is showing, and it follows client-side navigation like other internal
+links. Adding or deleting the nav file in watch mode rebuilds every page with
+the matching header.
 
 When search is enabled, the header stays fixed at the top of the viewport. The
 search field and back-to-top button keep their places in the trailing controls

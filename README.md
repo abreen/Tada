@@ -429,7 +429,7 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 
 | Field | Description |
 |-------|-------------|
-| `title` (required) | Page title (`<title>` tag and page heading) |
+| `title` (required) | Page title (`<title>` tag and page heading); optional on the home page (`content/index.md`), which then has no heading |
 | `skip` | Set to `true` to skip building this page completely |
 | `author` | Author handle (e.g. `jsmith`) resolved to a full object via the authors config |
 | `description` | Meta description for the page |

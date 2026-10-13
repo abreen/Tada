@@ -17,7 +17,8 @@ moving the site title out the top while the page title enters from the bottom.
 Scrolling back up rolls the reel down once the `h1` is entirely below the
 header again. Between those points, while the `h1` is partly hidden but the
 info line is still visible, the header keeps whichever title it is showing, so
-the title does not flicker. Pages without a heading block show the site title.
+the title does not flicker. Pages without a heading block, such as a home page
+without a title, show the site title.
 
 The roll is a 300ms `transform` transition with `cubic-bezier(0.2, 0, 0, 1)`.
 The window's top and bottom edges are feathered with a gradient mask, so a
@@ -49,8 +50,9 @@ background or padding, matching the file title heading on code pages. Both
 titles truncate with an ellipsis to the width left by the header controls. With a nav, the whole title area is hidden from assistive
 technology; the summary keeps its "Toggle site navigation" label, and clicking
 either title still toggles the navigation. Hovering the summary underlines the
-title that is showing. Without a nav, only the page title is hidden from
-assistive technology, and the title has no hover effect.
+title that is showing. Without a nav, the title area is a link to the home page
+whose accessible name is the site title; only the page title is hidden from
+assistive technology. Hovering it underlines the title that is showing.
 
 ## Without JavaScript
 

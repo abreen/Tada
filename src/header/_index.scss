@@ -57,12 +57,34 @@ header > .header-brand {
   min-width: 0;
 }
 
-// Without a nav, the logo and title stand alone in place of the summary
+// Without a nav, the logo and title link to the home page in place of the
+// summary. Like the summary, hovering underlines the title that is showing.
 header > .header-brand {
   display: flex;
   align-items: center;
   height: var(--header-collapsed-height);
   padding-left: var(--gap);
+  color: inherit;
+
+  &:active {
+    color: inherit;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      color: inherit;
+      text-decoration-line: none;
+    }
+
+    &:hover .site-title,
+    &:hover .header-page-title {
+      @include link-underline;
+    }
+  }
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
 }
 
 header details summary {

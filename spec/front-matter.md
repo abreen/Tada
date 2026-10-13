@@ -46,7 +46,8 @@ results; choose one per file.
 
 ## Fields
 
-- **title** (required): page title for `<title>` and the page heading
+- **title** (required, except on the home page): page title for `<title>` and
+  the page heading (see [Home page without a title](#home-page-without-a-title))
 - **author**: author handle, resolved against the authors config file
 - **description**: meta description
 - **published**: publication date, displayed below the title
@@ -109,3 +110,19 @@ applies to each breadcrumb entry's `label` and `url` before validation.
 Substitution cannot generate the YAML structure itself. A value that
 starts with a variable must be quoted, for example
 `title: "{{ courseName }} home"`; an unquoted one fails the build.
+
+## Home page without a title
+
+The site's home page (`content/index.md` or `content/index.html`, published as
+`/index.html`) may omit `title`. Every other page, including `index` pages in
+subdirectories, still fails the build without one. The home page still needs a
+front matter block, which may be empty (`---` on two lines): without the `---`
+line, the legacy format reads the page's first paragraph as front matter.
+
+Without a title, the page's `<title>` and `og:title` are the site title alone,
+without `titlePostfix`, and the page heading has no `<h1>`. The whole heading
+block (`.title-and-info`) is omitted unless the page has a `published` date or
+an `author`, which it still shows. `breadcrumbs` require a title, since the
+trail ends with it; a nonempty list without a title fails the build. In search
+results, the page is listed under the site title, which Pagefind takes from the
+`<title>` when a page has no `<h1>`.

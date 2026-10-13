@@ -202,18 +202,35 @@ function rejectReservedFrontMatterKeys(
   }
 }
 
+// Only the site's home page may omit its title (and so its heading)
+const HOME_PAGE_URL_PATH = '/index.html';
+
 function validateFrontMatter(
   pageVariables: Record<string, unknown>,
   filePath: string,
+  sourceUrlPath: string,
 ): void {
+  const isHomePage = sourceUrlPath === HOME_PAGE_URL_PATH;
   const missing = REQUIRED_FRONT_MATTER_FIELDS.filter(
-    field => !pageVariables[field],
+    field => !pageVariables[field] && !(isHomePage && field === 'title'),
   );
   if (missing.length > 0) {
     const noun = missing.length === 1 ? 'field' : 'fields';
     const fields = missing.map(f => `"${f}"`).join(', ');
     throw new Error(
       `${filePath}: missing required front matter ${noun}: ${fields}`,
+    );
+  }
+
+  // The breadcrumb trail ends with the page title
+  const breadcrumbs = pageVariables.breadcrumbs;
+  if (
+    !pageVariables.title &&
+    Array.isArray(breadcrumbs) &&
+    breadcrumbs.length > 0
+  ) {
+    throw new Error(
+      `${filePath}: front matter "breadcrumbs" requires a "title"`,
     );
   }
 }
@@ -633,7 +650,7 @@ function preparePageVariables({
   renderInlineField(frontMatterMd, pageVariables, 'title');
   renderInlineField(frontMatterMd, pageVariables, 'description');
 
-  validateFrontMatter(pageVariables, filePath);
+  validateFrontMatter(pageVariables, filePath, sourceUrlPath);
   resolveAuthor(pageVariables, filePath, dependencyCollector);
 
   const breadcrumbs = pageVariables.breadcrumbs;

@@ -4,8 +4,8 @@ The optional top-level `logo` string replaces the header's text `symbol` with an
 image rendered at build time. Navigation works with JavaScript disabled. The
 image is decorative (`alt=""`, `aria-hidden="true"`); the navigation summary
 retains its accessible name, “Toggle site navigation”. A site without a nav has
-no summary; the logo sits beside the site title in `.header-brand`, and the
-title remains the header's accessible text (see
+no summary; the logo sits beside the site title in the `.header-brand` home
+link, whose accessible name is the site title (see
 [Navigation](navigation.md#without-a-nav-file)).
 
 ```yaml
