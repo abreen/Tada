@@ -20,8 +20,9 @@ Favicon generation uses TTF fonts bundled with the package.
 ## Custom favicon
 
 Set top-level `favicon: branding/favicon.ico` to use an existing ICO file from
-`public/`. It follows the public-relative path rules described in [Header
-logo](logo.md) and must end in `.ico`. Tada checks existence and readability,
+`public/`, or from a package with an `npm:` path (see [Packages](packages.md)).
+It follows the path rules described in [Header logo](logo.md) and must end in
+`.ico`. Tada checks existence and readability,
 without decoding or converting the file, and copies its bytes unchanged.
 
 When enabled, a custom favicon emits one ICO link. It replaces all generated

@@ -36,6 +36,29 @@ describe('getScriptPathError', () => {
   test('rejects values that are not strings', () => {
     expect(getScriptPathError(3)).toBe('must be a string');
   });
+
+  test('accepts npm: paths with or without a path in the package', () => {
+    expect(getScriptPathError('npm:chart.js')).toBeNull();
+    expect(getScriptPathError('npm:tada-leaflet/heatmap')).toBeNull();
+    expect(getScriptPathError('npm:@scope/pkg')).toBeNull();
+  });
+
+  test('rejects malformed npm: paths', () => {
+    expect(getScriptPathError('npm:')).toBe(
+      'must name an npm package, such as npm:name or npm:@scope/name/path',
+    );
+    expect(getScriptPathError('npm:pkg/../x')).toBe(
+      'must name an npm package, such as npm:name or npm:@scope/name/path',
+    );
+  });
+
+  test('reserves the _npm~ prefix for packages', () => {
+    expect(getScriptPathError('_npm~x.ts')).toBe(
+      'must not start with _npm~, which Tada uses for packages',
+    );
+    expect(getScriptPathError('_npm/x.ts')).toBeNull();
+    expect(getScriptPathError('lib/_npm~x.ts')).toBeNull();
+  });
 });
 
 describe('getPageScripts', () => {
@@ -105,20 +128,40 @@ describe('getPageAuthorAssets', () => {
       getPageAuthorAssets(authorScripts, ['missing.ts'], 'content/a.md'),
     ).toThrow('content/a.md: script "missing.ts" not found in src/');
   });
+
+  test('reports why a script was not built', () => {
+    expect(() =>
+      getPageAuthorAssets(
+        { ...authorScripts, missing: new Map([['npm:pkg', 'is gone']]) },
+        ['npm:pkg'],
+        'content/a.md',
+      ),
+    ).toThrow('content/a.md: script "npm:pkg" is gone');
+  });
 });
 
 describe('validateSiteScripts', () => {
-  const exists = (script: string) => script === 'site.ts';
+  const findProblem = (script: string) =>
+    script === 'site.ts' || script === 'npm:pkg' ? null : 'is missing';
 
-  test('accepts scripts that exist in src/', () => {
-    expect(validateSiteScripts(['site.ts'], exists)).toEqual([]);
-    expect(validateSiteScripts(undefined, exists)).toEqual([]);
+  test('accepts scripts that can be found', () => {
+    expect(validateSiteScripts(['site.ts', 'npm:pkg'], findProblem)).toEqual(
+      [],
+    );
+    expect(validateSiteScripts(undefined, findProblem)).toEqual([]);
   });
 
   test('reports malformed and missing scripts', () => {
-    expect(validateSiteScripts(['/site.ts', 'gone.ts'], exists)).toEqual([
+    expect(
+      validateSiteScripts(
+        ['/site.ts', 'gone.ts', 'npm:Bad', 'npm:gone'],
+        findProblem,
+      ),
+    ).toEqual([
       'scripts[0] "/site.ts" must be a src-relative POSIX path ending in .ts or .js',
-      'scripts[1] "gone.ts" not found in src/',
+      'scripts[1] "gone.ts" is missing',
+      'scripts[2] "npm:Bad" must name an npm package, such as npm:name or npm:@scope/name/path',
+      'scripts[3] "npm:gone" is missing',
     ]);
   });
 });

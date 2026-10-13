@@ -34,6 +34,25 @@ test.describe('scripts from src/', () => {
     expect(await mountOrder(page)).toEqual(['site-wide', 'counter']);
   });
 
+  test('clean up in reverse order on leaving, site-wide scripts last', async ({
+    page,
+  }) => {
+    await page.goto('/author-modules.html');
+    await expect(page.locator('#module-marker')).toHaveText(
+      'mounted 1, evaluated 1',
+    );
+
+    await page.getByRole('link', { name: 'Back to the start page' }).click();
+    await expect(page).toHaveURL(/\/author-modules-start\.html$/);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { cleanupOrder?: string[] }).cleanupOrder,
+        ),
+      )
+      .toEqual(['counter', 'site-wide']);
+  });
+
   test('mount on every arrival and unmount on leaving, without reloading', async ({
     page,
   }) => {

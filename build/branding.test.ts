@@ -59,6 +59,35 @@ test('requires ICO and reports missing and unreadable assets', () => {
   ).toContain('favicon "icon.ico" could not be read');
 });
 
+test('validates branding assets from packages', () => {
+  const projectDir = path.dirname(publicDir);
+  const packageDir = path.join(projectDir, 'node_modules', 'brand');
+  const files = new Set([
+    path.join(packageDir, 'package.json'),
+    path.join(packageDir, 'logo.svg'),
+  ]);
+  const read: string[] = [];
+  const diagnostics = validateBranding(
+    { logo: 'npm:brand/logo.svg', favicon: 'npm:brand/icon.ico' },
+    {
+      publicDir,
+      publicFiles: new Set(),
+      packageFs: { isFile: file => files.has(file), realPath: file => file },
+      readFile: file => {
+        read.push(file);
+        return Buffer.from('asset');
+      },
+    },
+  );
+  expect(diagnostics).toEqual([
+    'favicon "npm:brand/icon.ico" does not exist in package "brand"',
+  ]);
+  expect(read).toEqual([path.join(packageDir, 'logo.svg')]);
+  expect(validate({ logo: 'npm:brand' })[0]).toBe(
+    'logo "npm:brand" must be a public-relative POSIX path or an npm: path',
+  );
+});
+
 test('schema accepts optional strings and rejects other types', async () => {
   const { compile } = await import('./json-schema');
   const { default: schema } = await import('../schema/site.schema.json');

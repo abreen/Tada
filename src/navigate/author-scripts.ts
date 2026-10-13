@@ -99,6 +99,10 @@ function startMount(
     if (typeof mount !== 'function') {
       throw new Error('default export is not a function');
     }
+    // Such as a library listed directly instead of a package that mounts it
+    if (Function.prototype.toString.call(mount).startsWith('class')) {
+      throw new Error('default export is a class, not a mount function');
+    }
     result = (mount as Mount)({ window, signal: controller.signal });
   } catch (err) {
     controller.abort();

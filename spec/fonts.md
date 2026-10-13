@@ -29,7 +29,8 @@ figures.
 
 The optional `fontOverrides.serif` and `fontOverrides.serifMono` configuration
 replace either serif family independently with licensed WOFF2 files from the
-site's `public/` directory. Each custom family requires a regular face and may add
+site's `public/` directory or from an installed font package, using `npm:`
+paths (see [Packages](packages.md)). Each custom family requires a regular face and may add
 italic, bold, and bold-italic faces. Tada declares these as fixed 400/700,
 normal/italic faces under internal family aliases. When a styled face is
 omitted, the browser may synthesize it. Source Serif 4 or Courier Prime stays
@@ -115,4 +116,4 @@ stylesheet, so the same output works at root and non-root base paths.
 
 Custom font files and their licenses belong to the site author. Tada only
 validates and publishes files explicitly placed in that site's `public/`
-directory.
+directory or named by an `npm:` path.

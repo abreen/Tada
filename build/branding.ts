@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { isValidPublicAssetPath } from './custom-fonts';
+import {
+  isValidConfigAssetPath,
+  resolveConfigAssetPath,
+  type PackageFileSystem,
+} from './packages';
 import type { SiteVariables } from './types';
 
 export function validateBranding(
@@ -8,6 +12,9 @@ export function validateBranding(
   options: {
     publicDir: string;
     publicFiles: ReadonlySet<string>;
+    /** Where packages are found; defaults to the parent of `publicDir` */
+    projectDir?: string;
+    packageFs?: PackageFileSystem;
     readFile?: (filePath: string) => Buffer;
   },
 ): string[] {
@@ -18,21 +25,24 @@ export function validateBranding(
       continue;
     }
     if (
-      !isValidPublicAssetPath(value) ||
+      !isValidConfigAssetPath(value) ||
       (field === 'favicon' && !value.endsWith('.ico'))
     ) {
       diagnostics.push(
-        `${field} "${value}" must be a public-relative POSIX path${field === 'favicon' ? ' ending in .ico' : ''}`,
+        `${field} "${value}" must be a public-relative POSIX path or an npm: path${field === 'favicon' ? ', ending in .ico' : ''}`,
       );
       continue;
     }
-    const absolutePath = path.resolve(options.publicDir, ...value.split('/'));
-    if (!options.publicFiles.has(absolutePath)) {
-      diagnostics.push(`${field} "${value}" does not exist in public/`);
+    const resolved = resolveConfigAssetPath(value, {
+      ...options,
+      projectDir: options.projectDir ?? path.dirname(options.publicDir),
+    });
+    if ('reason' in resolved) {
+      diagnostics.push(`${field} "${value}" ${resolved.reason}`);
       continue;
     }
     try {
-      (options.readFile ?? fs.readFileSync)(absolutePath);
+      (options.readFile ?? fs.readFileSync)(resolved.filePath);
     } catch {
       diagnostics.push(`${field} "${value}" could not be read`);
     }

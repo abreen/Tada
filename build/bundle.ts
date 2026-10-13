@@ -102,7 +102,7 @@ function createThemeImporter(themeScss: string): sass.Importer<'sync'> {
  * to fail the build.
  */
 export function createScssPlugin(
-  importers: sass.Importer<'sync'>[] = [],
+  importers: (sass.Importer<'sync'> | sass.NodePackageImporter)[] = [],
   checkLoaded?: (scssPath: string, loadedPaths: string[]) => void,
 ) {
   return {
@@ -140,8 +140,11 @@ export class BundleError extends Error {
   }
 }
 
+/** One message from Bun.build */
+export type BuildLog = Bun.BuildOutput['logs'][number];
+
 // Names the file and position of a build error, such as a syntax error
-function formatBuildLog(log: Bun.BuildOutput['logs'][number]): string {
+function formatBuildLog(log: BuildLog): string {
   const message = log.message || String(log);
   const position = 'position' in log ? log.position : null;
   if (!position?.file) {
@@ -153,14 +156,20 @@ function formatBuildLog(log: Bun.BuildOutput['logs'][number]): string {
     : `${position.file}: ${message}`;
 }
 
-/** Runs Bun.build and throws its errors as a BundleError */
+/**
+ * Runs Bun.build and throws its errors as a BundleError. `describeError` can
+ * replace the message of an error it recognizes.
+ */
 export async function runBuild(
   options: Parameters<typeof Bun.build>[0],
+  describeError: (log: BuildLog) => string | undefined = () => undefined,
 ): Promise<Bun.BuildOutput> {
   const result = await Bun.build({ ...options, throw: false });
   if (!result.success) {
     throw new BundleError(
-      result.logs.filter(log => log.level === 'error').map(formatBuildLog),
+      result.logs
+        .filter(log => log.level === 'error')
+        .map(log => describeError(log) ?? formatBuildLog(log)),
     );
   }
   return result;

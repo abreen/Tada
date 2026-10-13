@@ -14,7 +14,7 @@ import {
 } from './source-model';
 import { bundleAuthorScripts, type AuthorScripts } from './author-scripts';
 import { BundleError } from './bundle';
-import { getSrcDir } from './utils/paths';
+import { getProjectDir, getSrcDir } from './utils/paths';
 import {
   createContentRecord,
   createPublicRecord,
@@ -239,8 +239,8 @@ export function finishBuild({
 }
 
 /**
- * Compiles the scripts in `src/` that the site config and pages list, as
- * returned by getScriptEntries
+ * Compiles the scripts in `src/` and packages that the site config and pages
+ * list, as returned by getScriptEntries
  */
 export async function buildAuthorScripts(
   entries: string[],
@@ -251,7 +251,7 @@ export async function buildAuthorScripts(
   | { ok: false; diagnostics: BuildDiagnostic[] }
 > {
   if (entries.length > 0) {
-    log.info`Compiling ${entries.length} ${entries.length === 1 ? 'script' : 'scripts'} in src/`;
+    log.info`Compiling ${entries.length} ${entries.length === 1 ? 'script' : 'scripts'}`;
   }
   try {
     return {
@@ -259,6 +259,7 @@ export async function buildAuthorScripts(
       value: await bundleAuthorScripts(
         entries,
         getSrcDir(),
+        getProjectDir(),
         mode,
         siteVariables.basePath,
       ),

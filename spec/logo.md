@@ -11,7 +11,9 @@ favicon: branding/favicon.ico
 symbol: TADA
 ```
 
-Paths are relative to `public/`. Nested directories and spaces are supported,
+Paths are relative to `public/`, or name a file in an installed package with
+an `npm:` path, such as `npm:course-brand/logo.svg` (see
+[Packages](packages.md)). Nested directories and spaces are supported,
 and URLs encode each path segment and respect `basePath`. Absolute paths,
 backslashes, empty segments, `.` and `..` segments, queries, and fragments are
 rejected. Assets must exist and be readable. Logo formats are not restricted or

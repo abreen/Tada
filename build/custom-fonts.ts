@@ -1,6 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import * as fontkit from 'fontkit';
+import {
+  getPackageAssetOutputPath,
+  isNpmSpecifier,
+  isValidConfigAssetPath,
+  resolveConfigAssetPath,
+  type PackageFileSystem,
+} from './packages';
 import type { FontFamilyOverride, FontOverrides } from './types';
 
 export const CUSTOM_FONT_FACE_DEFINITIONS = Object.freeze({
@@ -36,44 +43,46 @@ interface CustomFontValidationOptions {
   fontOverrides: FontOverrides | undefined;
   publicDir: string;
   publicFiles: ReadonlySet<string>;
+  /** Where packages are found; defaults to the parent of `publicDir` */
+  projectDir?: string;
+  packageFs?: PackageFileSystem;
   readFile?: (filePath: string) => Buffer;
   parseFont?: (contents: Buffer) => ParsedFont;
 }
 
-export function isValidPublicWoff2Path(filePath: string): boolean {
-  return isValidPublicAssetPath(filePath) && filePath.endsWith('.woff2');
+/** Whether a font path names a WOFF2 file in `public/` or in a package */
+export function isValidFontPath(filePath: string): boolean {
+  return isValidConfigAssetPath(filePath) && filePath.endsWith('.woff2');
 }
 
-export function isValidPublicAssetPath(filePath: string): boolean {
-  if (
-    filePath.length === 0 ||
-    filePath.startsWith('/') ||
-    /^[A-Za-z]:/.test(filePath) ||
-    filePath.includes('\\') ||
-    filePath.includes('?') ||
-    filePath.includes('#')
-  ) {
-    return false;
-  }
-
-  const segments = filePath.split('/');
-  return segments.every(
-    segment => segment.length > 0 && segment !== '.' && segment !== '..',
-  );
-}
-
-export function resolvePublicFontPath(
-  publicDir: string,
-  filePath: string,
-): string {
-  return path.resolve(publicDir, ...filePath.split('/'));
-}
-
+/**
+ * The URL path, relative to the site root, of a config asset path: a file in
+ * `public/`, or a file in a package, which is published under `_packages/`
+ */
 export function encodePublicAssetPath(filePath: string): string {
-  return filePath
+  const outputPath = isNpmSpecifier(filePath)
+    ? getPackageAssetOutputPath(filePath)
+    : filePath;
+  return outputPath
     .split('/')
     .map(segment => encodeURIComponent(segment).replaceAll("'", '%27'))
     .join('/');
+}
+
+/** Every font file path that `fontOverrides` configures */
+export function getCustomFontPaths(
+  fontOverrides: FontOverrides | undefined,
+): string[] {
+  const paths: string[] = [];
+  for (const familyKey of FAMILY_KEYS) {
+    for (const faceKey of FACE_KEYS) {
+      const filePath = fontOverrides?.[familyKey]?.[faceKey];
+      if (filePath) {
+        paths.push(filePath);
+      }
+    }
+  }
+  return paths;
 }
 
 export function renderFontFeatureSettings(
@@ -233,9 +242,12 @@ function validateFamily(
   familyKey: CustomFontFamilyKey,
   family: FontFamilyOverride,
   options: Required<
-    Pick<CustomFontValidationOptions, 'readFile' | 'parseFont'>
+    Pick<CustomFontValidationOptions, 'readFile' | 'parseFont' | 'projectDir'>
   > &
-    Pick<CustomFontValidationOptions, 'publicDir' | 'publicFiles'>,
+    Pick<
+      CustomFontValidationOptions,
+      'publicDir' | 'publicFiles' | 'packageFs'
+    >,
 ): string[] {
   const diagnostics: string[] = [];
   const parsedFaces: Partial<Record<CustomFontFaceKey, ParsedFont>> = {};
@@ -246,18 +258,19 @@ function validateFamily(
       continue;
     }
     const configPath = `fontOverrides.${familyKey}.${faceKey}`;
-    if (!isValidPublicWoff2Path(filePath)) {
+    if (!isValidFontPath(filePath)) {
       diagnostics.push(
-        `${configPath} must be a public-relative POSIX path ending in .woff2`,
+        `${configPath} must be a public-relative POSIX path or an npm: path, ending in .woff2`,
       );
       continue;
     }
 
-    const absolutePath = resolvePublicFontPath(options.publicDir, filePath);
-    if (!options.publicFiles.has(absolutePath)) {
-      diagnostics.push(`${configPath} "${filePath}" does not exist in public/`);
+    const resolved = resolveConfigAssetPath(filePath, options);
+    if ('reason' in resolved) {
+      diagnostics.push(`${configPath} "${filePath}" ${resolved.reason}`);
       continue;
     }
+    const absolutePath = resolved.filePath;
 
     let contents: Buffer;
     try {
@@ -305,6 +318,8 @@ export function validateCustomFontOverrides(
         ...validateFamily(familyKey, family, {
           publicDir: options.publicDir,
           publicFiles: options.publicFiles,
+          projectDir: options.projectDir ?? path.dirname(options.publicDir),
+          packageFs: options.packageFs,
           readFile,
           parseFont,
         }),

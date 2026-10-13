@@ -27,6 +27,9 @@ const PER_PAGE_COMPONENTS: Record<
 };
 
 let cleanups: (() => void)[] = [];
+// Author scripts mount after Tada's components and are cleaned up before
+// them, last first, so a script is undone before the scripts it may build on
+let authorCleanups: (() => void)[] = [];
 let appearancePickerMounted = false;
 // Advances on each teardown, so components and author scripts that would mount
 // after the visitor left their page are not mounted, or are undone right away
@@ -87,13 +90,15 @@ export async function mountPerPageComponents(
   });
 
   await Promise.allSettled(mountPromises);
-  mountAuthorScripts(window, isCurrent, unmount => cleanups.push(unmount));
+  mountAuthorScripts(window, isCurrent, unmount =>
+    authorCleanups.push(unmount),
+  );
 
   return teardownPerPageComponents;
 }
 
 export function teardownPerPageComponents(): void {
-  for (const cleanup of cleanups) {
+  for (const cleanup of [...authorCleanups.reverse(), ...cleanups]) {
     try {
       cleanup();
     } catch {
@@ -101,6 +106,7 @@ export function teardownPerPageComponents(): void {
     }
   }
   cleanups = [];
+  authorCleanups = [];
   appearancePickerMounted = false;
   generation++;
 }

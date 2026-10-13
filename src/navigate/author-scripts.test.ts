@@ -237,4 +237,23 @@ describe('mountAuthorScripts', () => {
     );
     expect(mounted).toHaveBeenCalledTimes(1);
   });
+
+  test('reports a class default export, such as a library listed directly', async () => {
+    class Chart {}
+    modules['http://localhost/_scripts/chart.js'] = module(Chart);
+
+    mountAuthorScripts(
+      createWindow(['/_scripts/chart.js']),
+      () => true,
+      () => {},
+    );
+    await flushMicrotasks(10);
+
+    expect(reported.map(report => report.message)).toEqual([
+      'Failed to mount script /_scripts/chart.js:',
+    ]);
+    expect(String(reported[0].error)).toContain(
+      'default export is a class, not a mount function',
+    );
+  });
 });

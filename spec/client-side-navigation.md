@@ -78,8 +78,9 @@ re-mounted on every navigation.
 
 ## Author scripts
 
-Scripts compiled from the site's `src/` directory mount and unmount with each
-page through their default export; see [Author Scripts](author-scripts.md).
+Scripts compiled from the site's `src/` directory and from packages mount and
+unmount with each page through their default export, unmounting in reverse
+order before Tada's own components; see [Author Scripts](author-scripts.md).
 Stylesheets those scripts import are added to `<head>` for the pages that load
 them and removed when navigating to a page that doesn't.
 

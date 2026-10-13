@@ -5,12 +5,16 @@ import { createGlobals } from '../globals.test';
 
 const imported: string[] = [];
 let pendingImport: Promise<unknown> = Promise.resolve({});
+// Modules to import by URL, instead of pendingImport
+const modules = new Map<string, Promise<unknown>>();
+// Cleanup functions that ran, in order
+const cleanups: string[] = [];
 
 mock.module('../globals', () => ({
   globals: createGlobals({
     importModule: specifier => {
       imported.push(specifier);
-      return pendingImport;
+      return modules.get(specifier) ?? pendingImport;
     },
   }),
 }));
@@ -34,7 +38,9 @@ for (const component of Object.keys(components)) {
   mock.module(component, () => ({
     default: () => {
       componentMounts.push(component);
-      return () => {};
+      return () => {
+        cleanups.push(component);
+      };
     },
   }));
 }
@@ -56,9 +62,10 @@ function createWindow(): Window {
   return dom.window as unknown as Window;
 }
 
-function showScript(window: Window, href: string): void {
-  window.document.querySelector('.container')!.innerHTML =
-    `<link rel="modulepreload" href="${href}" data-tada-script>`;
+function showScript(window: Window, ...hrefs: string[]): void {
+  window.document.querySelector('.container')!.innerHTML = hrefs
+    .map(href => `<link rel="modulepreload" href="${href}" data-tada-script>`)
+    .join('');
 }
 
 function waitForTasks(window: Window): Promise<void> {
@@ -66,10 +73,12 @@ function waitForTasks(window: Window): Promise<void> {
 }
 
 beforeEach(() => {
+  teardownPerPageComponents();
   componentMounts.length = 0;
   imported.length = 0;
+  cleanups.length = 0;
+  modules.clear();
   pendingImport = Promise.resolve({});
-  teardownPerPageComponents();
 });
 
 test("a page's scripts are not mounted by an earlier page's pending mount", async () => {
@@ -110,4 +119,22 @@ test("Tada's components do not mount after the visitor left the page", async () 
 
   // The appearance picker mounts right away, before the visitor can leave
   expect(componentMounts).toEqual(['../appearance-picker']);
+});
+
+test('author scripts are cleaned up in reverse order, before Tada components', async () => {
+  const window = createWindow();
+  for (const name of ['site', 'page']) {
+    modules.set(
+      `http://localhost/_scripts/${name}.js`,
+      Promise.resolve({ default: () => () => cleanups.push(name) }),
+    );
+  }
+  showScript(window, '/_scripts/site.js', '/_scripts/page.js');
+  await mountPerPageComponents(window);
+  await flushMicrotasks();
+
+  teardownPerPageComponents();
+
+  expect(cleanups.slice(0, 2)).toEqual(['page', 'site']);
+  expect(cleanups.slice(2).sort()).toEqual([...componentMounts].sort());
 });

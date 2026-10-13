@@ -12,7 +12,7 @@ content/              Pages and assets
   ...
 public/               Static files copied to output as-is
 src/                  Scripts and styles compiled with the site (optional)
-package.json          Lists @abreen/tada for editor types (optional)
+package.json          Lists @abreen/tada for editor types, and packages (optional)
 tsconfig.json         TypeScript settings for src/ (optional)
 ```
 
@@ -22,7 +22,9 @@ else is copied unchanged. The `public/` directory is also copied to the output
 root. The optional `src/` directory holds the site's own TypeScript,
 JavaScript, and Sass. Pages list scripts from it in front matter, and Tada
 compiles them into `_scripts/`; nothing in `src/` is copied as-is (see
-[Author Scripts](author-scripts.md)). If two sources would produce the same
+[Author Scripts](author-scripts.md)). Config values and scripts can also name
+files in packages installed in `node_modules` with `npm:` paths; only those
+files are published (see [Packages](packages.md)). If two sources would produce the same
 output path, the build stops with an
 output conflict (see [Build errors](build-pipeline.md#build-errors)). This
 includes two content pages (such as `about.md` and `about.html`), a code page

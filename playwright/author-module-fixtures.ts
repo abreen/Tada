@@ -15,9 +15,15 @@ export function installAuthorModuleFixtures(siteDir: string): string {
     `import type { Mount } from '@abreen/tada';
 
 const mount: Mount = ({ window }) => {
-  const w = window as unknown as { mountOrder?: string[] };
+  const w = window as unknown as {
+    mountOrder?: string[];
+    cleanupOrder?: string[];
+  };
   (w.mountOrder ??= []).push('site-wide');
   window.document.documentElement.dataset.siteWideMounted = 'true';
+  return () => {
+    (w.cleanupOrder ??= []).push('site-wide');
+  };
 };
 export default mount;
 `,
@@ -30,7 +36,10 @@ import { counts } from './counts';
 counts.evaluations++;
 
 const mount: Mount = ({ window, signal }) => {
-  const w = window as unknown as { mountOrder?: string[] };
+  const w = window as unknown as {
+    mountOrder?: string[];
+    cleanupOrder?: string[];
+  };
   (w.mountOrder ??= []).push('counter');
   counts.mounts++;
   const marker = window.document.getElementById('module-marker')!;
@@ -38,6 +47,7 @@ const mount: Mount = ({ window, signal }) => {
   window.addEventListener('module-ping', () => counts.pings++, { signal });
   signal.addEventListener('abort', () => counts.aborts++);
   return () => {
+    (w.cleanupOrder ??= []).push('counter');
     counts.cleanups++;
   };
 };

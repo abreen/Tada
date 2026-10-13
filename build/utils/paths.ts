@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 import { globals } from '../globals';
 import type { SiteVariables } from '../types';
@@ -51,6 +52,15 @@ export function createApplyBasePath(
   };
 }
 
+/** A file's real path, or the path itself if it can't be resolved */
+export function realPath(filePath: string): string {
+  try {
+    return fs.realpathSync(filePath);
+  } catch {
+    return filePath;
+  }
+}
+
 /** Whether `filePath` is inside `dir`, not counting `dir` itself */
 export function isInside(dir: string, filePath: string): boolean {
   const relative = path.relative(dir, filePath);
@@ -83,4 +93,23 @@ export function normalizeOutputPath(outputPath: string): string {
     return '/';
   }
   return normalized.startsWith('/') ? normalized : `/${normalized}`;
+}
+
+/** Whether `filePath` is a relative POSIX path with no `.` or `..` segments */
+export function isValidPublicAssetPath(filePath: string): boolean {
+  if (
+    filePath.length === 0 ||
+    filePath.startsWith('/') ||
+    /^[A-Za-z]:/.test(filePath) ||
+    filePath.includes('\\') ||
+    filePath.includes('?') ||
+    filePath.includes('#')
+  ) {
+    return false;
+  }
+
+  const segments = filePath.split('/');
+  return segments.every(
+    segment => segment.length > 0 && segment !== '.' && segment !== '..',
+  );
 }

@@ -1,9 +1,12 @@
 import { bundle, bundleReloadClient } from './bundle';
+import { getCustomFontPaths } from './custom-fonts';
 import { isFeatureEnabled } from './features';
 import { generateFavicons } from './generate-favicon';
 import { getFontOutputs } from './generate-fonts';
 import { getKatexOutputs } from './generate-katex-assets';
 import { createWebAppManifest } from './generate-web-app-manifest';
+import { getPackageAssetOutputs } from './packages';
+import { getProjectDir } from './utils/paths';
 import type { OutputContent, SiteVariables } from './types';
 
 /** Files Tada generates itself, as opposed to files rendered from sources */
@@ -37,6 +40,14 @@ export async function generateSiteAssets(
     ...getFontOutputs(),
     ...getKatexOutputs(),
     ...favicons,
+    ...getPackageAssetOutputs(
+      [
+        siteVariables.logo,
+        siteVariables.favicon,
+        ...getCustomFontPaths(siteVariables.fontOverrides),
+      ],
+      getProjectDir(),
+    ),
   ]);
   if (generateFaviconFiles) {
     outputs.set('manifest.json', createWebAppManifest(siteVariables));

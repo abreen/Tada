@@ -10,7 +10,7 @@ import {
   SEARCH_INDEX_DIR,
   toPosix,
 } from './utils/paths';
-import { scriptExists, validateSiteScripts } from './author-scripts';
+import { findScriptProblem, validateSiteScripts } from './author-scripts';
 import { sameOutputContent } from './output-publication';
 import { isFeatureEnabled } from './features';
 import type { OutputContent, SiteVariables } from './types';
@@ -74,13 +74,15 @@ export function validateConfig(
       fontOverrides: siteVariables.fontOverrides,
       publicDir: scan.publicDir,
       publicFiles,
+      projectDir: getProjectDir(),
     }),
     ...validateBranding(siteVariables, {
       publicDir: scan.publicDir,
       publicFiles,
+      projectDir: getProjectDir(),
     }),
     ...validateSiteScripts(siteVariables.scripts, script =>
-      scriptExists(getSrcDir(), script),
+      findScriptProblem(script, getSrcDir(), getProjectDir()),
     ),
   ]);
   for (const outputPath of assertNoOutputPathConflicts(scan)) {

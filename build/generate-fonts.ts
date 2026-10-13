@@ -18,7 +18,11 @@ export const DEFAULT_FONT_PRELOAD_FILES = {
 
 interface DefaultFontPreloadFile {
   filePath: string;
-  source: 'package' | 'public';
+  /**
+   * `bundled` for Tada's own fonts, published at their paths in `fonts/`;
+   * `site` for a configured font path, in `public/` or an `npm:` package
+   */
+  source: 'bundled' | 'site';
 }
 
 export function getDefaultFontPreloadFiles(
@@ -27,23 +31,20 @@ export function getDefaultFontPreloadFiles(
   if ((siteVariables.defaultFont ?? 'sans') === 'sans') {
     return DEFAULT_FONT_PRELOAD_FILES.sans.map(filePath => ({
       filePath,
-      source: 'package',
+      source: 'bundled',
     }));
   }
 
   return [
     siteVariables.fontOverrides?.serif?.regular
-      ? {
-          filePath: siteVariables.fontOverrides.serif.regular,
-          source: 'public',
-        }
-      : { filePath: DEFAULT_FONT_PRELOAD_FILES.serif[0], source: 'package' },
+      ? { filePath: siteVariables.fontOverrides.serif.regular, source: 'site' }
+      : { filePath: DEFAULT_FONT_PRELOAD_FILES.serif[0], source: 'bundled' },
     siteVariables.fontOverrides?.serifMono?.regular
       ? {
           filePath: siteVariables.fontOverrides.serifMono.regular,
-          source: 'public',
+          source: 'site',
         }
-      : { filePath: DEFAULT_FONT_PRELOAD_FILES.serif[1], source: 'package' },
+      : { filePath: DEFAULT_FONT_PRELOAD_FILES.serif[1], source: 'bundled' },
   ];
 }
 

@@ -311,7 +311,7 @@ export function injectAssetTags(
   const fontPreloadTags = getDefaultFontPreloadFiles(siteVariables)
     .map(preload => {
       const urlPath =
-        preload.source === 'public'
+        preload.source === 'site'
           ? encodePublicAssetPath(preload.filePath)
           : preload.filePath;
       return `<link rel="preload" href="${normalizeOutputPath('/' + urlPath)}" as="font" type="font/woff2" crossorigin>`;

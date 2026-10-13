@@ -56,8 +56,10 @@ Generated development and production site configs explicitly include
 - **basePath**: URL prefix for all internal links (default: `/`); it may contain
   multiple slash-separated segments, such as `/old/26summer`, and must not end
   with a slash
-- **logo**: optional image path relative to `public/`, replacing the header symbol (see [Header logo](logo.md))
-- **favicon**: optional public-relative `.ico` path replacing all generated favicons and manifest (see [Favicons](favicons.md))
+- **logo**: optional image path relative to `public/`, or an `npm:` path to a
+  file in a package, replacing the header symbol (see [Header logo](logo.md)
+  and [Packages](packages.md))
+- **favicon**: optional public-relative or `npm:` `.ico` path replacing all generated favicons and manifest (see [Favicons](favicons.md))
 - **symbol**: short text (1 to 5 chars) or a single emoji for the header fallback and generated favicon
 - **faviconSymbol**: text (1 to 5 chars) overriding symbol for the favicon (defaults to a text symbol; required when symbol is an emoji and favicons are generated)
 - **faviconColor**: overrides theme color for the favicon
@@ -79,16 +81,19 @@ Generated development and production site configs explicitly include
   Shiki language used for generated code pages
 - **shikiLanguages**: optional list of bundled Shiki languages allowed in
   Markdown fences; plain-text fences (`text`, `txt`, `plain`) work without it
-- **scripts**: optional list of scripts in `src/` that every page loads,
-  before the scripts a page lists in its front matter; see
-  [Author Scripts](author-scripts.md)
+- **scripts**: optional list of scripts in `src/` or `npm:` package modules
+  that every page loads, before the scripts a page lists in its front matter;
+  see [Author Scripts](author-scripts.md) and [Packages](packages.md)
 - **vars**: arbitrary key-value pairs inserted into author content with
   `{{ name }}` (see [Site Variables](variables.md))
 
 ## Custom serif fonts
 
 Site authors can replace either bundled serif family with WOFF2 files they own
-under the site's `public/` directory:
+under the site's `public/` directory, or from an installed font package with
+`npm:` paths such as
+`npm:@fontsource/literata/files/literata-latin-400-normal.woff2` (see
+[Packages](packages.md)):
 
 ```yaml
 fontOverrides:
@@ -120,7 +125,8 @@ bundled Source Serif 4 or Courier Prime without replacing it. Bundled styled
 faces, preloads, and font-switch loading behavior are retained. Custom face
 paths or `features` require `regular`; the browser synthesizes any omitted
 italic or bold styles in a custom family. Face paths use
-POSIX separators and are relative to `public/`. Absolute paths, traversal,
+POSIX separators and are relative to `public/`, unless they are `npm:` paths.
+Absolute paths, traversal,
 query strings, fragments, and extensions other than `.woff2` are rejected.
 
 `features` is an optional list of unique four-character OpenType tags. Tada
@@ -131,8 +137,9 @@ normal builds and watch updates; an invalid watch update leaves the last
 successful output intact.
 
 Custom fonts remain assets owned and licensed by the site author. They are
-copied from `public/` using the normal public-asset pipeline and are never added
-to the Tada package or starter site.
+copied from `public/` using the normal public-asset pipeline, or from their
+package to `_packages/`, and are never added to the Tada package or starter
+site.
 
 The optional `tuning` blocks account for the different optical size, vertical
 metrics, and weight of a substituted family. `fontSizeAdjust` is a positive

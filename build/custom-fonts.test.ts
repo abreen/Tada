@@ -7,18 +7,17 @@ import {
   encodePublicAssetPath,
   getSerifFontStack,
   getSerifMonoFontStack,
-  isValidPublicWoff2Path,
+  isValidFontPath,
   renderCustomFontFaceScss,
   renderCustomFontTuningScss,
   renderFontFeatureSettings,
-  resolvePublicFontPath,
   validateCustomFontOverrides,
 } from './custom-fonts';
 
 const PUBLIC_DIR = path.resolve(path.sep, 'site', 'public');
 
 function publicPath(filePath: string): string {
-  return resolvePublicFontPath(PUBLIC_DIR, filePath);
+  return path.resolve(PUBLIC_DIR, ...filePath.split('/'));
 }
 
 function validWoff2(): Buffer {
@@ -223,7 +222,7 @@ describe('custom font configuration', () => {
   test.each(['font.woff2', 'fonts/font.woff2', 'fonts/Font Name.woff2'])(
     'accepts safe public font path %s',
     filePath => {
-      expect(isValidPublicWoff2Path(filePath)).toBe(true);
+      expect(isValidFontPath(filePath)).toBe(true);
     },
   );
 
@@ -240,7 +239,43 @@ describe('custom font configuration', () => {
     'fonts/font.woff2?version=1',
     'fonts/font.woff2#face',
   ])('rejects unsafe public font path %s', filePath => {
-    expect(isValidPublicWoff2Path(filePath)).toBe(false);
+    expect(isValidFontPath(filePath)).toBe(false);
+  });
+
+  test('reads faces from packages and encodes their published URLs', () => {
+    const packageDir = path.join(
+      path.dirname(PUBLIC_DIR),
+      'node_modules',
+      '@fontsource',
+      'lit',
+    );
+    const regular = path.join(packageDir, 'files', 'a.woff2');
+    const files = new Set([path.join(packageDir, 'package.json'), regular]);
+    const read: string[] = [];
+    const diagnostics = validateCustomFontOverrides({
+      fontOverrides: {
+        serif: {
+          regular: 'npm:@fontsource/lit/files/a.woff2',
+          italic: 'npm:@fontsource/missing/a.woff2',
+        },
+      },
+      publicDir: PUBLIC_DIR,
+      publicFiles: new Set(),
+      packageFs: { isFile: file => files.has(file), realPath: file => file },
+      readFile: filePath => {
+        read.push(filePath);
+        return validWoff2();
+      },
+      parseFont: () => ({ availableFeatures: [] }),
+    });
+
+    expect(diagnostics).toEqual([
+      'fontOverrides.serif.italic "npm:@fontsource/missing/a.woff2" needs package "@fontsource/missing", which is not installed; run bun install',
+    ]);
+    expect(read).toEqual([regular]);
+    expect(encodePublicAssetPath('npm:@fontsource/lit/files/a b.woff2')).toBe(
+      '_packages/%40fontsource/lit/files/a%20b.woff2',
+    );
   });
 
   test('accepts parsed faces that support every requested feature', () => {
@@ -291,7 +326,7 @@ describe('custom font configuration', () => {
     });
 
     expect(diagnostics).toEqual([
-      'fontOverrides.serif.regular must be a public-relative POSIX path ending in .woff2',
+      'fontOverrides.serif.regular must be a public-relative POSIX path or an npm: path, ending in .woff2',
       'fontOverrides.serif.italic "fonts/missing.woff2" does not exist in public/',
       'fontOverrides.serif.bold "fonts/unreadable.woff2" could not be read',
       'fontOverrides.serif.boldItalic "fonts/malformed.woff2" is not a WOFF2 font',
