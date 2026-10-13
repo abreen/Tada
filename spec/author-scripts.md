@@ -30,7 +30,13 @@ that fails to compile fails the build with its file, line, column, and reason.
 
 Only listed scripts and their imports are compiled. Other files in `src/` are
 ignored. Imports can be relative files in `src/`; Tada does not install
-packages. `src/` and directories in it may be symbolic links.
+packages. A relative import in a file in `src/` that leads outside `src/`
+fails the build, for example
+`src/lectures/clock.ts: "../../content/data.json" is outside src/`, since watch
+mode would not notice changes to it. `src/` and directories in it may be symbolic links, but a listed
+script's real path must be inside `src/`: Bun names compiled files by real
+paths, so a script reached through a link to a directory outside `src/` fails
+the build, for example `src/shared/clock.ts: its real path is outside src/`.
 
 A script can import code, stylesheets, and JSON, TOML, YAML, or text files,
 whose contents become part of the bundle. Importing any other file, such as an

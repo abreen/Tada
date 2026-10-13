@@ -25,6 +25,8 @@ const components = {
   '../trace': { ...(await import('../trace')) },
   '../print': { ...(await import('../print')) },
   '../slides': { ...(await import('../slides')) },
+  '../tabs': { ...(await import('../tabs')) },
+  '../highlight': { ...(await import('../highlight')) },
   '../appearance-picker': { ...(await import('../appearance-picker')) },
 };
 const componentMounts: string[] = [];

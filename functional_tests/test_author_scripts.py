@@ -300,6 +300,20 @@ def test_importing_a_file_from_a_script_fails(site, specifier):
     assert 'put files in content/ or public/' in result.stdout
 
 
+def test_script_imports_outside_src_fail(site):
+    # Watch mode only watches src/, so edits to such a file would be missed
+    write(site, 'content/data.json', '{"greeting": "hi"}\n')
+    write(
+        site,
+        'src/lectures/clock.ts',
+        "import data from '../../content/data.json';\nexport default () => data;\n",
+    )
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 1
+    assert 'src/lectures/clock.ts' in result.stdout
+    assert '"../../content/data.json" is outside src/' in result.stdout
+
+
 def test_modules_with_dots_in_their_names_can_be_imported(site):
     write(site, 'src/lectures/site.config.ts', 'export const greeting = "from config";\n')
     write(
@@ -417,6 +431,25 @@ def test_symlinked_src_directory(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     html = (site / 'dist' / 'index.html').read_text(encoding='utf-8')
     assert script_hrefs(html) == ['/_scripts/lectures/clock.js']
+
+
+def test_listed_script_linked_from_outside_src_fails(tmp_path):
+    site = init_site(tmp_path)
+    shared = tmp_path / 'shared'
+    write(shared, 'clock.ts', 'export default () => console.log("linked");\n')
+    (site / 'src').mkdir(exist_ok=True)
+    try:
+        os.symlink(shared, site / 'src' / 'shared', target_is_directory=True)
+    except OSError:
+        pytest.skip('symbolic links are not available')
+    write(site, 'content/index.md', page('Home', ['shared/clock.ts']))
+
+    result = run_tada('dev', cwd=str(site))
+    assert result.returncode == 1
+    assert 'src/shared/clock.ts: its real path is outside src/' in result.stdout
+    # Bun names outputs by real paths, which would lead out of _scripts/
+    assert not (site / 'shared').exists()
+    assert not (tmp_path / 'shared' / 'clock.js').exists()
 
 
 def test_watch_keeps_reporting_a_broken_script_until_it_is_fixed(site):

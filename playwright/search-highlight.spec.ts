@@ -102,6 +102,26 @@ test('scrolls to the highlight again on reload', async ({ page }) => {
   await expect(mark).toBeInViewport();
 });
 
+test('keeps the position a dev server refresh restores', async ({ page }) => {
+  await page.goto(REMAINDER_URL);
+  const mark = page.locator('mark.search-highlight', { hasText: 'remainder' });
+  await expect(mark).toBeInViewport();
+  await scrollToTop(page);
+
+  // Like the watch-mode reload client, which turns the browser's scroll
+  // restoration back on, then reloads. (Playwright's own reload is not a
+  // reload navigation in Firefox.)
+  const reloaded = page.waitForEvent('load');
+  await page.evaluate(() => {
+    window.history.scrollRestoration = 'auto';
+    window.setTimeout(() => window.location.reload());
+  });
+  await reloaded;
+  await expect(mark).toHaveAttribute('data-sweep');
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(mark).not.toBeInViewport();
+});
+
 test('keeps the tab with the link target selected', async ({ page }) => {
   // The only match is in a sibling tab of the target
   await page.goto('/tabs.html?pagefind-highlight=Ferris#python-details');

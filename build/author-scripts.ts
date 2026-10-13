@@ -199,11 +199,14 @@ function outsideSrcError(specifier: string, advice: string): Error {
 
 const STYLESHEET_IMPORT_ADVICE = 'stylesheets can only import files in src/';
 
+const SCRIPT_IMPORT_ADVICE =
+  'scripts can only import relative files in src/, which watch mode recompiles when they change';
+
 /**
- * Keeps scripts and their stylesheets to files in `src/`. Images and other
- * files belong in content/ or public/, which publish them at stable URLs.
- * Absolute stylesheet URLs, such as `url(/images/paper.png)`, are left for
- * the browser.
+ * Keeps scripts and their stylesheets to files in `src/`, plus packages that
+ * scripts import by name. Images and other files belong in content/ or
+ * public/, which publish them at stable URLs. Absolute stylesheet URLs, such
+ * as `url(/images/paper.png)`, are left for the browser.
  */
 function createImportCheckPlugin(srcDir: string) {
   return {
@@ -211,6 +214,19 @@ function createImportCheckPlugin(srcDir: string) {
     setup(build: PluginBuilder) {
       build.onResolve({ filter: /.*/ }, args => {
         if (JS_IMPORT_KINDS.has(args.kind)) {
+          // Compared without resolving links, so a directory in src/ that
+          // links elsewhere still counts as src/. Files outside src/, such as
+          // a package's own modules, import what they like.
+          if (
+            /^\.\.?\//.test(args.path) &&
+            isInside(srcDir, args.importer) &&
+            !isInside(
+              srcDir,
+              path.resolve(path.dirname(args.importer), args.path),
+            )
+          ) {
+            throw outsideSrcError(args.path, SCRIPT_IMPORT_ADVICE);
+          }
           // The resolved file decides, since a name like `./site.config` or
           // `lodash.debounce` is not a file extension
           const resolved = resolveImport(args.path, args.importer);
@@ -329,6 +345,22 @@ export async function bundleAuthorScripts(
     ],
   });
 
+  // Entry points are reported relative to the working directory
+  const scriptFor = (entryPoint: string) =>
+    scriptByRealPath.get(realPath(path.resolve(entryPoint)));
+  // Bun names outputs by real paths, so a script in a directory that links
+  // outside src/ would be written outside _scripts/
+  for (const [outputPath, output] of Object.entries(
+    result.metafile?.outputs ?? {},
+  )) {
+    if (!normalizeBundlePath(outputPath).startsWith(`${AUTHOR_SCRIPTS_DIR}/`)) {
+      const script = output.entryPoint && scriptFor(output.entryPoint);
+      throw new Error(
+        `${script ? `src/${script}` : outputPath}: its real path is outside src/, such as through a symbolic link; listed scripts must be in src/`,
+      );
+    }
+  }
+
   const entries = new Map<string, AuthorScriptOutputs>();
   for (const [outputPath, output] of Object.entries(
     result.metafile?.outputs ?? {},
@@ -336,10 +368,7 @@ export async function bundleAuthorScripts(
     if (!output.entryPoint || !outputPath.endsWith('.js')) {
       continue;
     }
-    // Entry points are reported relative to the working directory
-    const script = scriptByRealPath.get(
-      realPath(path.resolve(output.entryPoint)),
-    );
+    const script = scriptFor(output.entryPoint);
     if (script === undefined) {
       continue;
     }

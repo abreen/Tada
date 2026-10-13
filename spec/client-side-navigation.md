@@ -84,7 +84,8 @@ Stylesheets those scripts import are added to `<head>` for the pages that load
 them and removed when navigating to a page that doesn't.
 
 `<script>` elements in page content run each time the page is shown, both on a
-cold load and after a client-side navigation. After the swap, the navigator
+cold load and after a client-side navigation. After the swap, once the URL,
+title, stylesheets, and scroll position belong to the new page, the navigator
 replaces each script in the new content with a fresh copy carrying the same
 attributes and text, because browsers never run scripts that arrive through
 parsed HTML. External scripts without `async` run in document order. A `defer`

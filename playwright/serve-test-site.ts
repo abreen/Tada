@@ -349,12 +349,15 @@ title: Author Scripts
 ---
 
 <p id="inline-marker">inline did not run</p>
+<p id="inline-location">inline did not run</p>
 <p id="external-marker">external did not run</p>
 
 <script>
   window.inlineRuns = (window.inlineRuns || 0) + 1;
   document.getElementById('inline-marker').textContent =
     'inline ran ' + window.inlineRuns;
+  document.getElementById('inline-location').textContent =
+    location.pathname + ' | ' + document.title;
 </script>
 <script src="/author-script.js"></script>
 

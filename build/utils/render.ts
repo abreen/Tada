@@ -243,15 +243,23 @@ function createTemplateParameters({
   };
 }
 
+// The banner is the same on every page, so it is rendered once per site config
+const bannerHtmlCache = new WeakMap<SiteVariables, string>();
+
 function renderSiteBanner(siteVariables: SiteVariables): string {
   if (!siteVariables.banner) {
     return '';
   }
 
-  // Rendered apart from the page, so its tab groups need their own IDs
-  return createMarkdown(siteVariables, { tabsIdPrefix: 'banner-tabs' }).render(
-    siteVariables.banner,
-  );
+  let html = bannerHtmlCache.get(siteVariables);
+  if (html === undefined) {
+    // Rendered apart from the page, so its tab groups need their own IDs
+    html = createMarkdown(siteVariables, {
+      tabsIdPrefix: 'banner-tabs',
+    }).render(siteVariables.banner);
+    bannerHtmlCache.set(siteVariables, html);
+  }
+  return html;
 }
 
 // `<meta charset>` is the first element in `<head>` so browsers find it within

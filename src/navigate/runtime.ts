@@ -108,13 +108,18 @@ async function loadAuthorStylesheets(
   signal: AbortSignal,
 ): Promise<void> {
   const { document } = window;
-  // Stylesheets still turned off belong to another navigation
+  // Stylesheets still turned off belong to an abandoned navigation, such as
+  // one superseded before its view transition swapped the content. Left in
+  // place, the next swap would turn them on as duplicates.
+  for (const link of document.querySelectorAll(
+    `link[data-tada-style][media="${DISABLED_MEDIA}"]`,
+  )) {
+    link.remove();
+  }
   const existing = new Set(
-    Array.from(
-      document.querySelectorAll(
-        `link[data-tada-style]:not([media="${DISABLED_MEDIA}"])`,
-      ),
-    ).map(link => link.getAttribute('href')),
+    Array.from(document.querySelectorAll('link[data-tada-style]')).map(link =>
+      link.getAttribute('href'),
+    ),
   );
   const pending: HTMLLinkElement[] = [];
   const loads: Promise<void>[] = [];
@@ -182,7 +187,6 @@ function swapContent(document: Document, newDoc: Document): void {
   if (newContainer && oldContainer) {
     const imported = document.importNode(newContainer, true);
     oldContainer.replaceChildren(...imported.childNodes);
-    runAuthorScripts(document, oldContainer);
   }
 
   document.body.className = newDoc.body.className;
@@ -279,13 +283,25 @@ function isActiveNavigation(controller: AbortController): boolean {
   return currentAbortController === controller && !controller.signal.aborted;
 }
 
+// Whether the browser restores this page's scroll position itself: a reload
+// whose entry still has automatic scroll restoration, which the watch-mode
+// reload client turns back on before a dev server refresh. Other reloads keep
+// the manual mode set below, so they restore nothing.
+function browserRestoresScroll(window: Window): boolean {
+  if (window.history.scrollRestoration !== 'auto') {
+    return false;
+  }
+  const [entry] = window.performance?.getEntriesByType?.('navigation') ?? [];
+  return (entry as PerformanceNavigationTiming | undefined)?.type === 'reload';
+}
+
 export function initNavigation(window: Window): void {
   currentAbortController = null;
   historyIndex = 0;
   scrollByIndex.clear();
   scrollByLocation.clear();
+  setScrollRestored(browserRestoresScroll(window));
   window.history.scrollRestoration = 'manual';
-  setScrollRestored(false);
   currentPath = window.location.pathname + window.location.search;
   scrollByIndex.set(historyIndex, window.scrollY);
   scrollByLocation.set(getLocationKey(window), window.scrollY);
@@ -485,6 +501,13 @@ export async function navigateToUrl(
       window.scrollTo({ top: scrollTarget });
     } else {
       window.scrollTo({ top: 0 });
+    }
+
+    // As on a cold load, scripts in the content see the new page's URL,
+    // title, and stylesheets
+    const container = document.querySelector('.container');
+    if (container) {
+      runAuthorScripts(document, container);
     }
 
     scrollByIndex.set(historyIndex, window.scrollY);
