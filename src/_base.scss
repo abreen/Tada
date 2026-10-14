@@ -152,7 +152,8 @@ main details summary:focus {
   outline: none;
 }
 
-main details:focus-within {
+// Only keyboard focus outlines the box, and a preview outlines its label instead
+main details:not(.details-preview):has(:focus-visible) {
   outline: 2px solid var(--theme-color);
   outline-offset: 1px;
 }

@@ -16,8 +16,9 @@ Content shown when the details element is open.
 
 A details element in the page content is drawn as a square-cornered box with a
 border in the foreground color. The summary spans the full width of the box, so its
-whole row is clickable. While anything inside the box has focus, the box gets
-an outline in the theme color.
+whole row is clickable. While anything inside the box has keyboard focus, the
+box gets an outline in the theme color. Focus from a pointer, such as clicking
+the summary, draws no outline.
 
 Content inside a details element is not listed in the
 [table of contents](table-of-contents.md). Search highlights in a closed details
@@ -119,7 +120,8 @@ In browsers that support `::details-content`:
 - The label is styled like a link ("Show more" or "Show less" in the link
   color, underlined on hover) and ends with the `chevron-down` icon, which
   points down while the preview is closed and up while it is open. Keyboard
-  focus outlines the label.
+  focus outlines the label instead of the box, and clicking it draws no
+  outline.
 - An open preview shows its whole body. On screen, a preview that is not
   nested in another details element keeps its Show less label in view, mirroring
   a tall details element: while the bottom of the box is below the viewport,

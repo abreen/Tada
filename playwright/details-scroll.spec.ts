@@ -11,6 +11,13 @@ async function isFullyOnScreen(page: Page, locator: Locator) {
   }, page.viewportSize()!.height);
 }
 
+// Whether the element draws a focus outline
+function hasOutline(locator: Locator) {
+  return locator.evaluate(
+    element => getComputedStyle(element).outlineStyle !== 'none',
+  );
+}
+
 test.describe('Details in content', () => {
   test.beforeEach(async ({ page }) => {
     // Development builds log this once every component has mounted
@@ -173,5 +180,26 @@ test.describe('Details in content', () => {
     expect(paragraphBox.y + paragraphBox.height).toBeLessThanOrEqual(
       detailsBox.y + detailsBox.height,
     );
+  });
+
+  test('clicking a summary does not outline the box', async ({ page }) => {
+    const details = page.locator('main details', {
+      has: page.locator('summary', { hasText: 'Short details' }),
+    });
+
+    await details.locator('summary').click();
+    await expect(details).toHaveAttribute('open', '');
+    expect(await hasOutline(details)).toBe(false);
+  });
+
+  test('keyboard focus on a summary outlines the box', async ({ page }) => {
+    const details = page.locator('main details', {
+      has: page.locator('summary', { hasText: 'Short details' }),
+    });
+
+    // Focus with no pointer interaction first matches :focus-visible
+    await details.locator('summary').focus();
+    await expect(details.locator('summary')).toBeFocused();
+    expect(await hasOutline(details)).toBe(true);
   });
 });
