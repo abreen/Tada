@@ -16,10 +16,10 @@ describe('addDetailsPreviewSummaries', () => {
   test('keeps the existing classes and attributes of the details element', () => {
     expect(
       addDetailsPreviewSummaries(
-        '<details class="info" open><p>Body</p></details>',
+        '<details class="custom" open><p>Body</p></details>',
       ),
     ).toBe(
-      `<details class="info details-preview" open>${SUMMARY}<p>Body</p></details>`,
+      `<details class="custom details-preview" open>${SUMMARY}<p>Body</p></details>`,
     );
   });
 

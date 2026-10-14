@@ -189,42 +189,6 @@ main details > summary {
   margin: 0 calc(-1 * var(--details-padding));
 }
 
-/*
- * Info and warning details elements show their icon at the right end of the
- * summary, centered on its first line. The summary keeps room for the icon so
- * long text wraps before it.
- */
-main details.info {
-  --details-icon: var(--icon-info-compact);
-  --details-icon-size: var(--icon-info-compact-size);
-}
-
-main details.warning {
-  --details-icon: var(--icon-warning-compact);
-  --details-icon-size: var(--icon-warning-compact-size);
-}
-
-main details:is(.info, .warning) > summary {
-  // Sticky summaries stay sticky; their selector is more specific
-  position: relative;
-  padding-right: calc(2 * var(--details-padding) + var(--details-icon-size));
-
-  // ::after is taken by the stuck summary's fade
-  &::before {
-    position: absolute;
-    top: calc(var(--details-padding) + (1lh - var(--details-icon-size)) / 2);
-    right: var(--details-padding);
-    width: var(--details-icon-size);
-    height: var(--details-icon-size);
-    content: '';
-
-    @include contained-mask(var(--details-icon));
-
-    // Not currentcolor, so hover and active colors leave the icon alone
-    background-color: var(--fg-color);
-  }
-}
-
 main details > summary + * {
   margin-top: 0;
 }

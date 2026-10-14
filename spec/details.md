@@ -27,28 +27,6 @@ element are skipped, unless it is a preview (see below and
 printing, every details element is opened, and then closed again afterwards if
 it was closed.
 
-## Info and warning icons
-
-Add the `info` or `warning` class to show the matching icon in the summary:
-
-```html
-<details class="warning">
-<summary>Known issues</summary>
-
-Content shown when the details element is open.
-
-</details>
-```
-
-The icon is the 20px `info-compact` or `warning-compact` icon (see
-[Icons](icons.md)), drawn in the foreground color at the right end of the
-summary. It sits one details padding in from the box's right border and is
-centered on the summary's first line. The summary keeps room for the icon, so
-long summary text wraps before it. Hovering or activating the summary changes
-the text color but not the icon. The icon stays on the summary while it is
-stuck (see below). These classes only add the icon; the box keeps its usual
-border and background.
-
 ## Tall details elements
 
 On screen, an open details element that is not nested in another details
@@ -130,8 +108,6 @@ In browsers that support `::details-content`:
   fade appears once the summary has left the top of the box and disappears
   before the summary comes to rest on the box's bottom border. Browsers without
   scroll-driven animations show the stuck summary without a fade.
-- Info and warning icons are not shown, since a preview has no author summary
-  to put them in.
 - In print, the summary is hidden and the whole body is shown.
 
 With JavaScript, closing a preview whose top is in view (below the header and

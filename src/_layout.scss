@@ -152,8 +152,7 @@ body.literate main table {
   }
 }
 
-// Scoped to the heading so authors can use .info elsewhere (such as on details)
-.title-and-info > .info {
+.info {
   @include user-select(none);
 
   // Flex instead of a `1fr auto` grid: WebKit keeps the auto column's width
