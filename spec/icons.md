@@ -28,9 +28,9 @@ the shared SVG attributes.
 | `contrast-standard` | 20px | Contrast picker, standard endpoint |
 | `contrast-high` | 20px | Contrast picker, high endpoint |
 | `info` | 40px | Note alerts |
-| `info-compact` | 20px | Note entries in the table of contents |
+| `info-compact` | 20px | Note entries in the table of contents and info details summaries |
 | `warning` | 40px | Warning alerts |
-| `warning-compact` | 20px | Inline `i.warning` and warning TOC entries |
+| `warning-compact` | 20px | Inline `i.warning`, warning TOC entries, and warning details summaries |
 | `breadcrumb-separator` | 24px | Breadcrumb separators and the superlink chevron |
 | `heading-present` | 24px | Slide-title presentation buttons |
 | `check` | 18px | Checked checkboxes |

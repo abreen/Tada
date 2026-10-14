@@ -25,6 +25,28 @@ element are skipped (see [Search Highlighting](search-highlighting.md)). Before
 printing, every details element is opened, and then closed again afterwards if
 it was closed.
 
+## Info and warning icons
+
+Add the `info` or `warning` class to show the matching icon in the summary:
+
+```html
+<details class="warning">
+<summary>Known issues</summary>
+
+Content shown when the details element is open.
+
+</details>
+```
+
+The icon is the 20px `info-compact` or `warning-compact` icon (see
+[Icons](icons.md)), drawn in the foreground color at the right end of the
+summary. It sits one details padding in from the box's right border and is
+centered on the summary's first line. The summary keeps room for the icon, so
+long summary text wraps before it. Hovering or activating the summary changes
+the text color but not the icon. The icon stays on the summary while it is
+stuck (see below). These classes only add the icon; the box keeps its usual
+border and background.
+
 ## Tall details elements
 
 On screen, an open details element that is not nested in another details
