@@ -34,8 +34,13 @@ const fsMock = {
 mock.module('fs', () => createFsModuleMock(fsMock));
 
 function htmlText(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, '')
+  let text = html;
+  let previous;
+  do {
+    previous = text;
+    text = text.replace(/<[^>]+>/g, '');
+  } while (text !== previous);
+  return text
     .replaceAll('&quot;', '"')
     .replaceAll('&#x27;', "'")
     .replaceAll('&amp;', '&');
