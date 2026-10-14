@@ -141,6 +141,30 @@ test.describe('Details preview', () => {
     expect(Math.abs(after.y - before.y)).toBeLessThan(1);
   });
 
+  test('opening and closing a preview whose top is in view leaves the box where it was', async ({
+    page,
+  }) => {
+    const details = preview(page);
+    await details.evaluate(element =>
+      element.scrollIntoView({ block: 'center' }),
+    );
+    const before = (await details.boundingBox())!;
+
+    for (let i = 0; i < 3; i++) {
+      await button(details).click();
+      await expect(details).toHaveAttribute('open', '');
+
+      // The open button is stuck to the bottom of the viewport, so click
+      // where it is on screen
+      const box = (await button(details).boundingBox())!;
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await expect(details).not.toHaveAttribute('open');
+    }
+
+    const after = (await details.boundingBox())!;
+    expect(Math.abs(after.y - before.y)).toBeLessThan(1);
+  });
+
   test('focusing a link in the clipped body of a closed preview opens it', async ({
     page,
   }) => {

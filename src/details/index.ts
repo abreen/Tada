@@ -4,7 +4,8 @@
  * instead, then scroll the closed details to where fragment links land: below
  * the header, with the page's scroll padding above it. A preview (a details
  * element the build gave a Show more/Show less summary below its body)
- * instead scrolls so its summary stays where it was clicked.
+ * instead stays put while its top is in view, as it does when it opens, and
+ * otherwise scrolls so its summary stays where it was clicked.
  */
 
 import { PREVIEW_CLASS } from './preview-class';
@@ -35,6 +36,14 @@ function previewButtonTop(summary: Element) {
     }
   }
   return summary.getBoundingClientRect().top;
+}
+
+// Where fragment links land: below the header, with the page's scroll padding
+function restingTop(window: Window) {
+  const scrollPaddingTop = parseFloat(
+    window.getComputedStyle(window.document.documentElement).scrollPaddingTop,
+  );
+  return Number.isNaN(scrollPaddingTop) ? 0 : scrollPaddingTop;
 }
 
 export default (window: Window) => {
@@ -71,12 +80,17 @@ export default (window: Window) => {
       isPreview
         ? previewButtonTop(summary)
         : summary.getBoundingClientRect().top;
+    // Whether the top of the box is in view, where opening the preview left it
+    const topInView =
+      details.getBoundingClientRect().top >= restingTop(window) - 0.5;
     const topBefore = anchor();
     details.open = false;
     const moved = anchor() - topBefore;
     if (isPreview) {
-      // A preview's summary sits below its body, so keep it under the pointer
-      if (moved !== 0) {
+      // A preview's summary sits below its body, so once the top of the box
+      // has scrolled away, keep the summary under the pointer. With the top in
+      // view, leave the box where it is, as opening it did.
+      if (!topInView && moved !== 0) {
         window.scrollBy({ top: moved, behavior: 'instant' });
       }
     } else if (moved < 0) {

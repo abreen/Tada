@@ -132,9 +132,13 @@ In browsers that support `::details-content`:
   to put them in.
 - In print, the summary is hidden and the whole body is shown.
 
-With JavaScript, the `details` client component keeps the Show less label where
-it was clicked: closing a preview scrolls the page by however far the label
-moved, so the collapsed preview ends just above the reader's pointer. Moving
+With JavaScript, closing a preview whose top is in view (below the header and
+the page's scroll padding) leaves the box where it is, just as opening it does,
+so the body collapses up toward its top. Once the reader has scrolled past the
+top of the box, the `details` client component instead keeps the Show less
+label where it was clicked: closing the preview scrolls the page by however far
+the label moved, so the collapsed preview ends just above the reader's pointer
+instead of collapsing off screen. Moving
 keyboard focus into a closed preview's body (for example, tabbing to a link
 that is clipped from view) opens the preview; focus from a pointer, such as
 clicking a button in the visible part of the body, leaves it closed. A search
