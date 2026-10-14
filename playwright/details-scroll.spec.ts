@@ -29,7 +29,14 @@ test.describe('Details in content', () => {
 
   test('scrolling over a tall open details scrolls the page', async ({
     page,
+    browserName,
   }) => {
+    // Only real wheel input shows the details element does not trap scrolling
+    test.skip(
+      browserName === 'webkit' && process.platform === 'linux',
+      "Playwright's WebKit does not scroll the page on a wheel event on Linux",
+    );
+
     const details = longDetails(page);
     await details.locator('summary').click();
     await expect(details).toHaveAttribute('open', '');
