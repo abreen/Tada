@@ -334,6 +334,20 @@ August 5, 3:15-5:15 pm, [Science Center](https://example.com), hall A.
 );
 
 writeFileSync(
+  path.join(siteDir, 'content', 'footnote-line-height.md'),
+  `---
+title: Footnote Line Height
+---
+
+A line without a footnote reference.
+
+A line with a footnote reference.[^1]
+
+[^1]: The footnote.
+`,
+);
+
+writeFileSync(
   path.join(siteDir, 'content', 'author-scripts-start.md'),
   `---
 title: Author Scripts Start

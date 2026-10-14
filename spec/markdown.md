@@ -214,7 +214,9 @@ behavior, see [Slides Mode](slides.md).
 Footnotes use standard markdown-it footnote syntax (`[^name]` for the
 reference and `[^name]: text` for the definition). References use ordinary
 superscript numbers, and definitions use the browser's standard ordered-list
-markers so the treatment works with every body font.
+markers so the treatment works with every body font. References are raised with
+relative positioning rather than `vertical-align: super`, so a line containing
+a reference is no taller than one without.
 
 The footnote section at the bottom of the page is a `<div class="footnotes">`
 containing a `<p class="title">Footnotes</p>` title (italic, muted, and centered so it does not read as a heading) and an `<ol>` list.

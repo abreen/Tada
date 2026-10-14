@@ -76,9 +76,14 @@ a.external:not(:has(.external-link-tail))::after {
   margin-bottom: 8px;
 }
 
+// Raised with relative positioning instead of `vertical-align: super`, which
+// would grow the line box and make lines with references taller.
 a.footnote-ref {
+  position: relative;
+  top: -0.5em;
   font-size: 0.8em;
-  vertical-align: super;
+  line-height: 1;
+  vertical-align: baseline;
   border-bottom: none;
 }
 
