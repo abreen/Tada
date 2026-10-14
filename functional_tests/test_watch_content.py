@@ -6,7 +6,12 @@ import threading
 import pytest
 import websocket
 from conftest import PACKAGE_DIR, init_site, make_fake_failing_command, run_tada, set_site_config
-from watch_helpers import WEBSOCKET_TIMEOUT_SEC, WatchProcess, assert_trace_artifacts_exist
+from watch_helpers import (
+    WEBSOCKET_TIMEOUT_SEC,
+    WatchProcess,
+    assert_trace_artifacts_exist,
+    read_output_text,
+)
 
 WATCH_RELOAD_PATH = '/__tada_watch'
 
@@ -334,7 +339,7 @@ class TestWatchPublicFiles:
         public_file.write_text('updated public content')
 
         watch.wait_for_rebuild(dist_file, 'modified', before_mtime=before_mtime)
-        assert dist_file.read_text() == 'updated public content'
+        assert read_output_text(dist_file) == 'updated public content'
 
     def test_adding_new_public_file(self, watch, site_dir):
         new_public = site_dir / 'public' / 'new_public.txt'

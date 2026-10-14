@@ -152,9 +152,17 @@ test.describe('Details preview', () => {
     page,
   }) => {
     const details = preview(page);
-    await details.evaluate(element =>
-      element.scrollIntoView({ block: 'center' }),
-    );
+    // Center the box at a whole pixel: scrollIntoView can pick a half-pixel
+    // position, which Firefox later settles a pixel away
+    await details.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      window.scrollTo({
+        top: Math.round(
+          window.scrollY + box.top - (window.innerHeight - box.height) / 2,
+        ),
+        behavior: 'instant',
+      });
+    });
     const before = (await details.boundingBox())!;
 
     for (let i = 0; i < 3; i++) {

@@ -157,7 +157,10 @@ def test_file_snapshot_handles_windows_directory_read(tmp_path, monkeypatch, dir
     assert watch._file_snapshot(path) is None
 
 
-def test_file_snapshot_preserves_file_permission_errors(tmp_path, monkeypatch):
+@pytest.mark.parametrize('retries', [0, 3])
+def test_file_snapshot_preserves_file_permission_errors(tmp_path, monkeypatch, retries):
+    monkeypatch.setattr(watch_helpers, 'SHARING_VIOLATION_RETRIES', retries)
+    monkeypatch.setattr(watch_helpers, 'POLL_SEC', 0)
     watch = WatchProcess.__new__(WatchProcess)
     path = tmp_path / 'file'
     path.write_text('file')
@@ -168,3 +171,34 @@ def test_file_snapshot_preserves_file_permission_errors(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, 'read_bytes', denied_read_bytes)
     with pytest.raises(PermissionError):
         watch._file_snapshot(path)
+
+
+def windows_sharing_violation_once(monkeypatch):
+    """Make the next read fail as Windows does while another process writes."""
+    real_read_bytes = Path.read_bytes
+    failed = []
+
+    def read_bytes(self):
+        if not failed:
+            failed.append(self)
+            raise PermissionError(13, 'Permission denied', str(self))
+        return real_read_bytes(self)
+
+    monkeypatch.setattr(watch_helpers, 'SHARING_VIOLATION_RETRIES', 3)
+    monkeypatch.setattr(watch_helpers, 'POLL_SEC', 0)
+    monkeypatch.setattr(Path, 'read_bytes', read_bytes)
+
+
+def test_file_snapshot_retries_windows_sharing_violation(tmp_path, monkeypatch):
+    watch = WatchProcess.__new__(WatchProcess)
+    path = tmp_path / 'file'
+    path.write_text('copied')
+    windows_sharing_violation_once(monkeypatch)
+    assert watch._file_snapshot(path)['content'] == b'copied'
+
+
+def test_read_output_text_retries_windows_sharing_violation(tmp_path, monkeypatch):
+    path = tmp_path / 'file'
+    path.write_text('copied')
+    windows_sharing_violation_once(monkeypatch)
+    assert watch_helpers.read_output_text(path) == 'copied'

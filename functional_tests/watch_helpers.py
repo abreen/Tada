@@ -1,5 +1,6 @@
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 from stat import S_ISREG
@@ -18,6 +19,27 @@ POLL_SEC = 0.05
 ANSI_RE = re.compile(r'\x1b\[[0-9;]*m')
 SUCCESS_RE = re.compile(r'^.+! 🎉$', re.MULTILINE)
 TRACE_MANIFEST_RE = re.compile(r'data-trace-manifest="([^"]+)"')
+# Windows refuses to open a file while another process is copying over it (a
+# sharing violation, which Python reports as PermissionError), so a read that
+# races a rebuild's write is retried before the error is treated as real
+SHARING_VIOLATION_RETRIES = 20 if sys.platform == 'win32' else 0
+
+
+def read_output_bytes(path: Path) -> bytes:
+    """Read an output file, waiting out a rebuild that is writing it."""
+    for attempt in range(SHARING_VIOLATION_RETRIES + 1):
+        try:
+            return path.read_bytes()
+        except PermissionError:
+            if attempt == SHARING_VIOLATION_RETRIES or not path.is_file():
+                raise
+            time.sleep(POLL_SEC)
+    raise AssertionError('unreachable')
+
+
+def read_output_text(path: Path) -> str:
+    """Read an output file as text, waiting out a rebuild that is writing it."""
+    return read_output_bytes(path).decode()
 
 
 def assert_trace_artifacts_exist(dist_dir: Path, html: str, base_path: str = '') -> list[Path]:
@@ -78,7 +100,7 @@ class WatchProcess:
             if not S_ISREG(stat.st_mode):
                 return None
             try:
-                content = path.read_bytes()
+                content = read_output_bytes(path)
             except PermissionError:
                 # Windows reports EACCES when a file becomes a directory
                 # between stat() and read_bytes(). Preserve real access errors.
