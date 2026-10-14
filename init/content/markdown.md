@@ -281,6 +281,96 @@ becomes a multiple choice question with clickable options:
 ???
 
 
+### Details
+
+Write a raw HTML `<details>` element to hide content until the reader opens
+it. Leave a blank line after `</summary>` so the body is parsed as Markdown:
+
+```
+<details>
+<summary>How is the final grade calculated?</summary>
+
+Homework is worth 40%, the midterm 25%, and the final exam 35%.
+
+</details>
+```
+
+<details>
+<summary>How is the final grade calculated?</summary>
+
+Homework is worth 40%, the midterm 25%, and the final exam 35%.
+
+</details>
+
+Add the `info` or `warning` class to show an icon in the summary:
+
+```
+<details class="info">
+<summary>Office hours are by appointment during exam weeks</summary>
+
+Book a slot on the course calendar at least a day in advance.
+
+</details>
+```
+
+<details class="info">
+<summary>Office hours are by appointment during exam weeks</summary>
+
+Book a slot on the course calendar at least a day in advance.
+
+</details>
+
+<details class="warning">
+<summary>Known issues with the starter code</summary>
+
+The provided `Makefile` assumes a POSIX shell. On Windows, run the commands
+from WSL or Git Bash.
+
+</details>
+
+Leave out the `<summary>` to make a preview, which shows the start of a long
+body and fades it out behind a "Show more" link:
+
+```
+<details>
+
+A long passage that starts out partly shown...
+
+</details>
+```
+
+<details>
+
+Recursion is a technique in which a method solves a problem by calling itself
+on a smaller version of the same problem. Every recursive method needs two
+parts: a base case, which is simple enough to answer directly, and a recursive
+case, which breaks the problem down and combines the results.
+
+Consider computing the length of a string. The empty string has length zero;
+that is the base case. Any other string is one character longer than the string
+left after removing its first character; that is the recursive case.
+
+```java
+static int length(String s) {
+    if (s.isEmpty()) {
+        return 0;
+    }
+    return 1 + length(s.substring(1));
+}
+```
+
+Each call works on a shorter string, so the calls eventually reach the empty
+string and stop. If a recursive case ever failed to make the problem smaller,
+the method would call itself forever, and the program would end with a
+`StackOverflowError`.
+
+</details>
+
+Once opened, a tall details element keeps its summary (or a preview's "Show
+less" link) on screen while you scroll through it, so it can be closed from
+anywhere.
+
+
 ### Two-column layout
 
 Use
