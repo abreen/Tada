@@ -2,6 +2,7 @@ import mountTableOfContents from '../toc';
 import mountAnchor from '../anchor';
 import mountQuestion from '../question';
 import mountCode from '../code';
+import mountDetails from '../details';
 import mountTrace from '../trace';
 import mountPrint from '../print';
 import mountSlides from '../slides';
@@ -24,6 +25,7 @@ const PER_PAGE_COMPONENTS: Record<
   tabs: mountTabs,
   highlight: mountHighlight,
   print: mountPrint,
+  details: mountDetails,
 };
 
 let cleanups: (() => void)[] = [];

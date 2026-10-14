@@ -347,6 +347,44 @@ A line with a footnote reference.[^1]
 `,
 );
 
+const longDetailsParagraphs = Array.from({ length: 40 }, (_, i) =>
+  i === 19
+    ? '<p id="long-details-target">The target paragraph of the long details element.</p>'
+    : `Paragraph ${i + 1} of the long details element.`,
+).join('\n\n');
+writeFileSync(
+  path.join(siteDir, 'content', 'long-details.md'),
+  `---
+title: Long Details
+---
+
+<details>
+<summary>Short details</summary>
+
+The only paragraph of the short details element.
+
+</details>
+
+<details>
+<summary>Long details</summary>
+
+${longDetailsParagraphs}
+
+The last paragraph of the long details element.
+
+</details>
+
+${Array.from({ length: 40 }, (_, i) => `Paragraph ${i + 1} after the details.`).join('\n\n')}
+
+<details open>
+<summary><input type="checkbox" aria-label="Done"> Checkbox details</summary>
+
+The body of the checkbox details element.
+
+</details>
+`,
+);
+
 writeFileSync(
   path.join(siteDir, 'content', 'author-scripts-start.md'),
   `---

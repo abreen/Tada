@@ -7,11 +7,15 @@
 }
 
 .alert.warning {
+  --details-bg-color: var(--warning-bg-color);
+
   background: var(--warning-bg-color);
   border-color: var(--warning-bg-color);
 }
 
 .alert.note {
+  --details-bg-color: var(--note-bg-color);
+
   background: var(--note-bg-color);
   border-color: var(--note-bg-color);
 }

@@ -7,6 +7,7 @@ import { defineConfig } from '@playwright/test';
 const webkitSpecs = [
   'author-byline',
   'breadcrumbs',
+  'details-scroll',
   'external-link-wrapping',
   'font-loading',
   'header-layout',
@@ -25,6 +26,7 @@ const webkitSpecs = [
 
 const firefoxSpecs = [
   'breadcrumbs',
+  'details-scroll',
   'navigation-download',
   'navigation-history',
   'navigation-same-page',

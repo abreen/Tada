@@ -25,6 +25,8 @@ are in `src/util.ts`.
 - **Scroll-to-top button**: appears when the user scrolls down the page; not
   rendered with a static header (no nav and no search)
 - **Print handler**: opens all collapsible details before printing
+- **Details**: closing a tall details element from its stuck summary scrolls
+  the closed details into view (see [Details](details.md))
 - **Code scrollbar**: a sticky horizontal scrollbar for code pages, synced
   with the code body so wide code can be scrolled from the bottom of the viewport
 - **Header navigation**: collapsible header with logo, title, and nav links;
