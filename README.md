@@ -65,6 +65,8 @@ A static site generator. The successor to Presto.
   * `!!! note ... !!!` and `!!! warning ... !!!` render alert boxes
   * `??? question ... ???` renders a Q&A section; answer is hidden until click
     - To display clickable multiple choice options, use a [task list][task-list]
+  * `!!! drumroll ... !!!` hides content behind a CSS-only drumroll and
+    "Ta-da!" reveal
   * `+++ ... +++ ... +++` renders a two-column layout
   * `[Title][Description](url)` renders a two-line superlink
   * Special heading subtitles with `## Heading # A subtitle here`

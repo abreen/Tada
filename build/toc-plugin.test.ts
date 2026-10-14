@@ -166,6 +166,16 @@ describe('collected headings', () => {
     ]);
   });
 
+  test('skips headings and alerts inside drumrolls', () => {
+    const { toc } = renderToc(
+      '## Before\n\n!!!! drumroll\n\n### Hidden\n\n!!! note "Also hidden"\nText.\n!!!\n\n!!!!\n\n## After\n',
+    );
+    expect(toc.match(/<a href="#[^"]*">([^<]*)<\/a>/g)).toEqual([
+      '<a href="#before">Before</a>',
+      '<a href="#after">After</a>',
+    ]);
+  });
+
   test('lists headings after a details written as one HTML block', () => {
     const { toc } = renderToc(
       '<details><summary>More</summary>Text</details>\n\n## After\n',

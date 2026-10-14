@@ -88,6 +88,35 @@ Exactly one option must be marked `[x]` or `[X]`. The option marker must use
 standard Markdown list spacing, such as `- [ ] Option`.
 
 
+## Drumroll blocks
+
+A dramatic reveal, rendered as a `<details>` element:
+
+```
+!!! drumroll What does `f(2)` return?
+It returns **4**.
+!!!
+```
+
+The optional label renders inline Markdown in the `<summary>`, after a 🥁
+icon. Without a label, the summary reads "Drumroll, please…". The block uses no
+client-side JavaScript of its own and otherwise behaves like any other
+[details element](details.md), including the stuck summary of a tall one.
+
+When the block opens, CSS shakes the block for 1.2 seconds and shows
+"ba-dum ba-dum ba-dum…" at its top right, above the summary. Then the content
+fades in, a "Ta-da!"
+banner pops up over the block and fades out, and theme-colored confetti bursts
+from the banner. Each open replays the fanfare. Reduced motion disables all of
+it, and the block opens like a normal `<details>`. The banner and drum text are
+hidden from assistive technology.
+
+Like a `<details>`, headings and alerts inside a drumroll are not listed in the
+table of contents. The content is excluded from the search index. Printed
+drumrolls show their content without the fanfare, even though printing opens
+every details element.
+
+
 ## Two-column layout
 
 Arrange content in two equal columns:

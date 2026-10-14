@@ -666,6 +666,37 @@ describe('custom markdown containers', () => {
     expect(html).not.toContain('question-multiple-choice');
   });
 
+  test('renders drumrolls as details with a default label', () => {
+    const md = createProjectMarkdown();
+
+    const html = md.render(
+      ['!!! drumroll', 'It was **42**.', '!!!'].join('\n'),
+    );
+
+    expect(html).toContain(
+      '<details class="drumroll"><summary>Drumroll, please…</summary>',
+    );
+    expect(html).toContain(
+      '<div class="drumroll-content" data-pagefind-ignore>\n<p>It was <strong>42</strong>.</p>\n</div>',
+    );
+    expect(html).toContain(
+      '<p class="drumroll-tada" aria-hidden="true">Ta-da!</p></details>',
+    );
+    expect(html).not.toContain('class="alert');
+  });
+
+  test('renders inline Markdown in drumroll labels', () => {
+    const md = createProjectMarkdown();
+
+    const html = md.render(
+      ['!!! drumroll What does `f(2)` return?', '4', '!!!'].join('\n'),
+    );
+
+    expect(html).toContain(
+      '<summary>What does <code>f(2)</code> return?</summary>',
+    );
+  });
+
   test('rejects multiple choice questions without exactly one correct option', () => {
     const md = createProjectMarkdown();
 

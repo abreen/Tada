@@ -24,6 +24,7 @@ import type { RenderDependencyCollector, SiteVariables } from '../types';
 
 const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
 const QUESTION_PATTERN = /^question\s+(.+)$/;
+const DRUMROLL_PATTERN = /^drumroll(?:\s+(.+))?$/;
 const MULTIPLE_CHOICE_MARKER_LENGTH = 4;
 
 interface CreateMarkdownOptions {
@@ -463,6 +464,28 @@ export function createMarkdown(
         return html;
       } else {
         return '</div></div>\n';
+      }
+    },
+  });
+
+  // A <details> so the reveal works without JS; the fanfare is CSS-only
+  markdown.use(markdownItContainer, 'drumroll', {
+    marker: '!',
+    validate: function (params: string) {
+      return DRUMROLL_PATTERN.test(params.trim());
+    },
+    render: function (tokens: Token[], idx: number) {
+      const m = tokens[idx].info.trim().match(DRUMROLL_PATTERN);
+      if (tokens[idx].nesting === 1) {
+        const label = m?.[1]
+          ? markdown.renderInline(m[1])
+          : 'Drumroll, please…';
+        return (
+          `<details class="drumroll"><summary>${label}</summary>` +
+          '<div class="drumroll-content" data-pagefind-ignore>\n'
+        );
+      } else {
+        return '</div><p class="drumroll-tada" aria-hidden="true">Ta-da!</p></details>\n';
       }
     },
   });
