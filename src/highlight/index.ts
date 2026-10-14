@@ -1,4 +1,5 @@
 import { globals } from '../globals';
+import { PREVIEW_CLASS } from '../details/preview-class';
 import { getHashTarget } from '../hash-target';
 import { isScrollRestored } from '../navigate/restored-scroll';
 import { panelsAround, revealInTabs } from '../tabs';
@@ -63,19 +64,31 @@ function joinAdjacentMarks(document: Document): void {
   }
 }
 
-/** Whether a closed <details> hides the element (its summary stays shown) */
-function isInClosedDetails(element: Element): boolean {
+/** Closed <details> elements around the element that hide it (their summaries stay shown) */
+function closedDetailsAround(element: Element): HTMLDetailsElement[] {
+  const closed: HTMLDetailsElement[] = [];
   let details = element.closest('details');
   while (details) {
     if (
       !details.hasAttribute('open') &&
       !details.querySelector(':scope > summary')?.contains(element)
     ) {
-      return true;
+      closed.push(details);
     }
     details = details.parentElement?.closest('details') ?? null;
   }
-  return false;
+  return closed;
+}
+
+/**
+ * Whether a closed <details> hides the element. A details preview (one the
+ * build gave a Show more/Show less summary) shows part of its body, so it can be opened
+ * to reveal the element.
+ */
+function isInClosedDetails(element: Element): boolean {
+  return closedDetailsAround(element).some(
+    details => !details.classList.contains(PREVIEW_CLASS),
+  );
 }
 
 function sweepDuration(mark: HTMLElement): number {
@@ -152,6 +165,7 @@ export default async (window: Window) => {
       canReveal(mark),
   );
   if (first) {
+    closedDetailsAround(first).forEach(details => (details.open = true));
     revealInTabs(window, first);
     // Back, Forward, and dev refreshes restore the page's own scroll position
     if (!target && !isScrollRestored()) {

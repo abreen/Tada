@@ -31,6 +31,7 @@ the shared SVG attributes.
 | `info-compact` | 20px | Note entries in the table of contents and info details summaries |
 | `warning` | 40px | Warning alerts |
 | `warning-compact` | 20px | Inline `i.warning`, warning TOC entries, and warning details summaries |
+| `chevron-down` | 16px | Details preview labels (rotated up while open) |
 | `breadcrumb-separator` | 24px | Breadcrumb separators and the superlink chevron |
 | `heading-present` | 24px | Slide-title presentation buttons |
 | `check` | 18px | Checked checkboxes |

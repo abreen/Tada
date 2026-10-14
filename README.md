@@ -69,6 +69,8 @@ A static site generator. The successor to Presto.
   * `[Title][Description](url)` renders a two-line superlink
   * Special heading subtitles with `## Heading # A subtitle here`
   * `{{{ _partial.md }}}` syntax for including partials
+  * Styled `<details>` elements, including info/warning variants and
+    "Show more" previews (see [Details elements](#details-elements))
 
 - Extremely efficient client-side navigation
   * A miniature SPA that uses internal links tagged at build time
@@ -539,6 +541,18 @@ which results in:
   * pears
 * Car wash
 ```
+
+### Details elements
+
+Write raw HTML `<details>` elements in Markdown or HTML content. Each one is
+drawn as a bordered box, and all variants open and close without JavaScript.
+
+| Variant | Markup | Result |
+|---------|--------|--------|
+| Standard | `<details>` with a `<summary>` | Collapsed to its summary. When open and taller than the screen, the summary sticks to the top of the viewport so the reader can close it from anywhere |
+| Info | `<details class="info">` with a `<summary>` | Same, with an info icon at the right end of the summary |
+| Warning | `<details class="warning">` with a `<summary>` | Same, with a warning icon at the right end of the summary |
+| Preview | `<details>` with no `<summary>` | Shows the first 10em of the body, fading out behind a "Show more" link; when open, its "Show less" link sticks to the bottom of the viewport |
 
 
 [inter]: https://fonts.google.com/specimen/Inter

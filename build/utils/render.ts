@@ -26,6 +26,7 @@ import {
 import { extensionIsMarkdown } from './file-types';
 import { createTraceHelpers } from './trace';
 import { stripHtmlComments } from './html-comments';
+import { addDetailsPreviewSummaries } from './details-preview';
 import { htmlToPlainText } from './plain-text';
 import { finalizeHtmlPage } from './final-html';
 import {
@@ -738,7 +739,7 @@ function renderPlainTextContent(
     tocItems = (env.tocItems as unknown[] | undefined) || null;
   }
 
-  return { content: html, pageVariables, tocItems };
+  return { content: addDetailsPreviewSummaries(html), pageVariables, tocItems };
 }
 
 export function renderLiterateJavaPageAsset({
@@ -868,8 +869,8 @@ export function renderLiterateJavaPageAsset({
     return codeHtml;
   };
 
-  const contentHtml = stripHtmlComments(
-    md.renderer.render(tokens, md.options, env),
+  const contentHtml = addDetailsPreviewSummaries(
+    stripHtmlComments(md.renderer.render(tokens, md.options, env)),
   );
 
   // Build page variables

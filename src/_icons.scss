@@ -57,6 +57,7 @@
     20,
     "<path d='M10 2.5 2 16.75h16z' stroke-width='1'/><g fill='black' stroke='none'><path d='M8.9 8.1a1.1 1.1 0 0 1 2.2 0l-.4 3.5a.7.7 0 0 1-1.4 0z'/><circle cx='10' cy='14.1' r='1.05'/></g>"
   );
+  @include define-icon('chevron-down', 16, "<path d='m4 6 4 4 4-4'/>");
   @include define-icon(
     'breadcrumb-separator',
     24,

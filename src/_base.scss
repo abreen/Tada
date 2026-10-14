@@ -3,6 +3,17 @@
 // How far the body of a details element fades out under its stuck summary
 $details-fade: 1.5em;
 
+// How much of its body a closed details preview shows, and how far above its
+// button the body starts fading out
+$details-preview-height: 10em;
+$details-preview-fade: 3em;
+
+// Opaque from the top of the label row down, so the label stays readable
+$details-preview-gradient: linear-gradient(
+  transparent,
+  var(--details-bg-color) $details-preview-fade
+);
+
 :root {
   --box-border-width: 5px;
   --gap: 12px;
@@ -245,6 +256,30 @@ main details > :last-child {
   }
 }
 
+@property --details-preview-in {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --details-preview-out {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes details-preview-in {
+  to {
+    --details-preview-in: 1;
+  }
+}
+
+@keyframes details-preview-out {
+  from {
+    --details-preview-out: 1;
+  }
+}
+
 @keyframes details-fade-out {
   from {
     --details-fade-out: #{$details-fade};
@@ -329,6 +364,203 @@ main details > :last-child {
       animation-range:
         exit-crossing 0% exit-crossing #{$details-fade},
         exit-crossing calc(#{$stop} - #{$details-fade}) exit-crossing #{$stop};
+    }
+  }
+}
+
+/*
+ * A details element without a summary is a preview: the build gives it a
+ * summary labeled Show more or Show less (see build/utils/details-preview.ts). Browsers
+ * without ::details-content show it as a usual details element.
+ */
+main details.details-preview:not([open]) > summary > .close-label,
+main details.details-preview[open] > summary > .open-label {
+  display: none;
+}
+
+/*
+ * Where ::details-content can be styled, a closed preview shows the start of
+ * its body down to the bottom border. The summary lies over the bottom of the
+ * body as a fade, with its label centered in it. The whole summary, fade
+ * included, toggles the preview.
+ */
+@supports selector(details::details-content) {
+  main details.details-preview {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 0 var(--details-padding);
+  }
+
+  main details.details-preview::details-content {
+    padding-top: var(--details-padding);
+    content-visibility: visible;
+  }
+
+  main details.details-preview[open]::details-content {
+    padding-bottom: var(--details-padding);
+  }
+
+  // A fixed height, so a short body still leaves room for the summary
+  main details.details-preview:not([open])::details-content {
+    height: $details-preview-height;
+    overflow: clip;
+  }
+
+  main details.details-preview > summary {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    order: 1;
+    padding: var(--gap) 0;
+    color: inherit;
+    text-decoration-line: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    // Info and warning icons need a summary of the author's own
+    &::before {
+      content: none;
+    }
+  }
+
+  main details.details-preview:not([open]) > summary {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1;
+    padding-top: $details-preview-fade;
+    margin: 0;
+    background: $details-preview-gradient;
+  }
+
+  // The label reads like a link, with a chevron pointing the way the body
+  // will move
+  main details.details-preview > summary > span {
+    display: inline-flex;
+    gap: 0.25em;
+    align-items: center;
+
+    // Room inside the rounded focus outline (about 8px at the small size)
+    padding-left: 0.625em;
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    line-height: var(--line-height);
+    color: var(--link-color);
+
+    // Rounds the focus outline like a button's
+    border-radius: var(--border-radius);
+
+    &::after {
+      width: var(--icon-chevron-down-size);
+      height: var(--icon-chevron-down-size);
+      content: '';
+      background-color: currentcolor;
+
+      @include contained-mask(var(--icon-chevron-down));
+    }
+  }
+
+  main details.details-preview[open] > summary > span::after {
+    transform: rotate(180deg);
+  }
+
+  @media (hover: hover) {
+    main details.details-preview > summary:hover > span {
+      color: var(--link-color-hover);
+
+      @include link-underline;
+    }
+  }
+
+  main details.details-preview > summary:active > span {
+    color: var(--link-active-color);
+  }
+
+  main details.details-preview > summary:focus-visible > span {
+    outline: 2px solid var(--theme-color);
+    outline-offset: 2px;
+  }
+
+  /*
+   * An open preview mirrors a tall details element: its summary sticks to the
+   * bottom of the viewport instead of the top, drawing the box's bottom and
+   * side borders, and the body fades out above it. At rest, the summary covers
+   * the details element's own bottom border exactly.
+   */
+  @media screen {
+    main details.details-preview:not(details details)[open] {
+      // The label's height, the gaps around it, and the bottom border
+      --details-summary-height: calc(
+        var(--line-height) * var(--font-size-small) + 2 * var(--gap) +
+          var(--details-border-width)
+      );
+    }
+
+    main details.details-preview:not(details details)[open] > :not(summary),
+    main details.details-preview:not(details details)[open] > :not(summary) * {
+      scroll-margin: 0 0 calc(var(--details-summary-height) + #{$details-fade});
+    }
+
+    // The stuck summary draws the same fade as a closed preview, so it shows
+    // its bottom and side borders over a transparent background
+    main details.details-preview:not(details details)[open] > summary {
+      top: auto;
+      bottom: 0;
+      margin: 0
+        calc(-1 * (var(--details-padding) + var(--details-border-width)))
+        calc(-1 * var(--details-border-width));
+      background: none;
+      border: var(--details-border-width) solid var(--fg-color);
+      border-top: 0;
+
+      // Reaches above the summary, so the fade is as tall as a closed
+      // preview's (whose summary is padded by the fade instead of the gap)
+      &::after {
+        inset: calc(var(--gap) - #{$details-preview-fade}) 0 0;
+        z-index: -1;
+        height: auto;
+        content: '';
+        background: $details-preview-gradient;
+        opacity: min(var(--details-preview-in), var(--details-preview-out));
+        animation: none;
+      }
+    }
+
+    // The fade appears once the summary has left the top of the box and
+    // disappears before the summary comes to rest at the bottom
+    @supports (animation-timeline: view()) {
+      main details.details-preview:not(details details)[open] > summary::after {
+        $start: calc(
+          var(--details-summary-height) + var(--details-border-width) +
+            #{$details-preview-fade} - var(--gap)
+        );
+
+        animation:
+          details-preview-in linear both,
+          details-preview-out linear both;
+        animation-timeline: --details-frame, --details-frame;
+        animation-range:
+          entry-crossing #{$start} entry-crossing
+            calc(#{$start} + #{$details-fade}),
+          entry-crossing calc(100% - #{$details-fade}) entry-crossing 100%;
+      }
+    }
+  }
+
+  // Printing shows the whole body; the print component opens every details
+  // element, and without JavaScript a closed preview is no longer clipped
+  @media print {
+    main details.details-preview > summary {
+      display: none;
+    }
+
+    main details.details-preview:not([open])::details-content {
+      height: auto;
+      overflow: visible;
     }
   }
 }

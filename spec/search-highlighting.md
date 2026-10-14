@@ -36,9 +36,10 @@ separate strokes.
 
 The first highlight at or after the URL's fragment target, or the first on the
 page when there is no fragment, is revealed: if it is inside an inactive tab,
-that tab is selected (along with any enclosing tabs). Highlights inside a
-closed `<details>` are skipped, and so are highlights in a tab whose selection
-would hide the fragment target.
+that tab is selected (along with any enclosing tabs), and if it is inside a
+closed [details preview](details.md#previews), the preview is opened.
+Highlights inside any other closed `<details>` are skipped, and so are
+highlights in a tab whose selection would hide the fragment target.
 
 Without a fragment, the page scrolls so that highlight is centered; with one,
 the page keeps the fragment's scroll position. When client-side navigation

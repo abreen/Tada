@@ -385,6 +385,41 @@ The body of the checkbox details element.
 `,
 );
 
+const previewParagraphs = Array.from({ length: 40 }, (_, i) =>
+  i === 0
+    ? 'Paragraph 1 of the preview, with <button type="button">a button</button>.'
+    : i === 24
+      ? 'Paragraph 25 of the preview mentions a zebra.'
+      : i === 29
+        ? 'Paragraph 30 of the preview, with [a link](#preview-end).'
+        : `Paragraph ${i + 1} of the preview.`,
+).join('\n\n');
+writeFileSync(
+  path.join(siteDir, 'content', 'details-preview.md'),
+  `---
+title: Details Preview
+---
+
+${Array.from({ length: 20 }, (_, i) => `Paragraph ${i + 1} before the preview.`).join('\n\n')}
+
+<details>
+
+${previewParagraphs}
+
+<p id="preview-end">The last paragraph of the preview.</p>
+
+</details>
+
+<details>
+
+The only paragraph of the short preview.
+
+</details>
+
+${Array.from({ length: 40 }, (_, i) => `Paragraph ${i + 1} after the preview.`).join('\n\n')}
+`,
+);
+
 writeFileSync(
   path.join(siteDir, 'content', 'author-scripts-start.md'),
   `---

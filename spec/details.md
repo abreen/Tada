@@ -21,7 +21,8 @@ an outline in the theme color.
 
 Content inside a details element is not listed in the
 [table of contents](table-of-contents.md). Search highlights in a closed details
-element are skipped (see [Search Highlighting](search-highlighting.md)). Before
+element are skipped, unless it is a preview (see below and
+[Search Highlighting](search-highlighting.md)). Before
 printing, every details element is opened, and then closed again afterwards if
 it was closed.
 
@@ -84,3 +85,62 @@ alone. Without JavaScript, the browser
 closes the details element normally.
 
 Nested details elements, and details elements in print, do not stick.
+
+## Previews
+
+A details element without a summary is a preview:
+
+```html
+<details>
+
+Content that starts out partly shown.
+
+</details>
+```
+
+At build time, every details element in the rendered page content (before
+it is placed in the page template) that has no `<summary>` child gets the `details-preview` class and a generated summary
+labeled "Show more" while closed and "Show less" while open. The summary is ignored by
+search indexing. Details elements outside the page content (such as header
+menus) are left alone.
+
+In browsers that support `::details-content`:
+
+- A closed preview is drawn as the usual box, but shows the start of its body
+  instead of a summary, clipped to a height of 10em (relative to the body's
+  font size) plus the box's top padding. The body runs down to the box's
+  bottom border.
+- The summary lies over the bottom of the body: it fades from transparent,
+  3em above its label, to solid `--details-bg-color` at the top of the label
+  row, so the last lines of the body fade out and the label stays readable.
+  A closed preview is always 10em tall plus its top padding, so a short body
+  still leaves room for the summary. The label is centered in the fade, with `--gap` between it and the
+  box's bottom border. The whole summary, fade included, opens the preview.
+- The label is styled like a link ("Show more" or "Show less" in the link
+  color, underlined on hover) and ends with the `chevron-down` icon, which
+  points down while the preview is closed and up while it is open. Keyboard
+  focus outlines the label.
+- An open preview shows its whole body. On screen, a preview that is not
+  nested in another details element keeps its Show less label in view, mirroring
+  a tall details element: while the bottom of the box is below the viewport,
+  the summary row and the box's bottom edge stick to the bottom of the viewport, and
+  body text fades out under them with the same fade as a closed preview. The
+  fade appears once the summary has left the top of the box and disappears
+  before the summary comes to rest on the box's bottom border. Browsers without
+  scroll-driven animations show the stuck summary without a fade.
+- Info and warning icons are not shown, since a preview has no author summary
+  to put them in.
+- In print, the summary is hidden and the whole body is shown.
+
+With JavaScript, the `details` client component keeps the Show less label where
+it was clicked: closing a preview scrolls the page by however far the label
+moved, so the collapsed preview ends just above the reader's pointer. Moving
+keyboard focus into a closed preview's body (for example, tabbing to a link
+that is clipped from view) opens the preview; focus from a pointer, such as
+clicking a button in the visible part of the body, leaves it closed. A search
+highlight inside a closed preview opens it (see
+[Search Highlighting](search-highlighting.md)). Without JavaScript, the browser
+closes the preview normally.
+
+Browsers without `::details-content` show a preview as a usual details element
+whose summary reads "Show more" or "Show less".
