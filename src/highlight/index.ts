@@ -99,6 +99,18 @@ function sweepDuration(mark: HTMLElement): number {
   );
 }
 
+/** Unwraps the highlights, leaving the text as it was */
+function removeMarks(marks: HTMLElement[]): void {
+  const parents = new Set<Node>();
+  for (const mark of marks) {
+    if (mark.parentNode) {
+      parents.add(mark.parentNode);
+    }
+    mark.replaceWith(...mark.childNodes);
+  }
+  parents.forEach(parent => parent.normalize());
+}
+
 export default async (window: Window) => {
   const document = window.document;
   const page = window.location.pathname + window.location.search;
@@ -216,7 +228,20 @@ export default async (window: Window) => {
   });
   marks.forEach(mark => observer.observe(mark));
 
+  // Focusing the search box clears the highlights, as the reader is done with
+  // that search. The URL keeps the search terms.
+  const handleFocusIn = (event: FocusEvent) => {
+    if (!(event.target as Element).matches?.('input.quick-search')) {
+      return;
+    }
+    document.removeEventListener('focusin', handleFocusIn);
+    observer.disconnect();
+    removeMarks(marks);
+  };
+  document.addEventListener('focusin', handleFocusIn);
+
   return () => {
+    document.removeEventListener('focusin', handleFocusIn);
     observer.disconnect();
   };
 };

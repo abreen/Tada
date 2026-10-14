@@ -50,6 +50,15 @@ Reloads keep no scroll position, so they scroll to the highlight again.
 A fragment change on the same page while Pagefind's highlighter loads, such as
 following a table of contents link, does not cancel highlighting.
 
+## Clearing
+
+Focusing the search box, by clicking it or pressing `/`, clears the
+highlights: the marks are removed, leaving the text as it was. The URL, the
+scroll position, and any tabs or details the highlight opened are kept, so
+reloading the page highlights the same words again. Highlights are cleared only
+once they are on the page; focusing the search box while Pagefind's highlighter
+is still loading does not cancel highlighting.
+
 ## Animation
 
 The highlight is a background image that sweeps from left to right. Across a

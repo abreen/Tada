@@ -138,3 +138,26 @@ test('keeps the tab with the link target selected', async ({ page }) => {
     'false',
   );
 });
+
+test('focusing the search box clears the highlights', async ({ page }) => {
+  await page.goto(REMAINDER_URL);
+  const marks = page.locator('mark.search-highlight');
+  await expect(marks.first()).toBeInViewport();
+  const top = await page.evaluate(() => window.scrollY);
+
+  await page.keyboard.press('/');
+
+  await expect(page.locator('input.quick-search')).toBeFocused();
+  await expect(marks).toHaveCount(0);
+  // The reader stays where they were, in the tab the highlight opened
+  await expect(page.getByRole('tab', { name: 'Prose' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  expect(await page.evaluate(() => window.scrollY)).toBe(top);
+  await expect(page.getByText('remainder').first()).toBeInViewport();
+  // The URL keeps the search terms, so a reload highlights them again
+  await expect(page).toHaveURL(REMAINDER_URL);
+  await page.reload();
+  await expect(marks.first()).toBeInViewport();
+});
