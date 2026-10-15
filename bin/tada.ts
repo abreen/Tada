@@ -59,6 +59,7 @@ const COMMANDS = {
   serve: 'Start a local development server',
   clean: null,
   diff: null,
+  export: null,
 };
 
 interface InitQuestion {
@@ -152,6 +153,20 @@ function printUsage() {
       console.log('       [N M]               Compare version N vs version M');
       console.log(
         '       [--copy <dir>]      Copy changed files to a directory',
+      );
+      continue;
+    } else if (cmd === 'export') {
+      console.log(
+        '  export             Export content/ as plain GitHub Flavored Markdown',
+      );
+      console.log(
+        '       (--dev | --prod)    Site config to read variables from (required)',
+      );
+      console.log(
+        '       [--out <dir>]       Output directory (default: exported)',
+      );
+      console.log(
+        '       [--force]           Replace an output directory that is not empty',
       );
       continue;
     }
@@ -617,6 +632,46 @@ function diffCommand(args: string[]): void {
   }
 }
 
+async function exportCommand(args: string[]): Promise<void> {
+  let values: { dev?: boolean; prod?: boolean; out?: string; force?: boolean };
+  try {
+    ({ values } = parseArgs({
+      args,
+      options: {
+        dev: { type: 'boolean', default: false },
+        prod: { type: 'boolean', default: false },
+        out: { type: 'string' },
+        force: { type: 'boolean', default: false },
+      },
+    }));
+  } catch (error) {
+    console.error(`Error: ${(error as Error).message}`);
+    console.log('Usage: tada export (--dev | --prod) [--out <dir>] [--force]');
+    process.exit(1);
+  }
+
+  if (values.dev === values.prod) {
+    console.error('Error: Pass exactly one of --dev or --prod.');
+    console.log('Usage: tada export (--dev | --prod) [--out <dir>] [--force]');
+    process.exit(1);
+  }
+  const env = values.dev ? 'dev' : 'prod';
+  requireSiteConfig(env);
+
+  const { runExport, DEFAULT_EXPORT_DIR } = await import(
+    path.join(packageDir, 'build/export/export.ts')
+  );
+  const summary = runExport({
+    env,
+    outDir: values.out ?? DEFAULT_EXPORT_DIR,
+    force: values.force ?? false,
+  });
+  const noun = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  console.log(
+    `Exported ${noun(summary.pages, 'page')} and copied ${noun(summary.files, 'file')} to ${summary.outDir}/`,
+  );
+}
+
 /*
  * Start of script
  */
@@ -669,6 +724,10 @@ try {
 
     case 'diff':
       diffCommand(process.argv.slice(3));
+      break;
+
+    case 'export':
+      await exportCommand(process.argv.slice(3));
       break;
 
     case '--version':

@@ -220,6 +220,15 @@ Use `--copy <dir>` to copy only the changed and added files to a directory:
 
 The output directory will also include a `manifest.json` for the newer build.
 
+### `tada export`
+
+Write the site's content as plain GitHub Flavored Markdown, without front
+matter, to `exported/` (change it with `--out <dir>`). Pass `--dev` or `--prod`
+to choose which site config supplies the variables; one is required. Pass
+`--force` to replace an output directory that is not empty.
+
+    tada export --prod
+
 ## Development vs. production builds
 
 `tada dev` and `tada watch` build to the `dist/` directory using
