@@ -72,6 +72,9 @@ const LIST_ITEM_PREFIX_PATTERN = /(?:[-+*]|\d{1,9}[.)])[ \t]*$/;
 /** ASCII punctuation, which a backslash makes literal in Markdown */
 const MARKDOWN_PUNCTUATION_PATTERN = /[!-/:-@[-`{-~]/g;
 
+/** What ExportContext.readFile returns for a directory */
+export const DIRECTORY = Symbol('directory');
+
 /** What exporting a page needs to know about the rest of the site */
 export interface ExportContext {
   siteVariables: SiteVariables;
@@ -86,8 +89,11 @@ export interface ExportContext {
    * export leaves out, such as generated files
    */
   validTargets: ReadonlySet<string>;
-  /** Reads a file as written, or returns null when there is none */
-  readFile: (filePath: string) => string | null;
+  /**
+   * Reads a file as written, or returns null when there is none, or
+   * DIRECTORY for a directory
+   */
+  readFile: (filePath: string) => string | typeof DIRECTORY | null;
   /** Reads a traced source file as the build publishes it */
   readTraceFile: (filePath: string) => string;
 }
@@ -810,6 +816,11 @@ class PageExporter {
       }
       checkPartialTarget(caller, relativePath, resolvedPath);
       checkIncludeDepth(caller, depth);
+      if (raw === DIRECTORY) {
+        throw new Error(
+          `EISDIR: illegal operation on a directory, read '${resolvedPath}'`,
+        );
+      }
       const partial = this.expandPartials(
         normalizeNewlines(
           substituteContent(
@@ -2066,8 +2077,21 @@ export function exportMarkdownPage(
     normalizeNewlines(body),
     page.filePath,
   );
-  const exported = exporter
-    .transform(expanded.text, expanded.origins)
+  let transformed: string;
+  try {
+    transformed = exporter.transform(expanded.text, expanded.origins);
+  } catch (error) {
+    // The table of contents renders math in headings, and KaTeX's errors
+    // name no file
+    if ((error as Error).name === 'ParseError') {
+      throw new Error(
+        `${toDisplayPath(page.filePath)}: ${(error as Error).message}`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
+  const exported = transformed
     .replace(/^(?:[ \t]*\n)+/, '')
     .replace(/\n+$/, '\n');
   const title = exportTitle(context, page);

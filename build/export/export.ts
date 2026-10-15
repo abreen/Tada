@@ -27,6 +27,7 @@ import {
   substituteFrontMatterValue,
 } from '../variables';
 import {
+  DIRECTORY,
   exportHtmlPage,
   exportMarkdownPage,
   type ExportContext,
@@ -117,8 +118,10 @@ function checkOutDir(outDir: string, force: boolean): void {
 
 /** Whether a process with this ID is running */
 function isRunning(pid: number): boolean {
+  // This run cleans up before it stages, so a directory with its pid is from
+  // an earlier run that had the same pid, as pid 1 in containers
   if (pid === globals.pid()) {
-    return true;
+    return false;
   }
   try {
     process.kill(pid, 0);
@@ -344,12 +347,12 @@ export function runExport({
     pageTitles: scan.pageTitles,
     exportPaths,
     validTargets: scan.validTargets,
-    // A directory reads as empty, so the partial checks report it as the
-    // build does, by its name
+    // A directory is read only after the partial checks, as in the build,
+    // so one named like a partial fails as reading it fails there
     readFile: filePath =>
       fs.existsSync(filePath)
         ? fs.statSync(filePath).isDirectory()
-          ? ''
+          ? DIRECTORY
           : fs.readFileSync(filePath, 'utf-8')
         : null,
     readTraceFile: filePath => {

@@ -28,9 +28,10 @@ untouched for an hour, whose run is no longer going, is removed; a backup of an 
 
 The export reports the build's errors for what it reads and converts:
 variables, partials, [wikilinks](wikilinks.md), internal links, traces, and
-output conflicts. It does not run the build's other checks, such as fence
-languages, front matter fields, or KaTeX; run `tada dev` or `tada prod` to
-check a site.
+output conflicts. Math in headings is rendered for the table of contents, as
+in the build, so invalid math there fails the export too. It does not run the
+build's other checks, such as fence languages, front matter fields, or KaTeX
+elsewhere; run `tada dev` or `tada prod` to check a site.
 
 ## Files
 

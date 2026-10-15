@@ -157,7 +157,7 @@ function printUsage() {
       continue;
     } else if (cmd === 'export') {
       console.log(
-        '  export             Export content/ as plain GitHub Flavored Markdown',
+        '  export             Export the site as plain GitHub Flavored Markdown',
       );
       console.log(
         '       (--dev | --prod)    Site config to read variables from (required)',
@@ -666,7 +666,7 @@ async function exportCommand(args: string[]): Promise<void> {
   });
   const noun = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   console.log(
-    `Exported ${noun(summary.pages, 'page')} and copied ${noun(summary.files, 'file')} to ${summary.outDir}/`,
+    `Exported ${noun(summary.pages, 'page')} and ${noun(summary.files, 'other file')} to ${summary.outDir}/`,
   );
 }
 
