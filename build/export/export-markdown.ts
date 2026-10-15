@@ -1,7 +1,6 @@
 import path from 'path';
 import { decodeHTMLAttribute } from 'entities';
 import MarkdownIt from 'markdown-it';
-import htmlBlockNames from 'markdown-it/lib/common/html_blocks.mjs';
 import markdownItKatex from '@vscode/markdown-it-katex';
 import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
 import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
@@ -33,19 +32,10 @@ const CONTAINER_PREFIX_PATTERN =
 /** A container prefix, then any definition list marker (`: ` or `~ `) */
 const LINE_PREFIX_PATTERN =
   /^(?:[ \t]*(?:>|[-+*](?=[ \t]|$)|\d{1,9}[.)](?=[ \t]|$)|[:~](?=[ \t])))*[ \t]*/;
+/** ` # ` with its `#` escaped or written as a character reference */
+const ESCAPED_HASH_SEPARATOR_PATTERN = /^ (?:\\#|&#35;|&#[xX]23;|&num;) /;
 /** List markers and definition markers, which later lines indent past */
 const LIST_MARKER_PATTERN = /[-+*]|\d{1,9}[.)]|[:~]/g;
-/** HTML block types 1 to 5, which can interrupt a paragraph */
-const INTERRUPTING_HTML_PATTERN =
-  /^\s*(?:<(?:script|pre|style|textarea)(?=[\s>]|$)|<!--|<\?|<![A-Za-z]|<!\[CDATA\[)/i;
-const BLOCK_TAG_PATTERN = /^\s*<\/?([A-Za-z][A-Za-z0-9-]*)(?=[\s/>]|$)/;
-
-/** Whether HTML starts with a block-level tag: HTML block type 6 */
-function isBlockTag(html: string): boolean {
-  const name = BLOCK_TAG_PATTERN.exec(html)?.[1].toLowerCase();
-  return name !== undefined && htmlBlockNames.includes(name);
-}
-
 /** A container prefix that ends in a list marker, which starts a list item */
 const LIST_ITEM_PREFIX_PATTERN = /(?:[-+*]|\d{1,9}[.)])[ \t]*$/;
 /** ASCII punctuation, which a backslash makes literal in Markdown */
@@ -642,46 +632,6 @@ class PageExporter {
   }
 
   /**
-   * Whether Markdown's first block can start right after a paragraph line;
-   * an indented code block or some HTML blocks would join the paragraph
-   */
-  private canInterruptParagraph(markdown: string): boolean {
-    const { tokens, record } = this.parse(markdown, { wikilinks: false });
-    const firstLine = markdown.split('\n').findIndex(line => line.trim());
-    // A reference definition leaves no token
-    if (record.references.some(([start]) => start === firstLine)) {
-      return false;
-    }
-    const first = tokens[0];
-    switch (first?.type) {
-      case 'paragraph_open': {
-        // Text joins the paragraph, as the build's tight list shows it, but
-        // a line of `=` or `-` would underline it as a heading
-        const line = markdown.split('\n')[firstLine];
-        return !/^ {0,3}(?:=+|-+)[ \t]*$/.test(line);
-      }
-      case 'ordered_list_open':
-        // Only a list that starts at 1
-        return first.attrGet('start') === null;
-      case 'bullet_list_open':
-      case 'heading_open':
-      case 'fence':
-      case 'blockquote_open':
-        return true;
-      case 'html_block':
-        // Only HTML blocks of types 1 to 6
-        return (
-          INTERRUPTING_HTML_PATTERN.test(first.content) ||
-          isBlockTag(first.content)
-        );
-      default:
-        // Such as a thematic break, which `---` would make a heading
-        // underline, or a block Tada converts
-        return false;
-    }
-  }
-
-  /**
    * Replaces partial directives with the partials' text, recursively, with
    * the file each resulting line came from
    */
@@ -689,8 +639,6 @@ class PageExporter {
     text: string,
     fromFile: string,
     depth = 0,
-    /** Whether the text is a partial included in a list item */
-    inList = false,
   ): { text: string; origins: string[] } {
     const unchanged = () => ({
       text,
@@ -700,21 +648,7 @@ class PageExporter {
       return unchanged();
     }
     const { tokens } = this.parse(text, { wikilinks: false });
-    const directives: Token[] = [];
-    const inListItem = new Set<Token>();
-    let listItemDepth = 0;
-    for (const token of tokens) {
-      if (token.type === 'list_item_open') {
-        listItemDepth++;
-      } else if (token.type === 'list_item_close') {
-        listItemDepth--;
-      } else if (token.type === 'export_partial') {
-        directives.push(token);
-        if (inList || listItemDepth > 0) {
-          inListItem.add(token);
-        }
-      }
-    }
+    const directives = tokens.filter(token => token.type === 'export_partial');
     if (directives.length === 0) {
       return unchanged();
     }
@@ -749,7 +683,6 @@ class PageExporter {
         ),
         resolvedPath,
         depth + 1,
-        inListItem.has(directive),
       );
       const partialLines = partial.text.replace(/\n$/, '').split('\n');
       const partialText = partialLines.join('\n');
@@ -759,19 +692,14 @@ class PageExporter {
       const prefix = original.slice(0, original.indexOf('{{{'));
       const indent = continuationPrefix(prefix);
       // The build parses a partial as blocks of their own, so blank lines keep
-      // it from joining a paragraph or list around it. A directive that is a
-      // list item already starts a block of its own. Inside a list item, blank
-      // lines would make a tight list loose, which the build avoids, so one is
-      // added only before a block that cannot interrupt a paragraph.
+      // it from joining the lines around it. A directive that is a list item
+      // already starts a block of its own. Inside a list item, this makes the
+      // list loose (see Limitations in spec/export.md).
       const isBlank = (text: string | undefined) =>
         text === undefined || /^[\s>]*$/.test(text);
       const continuation = indent === prefix;
-      const listed = inListItem.has(directive);
-      const breakBefore =
-        continuation &&
-        !isBlank(lines[line - 1]) &&
-        (!listed || !this.canInterruptParagraph(partialText));
-      const breakAfter = continuation && !listed && !isBlank(lines[line + 1]);
+      const breakBefore = continuation && !isBlank(lines[line - 1]);
+      const breakAfter = continuation && !isBlank(lines[line + 1]);
       const { extraIndent } = directive.meta as { extraIndent: number };
       const withoutExtra = (text: string) =>
         text.slice(
@@ -851,7 +779,7 @@ class PageExporter {
     ) {
       return null;
     }
-    const linked = this.linkTo(target, absolute);
+    const linked = this.linkTo(target, absolute || climbs);
     if (linked === null) {
       return null;
     }
@@ -1866,9 +1794,13 @@ function findSubtitleSeparator(
       i = Math.max(...covering.map(([, end]) => end)) - 1;
     } else if (content.startsWith(' # ', i)) {
       return [i, i + 3];
-    } else if (content.startsWith(' \\# ', i)) {
-      // Then splits the text, where an escaped `#` is plain `#`
-      return [i, i + 4];
+    } else if (ESCAPED_HASH_SEPARATOR_PATTERN.test(content.slice(i, i + 9))) {
+      // Then splits the text, where an escaped `#` or a character reference
+      // for it is plain `#`
+      const separator = ESCAPED_HASH_SEPARATOR_PATTERN.exec(
+        content.slice(i, i + 9),
+      )![0];
+      return [i, i + separator.length];
     } else if (char === '\\') {
       i++;
     } else if (char === '`') {

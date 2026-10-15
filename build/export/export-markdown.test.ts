@@ -123,12 +123,17 @@ describe('exportMarkdownPage', () => {
     ).toThrow('trace blocks are not supported here');
   });
 
-  test('keeps a list tight around a partial on a continuation line', () => {
+  test('separates a partial on a list item continuation line', () => {
     expect(
       exportPage('- item\n  {{{ _p.md }}}\n- two', {
         files: { 'lectures/_p.md': 'Partial' },
       }),
-    ).toBe('- item\n  Partial\n- two\n');
+    ).toBe('- item\n\n  Partial\n\n- two\n');
+    expect(
+      exportPage('- item\n  {{{ _p.md }}}\n  more', {
+        files: { 'lectures/_p.md': '> q' },
+      }),
+    ).toBe('- item\n\n  > q\n\n  more\n');
   });
 
   test('converts blocks that start on a definition line', () => {
@@ -191,7 +196,7 @@ describe('exportMarkdownPage', () => {
     ).toBe('<svg>\n<rect/>\n\n<a href="../gone.html">x</a>\n</svg>\n');
   });
 
-  test('keeps lists tight around nested partials', () => {
+  test('separates nested partials in a list', () => {
     expect(
       exportPage('- one\n  {{{ _a.md }}}\n- two', {
         files: {
@@ -199,15 +204,7 @@ describe('exportMarkdownPage', () => {
           'lectures/_b.md': 'B text',
         },
       }),
-    ).toBe('- one\n  Intro\n  B text\n- two\n');
-  });
-
-  test('separates a partial that cannot interrupt a paragraph in a list', () => {
-    expect(
-      exportPage('- item\n  {{{ _p.md }}}', {
-        files: { 'lectures/_p.md': '    code' },
-      }),
-    ).toBe('- item\n\n      code\n');
+    ).toBe('- one\n\n  Intro\n\n  B text\n\n- two\n');
   });
 
   test('escapes wikilink destinations', () => {
@@ -264,17 +261,22 @@ describe('exportMarkdownPage', () => {
     );
   });
 
-  test('separates partials in a list by whether they can interrupt', () => {
-    expect(
-      exportPage('- text\n  {{{ _p.md }}}', {
-        files: { 'lectures/_p.md': '<div>x</div>' },
-      }),
-    ).toBe('- text\n  <div>x</div>\n');
-    expect(
-      exportPage('- text\n  {{{ _p.md }}}\n\n  [y][a]', {
-        files: { 'lectures/_p.md': '[a]: /index.html' },
-      }),
-    ).toBe('- text\n\n  [a]: ../index.md\n\n  [y][a]\n');
+  test('separates any partial on a continuation line in a list', () => {
+    for (const partial of [
+      '    code',
+      '<div>x</div>',
+      '[a]: /index.html',
+      '---',
+      '===',
+      'Title\n=====',
+      '-\n  x',
+      '2. two\n3. three',
+    ]) {
+      const exported = exportPage('- item\n  {{{ _p.md }}}', {
+        files: { 'lectures/_p.md': partial },
+      });
+      expect(exported.startsWith('- item\n\n')).toBe(true);
+    }
   });
 
   test('checks anchors inside an SVG foreignObject', () => {
@@ -347,19 +349,12 @@ describe('exportMarkdownPage', () => {
     );
   });
 
-  test('separates list partials that would join the paragraph above', () => {
-    for (const partial of ['---', '===', '2. two\n3. three']) {
-      expect(
-        exportPage('- item\n  {{{ _p.md }}}', {
-          files: { 'lectures/_p.md': partial },
-        }),
-      ).toBe(`- item\n\n  ${partial.replace('\n', '\n  ')}\n`);
-    }
-    expect(
-      exportPage('- item\n  {{{ _p.md }}}', {
-        files: { 'lectures/_p.md': '1. one' },
-      }),
-    ).toBe('- item\n  1. one\n');
+  test('rewrites a climbing link to a file the export leaves out', () => {
+    expect(exportPage('[x](../../feed.xml)')).toBe('[x](../feed.xml)\n');
+  });
+
+  test('reads a # character reference as the build does', () => {
+    expect(exportPage('## A &#35; # B')).toBe('## A - # B\n');
   });
 
   test('drops extra indentation before a partial directive', () => {

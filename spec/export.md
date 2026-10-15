@@ -73,7 +73,7 @@ them as the build does.
 
 | Tada | Export |
 |---|---|
-| `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it (inside a list item, only before a block that cannot interrupt a paragraph, such as an indented code block, since blank lines would make a tight list loose) |
+| `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it |
 | `[[Title]]`, `[[Title\|text]]` | `[Title](path.md)`, `[text](path.md)` |
 | `[Title][Description](url)` | `[Title](url) - Description`; a superlink followed by a line break ends with `\` so the next one stays on its own line |
 | `!!! note` / `!!! warning` | `> [!NOTE]` / `> [!WARNING]`; a custom title becomes a bold line under the marker, with its punctuation escaped so it shows literally, as in the build |
@@ -134,6 +134,7 @@ These are known differences from the built site:
   as a plain blockquote that starts with `[!NOTE]` or `[!WARNING]`.
 - Inside an alert, lines indented with tabs, including code, are indented
   with spaces instead, since after `> ` Markdown reads a tab as spaces.
-- A question, tab, or two-column layout inside a list item needs blank lines
-  around its content (GitHub parses Markdown inside `<details>` only after a
-  blank line), so the list renders loose, with spacing between items.
+- A question, tab, two-column layout, or partial inside a list item needs blank
+  lines around its content (GitHub parses Markdown inside `<details>` only
+  after a blank line, and a partial's blocks must not join the item's text),
+  so the list renders loose, with spacing between items.

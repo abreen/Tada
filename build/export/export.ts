@@ -172,9 +172,14 @@ function publishOutputs(outDir: string, outputs: ExportOutput[]): void {
     }
     fs.renameSync(staging, outDir);
   } catch (error) {
-    // Restore the earlier export first, so a failing cleanup cannot strand it
-    if (fs.existsSync(backup) && !fs.existsSync(outDir)) {
-      fs.renameSync(backup, outDir);
+    // Restore the earlier export first, so a failing cleanup cannot strand
+    // it; the error reported is still the one that stopped the export
+    try {
+      if (fs.existsSync(backup) && !fs.existsSync(outDir)) {
+        fs.renameSync(backup, outDir);
+      }
+    } catch (restoreError) {
+      log.warn`Could not restore ${toDisplayPath(outDir)} from ${toDisplayPath(backup)}: ${(restoreError as Error).message}`;
     }
     try {
       fs.rmSync(staging, { recursive: true, force: true });
