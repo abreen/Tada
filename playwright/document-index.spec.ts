@@ -74,7 +74,7 @@ for (const javaScriptEnabled of [true, false]) {
       ]) {
         await pagination(page).getByRole('link', { name: /Next/ }).click();
         await expect(page).toHaveURL(
-          new RegExp(`${path.replace(/\./g, '\\.')}$`),
+          new RegExp(`${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
         );
       }
       await expect(
