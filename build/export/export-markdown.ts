@@ -25,8 +25,11 @@ import { getSiteVars, substituteContent } from '../variables';
 import type { SiteVariables } from '../types';
 
 /** Blockquote markers, list markers, and indentation before a block */
-const LINE_PREFIX_PATTERN =
+const CONTAINER_PREFIX_PATTERN =
   /^(?:[ \t]*(?:>|[-+*](?=[ \t]|$)|\d{1,9}[.)](?=[ \t]|$)))*[ \t]*/;
+/** A container prefix, then any definition list marker (`: ` or `~ `) */
+const LINE_PREFIX_PATTERN =
+  /^(?:[ \t]*(?:>|[-+*](?=[ \t]|$)|\d{1,9}[.)](?=[ \t]|$)|[:~](?=[ \t])))*[ \t]*/;
 const LIST_MARKER_PATTERN = /[-+*]|\d{1,9}[.)]/g;
 /** ASCII punctuation, which a backslash makes literal in Markdown */
 const MARKDOWN_PUNCTUATION_PATTERN = /[!-/:-@[-`{-~]/g;
@@ -58,9 +61,10 @@ export interface ExportPage {
   relPath: string;
   /** Front matter title, after site variable substitution */
   title?: string;
-  /** Keeps `<!--- -->` comments, as literate Java pages do */
-  preserveHtmlComments?: boolean;
-  /** A literate Java page, where the build does not allow trace blocks */
+  /**
+   * A literate Java page, which keeps `<!--- -->` comments and where the build
+   * does not allow trace blocks
+   */
   literateJava?: boolean;
 }
 
@@ -93,6 +97,13 @@ interface ParseRecord {
   cells: Map<Token, number>;
   /** Line ranges of link reference definitions */
   references: [number, number][];
+}
+
+/** Text inserted at a column of a line, after removing some characters */
+interface PrefixChange {
+  col: number;
+  text: string;
+  remove?: number;
 }
 
 interface Edit {
@@ -312,6 +323,9 @@ function partialDirectivePlugin(md: MarkdownIt): void {
         const token = state.push('export_partial', '', 0);
         token.map = [startLine, startLine + 1];
         token.info = relativePath;
+        // Indentation beyond the container's, which the partial's own lines
+        // do not take, since the build parses the partial from column 0
+        token.meta = { extraIndent: state.sCount[startLine] - state.blkIndent };
       }
       state.line = startLine + 1;
       return true;
@@ -521,7 +535,7 @@ class PageExporter {
             raw,
             getSiteVars(this.context.siteVariables),
             resolvedPath,
-            this.page.preserveHtmlComments,
+            this.page.literateJava,
           ),
         ),
         resolvedPath,
@@ -543,7 +557,14 @@ class PageExporter {
         separate && !isBlank(lines[line - 1]) ? `${indent.trimEnd()}\n` : '';
       const after =
         separate && !isBlank(lines[line + 1]) ? `\n${indent.trimEnd()}` : '';
-      lines[line] = before + prefix + indentLines(partial, indent) + after;
+      const { extraIndent } = directive.meta as { extraIndent: number };
+      const extra = indent.match(/ *$/)![0].length;
+      const partialIndent = indent.slice(
+        0,
+        indent.length - Math.min(extra, Math.max(0, extraIndent)),
+      );
+      lines[line] =
+        before + prefix + indentLines(partial, partialIndent) + after;
     }
     return lines.join('\n');
   }
@@ -686,17 +707,19 @@ class PageExporter {
           typeof replacement === 'string' ? () => replacement : replacement,
       });
 
-    // Blockquote markers that alerts add to their lines, by line
-    const insertions = new Map<number, { col: number; text: string }[]>();
+    // Changes to the start of lines, by line: blockquote markers that alerts
+    // add, and definition markers and indentation that definitions remove
+    const insertions = new Map<number, PrefixChange[]>();
     const effectivePrefix = (line: number, col: number) => {
       const original = lines[line].slice(0, col);
+      const changes = (insertions.get(line) ?? [])
+        .filter(change => change.col <= col)
+        .sort((a, b) => a.col - b.col);
       let result = '';
       let pos = 0;
-      for (const insertion of insertions.get(line) ?? []) {
-        if (insertion.col <= col) {
-          result += original.slice(pos, insertion.col) + insertion.text;
-          pos = insertion.col;
-        }
+      for (const change of changes) {
+        result += original.slice(pos, change.col) + change.text;
+        pos = Math.min(col, change.col + (change.remove ?? 0));
       }
       return result + original.slice(pos);
     };
@@ -878,7 +901,9 @@ class PageExporter {
       } else if (token.type === 'dd_open') {
         this.exportDefinition(tokens, index, {
           lines,
-          blockStart,
+          insertions,
+          indentAt: (line, col) =>
+            continuationPrefix(effectivePrefix(line, col)),
           lineStart,
           lineEnd,
           replace,
@@ -906,7 +931,13 @@ class PageExporter {
       } else if (token.type === 'heading_open') {
         const inline = tokens[index + 1];
         const content = record.contents.get(inline) ?? '';
-        const separator = findSubtitleSeparator(content);
+        const html = record.spans
+          .filter(span => span.inline === inline && span.kind === 'html_inline')
+          .map((span): [number, number] => [
+            span.base + span.start,
+            span.base + span.end,
+          ]);
+        const separator = findSubtitleSeparator(content, html);
         if (separator >= 0) {
           const map = inlineMapper(inline);
           replace(map(separator), map(separator + 3), ' - ');
@@ -1086,7 +1117,7 @@ class PageExporter {
       };
       isMarkerLine: (line: number, marker: string) => boolean;
       blankStart: (line: number) => number;
-      insertions: Map<number, { col: number; text: string }[]>;
+      insertions: Map<number, PrefixChange[]>;
       lineStart: (line: number) => number;
       lineEnd: (line: number) => number;
       replace: (start: number, end: number, replacement: string) => void;
@@ -1192,34 +1223,42 @@ class PageExporter {
     index: number,
     helpers: {
       lines: string[];
-      blockStart: (line: number) => {
-        col: number;
-        start: number;
-        indent: string;
-      };
+      insertions: Map<number, PrefixChange[]>;
+      indentAt: (line: number, col: number) => string;
       lineStart: (line: number) => number;
       lineEnd: (line: number) => number;
       replace: (start: number, end: number, replacement: string) => void;
     },
   ): void {
-    const { lines, blockStart, lineStart, lineEnd, replace } = helpers;
+    const { lines, insertions, indentAt, lineStart, lineEnd, replace } =
+      helpers;
+    const containerPrefix = (line: number) =>
+      lines[line].match(CONTAINER_PREFIX_PATTERN)![0];
     // The map of a term's second and later definitions starts at the term
     const [mapStart, end] = tokens[index].map!;
     let open = mapStart;
     while (
       open < end - 1 &&
-      !/^[:~][ \t]/.test(lines[open].slice(linePrefix(lines[open]).length))
+      !/^[:~][ \t]/.test(lines[open].slice(containerPrefix(open).length))
     ) {
       open++;
     }
-    const { col, start, indent } = blockStart(open);
+    const col = containerPrefix(open).length;
+    const indent = indentAt(open, col);
     const markerEnd =
       col + 1 + lines[open].slice(col + 1).match(/^[ \t]*/)![0].length;
     replace(
-      start,
+      lineStart(open) + col,
       lineStart(open) + markerEnd,
       `<dd>\n${indent.trimEnd()}\n${indent}`,
     );
+    // Blocks inside the definition start where its text now starts
+    const removed = (line: number, count: number) => {
+      const changes = insertions.get(line) ?? [];
+      changes.push({ col, text: '', remove: count });
+      insertions.set(line, changes);
+    };
+    removed(open, markerEnd - col);
 
     // Later lines are indented to the text after the marker
     const contentIndent = new RegExp(`^(?:\\t| {0,${markerEnd - col}})`);
@@ -1230,6 +1269,7 @@ class PageExporter {
         const spaces = lines[line].slice(col).match(contentIndent)![0].length;
         if (spaces > 0) {
           replace(lineStart(line) + col, lineStart(line) + col + spaces, '');
+          removed(line, spaces);
         }
       }
     }
@@ -1414,10 +1454,17 @@ function findReferenceLabelEnd(definition: string): number {
 }
 
 /** Index of the ` # ` that starts a heading subtitle, outside code spans */
-function findSubtitleSeparator(content: string): number {
+function findSubtitleSeparator(
+  content: string,
+  /** Ranges of raw HTML, which the build does not look in */
+  html: [number, number][] = [],
+): number {
   for (let i = 0; i < content.length; i++) {
     const char = content[i];
-    if (char === '\\') {
+    const tag = html.find(([start]) => start === i);
+    if (tag) {
+      i = tag[1] - 1;
+    } else if (char === '\\') {
       i++;
     } else if (char === '`') {
       const run = /^`+/.exec(content.slice(i))![0];

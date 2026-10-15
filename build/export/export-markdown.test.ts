@@ -130,6 +130,34 @@ describe('exportMarkdownPage', () => {
     ).toBe('- item\n  Partial\n- two\n');
   });
 
+  test('converts blocks that start on a definition line', () => {
+    expect(exportPage('Term\n: !!! note\n  Body.\n  !!!')).toBe(
+      '<dl>\n<dt>\n\nTerm\n\n</dt>\n<dd>\n\n> [!NOTE]\n> Body.\n\n\n</dd>\n</dl>\n',
+    );
+    expect(exportPage('Term\n: [r]: /index.html\n\n[x][r]')).toBe(
+      '<dl>\n<dt>\n\nTerm\n\n</dt>\n<dd>\n\n[r]: ../index.md\n\n</dd>\n</dl>\n\n[x][r]\n',
+    );
+  });
+
+  test('indents partial lines to the container, not the directive', () => {
+    expect(
+      exportPage('   {{{ _p.md }}}', {
+        files: { 'lectures/_p.md': 'Intro\n\n  Second paragraph' },
+      }),
+    ).toBe('   Intro\n\n  Second paragraph\n');
+    expect(
+      exportPage('>  {{{ _p.md }}}', {
+        files: { 'lectures/_p.md': 'Intro\n\n  Second' },
+      }),
+    ).toBe('>  Intro\n>\n>   Second\n');
+  });
+
+  test('finds a heading subtitle only in text, as the build does', () => {
+    expect(exportPage('## Intro <span title="a # b">x</span> # Sub')).toBe(
+      '## Intro <span title="a # b">x</span> - Sub\n',
+    );
+  });
+
   test('keeps a title ending in # whole', () => {
     expect(exportPage('Body.', { title: 'Learn C #' })).toBe(
       '# Learn C \\#\n\nBody.\n',

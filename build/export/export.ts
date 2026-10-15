@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { globals } from '../globals';
+import { makeLogger } from '../log';
 import { getDevSiteVariables, getProdSiteVariables } from '../site-variables';
 import {
   addGeneratedRouteAliases,
@@ -31,6 +32,8 @@ import {
   type ExportContext,
 } from './export-markdown';
 import type { SiteEnv } from '../config-files';
+
+const log = makeLogger(import.meta.url);
 
 export const DEFAULT_EXPORT_DIR = 'exported';
 
@@ -146,7 +149,13 @@ function publishOutputs(outDir: string, outputs: ExportOutput[]): void {
     }
     throw error;
   }
-  fs.rmSync(backup, { recursive: true, force: true });
+  // The new export is in place, so failing to delete the old one, such as a
+  // file another program holds open on Windows, does not fail the command
+  try {
+    fs.rmSync(backup, { recursive: true, force: true });
+  } catch (error) {
+    log.warn`Could not remove ${toDisplayPath(backup)}: ${(error as Error).message}`;
+  }
 }
 
 function pageTitle(
@@ -309,20 +318,16 @@ export function runExport({
       ext,
       toDisplayPath(job.filePath),
     );
+    const literateJava =
+      job.kind === 'markdown' && job.javaRelPath !== undefined;
     const page = {
       filePath: job.filePath,
       relPath: job.relPath,
       title: pageTitle(pageVariables, siteVariables, job.filePath),
-      preserveHtmlComments:
-        job.kind === 'markdown' && job.javaRelPath !== undefined,
-      literateJava: job.kind === 'markdown' && job.javaRelPath !== undefined,
+      literateJava,
     };
-    const body = substituteContent(
-      content,
-      vars,
-      job.filePath,
-      page.preserveHtmlComments,
-    );
+    // Literate Java pages keep `<!--- -->` comments, as the build does
+    const body = substituteContent(content, vars, job.filePath, literateJava);
     outputs.push({
       relPath: job.relPath,
       filePath: job.filePath,
