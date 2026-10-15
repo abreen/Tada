@@ -1,4 +1,5 @@
 import path from 'path';
+import { decodeHTMLAttribute } from 'entities';
 import MarkdownIt from 'markdown-it';
 import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
 import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
@@ -17,7 +18,8 @@ import {
 } from '../utils/markdown-partials';
 import { resolvePathname, splitHref } from '../utils/final-html';
 import { isInternalLink } from '../utils/link';
-import { toDisplayPath, toUrlPath } from '../utils/paths';
+import { normalizeOutputPath, toDisplayPath, toUrlPath } from '../utils/paths';
+import { checkTraceFiles } from '../utils/trace';
 import { getSiteVars, substituteContent } from '../variables';
 import type { SiteVariables } from '../types';
 
@@ -338,6 +340,13 @@ function indentLines(text: string, prefix: string): string {
     .join('\n');
 }
 
+function escapeAttribute(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function escapeMarkdown(text: string): string {
   return text.replace(MARKDOWN_PUNCTUATION_PATTERN, char => `\\${char}`);
 }
@@ -525,14 +534,24 @@ class PageExporter {
     if (target === null) {
       return null;
     }
-    if (
-      isAnchor &&
-      !this.context.exportPaths.has(target) &&
-      !this.context.validTargets.has(target)
-    ) {
-      throw new Error(
-        `${this.displayPath}: broken internal link: "${url}" (resolved to "${target}")`,
+    const isPublished = (urlPath: string) =>
+      this.context.exportPaths.has(urlPath) ||
+      this.context.validTargets.has(urlPath);
+    if (isAnchor) {
+      // The build's checks, with its messages
+      const indexPath = normalizeOutputPath(
+        path.posix.join(target, 'index.html'),
       );
+      if (indexPath !== target && isPublished(indexPath)) {
+        throw new Error(
+          `${this.displayPath}: directory link must reference index.html explicitly: "${url}" (resolved to "${target}", expected "${indexPath}")`,
+        );
+      }
+      if (!isPublished(target)) {
+        throw new Error(
+          `${this.displayPath}: broken internal link: "${url}" (resolved to "${target}")`,
+        );
+      }
     }
     // A relative link to a file exported at its own path already works
     if (!absolute && this.context.exportPaths.get(target) === target.slice(1)) {
@@ -584,12 +603,17 @@ class PageExporter {
   htmlUrlEdits(html: string): { start: number; end: number; url: string }[] {
     const edits = [];
     for (const value of findUrlAttributes(html)) {
-      const rewritten = this.rewriteUrl(
-        plainMarkdown.utils.unescapeAll(value.url),
-        value.isAnchor,
-      );
+      // Character references only: backslashes mean nothing in HTML
+      const url = value.url.includes('&')
+        ? decodeHTMLAttribute(value.url)
+        : value.url;
+      const rewritten = this.rewriteUrl(url, value.isAnchor);
       if (rewritten !== null) {
-        edits.push({ start: value.start, end: value.end, url: rewritten });
+        edits.push({
+          start: value.start,
+          end: value.end,
+          url: escapeAttribute(rewritten),
+        });
       }
     }
     return edits;
@@ -668,10 +692,6 @@ class PageExporter {
         return mapper;
       }
       const content = record.contents.get(inline) ?? inline.content;
-      const notFound = (line: number) =>
-        new Error(
-          `${this.displayPath}: cannot export line ${line + 1}: text not found`,
-        );
 
       const row = record.cells.get(inline);
       if (row !== undefined) {
@@ -679,7 +699,9 @@ class PageExporter {
         const written = content.replace(/\|/g, '\\|');
         const col = lines[row].indexOf(written, cursors.get(row) ?? 0);
         if (col < 0) {
-          throw notFound(row);
+          throw new Error(
+            `${this.displayPath}: cannot export line ${row + 1}: text not found`,
+          );
         }
         cursors.set(row, col + written.length);
         mapper = (contentOffset: number) =>
@@ -691,8 +713,21 @@ class PageExporter {
         return mapper;
       }
 
+      mapper = blockMapper(content, inline.map![0]);
+      mappers.set(inline, mapper);
+      return mapper;
+    };
+
+    /**
+     * Maps offsets in block content, whose lines are the ends of source lines
+     * after their container prefixes, back to the source
+     */
+    const blockMapper = (content: string, firstLine: number) => {
+      const notFound = (line: number) =>
+        new Error(
+          `${this.displayPath}: cannot export line ${line + 1}: text not found`,
+        );
       const contentLines = content.split('\n');
-      const firstLine = inline.map![0];
       const cols = contentLines.map((contentLine, index) => {
         const line = firstLine + index;
         const source = lines[line] ?? '';
@@ -703,12 +738,15 @@ class PageExporter {
         if (trimmed.endsWith(contentLine)) {
           return trimmed.length - contentLine.length;
         }
-        const col = source.indexOf(contentLine, cursors.get(line) ?? 0);
+        // markdown-it turns part of a tab in the indentation into spaces, so
+        // only the text after the indentation is in the source as written
+        const text = contentLine.trimStart();
+        const col = source.indexOf(text, cursors.get(line) ?? 0);
         if (col < 0) {
           throw notFound(line);
         }
-        cursors.set(line, col + contentLine.length);
-        return col;
+        cursors.set(line, col + text.length);
+        return col - (contentLine.length - text.length);
       });
       const contentLineStarts: number[] = [];
       let pos = 0;
@@ -716,7 +754,7 @@ class PageExporter {
         contentLineStarts.push(pos);
         pos += contentLine.length + 1;
       }
-      mapper = (contentOffset: number) => {
+      return (contentOffset: number) => {
         let index = contentLineStarts.length - 1;
         while (index > 0 && contentLineStarts[index] > contentOffset) {
           index--;
@@ -728,8 +766,6 @@ class PageExporter {
           contentLineStarts[index]
         );
       };
-      mappers.set(inline, mapper);
-      return mapper;
     };
 
     // Block constructs, outermost first, so nested blocks see the
@@ -819,12 +855,12 @@ class PageExporter {
           indentLines(this.exportTrace(token.content), indent),
         );
       } else if (token.type === 'html_block') {
-        const [open, end] = token.map!;
-        const start = lineStart(open);
-        for (const edit of this.htmlUrlEdits(
-          text.slice(start, lineEnd(end - 1)),
-        )) {
-          replace(start + edit.start, start + edit.end, edit.url);
+        // Scanned without the lines' blockquote markers, which would end a
+        // tag that spans lines
+        const content = token.content.replace(/\n$/, '');
+        const map = blockMapper(content, token.map![0]);
+        for (const edit of this.htmlUrlEdits(content)) {
+          replace(map(edit.start), map(edit.end), edit.url);
         }
       } else if (token.type === 'heading_open') {
         const inline = tokens[index + 1];
@@ -1136,13 +1172,19 @@ class PageExporter {
       );
     }
     const languages = this.context.siteVariables.extensionToShikiLanguage ?? {};
-    return files
-      .map(file => {
-        const filePath = path.resolve(path.dirname(this.page.filePath), file);
-        const source = this.context
-          .readTraceFile(filePath)
-          .replace(/\r\n?/g, '\n')
-          .replace(/\n$/, '');
+    const sources = files.map(file => {
+      const absolutePath = path.resolve(path.dirname(this.page.filePath), file);
+      return {
+        requestedPath: file,
+        absolutePath,
+        text: this.context.readTraceFile(absolutePath),
+      };
+    });
+    // A trace the build would reject is not exported either
+    checkTraceFiles(files[0], sources);
+    return sources
+      .map(({ absolutePath: filePath, text }) => {
+        const source = text.replace(/\r\n?/g, '\n').replace(/\n$/, '');
         const ext = path.extname(filePath).slice(1);
         const language =
           Object.entries(languages).find(

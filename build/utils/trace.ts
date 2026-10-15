@@ -55,6 +55,37 @@ function traceLanguageForFile(filePath: string): 'java' | 'python' {
   throw new Error(`Unsupported trace source: ${filePath}`);
 }
 
+/**
+ * Fails unless a trace's files can run together: one supported language, and
+ * unique basenames for the flat workspace
+ */
+export function checkTraceFiles(
+  sourceFile: string,
+  sources: { requestedPath: string; absolutePath: string }[],
+): void {
+  const primaryExt = path.extname(sources[0].absolutePath).toLowerCase();
+  for (const source of sources) {
+    const ext = path.extname(source.absolutePath).toLowerCase();
+    if (ext !== primaryExt) {
+      throw new Error(
+        `Trace companion must use the same extension as ${sourceFile}: ${source.requestedPath}`,
+      );
+    }
+    traceLanguageForFile(source.absolutePath);
+  }
+
+  const seenBasenames = new Set<string>();
+  for (const source of sources) {
+    const file = path.basename(source.requestedPath);
+    if (seenBasenames.has(file)) {
+      throw new Error(
+        `Trace files must have unique basenames in a flat workspace: ${file}`,
+      );
+    }
+    seenBasenames.add(file);
+  }
+}
+
 function availabilityForFile(
   filePath: string,
   toolAvailability?: TraceToolAvailability,
@@ -154,27 +185,7 @@ export function createTraceHelpers(context: TraceContext): {
       };
     });
 
-    const primaryExt = path.extname(sources[0].absolutePath).toLowerCase();
-    for (const source of sources) {
-      const ext = path.extname(source.absolutePath).toLowerCase();
-      if (ext !== primaryExt) {
-        throw new Error(
-          `Trace companion must use the same extension as ${sourceFile}: ${source.requestedPath}`,
-        );
-      }
-      traceLanguageForFile(source.absolutePath);
-    }
-
-    const seenBasenames = new Set<string>();
-    for (const source of sources) {
-      if (seenBasenames.has(source.file)) {
-        throw new Error(
-          `Trace files must have unique basenames in a flat workspace: ${source.file}`,
-        );
-      }
-      seenBasenames.add(source.file);
-    }
-
+    checkTraceFiles(sourceFile, sources);
     return sources;
   }
 

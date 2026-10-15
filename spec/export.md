@@ -40,8 +40,10 @@ publishes them:
 The export fails when two sources would be exported at the same path, even
 where the build publishes them at different URLs: `content/notes.md` (built
 as `notes.html`) and `public/notes.md` would both be `notes.md`. Paths that
-differ only in case count as the same. It also fails, as the build does, when
-two sources write the same build output.
+differ only in case count as the same. It fails too when one source would be
+exported as a file at a path another source needs as a directory, such as
+`public/notes` and `content/notes/a.md`. It also fails, as the build does,
+when two sources write the same build output.
 
 ## Pages
 
@@ -67,7 +69,7 @@ them as the build does.
 | `+++` columns | Fence lines become blank lines; the columns follow one another |
 | `## Main # Subtitle` | `## Main - Subtitle` |
 | Definition lists | `<dl>` with `<dt>` and `<dd>` elements, each holding Markdown between blank lines |
-| ` ```trace ` blocks (any fence whose first info word is `trace`) | One fenced code block per listed file, with the file's contents as the build publishes them, in the language mapped from its extension |
+| ` ```trace ` blocks (any fence whose first info word is `trace`) | One fenced code block per listed file, with the file's contents as the build publishes them, in the language mapped from its extension. A trace the build rejects, such as one mixing languages or repeating a basename, fails the export with the build's error |
 
 Summaries are rendered to HTML, since GitHub does not parse Markdown inside
 `<summary>`. Everything else is kept as written, including math, footnotes,
@@ -89,9 +91,13 @@ and `href` and `src` attributes in raw HTML point to exported files:
 - A relative link to a file exported at the same path is left as written.
 - External links, fragments, and `mailto:` links are unchanged.
 - A link (a Markdown link, superlink, or `<a href>`) to a path the build does
-  not publish fails the export with the build's `broken internal link` error.
-  As in the build, images, `src` attributes, and reference definitions are not
-  checked. A link to a file the build
-  generates but the export leaves out is made relative and kept.
+  not publish fails the export with the build's `broken internal link` error,
+  and a link to a directory with an `index.html` fails with the build's
+  `directory link must reference index.html explicitly` error. As in the
+  build, images, `src` attributes, and reference definitions are not checked.
+  A link to a file the build generates but the export leaves out is made
+  relative and kept.
+- Attribute values in raw HTML are read with their character references
+  decoded, as the build reads them, and written back escaped.
 
 Query strings and fragments are kept.

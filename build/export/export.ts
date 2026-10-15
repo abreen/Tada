@@ -243,6 +243,19 @@ export function runExport({
     }
   }
 
+  // A file cannot also be a directory of another exported file
+  for (const [key, producer] of producers) {
+    const segments = key.split('/');
+    for (let i = 1; i < segments.length; i++) {
+      const other = producers.get(segments.slice(0, i).join('/'));
+      if (other !== undefined) {
+        throw new Error(
+          `${other} would be exported as a file where ${producer} needs a directory; rename one of them`,
+        );
+      }
+    }
+  }
+
   const context: ExportContext = {
     siteVariables,
     pageTitles: scan.pageTitles,

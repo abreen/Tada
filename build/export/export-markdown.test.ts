@@ -133,7 +133,7 @@ describe('exportMarkdownPage', () => {
     expect(
       exportPage(
         [
-          '[a](/index.html) [b](../index.html#top) [c](/lectures/)',
+          '[a](/index.html) [b](../index.html#top) [c](/lectures/index.html)',
           '[d](Demo.java.html) [e](./photo.png) [f](https://example.com/x.html)',
           '[g](#local) [h](/feed.xml) ![i](/lectures/photo.png)',
           '[j](</lectures/linked lists.html>) [k](/about.html "About")',
@@ -179,6 +179,33 @@ describe('exportMarkdownPage', () => {
     expect(exportPage('> [ref]:\n> /index.html\n\n[x][ref]')).toBe(
       '> [ref]:\n> ../index.md\n\n[x][ref]\n',
     );
+  });
+
+  test('maps lines indented with tabs', () => {
+    expect(exportPage('- item text\n\tcontinued [x](/index.html)')).toBe(
+      '- item text\n\tcontinued [x](../index.md)\n',
+    );
+  });
+
+  test('decodes and escapes HTML attribute values as HTML', () => {
+    expect(
+      exportPage('<a href="/index.html?q=&quot;a&quot;&amp;b">x</a>'),
+    ).toBe('<a href="../index.md?q=&quot;a&quot;&amp;b">x</a>\n');
+    expect(() => exportPage('<a href="a\\_b.html">x</a>')).toThrow(
+      'broken internal link: "a\\_b.html" (resolved to "/lectures/a\\_b.html")',
+    );
+  });
+
+  test('fails on a directory link, as the build does', () => {
+    expect(() => exportPage('[Lectures](/lectures/)')).toThrow(
+      'directory link must reference index.html explicitly: "/lectures/" (resolved to "/lectures/", expected "/lectures/index.html")',
+    );
+  });
+
+  test('rewrites tags that span lines of an HTML block in a blockquote', () => {
+    expect(
+      exportPage('> <div>\n> <a\n> href="/index.html">x</a>\n> </div>'),
+    ).toBe('> <div>\n> <a\n> href="../index.md">x</a>\n> </div>\n');
   });
 
   test('finds superlink labels as the build does', () => {
@@ -328,14 +355,14 @@ describe('exportMarkdownPage', () => {
 
   test('converts trace blocks to code blocks of their files', () => {
     expect(
-      exportPage('- Step\n\n  ```trace\n  Demo.java\n  helper.py\n  ```', {
+      exportPage('- Step\n\n  ```trace\n  Demo.java\n  Helper.java\n  ```', {
         files: {
           'lectures/Demo.java': 'class Demo {\n\n  // ```\n}\n',
-          'lectures/helper.py': 'x = 1\n',
+          'lectures/Helper.java': 'class Helper {}\n',
         },
       }),
     ).toBe(
-      '- Step\n\n  ````java\n  class Demo {\n\n    // ```\n  }\n  ````\n\n  ```python\n  x = 1\n  ```\n',
+      '- Step\n\n  ````java\n  class Demo {\n\n    // ```\n  }\n  ````\n\n  ```java\n  class Helper {}\n  ```\n',
     );
   });
 
@@ -351,6 +378,14 @@ describe('exportMarkdownPage', () => {
     ).toBe(
       '> Intro for CS 101.\n>\n> Second [Home](../index.md).\n\nOuter.\n\nInner.\n',
     );
+  });
+
+  test('checks trace files as the build does', () => {
+    expect(() =>
+      exportPage('```trace\nDemo.java\nhelper.py\n```', {
+        files: { 'lectures/Demo.java': '', 'lectures/helper.py': '' },
+      }),
+    ).toThrow('Trace companion must use the same extension as Demo.java');
   });
 
   test("fails on an empty trace block with the build's message", () => {

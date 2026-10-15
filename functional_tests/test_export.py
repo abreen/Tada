@@ -123,7 +123,7 @@ class TestExport:
         assert not (site_dir / 'exported' / 'old.md').exists()
         assert (site_dir / 'exported' / 'index.md').exists()
 
-    def test_failed_export_keeps_the_previous_one(self, site_dir):
+    def test_file_and_directory_clash_keeps_the_previous_export(self, site_dir):
         (site_dir / 'exported').mkdir()
         (site_dir / 'exported' / 'old.md').write_text('old', encoding='utf-8')
         # A file and a directory with the same path cannot both be written
@@ -132,6 +132,9 @@ class TestExport:
 
         result = run_tada('export', '--dev', '--force', cwd=str(site_dir))
         assert result.returncode != 0
+        assert 'would be exported as a file where content/notes/a.md needs a directory' in (
+            result.stderr
+        )
         assert (site_dir / 'exported' / 'old.md').read_text(encoding='utf-8') == 'old'
         assert [p.name for p in site_dir.iterdir() if p.name.startswith('exported')] == ['exported']
 
