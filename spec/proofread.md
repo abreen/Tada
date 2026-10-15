@@ -34,8 +34,9 @@ scripts compile and pages render, and each page is checked as soon as it
 renders. A build writes its output once every page it rendered is checked;
 later rebuilds check only the pages they re-render.
 
-If Harper fails to load or to check text, watch mode logs a warning and writes
-pages without underlines.
+If Harper fails to load, its worker stops, or a page cannot be proofread,
+watch mode logs a warning and writes the affected pages without underlines. A
+failure to check one block of text leaves only that block without underlines.
 
 ## What is checked
 

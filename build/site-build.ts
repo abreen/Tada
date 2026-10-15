@@ -204,7 +204,9 @@ export function renderSources(
       if (record.outputs.size > 0) {
         records.set(filePath, record);
         if (context.proofreader) {
-          proofreading.push(...proofreadRecord(record, context.proofreader));
+          proofreading.push(
+            ...proofreadRecord(record, context.proofreader.check),
+          );
         }
       }
     } catch (error) {

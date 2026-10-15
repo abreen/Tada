@@ -1,6 +1,7 @@
 import { makeLogger } from './log';
 import {
   proofreadHtml,
+  type CheckText,
   type ProofreadRequest,
   type ProofreadResponse,
   type TextIssue,
@@ -55,6 +56,8 @@ export class Proofreader {
       this.pending.delete(response.id);
     };
     this.worker.onerror = event => this.fail(event.message);
+    // A worker that exits without an error would leave checks waiting forever
+    this.worker.addEventListener('close', () => this.fail('Harper stopped'));
   }
 
   private post(request: ProofreadRequest) {
@@ -118,7 +121,7 @@ export function startProofreader(
  */
 export function proofreadRecord(
   record: TadaSourceRecord,
-  proofreader: Proofreader,
+  check: CheckText,
 ): Promise<void>[] {
   if (record.kind !== 'content') {
     return [];
@@ -129,9 +132,11 @@ export function proofreadRecord(
         entry[0].endsWith('.html') && typeof entry[1] === 'string',
     )
     .map(async ([outputPath, html]) => {
-      record.outputs.set(
-        outputPath,
-        await proofreadHtml(html, proofreader.check),
-      );
+      try {
+        record.outputs.set(outputPath, await proofreadHtml(html, check));
+      } catch (error) {
+        // The page is still written, without underlines
+        log.warn`${outputPath} was not proofread: ${(error as Error).message}`;
+      }
     });
 }
