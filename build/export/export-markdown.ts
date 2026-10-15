@@ -20,6 +20,7 @@ import { resolvePathname, splitHref } from '../utils/final-html';
 import { isInternalLink } from '../utils/link';
 import { normalizeOutputPath, toDisplayPath, toUrlPath } from '../utils/paths';
 import { checkTraceFiles } from '../utils/trace';
+import { getExtensionToShikiLanguage } from '../site-variables';
 import { getSiteVars, substituteContent } from '../variables';
 import type { SiteVariables } from '../types';
 
@@ -339,6 +340,15 @@ function indentLines(text: string, prefix: string): string {
       return line === '' ? prefix.trimEnd() : prefix + line;
     })
     .join('\n');
+}
+
+/** Columns that text starting at `column` takes, with tab stops every 4 */
+function expandedWidth(text: string, column: number): number {
+  let end = column;
+  for (const char of text) {
+    end = char === '\t' ? end + 4 - (end % 4) : end + 1;
+  }
+  return end - column;
 }
 
 function escapeAttribute(value: string): string {
@@ -879,6 +889,23 @@ class PageExporter {
       }
     });
 
+    // Reference labels that links use: their definitions become anchors'
+    // hrefs, which the build checks
+    const linkedLabels = new Set<string>();
+    for (const span of record.spans) {
+      if (span.kind !== 'link' || span.src[span.labelEnd + 1] === '(') {
+        continue;
+      }
+      const text = span.src.slice(span.start + 1, span.labelEnd);
+      let label = text;
+      if (span.src[span.labelEnd + 1] === '[') {
+        const close = span.src.indexOf(']', span.labelEnd + 2);
+        const written = span.src.slice(span.labelEnd + 2, close);
+        label = written.trim() === '' ? text : written;
+      }
+      linkedLabels.add(plainMarkdown.utils.normalizeReference(label));
+    }
+
     for (const [open, end] of record.references) {
       const { start } = blockStart(open);
       const definitionEnd = lineEnd(end - 1);
@@ -886,6 +913,11 @@ class PageExporter {
       if (labelEnd < 0) {
         continue;
       }
+      const isAnchor = linkedLabels.has(
+        plainMarkdown.utils.normalizeReference(
+          text.slice(start + 1, start + labelEnd),
+        ),
+      );
       // The destination can start on a later line, after that line's prefix
       let pos = start + labelEnd + 2;
       while (pos < definitionEnd && /\s/.test(text[pos])) {
@@ -904,8 +936,7 @@ class PageExporter {
       );
       if (destination.ok && destination.pos > pos) {
         const raw = text.slice(pos, destination.pos);
-        // A definition can serve images as well as links, so it is not checked
-        const rewritten = this.rewriteDestination(raw, false);
+        const rewritten = this.rewriteDestination(raw, isAnchor);
         if (rewritten !== raw) {
           replace(pos, destination.pos, rewritten);
         }
@@ -1056,6 +1087,19 @@ class PageExporter {
       const lineInsertions = insertions.get(line) ?? [];
       lineInsertions.push({ col: at, text: `${padding}> ` });
       insertions.set(line, lineInsertions);
+
+      // After `> `, a tab would reach a nearer tab stop, so indentation with
+      // tabs becomes the spaces it stood for
+      const indentation = lines[line].slice(at).match(/^[ \t]*/)![0];
+      if (indentation.includes('\t')) {
+        const startColumn = expandedWidth(lines[line].slice(0, at), 0);
+        const width = expandedWidth(indentation, startColumn);
+        replace(
+          lineStart(line) + at,
+          lineStart(line) + at + indentation.length,
+          ' '.repeat(width),
+        );
+      }
     }
 
     // A blank line ends the blockquote
@@ -1138,7 +1182,7 @@ class PageExporter {
     );
 
     // Later lines are indented to the text after the marker
-    const contentIndent = new RegExp(`^ {0,${markerEnd - col}}`);
+    const contentIndent = new RegExp(`^(?:\\t| {0,${markerEnd - col}})`);
     let last = open;
     for (let line = open + 1; line < end; line++) {
       if (lines[line].trim() !== '') {
@@ -1177,7 +1221,7 @@ class PageExporter {
         `${this.displayPath}: trace block must name a source file`,
       );
     }
-    const languages = this.context.siteVariables.extensionToShikiLanguage ?? {};
+    const languages = getExtensionToShikiLanguage(this.context.siteVariables);
     const sources = files.map(file => {
       const absolutePath = path.resolve(path.dirname(this.page.filePath), file);
       return {

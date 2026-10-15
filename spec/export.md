@@ -97,8 +97,9 @@ and `href` and `src` attributes in raw HTML point to exported files:
 - A link (a Markdown link, superlink, or `<a href>`) to a path the build does
   not publish fails the export with the build's `broken internal link` error,
   and a link to a directory with an `index.html` fails with the build's
-  `directory link must reference index.html explicitly` error. As in the
-  build, images, `src` attributes, and reference definitions are not checked.
+  `directory link must reference index.html explicitly` error. A reference
+  definition that a link uses is checked like the link. As in the build,
+  images, `src` attributes, and definitions only images use are not checked.
   A link to a file the build generates but the export leaves out is made
   relative and kept.
 - Attribute values in raw HTML are read with their character references

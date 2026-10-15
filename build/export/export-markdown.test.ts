@@ -196,6 +196,25 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('checks reference definitions that links use', () => {
+    expect(() => exportPage('[a][r]\n\n[r]: /missing.html')).toThrow(
+      'broken internal link: "/missing.html"',
+    );
+    expect(() => exportPage('[R]\n\n[r]: /missing.html')).toThrow(
+      'broken internal link: "/missing.html"',
+    );
+    expect(exportPage('![a][r]\n\n[r]: /missing.png')).toBe(
+      '![a][r]\n\n[r]: ../missing.png\n',
+    );
+  });
+
+  test('keeps tab-indented lines indented in definitions and alerts', () => {
+    expect(exportPage('Term\n:\tdef\n\n\tpara two')).toBe(
+      '<dl>\n<dt>\n\nTerm\n\n</dt>\n<dd>\n\ndef\n\npara two\n\n</dd>\n</dl>\n',
+    );
+    expect(exportPage('!!! note\n\tcode\n!!!')).toBe('> [!NOTE]\n>     code\n');
+  });
+
   test('escapes rewritten destinations for Markdown', () => {
     expect(exportPage('[x](/index.html#a\\)b) [y](</index.html#a b>)')).toBe(
       '[x](../index.md#a\\)b) [y](<../index.md#a b>)\n',

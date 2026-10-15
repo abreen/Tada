@@ -88,12 +88,12 @@ function checkOutDir(outDir: string, force: boolean): void {
     overlaps(getPublicDir())
   ) {
     throw new Error(
-      `cannot export to ${toDisplayPath(outDir)}: it overlaps content/ or public/`,
+      `cannot export to ${toDisplayPath(outDir) || '.'}: it overlaps content/ or public/`,
     );
   }
   if (fs.existsSync(outDir) && !fs.statSync(outDir).isDirectory()) {
     throw new Error(
-      `cannot export to ${toDisplayPath(outDir)}: it is a file, not a directory`,
+      `cannot export to ${toDisplayPath(outDir) || '.'}: it is a file, not a directory`,
     );
   }
   if (fs.existsSync(outDir) && fs.readdirSync(outDir).length > 0) {
