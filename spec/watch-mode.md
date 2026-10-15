@@ -158,9 +158,8 @@ detected. Restart watch mode if that happens.
 
 ## Proofreading
 
-When the development site config sets `proofread`, watch mode underlines
-spelling and grammar problems in the pages it renders; see
-[Proofreading](proofread.md).
+Watch mode underlines spelling and grammar problems in the pages it renders;
+see [Proofreading](proofread.md).
 
 ## Output Path Conflicts
 

@@ -1,15 +1,15 @@
 # Proofreading
 
-`tada watch` can check spelling and grammar in each page's main content and
-draw a wavy underline under the problems it finds. Proofreading is off by
-default; the development site config turns it on.
+`tada watch` checks spelling and grammar in each page's main content and draws
+a wavy underline under the problems it finds.
 
 Only `tada watch` proofreads. `tada dev` and `tada prod` never load the checker,
-and their output is the same whether or not proofreading is configured.
+and their output is the same whether or not `proofread` is configured.
 
 ## Configuration
 
-Add a `proofread` object to `site.dev.*`:
+Proofreading needs no configuration. To accept extra words, add a `proofread`
+object to `site.dev.*`:
 
 ```yaml
 proofread:
@@ -20,9 +20,10 @@ proofread:
 
 - **words**: optional list of words the spelling check accepts
 
-`proofread: {}` turns proofreading on with no extra words. `proofread` is
-only allowed in the development site config; a `site.prod.*` file that sets it
-fails to load.
+To turn proofreading off, set `proofread: false`.
+
+`proofread` is only allowed in the development site config; a `site.prod.*`
+file that sets it fails to load.
 
 ## Checker
 

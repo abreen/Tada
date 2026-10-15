@@ -184,6 +184,23 @@ describe('site config schema', () => {
     ).not.toThrow();
   });
 
+  test('accepts proofread: false', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: false,
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
   test('rejects unknown proofread options', () => {
     const validator = compile(siteSchema);
 

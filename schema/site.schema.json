@@ -85,7 +85,7 @@
     },
     "shikiLanguages": { "type": "array", "items": { "type": "string" } },
     "proofread": {
-      "type": "object",
+      "type": ["boolean", "object"],
       "properties": {
         "words": { "type": "array", "items": { "type": "string" } }
       },

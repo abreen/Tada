@@ -6,7 +6,7 @@ import {
   type TextIssue,
 } from './utils/proofread-html';
 import type { TadaSourceRecord } from './source-records';
-import type { OutputContent, ProofreadConfig } from './types';
+import type { OutputContent, ProofreadConfig, SiteVariables } from './types';
 
 const log = makeLogger(import.meta.url);
 
@@ -70,6 +70,17 @@ async function checkText(
     lint.free();
   }
   return issues;
+}
+
+/** The site's proofread options, or null if `proofread: false` turns it off */
+export function getProofreadConfig(
+  siteVariables: SiteVariables,
+): ProofreadConfig | null {
+  const { proofread } = siteVariables;
+  if (proofread === false) {
+    return null;
+  }
+  return typeof proofread === 'object' ? proofread : {};
 }
 
 /**
