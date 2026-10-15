@@ -143,9 +143,14 @@ function publishOutputs(outDir: string, outputs: ExportOutput[]): void {
     }
     fs.renameSync(staging, outDir);
   } catch (error) {
-    fs.rmSync(staging, { recursive: true, force: true });
+    // Restore the earlier export first, so a failing cleanup cannot strand it
     if (fs.existsSync(backup) && !fs.existsSync(outDir)) {
       fs.renameSync(backup, outDir);
+    }
+    try {
+      fs.rmSync(staging, { recursive: true, force: true });
+    } catch (cleanupError) {
+      log.warn`Could not remove ${toDisplayPath(staging)}: ${(cleanupError as Error).message}`;
     }
     throw error;
   }

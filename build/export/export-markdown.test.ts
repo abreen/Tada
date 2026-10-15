@@ -329,6 +329,24 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('reads a slash in an unquoted attribute as part of its value', () => {
+    expect(
+      exportPage('<svg width=10/><a href="/missing.html"></a></svg>'),
+    ).toBe('<svg width=10/><a href="../missing.html"></a></svg>\n');
+  });
+
+  test('matches a reference label that wraps lines in a blockquote', () => {
+    expect(() =>
+      exportPage('> [my\n> label]: /missing.html\n\n[x][my label]'),
+    ).toThrow('broken internal link: "/missing.html"');
+  });
+
+  test('names partial errors as the build does', () => {
+    expect(() => exportPage('{{{ _missing.md }}}')).toThrow(
+      `${contentPath('lectures/page.md')}: partial not found`,
+    );
+  });
+
   test('keeps a list tight around an alert', () => {
     expect(exportPage('1. one\n   !!! note\n   two\n   !!!\n2. three')).toBe(
       '1. one\n   > [!NOTE]\n   > two\n2. three\n',

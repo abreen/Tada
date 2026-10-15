@@ -655,12 +655,14 @@ class PageExporter {
     if (directives.length === 0) {
       return text;
     }
-    const caller = toDisplayPath(fromFile);
+    // Named as the build names them: by the including file's path, and the
+    // page's for an empty path
+    const caller = fromFile;
     const lines = text.split('\n');
     for (const directive of directives.reverse()) {
       const relativePath = directive.info;
       if (!relativePath) {
-        throw new Error(`${caller}: partial path is empty`);
+        throw new Error(`${this.page.filePath}: partial path is empty`);
       }
       const resolvedPath = path.resolve(path.dirname(fromFile), relativePath);
       // In the build's order, with its messages
@@ -1144,8 +1146,15 @@ class PageExporter {
         continue;
       }
       // markdown-it uses only a label's first definition
+      // A label can wrap lines, which start with their containers' prefixes
       const label = plainMarkdown.utils.normalizeReference(
-        text.slice(start + 1, start + labelEnd),
+        text
+          .slice(start + 1, start + labelEnd)
+          .split('\n')
+          .map((part, i) =>
+            i === 0 ? part : part.slice(linePrefix(part).length),
+          )
+          .join('\n'),
       );
       const isAnchor = linkedLabels.has(label) && !definedLabels.has(label);
       definedLabels.add(label);
@@ -1649,8 +1658,11 @@ function findUrlAttributes(
     }
 
     let i = open + 1 + name.length;
+    // A `/` right before `>` that is not part of an unquoted value
+    let selfClosing = false;
     while (i < html.length && html[i] !== '>') {
       if (/[\s/]/.test(html[i])) {
+        selfClosing = html[i] === '/' && html[i + 1] === '>';
         i++;
         continue;
       }
@@ -1680,7 +1692,7 @@ function findUrlAttributes(
     pos = i + 1;
     const lowerName = name.toLowerCase();
     const htmlNamespace = inHtmlNamespace(foreign);
-    if (html[i - 1] !== '/') {
+    if (!selfClosing) {
       if (htmlNamespace && FOREIGN_ELEMENTS.has(lowerName)) {
         foreign.stack.push({ name: lowerName, html: false });
       } else if (!htmlNamespace && HTML_INTEGRATION_POINTS.has(lowerName)) {
