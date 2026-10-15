@@ -65,6 +65,9 @@ in each:
 
 Every proofread page gets a `<style>` in its `<head>` that underlines these
 spans with `text-decoration: underline` and `text-decoration-style: wavy`, red
-for spelling and green for grammar. The underlines are in the built HTML, so
+for spelling and green for grammar. The colors are the `--proofread-spelling-color`
+and `--proofread-grammar-color` custom properties, which have separate light and
+dark values (`prefers-color-scheme`) matching the colors of multiple-choice
+question results. The underlines are in the built HTML, so
 they show without JavaScript. Page text, links, and search results are
 otherwise unchanged.

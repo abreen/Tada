@@ -12,10 +12,15 @@ export interface TextIssue {
 /** Finds the problems in the text of one block, such as a paragraph */
 export type CheckText = (text: string) => Promise<TextIssue[]>;
 
+// Same red and green as multiple-choice question results
 export const PROOFREAD_STYLE =
-  '<style>.proofread-spelling,.proofread-grammar{text-decoration:underline;text-decoration-style:wavy}' +
-  '.proofread-spelling{text-decoration-color:red}' +
-  '.proofread-grammar{text-decoration-color:green}</style>';
+  '<style>' +
+  ':root{--proofread-spelling-color:hsl(0deg 72% 48%);--proofread-grammar-color:hsl(142deg 58% 36%)}' +
+  '@media (prefers-color-scheme:dark){:root{--proofread-spelling-color:hsl(0deg 82% 62%);--proofread-grammar-color:hsl(142deg 58% 52%)}}' +
+  '.proofread-spelling,.proofread-grammar{text-decoration:underline;text-decoration-style:wavy}' +
+  '.proofread-spelling{text-decoration-color:var(--proofread-spelling-color)}' +
+  '.proofread-grammar{text-decoration-color:var(--proofread-grammar-color)}' +
+  '</style>';
 
 // Elements that continue the surrounding sentence; every other element ends it
 const INLINE_ELEMENTS = new Set([

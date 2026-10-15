@@ -1,3 +1,5 @@
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import type { LocalLinter } from 'harper.js';
 import { makeLogger } from './log';
 import {
@@ -12,24 +14,39 @@ const log = makeLogger(import.meta.url);
 
 const SPELLING_KINDS = new Set(['Spelling', 'Typo']);
 
-let linterPromise: Promise<LocalLinter> | null = null;
+let linterPromise: Promise<LocalLinter | null> | null = null;
 let importedWords: string | null = null;
 
-// Harper is loaded only when watch mode proofreads
-async function getLinter(words: string[]): Promise<LocalLinter> {
+async function loadLinter(): Promise<LocalLinter> {
+  const { LocalLinter, Dialect, createBinaryModuleFromUrl } =
+    await import('harper.js');
+  // Harper fetches its WebAssembly from a URL; a blob URL avoids fetching a
+  // file: URL, which is not supported on every platform
+  const wasmPath = fileURLToPath(
+    new URL('harper_wasm_bg.wasm', import.meta.resolve('harper.js')),
+  );
+  const wasm = new Blob([fs.readFileSync(wasmPath)], {
+    type: 'application/wasm',
+  });
+  const binary = createBinaryModuleFromUrl(URL.createObjectURL(wasm));
+  const linter = new LocalLinter({ binary, dialect: Dialect.American });
+  await linter.setup();
+  return linter;
+}
+
+/** Harper, loaded the first time watch mode proofreads, or null if it failed to load */
+async function getLinter(words: string[]): Promise<LocalLinter | null> {
   if (!linterPromise) {
     log.info`Loading Harper`;
-    linterPromise = (async () => {
-      const [{ LocalLinter, Dialect }, { binary }] = await Promise.all([
-        import('harper.js'),
-        import('harper.js/binary'),
-      ]);
-      const linter = new LocalLinter({ binary, dialect: Dialect.American });
-      await linter.setup();
-      return linter;
-    })();
+    linterPromise = loadLinter().catch((error: unknown) => {
+      log.warn`Harper failed to load, so pages will not be proofread: ${(error as Error).message}`;
+      return null;
+    });
   }
   const linter = await linterPromise;
+  if (!linter) {
+    return null;
+  }
   const key = JSON.stringify(words);
   if (key !== importedWords) {
     await linter.clearWords();
@@ -107,6 +124,9 @@ export async function proofreadRecords(
   }
 
   const linter = await getLinter(config.words ?? []);
+  if (!linter) {
+    return;
+  }
   log.info`Proofreading ${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`;
   for (const [outputs, outputPath, html] of pages) {
     outputs.set(
