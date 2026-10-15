@@ -194,11 +194,18 @@
     text-align: end;
   }
 
-  // The chevron is centered in a wider box; trim the empty space on both sides
-  // so the button's padding and gap are measured from the visible glyph
+  // The chevron is centered in a wider box; trim the empty space on its outer
+  // side so the button's padding is measured from the visible glyph
   .mask-icon {
     flex-shrink: 0;
-    margin-inline: -8px;
+  }
+
+  a.previous .mask-icon {
+    margin-inline-start: -8px;
+  }
+
+  a.next .mask-icon {
+    margin-inline-end: -8px;
   }
 }
 
