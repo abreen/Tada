@@ -325,8 +325,14 @@ export function runExport({
     pageTitles: scan.pageTitles,
     exportPaths,
     validTargets: scan.validTargets,
+    // A directory reads as empty, so the partial checks report it as the
+    // build does, by its name
     readFile: filePath =>
-      fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf-8') : null,
+      fs.existsSync(filePath)
+        ? fs.statSync(filePath).isDirectory()
+          ? ''
+          : fs.readFileSync(filePath, 'utf-8')
+        : null,
     readTraceFile: filePath => {
       if (!fs.existsSync(filePath)) {
         throw new Error(`Trace target not found: ${filePath}`);

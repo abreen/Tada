@@ -410,6 +410,27 @@ describe('exportMarkdownPage', () => {
     ).toBe('<!-- note\n-->\n\n[x](../index.md)\n');
   });
 
+  test('ends any block left open in a partial with the partial', () => {
+    const cases: [string, string][] = [
+      ['```\ncode\n\n', '```\ncode\n\n```'],
+      ['<!-- c\n\n', '<!-- c\n\n-->'],
+      ['```\n    ```', '```\n    ```\n```'],
+      ['!!! note\ntext', '> [!NOTE]\n> text'],
+      [
+        '??? question Q\ntext',
+        '<details>\n<summary>Q</summary>\n\ntext\n\n</details>',
+      ],
+      ['$$\nx = 1', '$$\nx = 1\n$$'],
+    ];
+    for (const [partial, exported] of cases) {
+      expect(
+        exportPage('{{{ _p.md }}}\n\nafter [x](/index.html)', {
+          files: { 'lectures/_p.md': partial },
+        }),
+      ).toBe(`${exported}\n\nafter [x](../index.md)\n`);
+    }
+  });
+
   test('resolves page references in tab labels', () => {
     expect(exportPage('[See [docs]|\nbody\n]\n\n[docs]: /index.html')).toBe(
       '<details>\n<summary>See <a href="../index.md">docs</a></summary>\n\nbody\n\n</details>\n\n[docs]: ../index.md\n',

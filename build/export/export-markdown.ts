@@ -183,7 +183,7 @@ summaryMarkdown.renderer.rules.math_inline_bare_block = keepMath('$$', '$$');
 /** Renders inline Markdown as HTML, for markup that GitHub does not parse */
 export function renderInlineHtml(
   markdown: string,
-  references?: Record<string, { href: string; title: string }>,
+  references?: References,
 ): string {
   return summaryMarkdown.renderInline(markdown, { references }).trim();
 }
@@ -658,36 +658,56 @@ class PageExporter {
   }
 
   /**
-   * Closes a fence or an HTML block (types 1 to 5, which end only at a
-   * closing tag or marker) that runs to the end of the text
+   * Closes a block that runs to the end of the text because nothing closed
+   * it: a fence, math, an alert, a question, or an HTML block of types 1 to
+   * 5, which end only at a closing tag or marker
    */
   private closeOpenBlocks(text: string): string {
     const lines = text.split('\n');
+    // markdown-it does not count a line after a final newline
+    const lineCount = text.endsWith('\n') ? lines.length - 1 : lines.length;
     const { tokens } = this.parse(text, { wikilinks: false });
     const last = tokens.findLast(
       token => token.level === 0 && token.map !== null,
     );
-    if (!last || last.map![1] < lines.length) {
+    if (!last || last.map![1] < lineCount) {
       return text;
     }
-    if (last.type === 'fence') {
-      const close = lines[last.map![1] - 1].trim();
-      const closed =
-        last.map![1] - 1 > last.map![0] &&
-        close.length >= last.markup.length &&
-        [...close].every(char => char === last.markup[0]);
-      return closed ? text : `${text}\n${last.markup}`;
-    }
-    if (last.type === 'html_block') {
-      const closer = HTML_BLOCK_CLOSERS.find(([start]) =>
-        start.test(last.content),
-      );
-      if (closer && !closer[1].test(last.content)) {
-        const tag = /^\s*<([a-z]+)/i.exec(last.content)?.[1] ?? '';
-        return `${text}\n${closer[2].replace('$tag', tag)}`;
+    const [open, end] = last.map!;
+    const close = (closer: string) => `${text}\n${closer}`;
+    switch (last.type) {
+      case 'fence': {
+        // A closing fence is indented less than 4 spaces
+        const closer = new RegExp(
+          `^ {0,3}${RegExp.escape(last.markup[0])}{${last.markup.length},}[ \\t]*$`,
+        );
+        const closed = end - 1 > open && closer.test(lines[end - 1]);
+        return closed ? text : close(last.markup);
       }
+      case 'math_block': {
+        const dollars =
+          lines.slice(open, end).join('\n').split('$$').length - 1;
+        return dollars >= 2 ? text : close('$$');
+      }
+      // A container that reaches the end has no closing line
+      case 'container_alert_open':
+      case 'container_question_open':
+        return close(last.markup);
+      case 'question_multiple_choice':
+        return close('???');
+      case 'html_block': {
+        const closer = HTML_BLOCK_CLOSERS.find(([start]) =>
+          start.test(last.content),
+        );
+        if (closer && !closer[1].test(last.content)) {
+          const tag = /^\s*<([a-z]+)/i.exec(last.content)?.[1] ?? '';
+          return close(closer[2].replace('$tag', tag));
+        }
+        return text;
+      }
+      default:
+        return text;
     }
-    return text;
   }
 
   /**
@@ -1926,9 +1946,8 @@ export function exportHtmlPage(
       replace: () => edit.url,
     }));
   const html = applyEdits(body, edits).replace(/^(?:[ \t]*\r?\n)+/, '');
-  return page.title
-    ? `<h1>${renderInlineHtml(exportTitle(context, page)!)}</h1>\n\n${html}`
-    : html;
+  const title = exportTitle(context, page);
+  return title ? `<h1>${renderInlineHtml(title)}</h1>\n\n${html}` : html;
 }
 
 /**
