@@ -1,93 +1,14 @@
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import type { LocalLinter } from 'harper.js';
 import { makeLogger } from './log';
 import {
   proofreadHtml,
-  type IssueKind,
+  type ProofreadRequest,
+  type ProofreadResponse,
   type TextIssue,
 } from './utils/proofread-html';
 import type { TadaSourceRecord } from './source-records';
-import type { OutputContent, ProofreadConfig, SiteVariables } from './types';
+import type { ProofreadConfig, SiteVariables } from './types';
 
 const log = makeLogger(import.meta.url);
-
-const SPELLING_KINDS = new Set(['Spelling', 'Typo']);
-
-let linterPromise: Promise<LocalLinter | null> | null = null;
-let importedWords: string | null = null;
-
-async function loadLinter(): Promise<LocalLinter> {
-  const { LocalLinter, Dialect, createBinaryModuleFromUrl } =
-    await import('harper.js');
-  // Harper fetches its WebAssembly from a URL; a blob URL avoids fetching a
-  // file: URL, which is not supported on every platform
-  const wasmPath = fileURLToPath(
-    new URL('harper_wasm_bg.wasm', import.meta.resolve('harper.js')),
-  );
-  const wasm = new Blob([fs.readFileSync(wasmPath)], {
-    type: 'application/wasm',
-  });
-  const binary = createBinaryModuleFromUrl(URL.createObjectURL(wasm));
-  const linter = new LocalLinter({ binary, dialect: Dialect.American });
-  await linter.setup();
-  return linter;
-}
-
-/** Harper, loaded the first time watch mode proofreads, or null if it failed to load */
-async function getLinter(words: string[]): Promise<LocalLinter | null> {
-  if (!linterPromise) {
-    log.info`Loading Harper`;
-    linterPromise = loadLinter().catch((error: unknown) => {
-      log.warn`Harper failed to load, so pages will not be proofread: ${(error as Error).message}`;
-      return null;
-    });
-  }
-  const linter = await linterPromise;
-  if (!linter) {
-    return null;
-  }
-  const key = JSON.stringify(words);
-  if (key !== importedWords) {
-    await linter.clearWords();
-    await linter.importWords(words);
-    importedWords = key;
-  }
-  return linter;
-}
-
-/** Maps code point offsets, which Harper reports, to UTF-16 offsets */
-export function toUtf16Offsets(text: string): (offset: number) => number {
-  if (!/[\uD800-\uDFFF]/.test(text)) {
-    return offset => offset;
-  }
-  const offsets: number[] = [];
-  let utf16 = 0;
-  for (const char of text) {
-    offsets.push(utf16);
-    utf16 += char.length;
-  }
-  offsets.push(utf16);
-  return offset => offsets[Math.min(offset, offsets.length - 1)];
-}
-
-async function checkText(
-  linter: LocalLinter,
-  text: string,
-): Promise<TextIssue[]> {
-  const toUtf16 = toUtf16Offsets(text);
-  const issues: TextIssue[] = [];
-  for (const lint of await linter.lint(text, { language: 'plaintext' })) {
-    const span = lint.span();
-    const kind: IssueKind = SPELLING_KINDS.has(lint.lint_kind())
-      ? 'spelling'
-      : 'grammar';
-    issues.push({ start: toUtf16(span.start), end: toUtf16(span.end), kind });
-    span.free();
-    lint.free();
-  }
-  return issues;
-}
 
 /** The site's proofread options, or null if `proofread: false` turns it off */
 export function getProofreadConfig(
@@ -101,37 +22,109 @@ export function getProofreadConfig(
 }
 
 /**
- * Underlines spelling and grammar problems in the HTML pages of the given
- * content records, in place. Only watch mode calls this.
+ * Checks text with Harper in a worker. Requests are posted at once, so the
+ * worker checks pages while later ones render; results arrive once the main
+ * thread is free.
  */
-export async function proofreadRecords(
-  records: Iterable<TadaSourceRecord>,
-  config: ProofreadConfig,
-): Promise<void> {
-  const pages: [Map<string, OutputContent>, string, string][] = [];
-  for (const record of records) {
-    if (record.kind !== 'content') {
-      continue;
-    }
-    for (const [outputPath, content] of record.outputs) {
-      if (outputPath.endsWith('.html') && typeof content === 'string') {
-        pages.push([record.outputs, outputPath, content]);
+export class Proofreader {
+  private readonly worker: Worker;
+  private readonly pending = new Map<number, (issues: TextIssue[]) => void>();
+  private nextId = 0;
+  private failed = false;
+  private words: string | null = null;
+
+  constructor() {
+    log.info`Loading Harper`;
+    this.worker = new Worker(new URL('./proofread-worker.ts', import.meta.url));
+    // Bun's Worker can let the process exit while it is running
+    (this.worker as Worker & { unref(): void }).unref();
+    this.worker.onmessage = (event: MessageEvent<ProofreadResponse>) => {
+      const response = event.data;
+      if (response.type === 'failed') {
+        this.fail(response.message);
+        return;
       }
-    }
-  }
-  if (pages.length === 0) {
-    return;
+      this.pending.get(response.id)?.(response.issues);
+      this.pending.delete(response.id);
+    };
+    this.worker.onerror = event => this.fail(event.message);
   }
 
-  const linter = await getLinter(config.words ?? []);
-  if (!linter) {
-    return;
+  private post(request: ProofreadRequest) {
+    this.worker.postMessage(request);
   }
-  log.info`Proofreading ${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`;
-  for (const [outputs, outputPath, html] of pages) {
-    outputs.set(
-      outputPath,
-      await proofreadHtml(html, text => checkText(linter, text)),
+
+  // Pages are still built when Harper fails; they are just not proofread
+  private fail(message: string) {
+    if (!this.failed) {
+      log.warn`Harper failed, so pages will not be proofread: ${message}`;
+    }
+    this.failed = true;
+    for (const resolve of this.pending.values()) {
+      resolve([]);
+    }
+    this.pending.clear();
+  }
+
+  setWords(words: string[]) {
+    const key = JSON.stringify(words);
+    if (key !== this.words) {
+      this.post({ type: 'words', words });
+      this.words = key;
+    }
+  }
+
+  check = (text: string): Promise<TextIssue[]> => {
+    if (this.failed) {
+      return Promise.resolve([]);
+    }
+    const id = this.nextId++;
+    const issues = new Promise<TextIssue[]>(resolve =>
+      this.pending.set(id, resolve),
     );
+    this.post({ type: 'check', id, text });
+    return issues;
+  };
+}
+
+let proofreader: Proofreader | null = null;
+
+/**
+ * Starts Harper loading, if the site proofreads, and returns the proofreader
+ * that watch mode keeps for the whole session
+ */
+export function startProofreader(
+  siteVariables: SiteVariables,
+): Proofreader | null {
+  const config = getProofreadConfig(siteVariables);
+  if (!config) {
+    return null;
   }
+  proofreader ??= new Proofreader();
+  proofreader.setWords(config.words ?? []);
+  return proofreader;
+}
+
+/**
+ * Sends the text of a content record's HTML pages to the proofreader right
+ * away, and underlines the problems it finds in place once they arrive
+ */
+export function proofreadRecord(
+  record: TadaSourceRecord,
+  proofreader: Proofreader,
+): Promise<void>[] {
+  if (record.kind !== 'content') {
+    return [];
+  }
+  return [...record.outputs]
+    .filter(
+      (entry): entry is [string, string] =>
+        entry[0].endsWith('.html') && typeof entry[1] === 'string',
+    )
+    .map(async ([outputPath, html]) => {
+      record.outputs.set(
+        outputPath,
+        await proofreadHtml(html, proofreader.check),
+      );
+    });
 }

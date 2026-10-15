@@ -28,9 +28,14 @@ file that sets it fails to load.
 ## Checker
 
 Tada uses [Harper](https://writewithharper.com) (`harper.js`), which runs
-locally in WebAssembly with American English rules. Harper loads the first time
-watch mode proofreads, which adds a few seconds to the first build; later
-rebuilds check only the pages they re-render.
+locally in WebAssembly with American English rules. Harper runs in a worker
+thread that watch mode starts when its first build begins, so Harper loads while
+scripts compile and pages render, and each page is checked as soon as it
+renders. A build writes its output once every page it rendered is checked;
+later rebuilds check only the pages they re-render.
+
+If Harper fails to load or to check text, watch mode logs a warning and writes
+pages without underlines.
 
 ## What is checked
 

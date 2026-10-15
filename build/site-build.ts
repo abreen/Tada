@@ -4,7 +4,11 @@ import { makeLogger } from './log';
 import { getRuntimeBundledShikiLanguages } from './site-variables';
 import { initHighlighter } from './utils/shiki-highlighter';
 import { generateSiteAssets } from './site-assets';
-import { getProofreadConfig, proofreadRecords } from './proofread';
+import {
+  proofreadRecord,
+  startProofreader,
+  type Proofreader,
+} from './proofread';
 import { getPdfSources } from './pagefind';
 import { checkTraceToolAvailability } from './utils/trace';
 import {
@@ -87,6 +91,8 @@ export interface RenderContext {
   traceCache: TraceCache;
   traceToolAvailability: TraceToolAvailability;
   documentIndex: DocumentIndex;
+  /** Watch mode's proofreader, which checks each page as soon as it renders */
+  proofreader?: Proofreader | null;
 }
 
 export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
@@ -169,9 +175,15 @@ export async function ensureHighlighter(
 export function renderSources(
   filePaths: Iterable<string>,
   context: RenderContext,
-): { records: Map<string, TadaSourceRecord>; diagnostics: BuildDiagnostic[] } {
+): {
+  records: Map<string, TadaSourceRecord>;
+  diagnostics: BuildDiagnostic[];
+  /** Settles once every rendered page is proofread */
+  proofreading: Promise<unknown>;
+} {
   const records = new Map<string, TadaSourceRecord>();
   const diagnostics: BuildDiagnostic[] = [];
+  const proofreading: Promise<void>[] = [];
   for (const filePath of filePaths) {
     try {
       const record =
@@ -191,6 +203,9 @@ export function renderSources(
             });
       if (record.outputs.size > 0) {
         records.set(filePath, record);
+        if (context.proofreader) {
+          proofreading.push(...proofreadRecord(record, context.proofreader));
+        }
       }
     } catch (error) {
       const { message } = diagnosticFromError(error);
@@ -204,7 +219,10 @@ export function renderSources(
       });
     }
   }
-  return { records, diagnostics };
+  if (proofreading.length > 0) {
+    log.info`Proofreading ${proofreading.length} ${proofreading.length === 1 ? 'page' : 'pages'}`;
+  }
+  return { records, diagnostics, proofreading: Promise.all(proofreading) };
 }
 
 /** Validates rendered records and assembles the snapshot of a build. */
@@ -329,6 +347,8 @@ export async function buildSite({
     return { ok: false, diagnostics: configDiagnostics };
   }
 
+  // Harper loads in a worker while scripts compile and pages render
+  const proofreader = isWatchMode ? startProofreader(siteVariables) : null;
   compileTemplates(siteVariables);
   await ensureHighlighter(siteVariables);
   const documentIndex = buildDocumentIndexForScan(scan, siteVariables);
@@ -358,20 +378,21 @@ export async function buildSite({
       log.warn`javac was not found; literate Java pages will not include execution output`;
     }
   }
-  const { records, diagnostics } = renderSources(scan.sources.keys(), {
-    siteVariables,
-    scan,
-    assetFiles: assets.assetFiles,
-    authorScripts: authorScripts.value,
-    isWatchMode,
-    traceCache,
-    traceToolAvailability,
-    documentIndex: documentIndex.value,
-  });
-  const proofread = isWatchMode ? getProofreadConfig(siteVariables) : null;
-  if (proofread) {
-    await proofreadRecords(records.values(), proofread);
-  }
+  const { records, diagnostics, proofreading } = renderSources(
+    scan.sources.keys(),
+    {
+      siteVariables,
+      scan,
+      assetFiles: assets.assetFiles,
+      authorScripts: authorScripts.value,
+      isWatchMode,
+      traceCache,
+      traceToolAvailability,
+      documentIndex: documentIndex.value,
+      proofreader,
+    },
+  );
+  await proofreading;
   return finishBuild({
     siteVariables,
     scan,

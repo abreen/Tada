@@ -12,6 +12,46 @@ export interface TextIssue {
 /** Finds the problems in the text of one block, such as a paragraph */
 export type CheckText = (text: string) => Promise<TextIssue[]>;
 
+/** A message to the proofreading worker */
+export type ProofreadRequest =
+  | { type: 'words'; words: string[] }
+  | { type: 'check'; id: number; text: string };
+
+/** A message from the proofreading worker */
+export type ProofreadResponse =
+  | { type: 'issues'; id: number; issues: TextIssue[] }
+  | { type: 'failed'; message: string };
+
+const SPELLING_KINDS = new Set(['Spelling', 'Typo']);
+
+/** Maps code point offsets, which Harper reports, to UTF-16 offsets */
+export function toUtf16Offsets(text: string): (offset: number) => number {
+  if (!/[\uD800-\uDFFF]/.test(text)) {
+    return offset => offset;
+  }
+  const offsets: number[] = [];
+  let utf16 = 0;
+  for (const char of text) {
+    offsets.push(utf16);
+    utf16 += char.length;
+  }
+  offsets.push(utf16);
+  return offset => offsets[Math.min(offset, offsets.length - 1)];
+}
+
+/** Converts Harper's lints, with code point spans and lint kinds, to issues */
+export function toTextIssues(
+  text: string,
+  lints: { start: number; end: number; kind: string }[],
+): TextIssue[] {
+  const toUtf16 = toUtf16Offsets(text);
+  return lints.map(lint => ({
+    start: toUtf16(lint.start),
+    end: toUtf16(lint.end),
+    kind: SPELLING_KINDS.has(lint.kind) ? 'spelling' : 'grammar',
+  }));
+}
+
 // Same red and green as multiple-choice question results
 export const PROOFREAD_STYLE =
   '<style>' +

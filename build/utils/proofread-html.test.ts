@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   PROOFREAD_STYLE,
   proofreadHtml,
+  toTextIssues,
+  toUtf16Offsets,
   type CheckText,
   type IssueKind,
 } from './proofread-html';
@@ -165,5 +167,32 @@ describe('proofreadHtml', () => {
     expect(html).toBe(
       page(content).replace('</head>', `${PROOFREAD_STYLE}</head>`),
     );
+  });
+});
+
+describe('toUtf16Offsets', () => {
+  test('keeps offsets in text without astral characters', () => {
+    const toUtf16 = toUtf16Offsets('Naïve café');
+    expect(toUtf16(6)).toBe(6);
+  });
+
+  test('counts astral characters as two UTF-16 code units', () => {
+    const text = '😀 😀 recieve';
+    const toUtf16 = toUtf16Offsets(text);
+    expect(text.slice(toUtf16(4), toUtf16(11))).toBe('recieve');
+  });
+});
+
+describe('toTextIssues', () => {
+  test('marks spelling and typo lints as spelling and others as grammar', () => {
+    expect(
+      toTextIssues('teh cat an dog', [
+        { start: 0, end: 3, kind: 'Typo' },
+        { start: 8, end: 10, kind: 'Miscellaneous' },
+      ]),
+    ).toEqual([
+      { start: 0, end: 3, kind: 'spelling' },
+      { start: 8, end: 10, kind: 'grammar' },
+    ]);
   });
 });
