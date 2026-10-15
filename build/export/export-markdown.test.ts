@@ -56,6 +56,8 @@ function createContext(files: Record<string, string> = {}): ExportContext {
       ['/lectures/Demo.java.html', 'lectures/Demo.java'],
       ['/lectures/photo.png', 'lectures/photo.png'],
       ['/about.html', 'about.html'],
+      ['/lectures/a_b.html', 'lectures/a_b.md'],
+      ['/lectures/a&b.html', 'lectures/a&b.md'],
     ]),
     validTargets: new Set(['/feed.xml']),
     readFile: read,
@@ -154,6 +156,28 @@ describe('exportMarkdownPage', () => {
     );
     expect(() => exportPage('<a href="nope.html">x</a>')).toThrow(
       'broken internal link: "nope.html" (resolved to "/lectures/nope.html")',
+    );
+  });
+
+  test('checks only anchors for broken links, as the build does', () => {
+    expect(
+      exportPage(
+        '![c](/api/chart.svg)\n\n<iframe src="/demo/"></iframe>\n\n[r]: /nowhere.png',
+      ),
+    ).toBe(
+      '![c](../api/chart.svg)\n\n<iframe src="../demo/"></iframe>\n\n[r]: ../nowhere.png\n',
+    );
+  });
+
+  test('resolves escapes and entities in destinations', () => {
+    expect(exportPage('[x](a\\_b.html) [y](a&amp;b.html)')).toBe(
+      '[x](a_b.md) [y](a%26b.md)\n',
+    );
+  });
+
+  test('rewrites a reference destination on the next line of a blockquote', () => {
+    expect(exportPage('> [ref]:\n> /index.html\n\n[x][ref]')).toBe(
+      '> [ref]:\n> ../index.md\n\n[x][ref]\n',
     );
   });
 
@@ -329,6 +353,12 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test("fails on an empty trace block with the build's message", () => {
+    expect(() => exportPage('```trace\n```')).toThrow(
+      'trace block must name a source file',
+    );
+  });
+
   test('fails on a missing partial', () => {
     expect(() => exportPage('{{{ _missing.md }}}')).toThrow(
       `partial not found: _missing.md (resolved to ${contentPath('lectures/_missing.md')})`,
@@ -380,6 +410,25 @@ describe('exportMarkdownPage', () => {
 });
 
 describe('exportHtmlPage', () => {
+  test('rewrites links inside noscript and fails on broken anchors', () => {
+    const page = {
+      filePath: contentPath('lectures/page.html'),
+      relPath: 'lectures/page.html',
+    };
+    expect(
+      exportHtmlPage(
+        createContext(),
+        page,
+        '<noscript><a href="/index.html">Home</a></noscript><img src="/x.png">',
+      ),
+    ).toBe(
+      '<noscript><a href="../index.md">Home</a></noscript><img src="../x.png">',
+    );
+    expect(() =>
+      exportHtmlPage(createContext(), page, '<a href="/nope.html">x</a>'),
+    ).toThrow('broken internal link: "/nope.html"');
+  });
+
   test('adds the title and rewrites links', () => {
     expect(
       exportHtmlPage(

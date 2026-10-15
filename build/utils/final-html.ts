@@ -30,12 +30,12 @@ type RewriterElement = HTMLRewriterTypes.Element;
 
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 
-function splitHref(href: string): { pathname: string; suffix: string } {
+export function splitHref(href: string): { pathname: string; suffix: string } {
   const match = href.match(/^([^?#]*)(.*)$/);
   return { pathname: match ? match[1] : href, suffix: match ? match[2] : '' };
 }
 
-function resolvePathname(
+export function resolvePathname(
   sourceUrlPath: string,
   pathname: string,
 ): string | null {

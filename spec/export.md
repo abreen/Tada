@@ -18,7 +18,7 @@ tada export (--dev | --prod) [--out <dir>] [--force]
   passed, which replaces it.
 
 Every page is converted first, then the export is written to a new directory
-beside the output directory (`<dir>.tmp-<pid>`) and moved into place. An error
+beside the output directory (`<dir>.tmp-<pid>-<time>`) and moved into place. An error
 at any step leaves an earlier export as it was. Errors match the build's, such
 as a broken [wikilink](wikilinks.md) or an unknown variable. Nothing in
 `content/` changes.
@@ -88,8 +88,10 @@ and `href` and `src` attributes in raw HTML point to exported files:
   base path.
 - A relative link to a file exported at the same path is left as written.
 - External links, fragments, and `mailto:` links are unchanged.
-- An internal link to a path the build does not publish fails the export with
-  the build's `broken internal link` error. A link to a file the build
+- A link (a Markdown link, superlink, or `<a href>`) to a path the build does
+  not publish fails the export with the build's `broken internal link` error.
+  As in the build, images, `src` attributes, and reference definitions are not
+  checked. A link to a file the build
   generates but the export leaves out is made relative and kept.
 
 Query strings and fragments are kept.

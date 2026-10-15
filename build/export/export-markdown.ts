@@ -15,11 +15,12 @@ import {
   checkPartialTarget,
   parsePartialDirective,
 } from '../utils/markdown-partials';
+import { resolvePathname, splitHref } from '../utils/final-html';
+import { isInternalLink } from '../utils/link';
 import { toDisplayPath, toUrlPath } from '../utils/paths';
 import { getSiteVars, substituteContent } from '../variables';
 import type { SiteVariables } from '../types';
 
-const URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
 /** Blockquote markers, list markers, and indentation before a block */
 const LINE_PREFIX_PATTERN =
   /^(?:[ \t]*(?:>|[-+*](?=[ \t]|$)|\d{1,9}[.)](?=[ \t]|$)))*[ \t]*/;
@@ -346,14 +347,6 @@ function normalizeNewlines(text: string): string {
   return normalized.endsWith('\n') ? normalized : `${normalized}\n`;
 }
 
-function safeDecode(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
-
 /**
  * Applies edits that may nest: an edit's replacement can render the text of
  * its own range with the edits inside it applied. Insertions at the start or
@@ -504,7 +497,6 @@ class PageExporter {
       const prefix = original.slice(0, original.indexOf('{{{'));
       const indent = continuationPrefix(prefix);
       // The build parses a partial as blocks of their own, so blank lines keep
-      // it from joining a paragraph or list around it
       // it from joining a paragraph or list around it. A directive that is a
       // list item already starts a block of its own.
       const isBlank = (text: string | undefined) =>
@@ -519,28 +511,22 @@ class PageExporter {
     return lines.join('\n');
   }
 
-  /** Rewrites a URL written on this page to point into the export */
-  rewriteUrl(url: string): string | null {
-    if (
-      url === '' ||
-      URL_SCHEME_PATTERN.test(url) ||
-      url.startsWith('//') ||
-      url.startsWith('#') ||
-      url.startsWith('?')
-    ) {
+  /**
+   * Rewrites a URL written on this page to point into the export. An anchor's
+   * link must name something the build publishes, as the build checks.
+   */
+  rewriteUrl(url: string, isAnchor = false): string | null {
+    if (!isInternalLink(url) || url.startsWith('?')) {
       return null;
     }
-    const [, urlPath, suffix] = url.match(/^([^?#]*)(.*)$/s)!;
-    const decoded = urlPath.split('/').map(safeDecode).join('/');
-    const absolute = decoded.startsWith('/');
-    const pageDir = path.posix.dirname(`/${this.page.relPath}`);
-    const target = path.posix.normalize(
-      absolute ? decoded : path.posix.join(pageDir, decoded),
-    );
-    if (!target.startsWith('/') || target.startsWith('/..')) {
+    const { pathname, suffix } = splitHref(url);
+    const absolute = pathname.startsWith('/');
+    const target = resolvePathname(`/${this.page.relPath}`, pathname);
+    if (target === null) {
       return null;
     }
     if (
+      isAnchor &&
       !this.context.exportPaths.has(target) &&
       !this.context.validTargets.has(target)
     ) {
@@ -580,28 +566,33 @@ class PageExporter {
     return toUrlPath(relative);
   }
 
-  private rewriteDestination(raw: string): string {
-    if (raw.startsWith('<') && raw.endsWith('>')) {
-      const rewritten = this.rewriteUrl(raw.slice(1, -1));
-      return rewritten === null ? raw : `<${rewritten}>`;
+  /** A Markdown link destination as written, rewritten into the export */
+  private rewriteDestination(raw: string, isAnchor: boolean): string {
+    const bracketed = raw.startsWith('<') && raw.endsWith('>');
+    // Backslash escapes and character references, as markdown-it reads them
+    const url = plainMarkdown.utils.unescapeAll(
+      bracketed ? raw.slice(1, -1) : raw,
+    );
+    const rewritten = this.rewriteUrl(url, isAnchor);
+    if (rewritten === null) {
+      return raw;
     }
-    return this.rewriteUrl(raw) ?? raw;
+    return bracketed ? `<${rewritten}>` : rewritten;
   }
 
-  rewriteHtml(html: string): string {
-    const rewriter = new HTMLRewriter();
-    for (const attribute of ['href', 'src']) {
-      rewriter.on(`[${attribute}]`, {
-        element: element => {
-          const value = element.getAttribute(attribute);
-          const rewritten = value === null ? null : this.rewriteUrl(value);
-          if (rewritten !== null) {
-            element.setAttribute(attribute, rewritten);
-          }
-        },
-      });
+  /** Edits for the `href` and `src` values in raw HTML */
+  htmlUrlEdits(html: string): { start: number; end: number; url: string }[] {
+    const edits = [];
+    for (const value of findUrlAttributes(html)) {
+      const rewritten = this.rewriteUrl(
+        plainMarkdown.utils.unescapeAll(value.url),
+        value.isAnchor,
+      );
+      if (rewritten !== null) {
+        edits.push({ start: value.start, end: value.end, url: rewritten });
+      }
     }
-    return rewriter.transform(html);
+    return edits;
   }
 
   /** Exports a short piece of inline Markdown, such as a question */
@@ -830,13 +821,10 @@ class PageExporter {
       } else if (token.type === 'html_block') {
         const [open, end] = token.map!;
         const start = lineStart(open);
-        for (const value of findUrlAttributes(
+        for (const edit of this.htmlUrlEdits(
           text.slice(start, lineEnd(end - 1)),
         )) {
-          const rewritten = this.rewriteUrl(value.url);
-          if (rewritten !== null) {
-            replace(start + value.start, start + value.end, rewritten);
-          }
+          replace(start + edit.start, start + edit.end, edit.url);
         }
       } else if (token.type === 'heading_open') {
         const inline = tokens[index + 1];
@@ -851,25 +839,33 @@ class PageExporter {
 
     for (const [open, end] of record.references) {
       const { start } = blockStart(open);
-      const definition = text.slice(start, lineEnd(end - 1));
-      const labelEnd = findReferenceLabelEnd(definition);
+      const definitionEnd = lineEnd(end - 1);
+      const labelEnd = findReferenceLabelEnd(text.slice(start, definitionEnd));
       if (labelEnd < 0) {
         continue;
       }
-      let pos = labelEnd + 2;
-      while (pos < definition.length && /\s/.test(definition[pos])) {
-        pos++;
+      // The destination can start on a later line, after that line's prefix
+      let pos = start + labelEnd + 2;
+      while (pos < definitionEnd && /\s/.test(text[pos])) {
+        if (text[pos] === '\n') {
+          const line = lineStarts.indexOf(pos + 1);
+          pos += 1 + linePrefix(lines[line]).length;
+        } else {
+          pos++;
+        }
       }
+      const lineEndAtPos = text.indexOf('\n', pos);
       const destination = plainMarkdown.helpers.parseLinkDestination(
-        definition,
+        text,
         pos,
-        definition.length,
+        lineEndAtPos < 0 ? text.length : lineEndAtPos,
       );
       if (destination.ok && destination.pos > pos) {
-        const raw = definition.slice(pos, destination.pos);
-        const rewritten = this.rewriteDestination(raw);
+        const raw = text.slice(pos, destination.pos);
+        // A definition can serve images as well as links, so it is not checked
+        const rewritten = this.rewriteDestination(raw, false);
         if (rewritten !== raw) {
-          replace(start + pos, start + destination.pos, rewritten);
+          replace(pos, destination.pos, rewritten);
         }
       }
     }
@@ -928,14 +924,19 @@ class PageExporter {
         pos,
         end,
       );
+      // The superlink rule accepts only a destination, with no title
+      if (!destination.ok) {
+        return;
+      }
       const raw = src.slice(pos, destination.pos);
+      const href = this.rewriteDestination(raw, true);
       // Each superlink was a block of its own: keep the next one on its own line
       const lineBreak = src[end] === '\n' ? '\\' : '';
       replace(
         at(start),
         at(end),
         render =>
-          `[${render(at(start + 1), at(titleEnd))}](${this.rewriteDestination(raw)}) - ` +
+          `[${render(at(start + 1), at(titleEnd))}](${href}) - ` +
           render(at(descriptionStart), at(descriptionEnd)) +
           lineBreak,
       );
@@ -956,18 +957,15 @@ class PageExporter {
         return;
       }
       const raw = src.slice(pos, destination.pos);
-      const rewritten = this.rewriteDestination(raw);
+      const rewritten = this.rewriteDestination(raw, span.kind === 'link');
       if (rewritten !== raw) {
         replace(at(pos), at(destination.pos), rewritten);
       }
     } else {
       // Only the attribute values change, so a tag that spans lines keeps
       // the markers an alert added to them
-      for (const value of findUrlAttributes(src.slice(start, end))) {
-        const rewritten = this.rewriteUrl(value.url);
-        if (rewritten !== null) {
-          replace(at(start + value.start), at(start + value.end), rewritten);
-        }
+      for (const edit of this.htmlUrlEdits(src.slice(start, end))) {
+        replace(at(start + edit.start), at(start + edit.end), edit.url);
       }
     }
   }
@@ -1133,7 +1131,9 @@ class PageExporter {
       .map(line => line.trim())
       .filter(line => line !== '');
     if (files.length === 0) {
-      throw new Error(`${this.displayPath}: trace block is empty`);
+      throw new Error(
+        `${this.displayPath}: trace block must name a source file`,
+      );
     }
     const languages = this.context.siteVariables.extensionToShikiLanguage ?? {};
     return files
@@ -1171,7 +1171,7 @@ const RAW_TEXT_ELEMENTS = new Set(['script', 'style', 'textarea', 'title']);
  */
 function findUrlAttributes(
   html: string,
-): { start: number; end: number; url: string }[] {
+): { start: number; end: number; url: string; isAnchor: boolean }[] {
   const values = [];
   const lower = html.toLowerCase();
   let pos = 0;
@@ -1210,7 +1210,14 @@ function findUrlAttributes(
       if (url !== undefined && /^(?:href|src)$/i.test(attribute[1])) {
         const end =
           i + attribute[0].length - (attribute[4] === undefined ? 1 : 0);
-        values.push({ start: end - url.length, end, url });
+        values.push({
+          start: end - url.length,
+          end,
+          url,
+          // The build checks only links of `<a>` elements
+          isAnchor:
+            name.toLowerCase() === 'a' && attribute[1].toLowerCase() === 'href',
+        });
       }
       i += attribute[0].length;
     }
@@ -1294,7 +1301,14 @@ export function exportHtmlPage(
   body: string,
 ): string {
   const exporter = new PageExporter(context, page);
-  const html = exporter.rewriteHtml(body).replace(/^(?:[ \t]*\r?\n)+/, '');
+  const edits = exporter
+    .htmlUrlEdits(body)
+    .map(edit => ({
+      start: edit.start,
+      end: edit.end,
+      replace: () => edit.url,
+    }));
+  const html = applyEdits(body, edits).replace(/^(?:[ \t]*\r?\n)+/, '');
   return page.title
     ? `<h1>${renderInlineHtml(page.title)}</h1>\n\n${html}`
     : html;
