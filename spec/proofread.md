@@ -28,7 +28,8 @@ proofread:
 - **rules**: optional map from a Harper rule name to `true` (turn the rule on)
   or `false` (turn it off). Rules not listed keep Harper's defaults. Rule names
   are the keys of Harper's lint config, such as `SpellCheck` and
-  `LongSentences`.
+  `LongSentences`. Each problem's tooltip shows the name of the rule that
+  found it.
   A name Harper does not have is skipped with a warning, and the other rules
   still apply
 
@@ -100,11 +101,18 @@ Each span carries Harper's message about the problem:
   JavaScript; words Harper quotes with backticks are shown in curly quotes
 - `data-proofread-message`, the message as HTML, such as words in `<code>`
 
+Both end with the name of the Harper rule that found the problem, on its own
+line, so authors can copy it into `rules`. In `data-proofread-message` it is a
+`<p class="proofread-rule">` holding the name in `<code>`. The worker gets rule
+names from Harper's `organizedLints`.
+
 Every proofread page also gets an inline `<script>` in its `<head>`. When the
 pointer moves over a span, the script removes its `title` and shows a
 `role="tooltip"` element below the span with the HTML message. The tooltip
 has inverted theme colors (`--fg-color` background, `--bg-color` text) and
 `--box-shadow`. Harper wraps quoted words in `<code>`; the tooltip shows them in
-the tooltip's own font with curly quotes instead of as monospace code. It goes
+the tooltip's own font with curly quotes instead of as monospace code. The rule
+name is shown in the italic monospace style of the table of contents' "On this
+page" label, without quotes. It goes
 away when the pointer leaves the span or the page scrolls. The script listens
 on `document`, so it keeps working across client-side navigation.

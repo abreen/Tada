@@ -84,20 +84,28 @@ async function handle(request: ProofreadRequest) {
     }
     return;
   }
-  const lints = await linter.lint(request.text, { language: 'plaintext' });
-  const found = lints.map(lint => {
-    const span = lint.span();
-    const result = {
-      start: span.start,
-      end: span.end,
-      kind: lint.lint_kind(),
-      message: lint.message(),
-      messageHtml: lint.message_html(),
-    };
-    span.free();
-    lint.free();
-    return result;
+  // Lints grouped by the name of the rule that found them, as in the config
+  const lintsByRule = await linter.organizedLints(request.text, {
+    language: 'plaintext',
   });
+  const found = Object.entries(lintsByRule)
+    .flatMap(([rule, lints]) =>
+      lints.map(lint => {
+        const span = lint.span();
+        const result = {
+          start: span.start,
+          end: span.end,
+          kind: lint.lint_kind(),
+          rule,
+          message: lint.message(),
+          messageHtml: lint.message_html(),
+        };
+        span.free();
+        lint.free();
+        return result;
+      }),
+    )
+    .sort((a, b) => a.start - b.start);
   respond({
     type: 'issues',
     id: request.id,
