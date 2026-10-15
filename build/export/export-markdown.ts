@@ -16,6 +16,7 @@ import {
   checkIncludeDepth,
   checkPartialTarget,
   parsePartialDirective,
+  setTokenSourceFile,
 } from '../utils/markdown-partials';
 import { resolvePathname, splitHref } from '../utils/final-html';
 import { isInternalLink } from '../utils/link';
@@ -119,6 +120,13 @@ interface ParseRecord {
   references: [number, number][];
   /** Ranges of inline footnotes (`^[...]`) in inline tokens' content */
   footnotes: { inline: Token; start: number; end: number }[];
+  /** The file each line came from, for errors in included partials */
+  origins?: readonly string[];
+}
+
+interface ParseOptions {
+  wikilinks?: boolean;
+  origins?: readonly string[];
 }
 
 /** Text inserted at a column of a line, after removing some characters */
@@ -236,6 +244,12 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
           row >= 0
         ) {
           record.cells.set(token, row);
+        }
+        // Errors name the partial that the text came from, as in the build
+        const line = token.map?.[0] ?? record.cells.get(token);
+        const origin = line === undefined ? undefined : record.origins?.[line];
+        if (origin) {
+          setTokenSourceFile(token, origin);
         }
         state.md.inline.parse(
           token.content,
@@ -580,25 +594,34 @@ class PageExporter {
     return toDisplayPath(this.page.filePath);
   }
 
-  private createParser(record: ParseRecord): MarkdownIt {
+  private createParser(record: ParseRecord, wikilinks: boolean): MarkdownIt {
     const md = createMarkdown(this.context.siteVariables, {
       filePath: this.page.filePath,
-      pageTitles: this.forTitle ? undefined : this.context.pageTitles,
+      pageTitles: wikilinks ? this.context.pageTitles : undefined,
     });
     md.use(partialDirectivePlugin);
     md.use(recorderPlugin, record);
     return md;
   }
 
-  private parse(text: string): { tokens: Token[]; record: ParseRecord } {
+  /**
+   * Parses Markdown. Without wikilinks, `[[...]]` stays unresolved, for a
+   * look at text whose references may be defined in partials not yet
+   * included. `origins` names the file each line came from.
+   */
+  private parse(
+    text: string,
+    { wikilinks = !this.forTitle, origins }: ParseOptions = {},
+  ): { tokens: Token[]; record: ParseRecord } {
     const record: ParseRecord = {
       spans: [],
       contents: new Map(),
       cells: new Map(),
       references: [],
       footnotes: [],
+      origins,
     };
-    const tokens = this.createParser(record).parse(text, {});
+    const tokens = this.createParser(record, wikilinks).parse(text, {});
     return { tokens, record };
   }
 
@@ -607,7 +630,7 @@ class PageExporter {
    * an indented code block or some HTML blocks would join the paragraph
    */
   private canInterruptParagraph(markdown: string): boolean {
-    const { tokens, record } = this.parse(markdown);
+    const { tokens, record } = this.parse(markdown, { wikilinks: false });
     const firstLine = markdown.split('\n').findIndex(line => line.trim());
     // A reference definition leaves no token
     if (record.references.some(([start]) => start === firstLine)) {
@@ -642,18 +665,25 @@ class PageExporter {
     }
   }
 
-  /** Replaces partial directives with the partials' text, recursively */
+  /**
+   * Replaces partial directives with the partials' text, recursively, with
+   * the file each resulting line came from
+   */
   expandPartials(
     text: string,
     fromFile: string,
     depth = 0,
     /** Whether the text is a partial included in a list item */
     inList = false,
-  ): string {
+  ): { text: string; origins: string[] } {
+    const unchanged = () => ({
+      text,
+      origins: text.split('\n').map(() => fromFile),
+    });
     if (!text.includes('{{{')) {
-      return text;
+      return unchanged();
     }
-    const { tokens } = this.parse(text);
+    const { tokens } = this.parse(text, { wikilinks: false });
     const directives: Token[] = [];
     const inListItem = new Set<Token>();
     let listItemDepth = 0;
@@ -670,12 +700,13 @@ class PageExporter {
       }
     }
     if (directives.length === 0) {
-      return text;
+      return unchanged();
     }
     // Named as the build names them: by the including file's path, and the
     // page's for an empty path
     const caller = fromFile;
     const lines = text.split('\n');
+    const origins = lines.map(() => fromFile);
     for (const directive of directives.reverse()) {
       const relativePath = directive.info;
       if (!relativePath) {
@@ -703,7 +734,9 @@ class PageExporter {
         resolvedPath,
         depth + 1,
         inListItem.has(directive),
-      ).replace(/\n$/, '');
+      );
+      const partialLines = partial.text.replace(/\n$/, '').split('\n');
+      const partialText = partialLines.join('\n');
 
       const line = directive.map![0];
       const original = lines[line];
@@ -721,10 +754,8 @@ class PageExporter {
       const breakBefore =
         continuation &&
         !isBlank(lines[line - 1]) &&
-        (!listed || !this.canInterruptParagraph(partial));
+        (!listed || !this.canInterruptParagraph(partialText));
       const breakAfter = continuation && !listed && !isBlank(lines[line + 1]);
-      const before = breakBefore ? `${indent.trimEnd()}\n` : '';
-      const after = breakAfter ? `\n${indent.trimEnd()}` : '';
       const { extraIndent } = directive.meta as { extraIndent: number };
       const withoutExtra = (text: string) =>
         text.slice(
@@ -732,13 +763,27 @@ class PageExporter {
           text.length -
             Math.min(text.match(/ *$/)![0].length, Math.max(0, extraIndent)),
         );
-      lines[line] =
-        before +
-        withoutExtra(prefix) +
-        indentLines(partial, withoutExtra(indent)) +
-        after;
+      const included = indentLines(
+        withoutExtra(prefix) + partialText,
+        withoutExtra(indent),
+      ).split('\n');
+      const blank = indent.trimEnd();
+      lines.splice(
+        line,
+        1,
+        ...(breakBefore ? [blank] : []),
+        ...included,
+        ...(breakAfter ? [blank] : []),
+      );
+      origins.splice(
+        line,
+        1,
+        ...(breakBefore ? [fromFile] : []),
+        ...partial.origins.slice(0, included.length),
+        ...(breakAfter ? [fromFile] : []),
+      );
     }
-    return lines.join('\n');
+    return { text: lines.join('\n'), origins };
   }
 
   /**
@@ -868,8 +913,8 @@ class PageExporter {
       .trim();
   }
 
-  transform(text: string): string {
-    const { tokens, record } = this.parse(text);
+  transform(text: string, origins?: readonly string[]): string {
+    const { tokens, record } = this.parse(text, { origins });
     const lines = text.split('\n');
     const lineStarts: number[] = [];
     let offset = 0;
@@ -1284,16 +1329,19 @@ class PageExporter {
       }
       const raw = src.slice(pos, destination.pos);
       const href = this.rewriteDestination(raw, !span.inAlt);
-      // Each superlink was a block of its own: keep the next one on its own line
-      const lineBreak = src[end] === '\n' ? '\\' : '';
       replace(
         at(start),
         at(end),
         render =>
           `[${render(at(start + 1), at(titleEnd))}](${href}) - ` +
-          render(at(descriptionStart), at(descriptionEnd)) +
-          lineBreak,
+          render(at(descriptionStart), at(descriptionEnd)),
       );
+      // Each superlink was a block of its own: a hard line break, which must
+      // end the line, keeps the next one on its own line
+      const trailing = /^[ \t]*\n/.exec(src.slice(end))?.[0];
+      if (trailing) {
+        replace(at(end), at(end + trailing.length - 1), '\\');
+      }
     } else if (span.kind === 'link' || span.kind === 'image') {
       if (span.labelEnd < 0 || !isInlineLink(span)) {
         return;
@@ -1832,7 +1880,7 @@ export function exportMarkdownPage(
     page.filePath,
   );
   const exported = exporter
-    .transform(expanded)
+    .transform(expanded.text, expanded.origins)
     .replace(/^(?:[ \t]*\n)+/, '')
     .replace(/\n+$/, '\n');
   const title = exportTitle(context, page);

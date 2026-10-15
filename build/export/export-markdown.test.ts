@@ -374,6 +374,28 @@ describe('exportMarkdownPage', () => {
     expect(exportPage('## A \\# B # C')).toBe('## A - B # C\n');
   });
 
+  test('reads a reference defined in a partial before wikilinks', () => {
+    expect(
+      exportPage('See [[1]] here.\n\n{{{ _refs.md }}}', {
+        files: { 'lectures/_refs.md': '[1]: /index.html' },
+      }),
+    ).toBe('See [[1]] here.\n\n[1]: ../index.md\n');
+  });
+
+  test('breaks the line after a superlink with trailing spaces', () => {
+    expect(exportPage('[A][a](/index.html) \n[B][b](/index.html)')).toBe(
+      '[A](../index.md) - a\\\n[B](../index.md) - b\n',
+    );
+  });
+
+  test('names the partial in a wikilink error from its text', () => {
+    expect(() =>
+      exportPage('Intro.\n\n{{{ _p.md }}}', {
+        files: { 'lectures/_p.md': 'See [[Nope]].' },
+      }),
+    ).toThrow('lectures/_p.md: broken wikilink "[[Nope]]"');
+  });
+
   test('keeps a list tight around an alert', () => {
     expect(exportPage('1. one\n   !!! note\n   two\n   !!!\n2. three')).toBe(
       '1. one\n   > [!NOTE]\n   > two\n2. three\n',

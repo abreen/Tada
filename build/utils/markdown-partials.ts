@@ -25,6 +25,11 @@ export function getTokenSourceFile(token: Token): string | undefined {
   return typeof sourceFile === 'string' ? sourceFile : undefined;
 }
 
+/** Tags an inline token with the file its text came from */
+export function setTokenSourceFile(token: Token, filePath: string): void {
+  token.meta = { ...token.meta, [SOURCE_FILE_META_KEY]: filePath };
+}
+
 /**
  * The path in a `{{{ path }}}` directive line, trimmed, or null when the line
  * is not a directive (including an escaped `\{{{`)
