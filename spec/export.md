@@ -22,6 +22,9 @@ tada export (--dev | --prod) [--out <dir>] [--force]
 Every page is converted first, then the export is written to a new directory
 beside the output directory (`<dir>.tmp-<pid>-<time>`) and moved into place. An error
 at any step leaves an earlier export as it was. Nothing in `content/` changes.
+A staging directory that a stopped run left behind, marked as an export and
+untouched for an hour, is removed; a backup of an earlier export
+(`<dir>.old-*`) is kept.
 
 The export reports the build's errors for what it reads and converts:
 variables, partials, [wikilinks](wikilinks.md), internal links, traces, and
@@ -126,6 +129,9 @@ These are known differences from the built site:
   heading's text, and a subtitle heading's text changes (`## Main # Sub`
   becomes `## Main - Sub`). A `#section` link can land at the top of the page
   instead.
+- GitHub shows alerts only at the top level. An alert inside a list item,
+  blockquote, or another alert is exported the same way, and GitHub shows it
+  as a plain blockquote that starts with `[!NOTE]` or `[!WARNING]`.
 - A question, tab, or two-column layout inside a list item needs blank lines
   around its content (GitHub parses Markdown inside `<details>` only after a
   blank line), so the list renders loose, with spacing between items.

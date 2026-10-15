@@ -347,6 +347,21 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('separates list partials that would join the paragraph above', () => {
+    for (const partial of ['---', '===', '2. two\n3. three']) {
+      expect(
+        exportPage('- item\n  {{{ _p.md }}}', {
+          files: { 'lectures/_p.md': partial },
+        }),
+      ).toBe(`- item\n\n  ${partial.replace('\n', '\n  ')}\n`);
+    }
+    expect(
+      exportPage('- item\n  {{{ _p.md }}}', {
+        files: { 'lectures/_p.md': '1. one' },
+      }),
+    ).toBe('- item\n  1. one\n');
+  });
+
   test('keeps a list tight around an alert', () => {
     expect(exportPage('1. one\n   !!! note\n   two\n   !!!\n2. three')).toBe(
       '1. one\n   > [!NOTE]\n   > two\n2. three\n',

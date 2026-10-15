@@ -614,15 +614,32 @@ class PageExporter {
       return false;
     }
     const first = tokens[0];
-    if (first?.type === 'code_block') {
-      return false;
+    switch (first?.type) {
+      case 'paragraph_open': {
+        // Text joins the paragraph, as the build's tight list shows it, but
+        // a line of `=` or `-` would underline it as a heading
+        const line = markdown.split('\n')[firstLine];
+        return !/^ {0,3}(?:=+|-+)[ \t]*$/.test(line);
+      }
+      case 'ordered_list_open':
+        // Only a list that starts at 1
+        return first.attrGet('start') === null;
+      case 'bullet_list_open':
+      case 'heading_open':
+      case 'fence':
+      case 'blockquote_open':
+        return true;
+      case 'html_block':
+        // Only HTML blocks of types 1 to 6
+        return (
+          INTERRUPTING_HTML_PATTERN.test(first.content) ||
+          isBlockTag(first.content)
+        );
+      default:
+        // Such as a thematic break, which `---` would make a heading
+        // underline, or a block Tada converts
+        return false;
     }
-    // Only HTML blocks of types 1 to 6 can interrupt a paragraph
-    return (
-      first?.type !== 'html_block' ||
-      INTERRUPTING_HTML_PATTERN.test(first.content) ||
-      isBlockTag(first.content)
-    );
   }
 
   /** Replaces partial directives with the partials' text, recursively */

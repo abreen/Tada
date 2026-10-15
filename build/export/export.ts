@@ -115,6 +115,36 @@ function checkOutDir(outDir: string, force: boolean): void {
   }
 }
 
+/** How long a staging directory goes untouched before it counts as stale */
+const STALE_STAGING_MS = 60 * 60 * 1000;
+
+/**
+ * Removes staging directories that stopped runs left beside `outDir`: named
+ * as staging is, marked as an export, and untouched for an hour, so another
+ * run's staging and other folders are left alone. Backups are kept, since
+ * one may hold the only copy of an earlier export.
+ */
+function removeStaleStaging(outDir: string): void {
+  const parent = path.dirname(outDir);
+  const pattern = new RegExp(
+    `^${RegExp.escape(path.basename(outDir))}\\.tmp-\\d+-\\d+$`,
+  );
+  for (const name of fs.existsSync(parent) ? fs.readdirSync(parent) : []) {
+    const dir = path.join(parent, name);
+    try {
+      if (
+        pattern.test(name) &&
+        fs.existsSync(path.join(dir, EXPORT_MARKER_FILE)) &&
+        globals.now() - fs.statSync(dir).mtimeMs > STALE_STAGING_MS
+      ) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    } catch (error) {
+      log.warn`Could not remove ${toDisplayPath(dir)}: ${(error as Error).message}`;
+    }
+  }
+}
+
 /**
  * Writes the outputs to a new directory beside `outDir`, then puts it in
  * place, so a failure leaves any earlier export as it was
@@ -124,15 +154,7 @@ function publishOutputs(outDir: string, outputs: ExportOutput[]): void {
   const suffix = `${globals.pid()}-${globals.now()}`;
   const staging = `${outDir}.tmp-${suffix}`;
   const backup = `${outDir}.old-${suffix}`;
-  // Staging directories of runs that were stopped hold nothing else. Backups
-  // are kept, since one may hold the only copy of an earlier export.
-  const parent = path.dirname(outDir);
-  const stale = `${path.basename(outDir)}.tmp-`;
-  for (const name of fs.existsSync(parent) ? fs.readdirSync(parent) : []) {
-    if (name.startsWith(stale)) {
-      fs.rmSync(path.join(parent, name), { recursive: true, force: true });
-    }
-  }
+  removeStaleStaging(outDir);
   try {
     fs.mkdirSync(staging, { recursive: true });
     fs.writeFileSync(path.join(staging, EXPORT_MARKER_FILE), '');
