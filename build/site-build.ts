@@ -26,6 +26,8 @@ import {
   validateConfig,
   validateProjectConfigLinks,
 } from './build-validation';
+import { loadDocumentIndex, type DocumentIndex } from './document-index';
+import { readPageTitle, retainPageTitles } from './utils/render';
 import type { OutputFile } from './output-publication';
 import type {
   OutputContent,
@@ -47,6 +49,7 @@ export interface TadaSnapshot {
   generatedOutputs: ReadonlyMap<string, OutputContent>;
   authorScripts: AuthorScripts;
   authorsData: unknown;
+  documentIndex: DocumentIndex;
   records: ReadonlyMap<string, TadaSourceRecord>;
   outputs: ReadonlyMap<string, OutputFile>;
   fileDependents: ReadonlyMap<string, ReadonlySet<string>>;
@@ -63,7 +66,10 @@ type SnapshotInputs = Pick<
   | 'authorsData'
   | 'records'
   | 'scan'
-> & { generatedOutputs?: ReadonlyMap<string, OutputContent> };
+> & {
+  generatedOutputs?: ReadonlyMap<string, OutputContent>;
+  documentIndex: DocumentIndex;
+};
 
 export type SiteBuildResult =
   | { ok: true; snapshot: TadaSnapshot }
@@ -77,6 +83,7 @@ export interface RenderContext {
   isWatchMode: boolean;
   traceCache: TraceCache;
   traceToolAvailability: TraceToolAvailability;
+  documentIndex: DocumentIndex;
 }
 
 export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
@@ -174,6 +181,7 @@ export function renderSources(
               traceCache: context.traceCache,
               traceToolAvailability: context.traceToolAvailability,
               skipLiterateJavaExecution: !context.traceToolAvailability.java,
+              documentIndex: context.documentIndex,
             });
       if (record.outputs.size > 0) {
         records.set(filePath, record);
@@ -200,6 +208,7 @@ export function finishBuild({
   assetFiles,
   generatedOutputs,
   authorScripts,
+  documentIndex,
   records,
   diagnostics,
 }: {
@@ -208,6 +217,7 @@ export function finishBuild({
   assetFiles: string[];
   generatedOutputs: ReadonlyMap<string, OutputContent>;
   authorScripts: AuthorScripts;
+  documentIndex: DocumentIndex;
   records: ReadonlyMap<string, TadaSourceRecord>;
   diagnostics: BuildDiagnostic[];
 }): SiteBuildResult {
@@ -232,10 +242,29 @@ export function finishBuild({
       generatedOutputs,
       authorScripts,
       authorsData: config('authors'),
+      documentIndex,
       scan,
       records,
     }),
   };
+}
+
+/** Reads the scan's document index files and the titles of the pages they list */
+export function buildDocumentIndexForScan(
+  scan: TadaProjectScan,
+  siteVariables: SiteVariables,
+): ReturnType<typeof loadDocumentIndex> {
+  const result = loadDocumentIndex(scan, siteVariables, sourcePath =>
+    readPageTitle(
+      sourcePath,
+      scan.sources.get(sourcePath)!.renderKind,
+      siteVariables,
+    ),
+  );
+  if (result.ok) {
+    retainPageTitles(siteVariables, new Set(result.value.keys()));
+  }
+  return result;
 }
 
 /**
@@ -300,6 +329,10 @@ export async function buildSite({
 
   compileTemplates(siteVariables);
   await ensureHighlighter(siteVariables);
+  const documentIndex = buildDocumentIndexForScan(scan, siteVariables);
+  if (!documentIndex.ok) {
+    return documentIndex;
+  }
   // Independent bundles, so they build at the same time
   const [assets, authorScripts] = await Promise.all([
     generateSiteAssets(siteVariables, { mode, isWatchMode }),
@@ -331,6 +364,7 @@ export async function buildSite({
     isWatchMode,
     traceCache,
     traceToolAvailability,
+    documentIndex: documentIndex.value,
   });
   return finishBuild({
     siteVariables,
@@ -338,6 +372,7 @@ export async function buildSite({
     assetFiles: assets.assetFiles,
     generatedOutputs: assets.outputs,
     authorScripts: authorScripts.value,
+    documentIndex: documentIndex.value,
     records,
     diagnostics,
   });

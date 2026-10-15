@@ -5,18 +5,17 @@ import {
   type TadaProjectScan,
 } from '../source-model';
 import type { TadaSnapshot } from '../site-build';
+import { getChangedDocumentPages, type DocumentIndex } from '../document-index';
 import type { AuthorScriptOutputs, AuthorScripts } from '../author-scripts';
 import type { SiteVariables } from '../types';
 import { isInside } from '../utils/paths';
 
 export interface TadaIncrementalWatchPlan {
-  kind: 'incremental';
   scan: TadaProjectScan;
+  documentIndex: DocumentIndex;
   renderSources: Set<string>;
   removeSources: Set<string>;
 }
-
-type TadaWatchPlan = { kind: 'full' } | TadaIncrementalWatchPlan;
 
 function sameItems(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   return a.size === b.size && [...a].every(item => b.has(item));
@@ -47,22 +46,49 @@ export function diffAuthorKeys(previous: unknown, next: unknown): Set<string> {
   );
 }
 
+/**
+ * Whether changed paths can change a document index: an index file in either
+ * scan, so one that was added or deleted, a page an index lists, or a
+ * directory that holds either. Site variables do not change
+ * between incremental builds, and the paths include every change since the
+ * snapshot's build.
+ */
+export function documentIndexMayChange(
+  paths: ReadonlySet<string>,
+  snapshot: Pick<TadaSnapshot, 'documentIndex' | 'scan'>,
+  scan: TadaProjectScan,
+): boolean {
+  const dependencies = new Set(snapshot.documentIndex.keys());
+  for (const sources of [snapshot.scan.sources, scan.sources]) {
+    for (const [source, entry] of sources) {
+      if (entry.renderKind === 'document-index') {
+        dependencies.add(source);
+      }
+    }
+  }
+  const dirPrefixes = [...paths].map(changed => changed + path.sep);
+  return (
+    [...paths].some(changed => dependencies.has(changed)) ||
+    [...dependencies].some(source =>
+      dirPrefixes.some(prefix => source.startsWith(prefix)),
+    )
+  );
+}
+
 export function createTadaWatchPlan({
   snapshot,
   paths,
   scan,
-  full = false,
   changedAuthors = new Set<string>(),
+  documentIndex,
 }: {
   snapshot: TadaSnapshot;
   paths: ReadonlySet<string>;
   scan: TadaProjectScan;
-  full?: boolean;
   changedAuthors?: ReadonlySet<string>;
-}): TadaWatchPlan {
-  if (full) {
-    return { kind: 'full' };
-  }
+  /** Built from `scan`; pages whose navigation changed are rendered */
+  documentIndex: DocumentIndex;
+}): TadaIncrementalWatchPlan {
   const renderSources = new Set<string>();
   const removeSources = new Set(
     [...snapshot.records.keys()].filter(source => !scan.sources.has(source)),
@@ -103,6 +129,12 @@ export function createTadaWatchPlan({
   for (const key of changedAuthors) {
     include(snapshot.authorDependents, key);
   }
+  for (const source of getChangedDocumentPages(
+    snapshot.documentIndex,
+    documentIndex,
+  )) {
+    renderSources.add(source);
+  }
   for (const target of new Set([
     ...snapshot.scan.validTargets,
     ...scan.validTargets,
@@ -130,7 +162,7 @@ export function createTadaWatchPlan({
       renderSources.delete(source);
     }
   }
-  return { kind: 'incremental', scan, renderSources, removeSources };
+  return { scan, documentIndex, renderSources, removeSources };
 }
 
 /**

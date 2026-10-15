@@ -10,6 +10,7 @@ const ports = await assignPorts();
 const webkitSpecs = [
   'author-byline',
   'breadcrumbs',
+  'document-index',
   'details-preview',
   'details-scroll',
   'external-link-wrapping',

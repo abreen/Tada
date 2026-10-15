@@ -47,6 +47,7 @@ export async function buildIncremental({
     isWatchMode: true,
     traceCache,
     traceToolAvailability,
+    documentIndex: plan.documentIndex,
   });
   for (const [source, record] of rendered.records) {
     records.set(source, record);
@@ -58,6 +59,7 @@ export async function buildIncremental({
     assetFiles: snapshot.assetFiles,
     generatedOutputs: snapshot.generatedOutputs,
     authorScripts,
+    documentIndex: plan.documentIndex,
     records,
     diagnostics: rendered.diagnostics,
   });

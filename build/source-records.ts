@@ -17,6 +17,7 @@ import type {
 } from './types';
 import type { TadaProjectScan } from './source-model';
 import type { AuthorScripts } from './author-scripts';
+import type { DocumentIndex } from './document-index';
 
 import type { TraceCache } from './build-types';
 
@@ -96,6 +97,7 @@ export function createContentRecord({
   traceCache,
   traceToolAvailability,
   skipLiterateJavaExecution,
+  documentIndex,
 }: {
   filePath: string;
   siteVariables: SiteVariables;
@@ -106,11 +108,17 @@ export function createContentRecord({
   traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
   skipLiterateJavaExecution?: boolean;
+  documentIndex?: DocumentIndex;
 }): TadaSourceRecord {
   const renderKind = scan.sources.get(filePath)?.renderKind ?? 'skip';
-  if (renderKind === 'skip' || renderKind === 'public-copy') {
+  if (
+    renderKind === 'skip' ||
+    renderKind === 'public-copy' ||
+    renderKind === 'document-index'
+  ) {
     return createEmptyContentRecord(filePath);
   }
+  const documentNavigation = documentIndex?.get(filePath);
 
   const deps = createDependencyCollector();
   const assets: Asset[] = [];
@@ -131,6 +139,7 @@ export function createContentRecord({
           codePageSourceTargets: scan.codePageSourceTargets,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
+          documentNavigation,
         }),
       );
       break;
@@ -148,6 +157,7 @@ export function createContentRecord({
           isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
+          documentNavigation,
           traceCache,
           traceToolAvailability,
         }),
@@ -170,6 +180,7 @@ export function createContentRecord({
           isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
+          documentNavigation,
         }),
       );
       assets.push(

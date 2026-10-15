@@ -24,7 +24,8 @@ export type TadaSourceRenderKind =
   | 'literate-java'
   | 'code-page'
   | 'content-copy'
-  | 'public-copy';
+  | 'public-copy'
+  | 'document-index';
 
 /** Render kinds that produce a page */
 export const PAGE_RENDER_KINDS: ReadonlySet<TadaSourceRenderKind> = new Set([
@@ -71,6 +72,16 @@ export function* sourcePaths(
   }
 }
 
+const DOCUMENT_INDEX_FILE_NAMES: ReadonlySet<string> = new Set([
+  'index.yml',
+  'index.yaml',
+]);
+
+/** Whether a content file defines a document index rather than a page */
+export function isDocumentIndexFile(filePath: string): boolean {
+  return DOCUMENT_INDEX_FILE_NAMES.has(path.basename(filePath));
+}
+
 export function getSourceRenderKind(
   filePath: string,
   kind: SourceEntry['kind'],
@@ -80,6 +91,9 @@ export function getSourceRenderKind(
   const ext = path.extname(filePath).toLowerCase();
   if (kind === 'public') {
     return 'public-copy';
+  }
+  if (isDocumentIndexFile(filePath)) {
+    return 'document-index';
   }
   if (!processedExts.has(ext.slice(1))) {
     return 'content-copy';
@@ -108,6 +122,10 @@ function createSourceEntry(
     scan.processedExts,
     buildContent,
   );
+  // Read by the build, not published
+  if (renderKind === 'document-index') {
+    return { kind, renderKind, outputs: new Set(), targets: new Set() };
+  }
   const rootDir = kind === 'content' ? scan.contentDir : scan.publicDir;
   const scripts =
     renderKind === 'plain-text-page' || renderKind === 'literate-java'

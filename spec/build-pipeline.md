@@ -3,8 +3,8 @@
 A build runs in five phases. The first three happen in memory; nothing is
 written until all of them succeed.
 
-1. **Setup**: validate configuration, compile templates, and initialize the
-   syntax highlighter
+1. **Setup**: validate configuration, compile templates, initialize the
+   syntax highlighter, and read [document indexes](document-index.md)
 2. **Generate**: bundle CSS and JavaScript with filenames containing the Tada
    package version, compile the KaTeX stylesheet, generate favicons and the web
    manifest (if enabled), and reference the bundled fonts; then compile the
@@ -33,7 +33,8 @@ A build stops when any of these happen. The rules are the same for
    page: `content/index.md` or `content/index.html` must render the root
    `index.html`. A skipped page or a file in `public/` does not count. Search
    indexing starts at the home page, and the header links to it when there is
-   no nav.
+   no nav. An invalid [document index](document-index.md) is a config error
+   too, and is reported before any page is rendered.
 2. **Output conflict.** Two sources would write the same output path. Sources
    are files in `content/` and `public/`, plus the files Tada generates: CSS and
    JavaScript bundles, bundled fonts, `katex/`, `pagefind/`, favicons and

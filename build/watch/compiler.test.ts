@@ -48,6 +48,7 @@ function emptySnapshot() {
       siteVariables: {} as import('../types').SiteVariables,
       assetFiles: [],
       authorScripts: createEmptyAuthorScripts(),
+      documentIndex: new Map(),
       authorsData: undefined,
       records: new Map(),
       scan: {

@@ -1,0 +1,6 @@
+# The order of the lectures, for the sidebar, breadcrumbs, and previous and
+# next links. Paths are relative to this directory.
+page: index.md
+children:
+  - 01/index.md
+  - 02/index.md

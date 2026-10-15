@@ -1,0 +1,205 @@
+@use '../mixins' as *;
+
+.document-index {
+  --document-index-indent: 16px;
+  --document-index-label-gap: 8px;
+  --document-index-stroke: 1px;
+  --document-index-corner-radius: 4px;
+  --document-index-bullet-size: 7px;
+  --document-index-bullet-offset: 3px;
+  --document-index-bullet-optical-offset: 1px;
+  --document-index-root-gap: 4px;
+  --document-index-junction: calc(0.7em + 4px);
+
+  @include user-select(none);
+
+  box-sizing: border-box;
+  overflow: hidden;
+  font-size: var(--font-size-smaller);
+  line-height: 1.4;
+  background: var(--bg-color);
+  border: 1px solid var(--fg2-color);
+  border-radius: var(--border-radius);
+}
+
+.document-index ol {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.document-index ol ol {
+  position: relative;
+  margin-inline-start: var(--document-index-indent);
+}
+
+.document-index li {
+  position: relative;
+  margin: 0;
+}
+
+.document-index li > a {
+  @include subdued-link;
+
+  display: block;
+  min-width: 0;
+  padding: 4px 6px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+.document-index li > a[aria-current='page'] {
+  font-weight: 600;
+}
+
+// Tree guide lines: each nested entry has a connector from the trunk to its
+// label. Continuing siblings meet the trunk with a tee and the last sibling
+// ends in a rounded elbow.
+.document-index ol ol > li > a {
+  position: relative;
+  padding-inline-start: calc(
+    var(--document-index-indent) + var(--document-index-label-gap)
+  );
+}
+
+.document-index ol ol > li::before {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  width: var(--document-index-indent);
+  height: calc(var(--document-index-junction) + var(--document-index-stroke));
+  pointer-events: none;
+  content: '';
+  border-block-end: var(--document-index-stroke) solid var(--fg2-color);
+  border-inline-start: var(--document-index-stroke) solid var(--fg2-color);
+}
+
+.document-index ol ol > li:last-child::before {
+  border-end-start-radius: var(--document-index-corner-radius);
+}
+
+// The trunk continues past a sibling's connector to the next sibling
+.document-index ol ol > li:not(:last-child)::after {
+  position: absolute;
+  inset-inline-start: 0;
+  top: var(--document-index-junction);
+  bottom: calc(-1 * var(--document-index-stroke));
+  z-index: 1;
+  width: var(--document-index-stroke);
+  pointer-events: none;
+  content: '';
+  background: var(--fg2-color);
+}
+
+// The first level hangs from the root label with a small gap
+.document-index > ol > li > ol > li:first-child::before {
+  top: var(--document-index-root-gap);
+  height: calc(
+    var(--document-index-junction) - var(--document-index-root-gap) +
+      var(--document-index-stroke)
+  );
+}
+
+// A branch's children hang from the center of its junction dot
+.document-index li.document-index-branch > ol > li::before {
+  inset-inline-start: calc(-1 * var(--document-index-bullet-optical-offset));
+  width: calc(
+    var(--document-index-indent) + var(--document-index-bullet-optical-offset)
+  );
+}
+
+.document-index li.document-index-branch > ol > li:not(:last-child)::after {
+  inset-inline-start: calc(-1 * var(--document-index-bullet-optical-offset));
+}
+
+// Join the junction dot on a label's first line to its children, across every
+// line of a wrapped label
+.document-index ol ol > li.document-index-branch-open > a::before {
+  position: absolute;
+  inset-inline-start: calc(
+    var(--document-index-indent) - var(--document-index-bullet-optical-offset)
+  );
+  top: var(--document-index-junction);
+  bottom: 0;
+  z-index: 1;
+  width: var(--document-index-stroke);
+  pointer-events: none;
+  content: '';
+  background: var(--fg2-color);
+}
+
+// Junction dot: filled when the branch's children are not shown, open when
+// they are
+.document-index ol ol > li.document-index-branch > a::after {
+  position: absolute;
+  inset-inline-start: calc(
+    var(--document-index-indent) - var(--document-index-bullet-offset) - var(
+        --document-index-bullet-optical-offset
+      )
+  );
+  top: calc(
+    var(--document-index-junction) - var(--document-index-bullet-offset)
+  );
+  z-index: 3;
+  width: var(--document-index-bullet-size);
+  height: var(--document-index-bullet-size);
+  pointer-events: none;
+  content: '';
+  background: var(--fg2-color);
+  border-radius: 50%;
+}
+
+.document-index ol ol > li.document-index-branch-open > a::after {
+  box-sizing: border-box;
+  background: var(--bg-color);
+  border: var(--document-index-stroke) solid var(--fg2-color);
+}
+
+.document-pagination {
+  @include user-select(none);
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  padding-top: var(--gap);
+  margin-top: 3rem;
+  border-top: 1px solid var(--fg2-color);
+
+  a {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+
+    .title {
+      @include link-underline;
+    }
+
+    &:focus-visible {
+      outline-offset: 2px;
+    }
+  }
+
+  a.next {
+    grid-column: 2;
+    text-align: end;
+  }
+
+  .direction {
+    display: block;
+    font-size: var(--font-size-small);
+    color: var(--fg2-color);
+  }
+}
+
+@media print {
+  .document-index,
+  .document-pagination {
+    display: none;
+  }
+}

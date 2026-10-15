@@ -18,6 +18,9 @@ other pages. The current item uses the plain-text `title`, while the existing
 heading retains its inline Markdown formatting. Missing or empty lists render
 no breadcrumb navigation.
 
+Pages listed in a [document index](document-index.md) get their trail from the
+index instead, and may not set `breadcrumbs`.
+
 Each entry requires a nonempty string `label` and `url`. A nonempty list
 requires the page to have a `title`, which only the home page may omit (see
 [Front Matter](front-matter.md#home-page-without-a-title)).

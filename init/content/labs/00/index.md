@@ -1,7 +1,4 @@
 ---
-breadcrumbs:
-  - label: Labs
-    url: /labs/index.html
 title: Lab 0
 author: alex
 description: An example lab page.

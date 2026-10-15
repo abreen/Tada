@@ -1,7 +1,4 @@
 ---
-breadcrumbs:
-  - label: Lectures
-    url: /lectures/index.html
 title: Lecture 1
 description: An example lecture page.
 author: alex

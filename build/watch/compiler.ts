@@ -20,6 +20,7 @@ import { getDevSiteVariables } from '../site-variables';
 import { getScriptEntries, scanProject } from '../source-model';
 import {
   buildAuthorScripts,
+  buildDocumentIndexForScan,
   buildSite,
   createBuildMeta,
   type TadaSnapshot,
@@ -30,6 +31,7 @@ import { checkTraceToolAvailability } from '../utils/trace';
 import {
   createTadaWatchPlan,
   diffAuthorKeys,
+  documentIndexMayChange,
   getScriptDependentSources,
   shouldRecompileScripts,
 } from './planner';
@@ -132,21 +134,29 @@ export class TadaWatchCompiler {
     // Every build rescans the source directories instead of reconciling
     // individual file and directory events.
     const scan = scanProject(snapshot.siteVariables);
+    if (
+      authorsChanged &&
+      (snapshot.authorsData === undefined || nextAuthors === undefined)
+    ) {
+      // Only the authors file changed, so the site config and scan still hold.
+      return this.buildFull({ siteVariables: snapshot.siteVariables, scan });
+    }
+    // Any page's title can appear on the other pages in its document tree
+    const documentIndex = documentIndexMayChange(paths, snapshot, scan)
+      ? buildDocumentIndexForScan(scan, snapshot.siteVariables)
+      : { ok: true as const, value: snapshot.documentIndex };
+    if (!documentIndex.ok) {
+      return documentIndex;
+    }
     const plan = createTadaWatchPlan({
       snapshot,
       paths,
       scan,
-      full:
-        authorsChanged &&
-        (snapshot.authorsData === undefined || nextAuthors === undefined),
+      documentIndex: documentIndex.value,
       changedAuthors: authorsChanged
         ? diffAuthorKeys(snapshot.authorsData, nextAuthors)
         : new Set(),
     });
-    if (plan.kind === 'full') {
-      // Only the authors file changed, so the site config and scan still hold.
-      return this.buildFull({ siteVariables: snapshot.siteVariables, scan });
-    }
 
     let authorScripts = snapshot.authorScripts;
     const scripts = getScriptEntries(scan, snapshot.siteVariables);

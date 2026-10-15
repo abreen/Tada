@@ -20,7 +20,8 @@ The `content/` directory contains pages (Markdown, HTML, or source code files)
 and assets (images, PDFs, etc.). It must contain a home page, `index.md` or
 `index.html`, or the build fails (see
 [Build errors](build-pipeline.md#build-errors)). Processed files become HTML pages; everything
-else is copied unchanged. The `public/` directory is also copied to the output
+else is copied unchanged, except `index.yml` and `index.yaml` files, which
+define [document indexes](document-index.md). The `public/` directory is also copied to the output
 root. The optional `src/` directory holds the site's own TypeScript,
 JavaScript, and Sass. Pages list scripts from it in front matter, and Tada
 compiles them into `_scripts/`; nothing in `src/` is copied as-is (see

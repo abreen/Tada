@@ -57,7 +57,8 @@ results; choose one per file.
   [Slides Mode](slides.md)); HTML content pages and literate Java pages with
   `slides: true` fail the build
 - **breadcrumbs**: ordered list of ancestor links, each with a nonempty string
-  `label` and internal `url` (see [Breadcrumbs](breadcrumbs.md)); the current
+  `label` and internal `url` (see [Breadcrumbs](breadcrumbs.md)); not allowed on
+  pages listed in a [document index](document-index.md); the current
   page title is appended automatically
 - **skip**: set to `true` to exclude the page from the build
 - **stdin**: input string sent to a literate Java program's stdin at build time (see [Literate Java](literate-java.md))

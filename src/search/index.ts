@@ -15,6 +15,8 @@ interface PagefindResult {
   meta?: {
     title?: string;
     title_html?: string;
+    /** The title of the document index tree the page belongs to */
+    document_root?: string;
     page?: string;
     template?: string;
   };
@@ -92,6 +94,7 @@ async function doSearch(query: string, window: Window): Promise<SearchState> {
     return {
       title,
       titleHtml: d.meta?.title_html ?? null,
+      documentRoot: d.meta?.document_root ?? null,
       url,
       excerpt: d.excerpt ?? '',
       score: d.score ?? 0,
@@ -143,6 +146,12 @@ function render(resultsContainer: HTMLElement, state: State, loading = false) {
       titleEl.innerHTML = result.titleHtml;
     } else {
       titleEl.textContent = result.title;
+    }
+    if (result.documentRoot) {
+      const context = doc.createElement('span');
+      context.className = 'document-context';
+      context.textContent = `${result.documentRoot} › `;
+      titleEl.prepend(context);
     }
     a.appendChild(titleEl);
 

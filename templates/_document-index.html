@@ -1,0 +1,15 @@
+<% if (page.documentNavigation) { %>
+<nav class="document-index" aria-label="Document navigation" data-pagefind-ignore>
+  <% const renderEntries = entries => { %>
+  <ol>
+    <% for (const entry of entries) { %>
+    <li<% if (entry.isBranch) { %> class="document-index-branch<% if (entry.children.length > 0) { %> document-index-branch-open<% } %>"<% } %>>
+      <a href="<%- encodeAuthoredUrl(entry.href) %>"<% if (entry.current) { %> aria-current="page"<% } %>><%= entry.titleHtml %></a>
+      <% if (entry.children.length > 0) { renderEntries(entry.children); } %>
+    </li>
+    <% } %>
+  </ol>
+  <% }; %>
+  <% renderEntries([page.documentNavigation.tree]); %>
+</nav>
+<% } %>

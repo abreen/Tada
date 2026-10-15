@@ -1,6 +1,7 @@
 import type { BundledLanguage } from 'shiki';
 import type { TraceCache } from './build-types';
 import type { AuthorScripts } from './author-scripts';
+import type { DocumentNavigation } from './document-index';
 
 /** An explicitly authored ancestor in a page's breadcrumb trail. */
 export interface BreadcrumbEntry {
@@ -121,6 +122,8 @@ export interface RenderPlainTextOptions {
   isWatchMode: boolean;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
+  /** The page's place in a document index, if one lists it */
+  documentNavigation?: DocumentNavigation;
   traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
 }
@@ -146,6 +149,8 @@ export interface RenderCodePageOptions {
   codePageSourceTargets?: ReadonlySet<string>;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
+  /** The page's place in a document index, if one lists it */
+  documentNavigation?: DocumentNavigation;
 }
 
 /** Options for literate Java asset rendering */
@@ -163,6 +168,8 @@ export interface RenderLiterateJavaOptions {
   codePageSourceTargets?: ReadonlySet<string>;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
+  /** The page's place in a document index, if one lists it */
+  documentNavigation?: DocumentNavigation;
 }
 
 /** Options for copied content asset rendering */

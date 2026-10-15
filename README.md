@@ -61,6 +61,10 @@ A static site generator. The successor to Presto.
   * Renders headings, alert boxes, and `<hr>` elements
   * Highlights the heading currently being viewed
 
+- Document indexes for ordered sections, like a course's labs
+  * An `index.yml` lists pages as a tree
+  * Pages get a sidebar tree, breadcrumbs, and previous and next links
+
 - Extended Markdown syntax
   * `!!! note ... !!!` and `!!! warning ... !!!` render alert boxes
   * `??? question ... ???` renders a Q&A section; answer is hidden until click
@@ -419,7 +423,26 @@ ajones:
 Site content lives in the `content/` directory. Markdown is converted to HTML.
 HTML files should contain front matter and are also built.
 
-Any other kinds of files are copied into `dist/` in the same locations.
+Any other kinds of files are copied into `dist/` in the same locations, except
+document indexes.
+
+### Document indexes
+
+An `index.yml` (or `index.yaml`) file anywhere in `content/` orders pages into
+a tree. Paths are relative to the file's directory:
+
+```yaml
+page: index.md
+children:
+  - page: 00/index.md
+    children:
+      - 00/VowelCounter.java.md
+  - 01/index.md
+```
+
+Each listed page shows the part of the tree around it, breadcrumbs from its
+ancestors, and links to the previous and next pages in order. Listed pages
+must have a `title` and may not set `breadcrumbs`.
 
 All files in `public/` are copied directly into `dist/` with zero processing.
 Files in `public/` are **not** included in the search index.
@@ -437,7 +460,7 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `description` | Meta description for the page |
 | `toc` | Set to `true` to show a table of contents |
 | `slides` | Set to `true` on Markdown pages to treat top-level `---` as slide separators and add presentation controls |
-| `breadcrumbs` | Ordered ancestor links with `label` and `url`; the page title completes the trail |
+| `breadcrumbs` | Ordered ancestor links with `label` and `url`; the page title completes the trail; not allowed on pages in a [document index](#document-indexes) |
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
 | `scripts` | Scripts in `src/` to compile and run on this page (see [Scripts](#scripts)) |
 

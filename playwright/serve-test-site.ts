@@ -3,6 +3,7 @@ import path from 'path';
 import { installCustomFontFixtures } from './custom-font-fixtures';
 import { installPageLayoutFixtures } from './page-layout-fixtures';
 import { installBreadcrumbFixtures } from './breadcrumb-fixtures';
+import { installDocumentIndexFixtures } from './document-index-fixtures';
 import { installAuthorModuleFixtures } from './author-module-fixtures';
 import { portArgument } from './ports';
 
@@ -474,6 +475,7 @@ writeFileSync(
 
 installPageLayoutFixtures(siteDir);
 installBreadcrumbFixtures(siteDir);
+installDocumentIndexFixtures(siteDir);
 
 await runTada(['dev'], siteDir);
 await runTada(['serve', '--port', port], siteDir);

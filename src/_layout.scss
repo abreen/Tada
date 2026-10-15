@@ -29,13 +29,24 @@ body > .container {
 .main-content {
   display: grid;
   flex: 1;
-  grid-template-areas: 'heading' 'toc' 'body';
-  grid-template-rows: auto auto 1fr;
+  grid-template-areas: 'heading' 'index' 'toc' 'body';
+  grid-template-rows: auto auto auto 1fr;
   width: 100%;
 }
 
-.main-content > .title-and-info {
+.main-content > .title-and-info,
+.main-content > nav.breadcrumbs {
   grid-area: heading;
+}
+
+// Code pages have no heading block, only their breadcrumbs
+.main-content > nav.breadcrumbs {
+  margin-bottom: var(--gap);
+}
+
+.main-content > nav.document-index {
+  grid-area: index;
+  margin-bottom: var(--gap);
 }
 
 .main-content > nav.toc {
@@ -114,16 +125,18 @@ body.literate main table {
   }
 }
 
-// Screen only: in print the TOC is hidden, so the content takes the full width
+// Screen only: in print the TOC and document index are hidden, so the content
+// takes the full width. The document index scrolls away above the sticky TOC.
 @media screen and (width >= 900px) {
-  :not(.toc-is-active) > .container > .main-content {
+  :not(.toc-is-active, .document-index-is-active) > .container > .main-content {
     max-width: var(--main-width);
     margin: 0 auto;
   }
 
-  .toc-is-active .main-content {
+  :is(.toc-is-active, .document-index-is-active) .main-content {
     grid-template:
       'heading heading' auto
+      'index body' auto
       'toc body' 1fr / var(--toc-width) minmax(0, 1fr);
     gap: 0 var(--gap);
   }
@@ -146,7 +159,7 @@ body.literate main table {
 }
 
 @media screen and (width >= 1300px) {
-  .toc-is-active .main-content {
+  :is(.toc-is-active, .document-index-is-active) .main-content {
     max-width: calc(var(--toc-width) + var(--gap) + 960px);
     margin: 0 auto;
   }

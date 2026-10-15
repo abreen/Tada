@@ -73,17 +73,34 @@ function loadResolvedConfigFile<
   /** Substitutes variables in string values when given */
   siteVariables?: SiteVariables,
 ): LoadedProjectConfigFile<T, Name> {
-  const rawText = fs.readFileSync(resolved.filePath, 'utf-8');
-  const parse = (text: string) => parseConfigText(text, resolved.fileName);
-  const value = siteVariables
+  return {
+    ...resolved,
+    value: readConfigFile(
+      resolved.filePath,
+      resolved.fileName,
+      siteVariables,
+    ) as T,
+  };
+}
+
+/**
+ * Parses a YAML or JSON config file, naming it `fileName` in errors.
+ * Substitutes variables in string values when given site variables.
+ */
+export function readConfigFile(
+  filePath: string,
+  fileName: string,
+  siteVariables?: SiteVariables,
+): unknown {
+  const rawText = fs.readFileSync(filePath, 'utf-8');
+  const parse = (text: string) => parseConfigText(text, fileName);
+  return siteVariables
     ? interpolateConfigValue(
-        parseYamlWithVariables(rawText, resolved.fileName, parse),
+        parseYamlWithVariables(rawText, fileName, parse),
         getSiteVars(siteVariables),
-        resolved.fileName,
+        fileName,
       )
     : parse(rawText);
-
-  return { ...resolved, value: value as T };
 }
 
 export function loadSiteConfig(

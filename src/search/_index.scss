@@ -146,6 +146,10 @@ header {
       line-height: var(--heading-line-height);
     }
 
+    ol a .title .document-context {
+      color: var(--fg2-color);
+    }
+
     ol a .title.code-page code {
       padding: 0;
       background: none;

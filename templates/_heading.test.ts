@@ -1,10 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { compileTemplate } from '../build/lodash-template';
 import { encodeAuthoredUrl } from '../build/template-globals';
 import HEADING_TEMPLATE from './_heading.html' with { type: 'text' };
+import BREADCRUMBS_TEMPLATE from './_breadcrumbs.html' with { type: 'text' };
+import { renderWithPartials } from './test-helpers';
 
 function renderHeading(params: Record<string, unknown>): string {
-  return compileTemplate(HEADING_TEMPLATE)({ ...params, encodeAuthoredUrl });
+  return renderWithPartials(
+    HEADING_TEMPLATE,
+    { encodeAuthoredUrl, ...params },
+    { '_breadcrumbs.html': BREADCRUMBS_TEMPLATE },
+  );
 }
 
 describe('_heading.html template', () => {
@@ -53,7 +58,7 @@ describe('_heading.html template', () => {
   });
 
   test('escapes the breadcrumb label but keeps the title HTML', () => {
-    const html = compileTemplate(HEADING_TEMPLATE)({
+    const html = renderHeading({
       page: {
         breadcrumbs: [
           { url: '/docs/index.html', label: 'Docs & <Notes> **plain**' },
@@ -61,7 +66,6 @@ describe('_heading.html template', () => {
         title: 'Width is 5" bold',
         titleHtml: 'Width is 5&quot; <b>bold</b>',
       },
-      encodeAuthoredUrl,
     });
 
     expect(html).toContain('>Docs &amp; &lt;Notes&gt; **plain**</a>');

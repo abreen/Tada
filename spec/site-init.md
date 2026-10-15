@@ -26,7 +26,9 @@ author script: the Lectures page lists `src/lectures/timezone.ts` in its
 visitors convert the page's `<time>` elements to another time zone and
 remembers the choice in local storage, and it imports
 `src/lectures/timezone.scss` for its styles. Without JavaScript, the chooser
-stays hidden and the authored times show with a `<noscript>` note. Bare-mode config files also start with
+stays hidden and the authored times show with a `<noscript>` note. The Labs and
+Lectures sections each have an `index.yml` that orders their pages as a
+[document index](document-index.md). Bare-mode config files also start with
 `extensionToShikiLanguage: {}` and `shikiLanguages: []`, so source-code pages
 and Markdown fence highlighting remain opt-in.
 

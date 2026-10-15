@@ -4,6 +4,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   createTadaWatchPlan,
   diffAuthorKeys,
+  documentIndexMayChange,
   getScriptDependentSources,
   shouldRecompileScripts,
 } from './planner';
@@ -65,6 +66,7 @@ function snapshot(records: TadaSourceRecord[]) {
     siteVariables,
     assetFiles: [],
     authorScripts: createEmptyAuthorScripts(),
+    documentIndex: new Map(),
     authorsData: {},
     scan: scan(records),
     records: new Map(
@@ -98,11 +100,9 @@ function plan(
     snapshot: previous,
     scan: { ...nextScan, sources },
     paths: new Set(changes.map(source)),
+    documentIndex: previous.documentIndex,
     ...extra,
   });
-  if (result.kind !== 'incremental') {
-    throw new Error('expected incremental');
-  }
   return result;
 }
 
@@ -204,18 +204,6 @@ test('skipping a page schedules its record replacement and invalidates inbound l
       ['content/page.md'],
     ).renderSources,
   ).toEqual(new Set([page.sourcePath, inbound.sourcePath]));
-});
-
-test('explicit full rebuild decision does not consult the filesystem', () => {
-  const before = snapshot([]);
-  expect(
-    createTadaWatchPlan({
-      snapshot: before,
-      scan: before.scan,
-      paths: new Set(),
-      full: true,
-    }),
-  ).toEqual({ kind: 'full' });
 });
 
 test('directory reconciliation invalidates partial dependents without individual file events', () => {
@@ -429,5 +417,92 @@ describe('shouldRecompileScripts', () => {
         compiled,
       }),
     ).toBe(false);
+  });
+});
+
+test('pages whose document navigation changed are rendered', () => {
+  const guide = record('content/guide.md', ['guide.html']);
+  const install = record('content/install.md', ['install.html']);
+  const other = record('content/other.md', ['other.html']);
+  const link = (title: string, href: string) => ({
+    title,
+    titleHtml: title,
+    href,
+  });
+  const navigation = (title: string) => ({
+    indexFile: 'content/index.yml',
+    ancestors: [],
+    tree: {
+      ...link('Guide', '/guide.html'),
+      current: false,
+      isBranch: true,
+      children: [],
+    },
+    next: link(title, '/install.html'),
+  });
+  const previous = snapshot([guide, install, other]);
+  const result = createTadaWatchPlan({
+    snapshot: {
+      ...previous,
+      documentIndex: new Map([[guide.sourcePath, navigation('Install')]]),
+    },
+    scan: previous.scan,
+    paths: new Set([install.sourcePath]),
+    documentIndex: new Map([[guide.sourcePath, navigation('Installing')]]),
+  });
+  expect(result.renderSources).toEqual(
+    new Set([guide.sourcePath, install.sourcePath]),
+  );
+});
+
+describe('documentIndexMayChange', () => {
+  const indexFile = source('content/guide/index.yml');
+  const listed = record('content/guide/page.md', ['guide/page.html']);
+  const other = record('content/other.md', ['other.html']);
+  const before = snapshot([listed, other]);
+  const withIndexFile = {
+    ...before.scan,
+    sources: new Map([
+      ...before.scan.sources,
+      [
+        indexFile,
+        {
+          kind: 'content',
+          renderKind: 'document-index',
+          outputs: new Set(),
+          targets: new Set(),
+        } satisfies SourceEntry,
+      ],
+    ]),
+  };
+  const indexed = {
+    scan: withIndexFile,
+    documentIndex: new Map([[listed.sourcePath, {} as never]]),
+  };
+  const mayChange = (changes: string[]) =>
+    documentIndexMayChange(
+      new Set(changes.map(source)),
+      indexed,
+      withIndexFile,
+    );
+
+  test('index files, listed pages, and directories holding them', () => {
+    expect(mayChange(['content/guide/index.yml'])).toBe(true);
+    expect(mayChange(['content/guide/page.md'])).toBe(true);
+    expect(mayChange(['content/guide'])).toBe(true);
+    expect(mayChange(['content'])).toBe(true);
+  });
+
+  test('an index file added since the snapshot', () => {
+    expect(
+      documentIndexMayChange(new Set([indexFile]), before, withIndexFile),
+    ).toBe(true);
+  });
+
+  test('not other pages, scripts, or similarly named paths', () => {
+    expect(mayChange(['content/other.md'])).toBe(false);
+    expect(mayChange(['src/styles.scss'])).toBe(false);
+    expect(mayChange(['content/gui'])).toBe(false);
+    expect(mayChange(['public/index.yml'])).toBe(false);
   });
 });

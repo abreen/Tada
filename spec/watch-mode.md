@@ -94,6 +94,9 @@ Editing an `authors.*` config source rebuilds only page sources whose `author`
 front matter depends on author entries whose data changed. But adding or
 deleting an `authors.*` config source triggers a full rebuild.
 
+Changing a [document index](document-index.md) file, or a title it shows,
+re-renders only the pages whose document navigation changed.
+
 ### Script source change
 
 Any change in `src/` recompiles every listed script, because imports such as

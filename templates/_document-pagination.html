@@ -1,0 +1,17 @@
+<% const documentNavigation = page.documentNavigation; %>
+<% if (documentNavigation && (documentNavigation.previous || documentNavigation.next)) { %>
+<nav class="document-pagination" aria-label="Previous and next pages" data-pagefind-ignore>
+  <% if (documentNavigation.previous) { %>
+  <a class="previous" rel="prev" href="<%- encodeAuthoredUrl(documentNavigation.previous.href) %>">
+    <span class="direction">Previous</span>
+    <span class="title"><%= documentNavigation.previous.titleHtml %></span>
+  </a>
+  <% } %>
+  <% if (documentNavigation.next) { %>
+  <a class="next" rel="next" href="<%- encodeAuthoredUrl(documentNavigation.next.href) %>">
+    <span class="direction">Next</span>
+    <span class="title"><%= documentNavigation.next.titleHtml %></span>
+  </a>
+  <% } %>
+</nav>
+<% } %>

@@ -1,6 +1,7 @@
 <%= render('_top.html') %>
 
 <div class="main-content">
+  <%= render('_breadcrumbs.html') %>
   <main class="body" data-pagefind-body>
     <div class="page-content">
       <div class="file-header">
@@ -23,9 +24,11 @@
         <% }); %>
       </div>
       <% } %>
+      <%= render('_document-pagination.html') %>
     </div>
     <%= render('_page-bottom.html') %>
   </main>
+  <%= render('_document-index.html') %>
   <% if (page.tocHtml) { %>
   <nav class="toc"><%= page.tocHtml %></nav>
   <% } %>

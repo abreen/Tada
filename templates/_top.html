@@ -186,7 +186,8 @@
   </style></noscript>
   </head>
 
-  <body class="<%= page.template %><% if (page.tocHtml) { %> toc-is-active<% } %>" data-pagefind-meta="template:<%= page.template %>">
+  <% const documentRoot = page.documentNavigation && page.documentNavigation.ancestors[0]; %>
+  <body class="<%= page.template %><% if (page.tocHtml) { %> toc-is-active<% } %><% if (page.documentNavigation) { %> document-index-is-active<% } %>" data-pagefind-meta="template[data-template]<% if (documentRoot) { %>, document_root[data-document-root]<% } %>" data-template="<%- page.template %>"<% if (documentRoot) { %> data-document-root="<%- documentRoot.title %>"<% } %>>
     <header data-pagefind-ignore>
       <% if (isHeaderFloating) { %>
       <div class="header-controls">

@@ -55,7 +55,8 @@ that slide, using the current `Full screen` checkbox state. If fullscreen is
 requested but the browser Fullscreen API is unavailable or rejects the request,
 presentation remains active in normal mode at the requested slide.
 
-While presenting, the site header, title block, table of contents, footer,
+While presenting, the site header, title block, table of contents,
+[document index](document-index.md) and its previous and next links, footer,
 appearance controls, page file header, and trace toolbars are hidden. The
 `Close` button appears only when the pointer is moved into the top reveal zone
 near the button itself; it hides again when the pointer leaves that zone. Slide

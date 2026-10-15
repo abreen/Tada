@@ -230,6 +230,20 @@ test('the whole trail moves as one group when the page layout changes', async ({
   await expectNoBreadcrumbTransitionNames(page);
 });
 
+test('a code page trail moves as one group with the page trail', async ({
+  page,
+}) => {
+  await page.goto('/labs/01/TraceDemo.java.html');
+  await trackBreadcrumbTransitions(page);
+  await page
+    .getByRole('navigation', { name: 'Breadcrumb', exact: true })
+    .getByRole('link', { name: 'Lab 1', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/labs\/01\/index\.html$/);
+  expectSingleBreadcrumbGroup(await lastBreadcrumbTransition(page));
+  await expectNoBreadcrumbTransitionNames(page);
+});
+
 test('the trail and page heading move with the same timing', async ({
   page,
 }) => {

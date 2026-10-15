@@ -244,9 +244,14 @@ const TITLE_TRANSITION_NAMES = [
   ['.info', 'page-info'],
 ] as const;
 
+// The page heading block, or on code pages, which have none, their breadcrumbs
+const TITLE_BLOCK_SELECTOR = '.title-and-info, .main-content > nav.breadcrumbs';
+
 function setTitleTransitionNames(titleEl: Element, enabled: boolean): void {
   for (const [selector, name] of TITLE_TRANSITION_NAMES) {
-    const element = titleEl.querySelector<HTMLElement>(selector);
+    const element = titleEl.matches(selector)
+      ? (titleEl as HTMLElement)
+      : titleEl.querySelector<HTMLElement>(selector);
     if (element) {
       element.style.viewTransitionName = enabled ? name : '';
     }
@@ -268,7 +273,7 @@ function setPageBottomTransitionName(window: Window): void {
 }
 
 function cleanupViewTransitionNames(document: Document): void {
-  const titleEl = document.querySelector('.title-and-info');
+  const titleEl = document.querySelector(TITLE_BLOCK_SELECTOR);
   if (titleEl) {
     setTitleTransitionNames(titleEl, false);
   }
@@ -536,7 +541,7 @@ export async function navigateToUrl(
     !prefersReducedMotion(window) &&
     typeof transitionDoc.startViewTransition === 'function'
   ) {
-    const titleEl = document.querySelector('.title-and-info');
+    const titleEl = document.querySelector(TITLE_BLOCK_SELECTOR);
     const headerHeight = getHeaderCoverage(document);
     const titleVisible =
       titleEl != null && titleEl.getBoundingClientRect().top >= headerHeight;
@@ -551,7 +556,7 @@ export async function navigateToUrl(
         return;
       }
 
-      const newTitleEl = document.querySelector('.title-and-info');
+      const newTitleEl = document.querySelector(TITLE_BLOCK_SELECTOR);
       const newHeaderHeight = getHeaderCoverage(document);
       const newTitleVisible =
         newTitleEl != null &&

@@ -35,6 +35,11 @@ A search field in a search landmark in the site header queries the Pagefind
 index. Results are exposed in a live region as a regular list of links, with
 excerpts and keyboard navigation. PDF results are grouped by document, with
 individual page numbers shown as sub-results sorted by page number.
+A result for a page below the root of a [document index](document-index.md)
+tree starts with the root's plain-text title in a subdued color, as in
+"Labs › Counting vowels"; the root page itself and pages outside every index
+show only their own title. The build records the root title as Pagefind
+metadata on each such page.
 The search field is rendered disabled and is enabled only after its client
 component has attached the search and keyboard-shortcut listeners. Without
 JavaScript it remains disabled.

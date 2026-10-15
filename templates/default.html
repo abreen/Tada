@@ -14,9 +14,11 @@
       </div>
       <% } %>
       <%= content %>
+      <%= render('_document-pagination.html') %>
     </div>
     <%= render('_page-bottom.html') %>
   </main>
+  <%= render('_document-index.html') %>
   <% if (page.toc && page.tocHtml) { %>
   <nav class="toc"><%= page.tocHtml %></nav>
   <% } %>
