@@ -57,6 +57,7 @@ function createContext(files: Record<string, string> = {}): ExportContext {
       ['/lectures/photo.png', 'lectures/photo.png'],
       ['/about.html', 'about.html'],
       ['/lectures/a_b.html', 'lectures/a_b.md'],
+      ['/photo.png', 'photo.png'],
       ['/lectures/a&b.html', 'lectures/a&b.md'],
     ]),
     validTargets: new Set(['/feed.xml']),
@@ -175,6 +176,63 @@ describe('exportMarkdownPage', () => {
   test('checks the definition a link falls back to', () => {
     expect(() => exportPage('[foo](bar baz)\n\n[foo]: /missing.html')).toThrow(
       'broken internal link: "/missing.html"',
+    );
+  });
+
+  test('checks only the first definition of a label, as markdown-it uses', () => {
+    expect(exportPage('[d]: /index.html\n[d]: /missing.html\n\n[use][d]')).toBe(
+      '[d]: ../index.md\n[d]: ../missing.html\n\n[use][d]\n',
+    );
+  });
+
+  test('keeps SVG context across HTML blocks', () => {
+    expect(
+      exportPage('<svg>\n<rect/>\n\n<a href="/gone.html">x</a>\n</svg>'),
+    ).toBe('<svg>\n<rect/>\n\n<a href="../gone.html">x</a>\n</svg>\n');
+  });
+
+  test('keeps lists tight around nested partials', () => {
+    expect(
+      exportPage('- one\n  {{{ _a.md }}}\n- two', {
+        files: {
+          'lectures/_a.md': 'Intro\n{{{ _b.md }}}',
+          'lectures/_b.md': 'B text',
+        },
+      }),
+    ).toBe('- one\n  Intro\n  B text\n- two\n');
+  });
+
+  test('separates a partial that cannot interrupt a paragraph in a list', () => {
+    expect(
+      exportPage('- item\n  {{{ _p.md }}}', {
+        files: { 'lectures/_p.md': '    code' },
+      }),
+    ).toBe('- item\n\n      code\n');
+  });
+
+  test('escapes wikilink destinations', () => {
+    const context = createContext();
+    const byTitle = context.pageTitles.byTitle as Map<string, string[]>;
+    byTitle.set('Draft', ['/lectures/Ch 1).html']);
+    (context.exportPaths as Map<string, string>).set(
+      '/lectures/Ch 1).html',
+      'lectures/Ch 1).md',
+    );
+    expect(
+      exportMarkdownPage(
+        context,
+        {
+          filePath: contentPath('lectures/page.md'),
+          relPath: 'lectures/page.md',
+        },
+        '[[Draft]]',
+      ),
+    ).toBe('[Draft](Ch%201\\).md)\n');
+  });
+
+  test('rewrites a relative link that climbs above the site root', () => {
+    expect(exportPage('![x](../photo.png)', { relPath: 'index.md' })).toBe(
+      '![x](photo.png)\n',
     );
   });
 

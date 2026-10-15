@@ -165,9 +165,7 @@ function printUsage() {
       console.log(
         '       [--out <dir>]       Output directory (default: exported)',
       );
-      console.log(
-        '       [--force]           Replace an output directory that is not empty',
-      );
+      console.log('       [--force]           Replace an earlier export');
       continue;
     }
     console.log(`  ${cmd.padEnd(18)} ${desc}`);

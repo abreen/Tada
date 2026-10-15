@@ -359,6 +359,17 @@ function indentLines(text: string, prefix: string): string {
 }
 
 /**
+ * A URL written as a Markdown link destination: in angle brackets when it has
+ * spaces, with the characters that would end it escaped
+ */
+function markdownDestination(url: string, bracketed = false): string {
+  if (bracketed || /\s/.test(url)) {
+    return `<${url.replace(/[\\<>]/g, '\\$&')}>`;
+  }
+  return url.replace(/[\\()]/g, '\\$&');
+}
+
+/**
  * Whether a link span is an inline link, `[text](destination)`. markdown-it
  * reads `[text]` as a shortcut reference when the destination is not valid.
  */
@@ -407,6 +418,10 @@ function expandedWidth(text: string, column: number): number {
   return end - column;
 }
 
+/**
+ * Escapes an attribute value for either quote style. `entities`'
+ * escapeAttribute leaves `'` as is, which would end a single-quoted value.
+ */
 function escapeAttribute(value: string): string {
   return value
     .replaceAll('&', '&amp;')
@@ -528,8 +543,23 @@ class PageExporter {
     return { tokens, record };
   }
 
+  /**
+   * Whether Markdown's first block can start right after a paragraph line;
+   * an indented code block or some HTML blocks would join the paragraph
+   */
+  private canInterruptParagraph(markdown: string): boolean {
+    const first = this.parse(markdown).tokens[0]?.type;
+    return first !== 'code_block' && first !== 'html_block';
+  }
+
   /** Replaces partial directives with the partials' text, recursively */
-  expandPartials(text: string, fromFile: string, depth = 0): string {
+  expandPartials(
+    text: string,
+    fromFile: string,
+    depth = 0,
+    /** Whether the text is a partial included in a list item */
+    inList = false,
+  ): string {
     if (!text.includes('{{{')) {
       return text;
     }
@@ -544,7 +574,7 @@ class PageExporter {
         listItemDepth--;
       } else if (token.type === 'export_partial') {
         directives.push(token);
-        if (listItemDepth > 0) {
+        if (inList || listItemDepth > 0) {
           inListItem.add(token);
         }
       }
@@ -580,6 +610,7 @@ class PageExporter {
         ),
         resolvedPath,
         depth + 1,
+        inListItem.has(directive),
       ).replace(/\n$/, '');
 
       const line = directive.map![0];
@@ -588,15 +619,20 @@ class PageExporter {
       const indent = continuationPrefix(prefix);
       // The build parses a partial as blocks of their own, so blank lines keep
       // it from joining a paragraph or list around it. A directive that is a
-      // list item already starts a block of its own, and inside a list item
-      // blank lines would make a tight list loose, which the build avoids.
+      // list item already starts a block of its own. Inside a list item, blank
+      // lines would make a tight list loose, which the build avoids, so one is
+      // added only before a block that cannot interrupt a paragraph.
       const isBlank = (text: string | undefined) =>
         text === undefined || /^[\s>]*$/.test(text);
-      const separate = indent === prefix && !inListItem.has(directive);
-      const before =
-        separate && !isBlank(lines[line - 1]) ? `${indent.trimEnd()}\n` : '';
-      const after =
-        separate && !isBlank(lines[line + 1]) ? `\n${indent.trimEnd()}` : '';
+      const continuation = indent === prefix;
+      const listed = inListItem.has(directive);
+      const breakBefore =
+        continuation &&
+        !isBlank(lines[line - 1]) &&
+        (!listed || !this.canInterruptParagraph(partial));
+      const breakAfter = continuation && !listed && !isBlank(lines[line + 1]);
+      const before = breakBefore ? `${indent.trimEnd()}\n` : '';
+      const after = breakAfter ? `\n${indent.trimEnd()}` : '';
       const { extraIndent } = directive.meta as { extraIndent: number };
       const extra = indent.match(/ *$/)![0].length;
       const partialIndent = indent.slice(
@@ -642,8 +678,19 @@ class PageExporter {
         );
       }
     }
-    // A relative link to a file exported at its own path already works
-    if (!absolute && this.context.exportPaths.get(target) === target.slice(1)) {
+    // A relative link to a file exported at its own path already works,
+    // unless it climbs above the site root, which browsers clamp but the
+    // export's readers do not
+    const climbs = path.posix
+      .normalize(
+        path.posix.join(path.posix.dirname(this.page.relPath), pathname),
+      )
+      .startsWith('..');
+    if (
+      !absolute &&
+      !climbs &&
+      this.context.exportPaths.get(target) === target.slice(1)
+    ) {
       return null;
     }
     const linked = this.linkTo(target, absolute);
@@ -685,12 +732,7 @@ class PageExporter {
     if (rewritten === null) {
       return raw;
     }
-    // Written back as a destination: bracketed when it has spaces, with the
-    // characters that would end it escaped
-    if (bracketed || /\s/.test(rewritten)) {
-      return `<${rewritten.replace(/[\\<>]/g, '\\$&')}>`;
-    }
-    return rewritten.replace(/[\\()]/g, '\\$&');
+    return markdownDestination(rewritten, bracketed);
   }
 
   /** Edits for the `href` and `src` values in raw HTML */
@@ -870,6 +912,13 @@ class PageExporter {
       };
     };
 
+    // Raw HTML is scanned in document order, so an SVG that spans blocks
+    // and paragraphs is known in all of them
+    const htmlScans: {
+      offset: number;
+      scan: (foreign: ForeignDepth) => void;
+    }[] = [];
+
     // Block constructs, outermost first, so nested blocks see the
     // blockquote markers of alerts around them
     tokens.forEach((token, index) => {
@@ -965,9 +1014,14 @@ class PageExporter {
         // tag that spans lines
         const content = token.content.replace(/\n$/, '');
         const map = blockMapper(content, token.map![0]);
-        for (const edit of this.htmlUrlEdits(content)) {
-          replace(map(edit.start), map(edit.end), edit.url);
-        }
+        htmlScans.push({
+          offset: map(0),
+          scan: foreign => {
+            for (const edit of this.htmlUrlEdits(content, foreign)) {
+              replace(map(edit.start), map(edit.end), edit.url);
+            }
+          },
+        });
       } else if (token.type === 'heading_open') {
         const inline = tokens[index + 1];
         const content = record.contents.get(inline) ?? '';
@@ -988,6 +1042,7 @@ class PageExporter {
     // Reference labels that links use: their definitions become anchors'
     // hrefs, which the build checks
     const linkedLabels = new Set<string>();
+    const definedLabels = new Set<string>();
     for (const span of record.spans) {
       if (span.kind !== 'link' || isInlineLink(span)) {
         continue;
@@ -1009,11 +1064,12 @@ class PageExporter {
       if (labelEnd < 0) {
         continue;
       }
-      const isAnchor = linkedLabels.has(
-        plainMarkdown.utils.normalizeReference(
-          text.slice(start + 1, start + labelEnd),
-        ),
+      // markdown-it uses only a label's first definition
+      const label = plainMarkdown.utils.normalizeReference(
+        text.slice(start + 1, start + labelEnd),
       );
+      const isAnchor = linkedLabels.has(label) && !definedLabels.has(label);
+      definedLabels.add(label);
       // The destination can start on a later line, after that line's prefix
       let pos = start + labelEnd + 2;
       while (pos < definitionEnd && /\s/.test(text[pos])) {
@@ -1045,19 +1101,25 @@ class PageExporter {
       inlineMapper(cell);
     }
 
-    const foreignDepths = new Map<Token, ForeignDepth>();
     for (const span of record.spans) {
       if (!span.inline.map && !record.cells.has(span.inline)) {
         continue;
       }
       const map = inlineMapper(span.inline);
       const at = (srcOffset: number) => map(span.base + srcOffset);
-      let foreign = foreignDepths.get(span.inline);
-      if (!foreign) {
-        foreign = { depth: 0 };
-        foreignDepths.set(span.inline, foreign);
+      if (span.kind === 'html_inline') {
+        htmlScans.push({
+          offset: at(span.start),
+          scan: foreign => this.exportSpan(span, at, replace, foreign),
+        });
+      } else {
+        this.exportSpan(span, at, replace, { depth: 0 });
       }
-      this.exportSpan(span, at, replace, foreign);
+    }
+
+    const foreign: ForeignDepth = { depth: 0 };
+    for (const { scan } of htmlScans.sort((a, b) => a.offset - b.offset)) {
+      scan(foreign);
     }
 
     return applyEdits(text, edits);
@@ -1088,7 +1150,7 @@ class PageExporter {
           ? [start + 2 + leading, start + 2 + leading + title.length]
           : [start + 2 + pipe + 1, end - 2];
       const target = this.context.pageTitles.byTitle.get(title)![0];
-      const href = this.linkTo(target)!;
+      const href = markdownDestination(this.linkTo(target)!);
       replace(
         at(start),
         at(end),

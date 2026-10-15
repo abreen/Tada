@@ -225,7 +225,8 @@ The output directory will also include a `manifest.json` for the newer build.
 Write the site's content as plain GitHub Flavored Markdown, without front
 matter, to `exported/` (change it with `--out <dir>`). Pass `--dev` or `--prod`
 to choose which site config supplies the variables; one is required. Pass
-`--force` to replace an output directory that is not empty.
+`--force` to replace an earlier export; a directory that `tada export` did not
+write is never replaced.
 
     tada export --prod
 

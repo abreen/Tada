@@ -65,7 +65,7 @@ them as the build does.
 
 | Tada | Export |
 |---|---|
-| `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it (not inside a list item, where they would make a tight list loose) |
+| `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it (inside a list item, only before a block that cannot interrupt a paragraph, such as an indented code block, since blank lines would make a tight list loose) |
 | `[[Title]]`, `[[Title\|text]]` | `[Title](path.md)`, `[text](path.md)` |
 | `[Title][Description](url)` | `[Title](url) - Description`; a superlink followed by a line break ends with `\` so the next one stays on its own line |
 | `!!! note` / `!!! warning` | `> [!NOTE]` / `> [!WARNING]`; a custom title becomes a bold line under the marker, with its punctuation escaped so it shows literally, as in the build |
@@ -93,14 +93,16 @@ and `href` and `src` attributes in raw HTML point to exported files:
   lines keeps any `> ` markers an alert added to it.
 - Root-relative links become relative to the page, since the export has no
   base path.
-- A relative link to a file exported at the same path is left as written.
+- A relative link to a file exported at the same path is left as written,
+  unless it climbs above the site root.
 - External links, fragments, and `mailto:` links are unchanged.
 - A link (a Markdown link, superlink, or `<a href>`) to a path the build does
   not publish fails the export with the build's `broken internal link` error,
   and a link to a directory with an `index.html` fails with the build's
   `directory link must reference index.html explicitly` error. Like the build,
   the export does not check `<a>` elements inside SVG or MathML. A reference
-  definition that a link uses is checked like the link. As in the build,
+  definition that a link uses is checked like the link; as in markdown-it,
+  only a label's first definition counts. As in the build,
   images, `src` attributes, and definitions only images use are not checked.
   A link to a file the build generates but the export leaves out is made
   relative and kept.
