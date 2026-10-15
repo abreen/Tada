@@ -75,6 +75,8 @@ A static site generator. The successor to Presto.
   * Special heading subtitles with `## Heading # A subtitle here`
   * `{{{ _partial.md }}}` syntax for including partials
   * Styled `<details>` elements, including "Show more" previews (see [Details elements](#details-elements))
+  * `[Label| ... ]` renders tabs; consecutive tabs form one group
+    - Number the labels `1.`, `2.`, ... to render a stepper with Back and Next buttons
 
 - Extremely efficient client-side navigation
   * A miniature SPA that uses internal links tagged at build time
