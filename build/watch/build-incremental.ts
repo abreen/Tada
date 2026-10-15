@@ -6,6 +6,7 @@ import {
   renderSources,
   type TadaSnapshot,
 } from '../site-build';
+import { proofreadRecords } from '../proofread';
 import type { TraceCache } from '../build-types';
 import type { TraceToolAvailability } from '../types';
 import type { AuthorScripts } from '../author-scripts';
@@ -49,6 +50,9 @@ export async function buildIncremental({
     traceToolAvailability,
     documentIndex: plan.documentIndex,
   });
+  if (siteVariables.proofread) {
+    await proofreadRecords(rendered.records.values(), siteVariables.proofread);
+  }
   for (const [source, record] of rendered.records) {
     records.set(source, record);
   }

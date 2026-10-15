@@ -4,6 +4,7 @@ import { makeLogger } from './log';
 import { getRuntimeBundledShikiLanguages } from './site-variables';
 import { initHighlighter } from './utils/shiki-highlighter';
 import { generateSiteAssets } from './site-assets';
+import { proofreadRecords } from './proofread';
 import { getPdfSources } from './pagefind';
 import { checkTraceToolAvailability } from './utils/trace';
 import {
@@ -367,6 +368,9 @@ export async function buildSite({
     traceToolAvailability,
     documentIndex: documentIndex.value,
   });
+  if (isWatchMode && siteVariables.proofread) {
+    await proofreadRecords(records.values(), siteVariables.proofread);
+  }
   return finishBuild({
     siteVariables,
     scan,

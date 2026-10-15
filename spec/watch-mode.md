@@ -156,6 +156,12 @@ A known limitation: if a directory is replaced by a file and then by a directory
 again in quick succession, edits inside the recreated directory may not be
 detected. Restart watch mode if that happens.
 
+## Proofreading
+
+When the development site config sets `proofread`, watch mode underlines
+spelling and grammar problems in the pages it renders; see
+[Proofreading](proofread.md).
+
 ## Output Path Conflicts
 
 Output conflicts stop the build like any other build error (see

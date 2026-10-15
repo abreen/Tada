@@ -86,6 +86,8 @@ Generated development and production site configs explicitly include
   see [Author Scripts](author-scripts.md) and [Packages](packages.md)
 - **vars**: arbitrary key-value pairs inserted into author content with
   `{{ name }}` (see [Site Variables](variables.md))
+- **proofread**: development config only; turns on spelling and grammar
+  underlines in `tada watch` (see [Proofreading](proofread.md))
 
 ## Custom serif fonts
 

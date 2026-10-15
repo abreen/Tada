@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { compile, doValidation } from './json-schema';
 import {
+  rejectDevOnlyConfig,
   resolveFaviconSymbol,
   validateExtensionToShikiLanguage,
   validateShikiLanguages,
@@ -164,6 +165,40 @@ describe('site config schema', () => {
         'site.dev.json',
       ),
     ).toThrow('/banner: must be string');
+  });
+
+  test('accepts proofread words', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: { words: ['Tada', 'KaTeX'] },
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
+  test('rejects unknown proofread options', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: { dialect: 'british' },
+        },
+        'site.dev.json',
+      ),
+    ).toThrow('/proofread: unknown property "dialect"');
   });
 
   test('accepts configurable appearance defaults', () => {
@@ -426,5 +461,27 @@ describe('site config schema', () => {
         'site.dev.json',
       ),
     ).toThrow('unknown property "code"');
+  });
+});
+
+describe('rejectDevOnlyConfig', () => {
+  test('allows proofread in the development site config', () => {
+    expect(() =>
+      rejectDevOnlyConfig({ proofread: {} }, 'dev', 'site.dev.yaml'),
+    ).not.toThrow();
+  });
+
+  test('rejects proofread in the production site config', () => {
+    expect(() =>
+      rejectDevOnlyConfig({ proofread: {} }, 'prod', 'site.prod.yaml'),
+    ).toThrow(
+      'site.prod.yaml: proofread is only supported in the development site config',
+    );
+  });
+
+  test('allows a production site config without proofread', () => {
+    expect(() =>
+      rejectDevOnlyConfig({ title: 'Site' }, 'prod', 'site.prod.yaml'),
+    ).not.toThrow();
   });
 });
