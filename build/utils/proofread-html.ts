@@ -1,4 +1,4 @@
-import { decodeHTML } from 'entities';
+import { decodeHTML, escapeAttribute } from 'entities';
 
 export type IssueKind = 'spelling' | 'grammar';
 
@@ -7,6 +7,10 @@ export interface TextIssue {
   start: number;
   end: number;
   kind: IssueKind;
+  /** What is wrong, as plain text */
+  message?: string;
+  /** What is wrong, as HTML */
+  messageHtml?: string;
 }
 
 /** Finds the problems in the text of one block, such as a paragraph */
@@ -42,25 +46,75 @@ export function toUtf16Offsets(text: string): (offset: number) => number {
 /** Converts Harper's lints, with code point spans and lint kinds, to issues */
 export function toTextIssues(
   text: string,
-  lints: { start: number; end: number; kind: string }[],
+  lints: {
+    start: number;
+    end: number;
+    kind: string;
+    message: string;
+    messageHtml: string;
+  }[],
 ): TextIssue[] {
   const toUtf16 = toUtf16Offsets(text);
   return lints.map(lint => ({
     start: toUtf16(lint.start),
     end: toUtf16(lint.end),
     kind: SPELLING_KINDS.has(lint.kind) ? 'spelling' : 'grammar',
+    message: lint.message,
+    messageHtml: lint.messageHtml,
   }));
 }
 
 // Same red and green as multiple-choice question results
-export const PROOFREAD_STYLE =
+const PROOFREAD_STYLE =
   '<style>' +
   ':root{--proofread-spelling-color:hsl(0deg 72% 48%);--proofread-grammar-color:hsl(142deg 58% 36%)}' +
   '@media (prefers-color-scheme:dark){:root{--proofread-spelling-color:hsl(0deg 82% 62%);--proofread-grammar-color:hsl(142deg 58% 52%)}}' +
   '.proofread-spelling,.proofread-grammar{text-decoration:underline;text-decoration-style:wavy}' +
   '.proofread-spelling{text-decoration-color:var(--proofread-spelling-color)}' +
   '.proofread-grammar{text-decoration-color:var(--proofread-grammar-color)}' +
+  '.proofread-tooltip{position:absolute;z-index:1000;max-width:min(24rem,calc(100vw - 16px));padding:0.25em 0.5em;' +
+  'border-radius:var(--mono-border-radius);background:var(--bg2-color);color:var(--fg-color);box-shadow:var(--box-shadow);' +
+  'font-size:var(--font-size-small);pointer-events:none}' +
+  '.proofread-tooltip p{margin:0}' +
   '</style>';
+
+// Replaces the native title tooltip with one that shows the HTML message.
+// Delegated from document, so it keeps working across client-side navigation.
+const PROOFREAD_SCRIPT = `<script>(() => {
+  let tooltip = null;
+  let owner = null;
+  function hide() {
+    tooltip?.remove();
+    tooltip = owner = null;
+  }
+  document.addEventListener('pointerover', event => {
+    const span = event.target instanceof Element
+      ? event.target.closest('[data-proofread-message]')
+      : null;
+    if (span === owner) {
+      return;
+    }
+    hide();
+    if (!span) {
+      return;
+    }
+    span.removeAttribute('title');
+    owner = span;
+    tooltip = document.createElement('div');
+    tooltip.className = 'proofread-tooltip';
+    tooltip.setAttribute('role', 'tooltip');
+    tooltip.innerHTML = span.dataset.proofreadMessage;
+    document.body.append(tooltip);
+    const rect = span.getBoundingClientRect();
+    const left = Math.max(8, Math.min(rect.left, innerWidth - tooltip.offsetWidth - 8));
+    tooltip.style.left = left + scrollX + 'px';
+    tooltip.style.top = rect.bottom + scrollY + 4 + 'px';
+  });
+  addEventListener('scroll', hide, true);
+})();</script>`;
+
+/** Added to the head of every proofread page */
+export const PROOFREAD_HEAD = PROOFREAD_STYLE + PROOFREAD_SCRIPT;
 
 // Elements that continue the surrounding sentence; every other element ends it
 const INLINE_ELEMENTS = new Set([
@@ -151,6 +205,8 @@ interface Mark {
   start: number;
   end: number;
   kind: IssueKind;
+  message?: string;
+  messageHtml?: string;
 }
 
 const TOKEN_PATTERN = /&(?:#[0-9]+|#x[0-9a-f]+|[a-z][a-z0-9]*);|[^&]+|&/gi;
@@ -338,6 +394,8 @@ function marksForIssues(
           start: Math.max(issue.start, piece.start) - piece.start,
           end: Math.min(issue.end, piece.end) - piece.start,
           kind: issue.kind,
+          message: issue.message,
+          messageHtml: issue.messageHtml,
         });
         marksByNode.set(piece.node, marks);
       }
@@ -360,6 +418,17 @@ function marksForIssues(
   return marksByNode;
 }
 
+function openMark({ kind, message, messageHtml }: Mark): string {
+  let attributes = `class="proofread-${kind}"`;
+  if (message) {
+    attributes += ` title="${escapeAttribute(message)}"`;
+  }
+  if (messageHtml) {
+    attributes += ` data-proofread-message="${escapeAttribute(messageHtml.trim())}"`;
+  }
+  return `<span ${attributes}>`;
+}
+
 /** Wraps each mark's text in a span; an entity is never split */
 function renderMarkedText(tokens: TextToken[], marks: Mark[]): string {
   const boundaries = [
@@ -379,7 +448,7 @@ function renderMarkedText(tokens: TextToken[], marks: Mark[]): string {
       index++;
     }
     if (!open && index < marks.length && position >= marks[index].start) {
-      html += `<span class="proofread-${marks[index].kind}">`;
+      html += openMark(marks[index]);
       open = true;
     }
   }
@@ -441,7 +510,7 @@ export async function proofreadHtml(
   })
     .on('head', {
       element(el) {
-        el.append(PROOFREAD_STYLE, { html: true });
+        el.append(PROOFREAD_HEAD, { html: true });
       },
     })
     .transform(html);

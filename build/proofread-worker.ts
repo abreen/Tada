@@ -55,7 +55,13 @@ async function handle(request: ProofreadRequest) {
   const lints = await linter.lint(request.text, { language: 'plaintext' });
   const found = lints.map(lint => {
     const span = lint.span();
-    const result = { start: span.start, end: span.end, kind: lint.lint_kind() };
+    const result = {
+      start: span.start,
+      end: span.end,
+      kind: lint.lint_kind(),
+      message: lint.message(),
+      messageHtml: lint.message_html(),
+    };
     span.free();
     lint.free();
     return result;

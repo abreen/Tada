@@ -76,3 +76,18 @@ dark values (`prefers-color-scheme`) matching the colors of multiple-choice
 question results. The underlines are in the built HTML, so
 they show without JavaScript. Page text, links, and search results are
 otherwise unchanged.
+
+## Messages
+
+Each span carries Harper's message about the problem:
+
+- `title`, the message as plain text, which the browser shows on hover without
+  JavaScript
+- `data-proofread-message`, the message as HTML, such as words in `<code>`
+
+Every proofread page also gets an inline `<script>` in its `<head>`. When the
+pointer moves over a span, the script removes its `title` and shows a
+`role="tooltip"` element below the span with the HTML message. The tooltip
+uses the theme's `--bg2-color`, `--fg-color`, and `--box-shadow`, and it goes
+away when the pointer leaves the span or the page scrolls. The script listens
+on `document`, so it keeps working across client-side navigation.

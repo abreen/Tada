@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
-  PROOFREAD_STYLE,
+  PROOFREAD_HEAD,
   proofreadHtml,
   toTextIssues,
   toUtf16Offsets,
@@ -46,10 +46,26 @@ describe('proofreadHtml', () => {
     );
   });
 
+  test('adds the message as a title and as escaped HTML for the tooltip', async () => {
+    const check: CheckText = async () => [
+      {
+        start: 4,
+        end: 7,
+        kind: 'spelling',
+        message: 'Did you mean to spell `teh` this way?',
+        messageHtml: '<p>Did you mean <code>"the"</code>?</p>\n',
+      },
+    ];
+    const html = await proofreadHtml(page('<p>Use teh cat.</p>'), check);
+    expect(mainOf(html)).toBe(
+      '<p>Use <span class="proofread-spelling" title="Did you mean to spell `teh` this way?" data-proofread-message="<p>Did you mean <code>&quot;the&quot;</code>?</p>">teh</span> cat.</p>',
+    );
+  });
+
   test('adds the underline style to the head', async () => {
     const { check } = fakeCheck({});
     const html = await proofreadHtml(page('<p>Fine.</p>'), check);
-    expect(html).toContain(`${PROOFREAD_STYLE}</head>`);
+    expect(html).toContain(`${PROOFREAD_HEAD}</head>`);
   });
 
   test('checks only text inside main', async () => {
@@ -165,7 +181,7 @@ describe('proofreadHtml', () => {
     const content = '<p>All <a href="/x">good</a> here.</p>';
     const html = await proofreadHtml(page(content), check);
     expect(html).toBe(
-      page(content).replace('</head>', `${PROOFREAD_STYLE}</head>`),
+      page(content).replace('</head>', `${PROOFREAD_HEAD}</head>`),
     );
   });
 });
@@ -187,12 +203,18 @@ describe('toTextIssues', () => {
   test('marks spelling and typo lints as spelling and others as grammar', () => {
     expect(
       toTextIssues('teh cat an dog', [
-        { start: 0, end: 3, kind: 'Typo' },
-        { start: 8, end: 10, kind: 'Miscellaneous' },
+        { start: 0, end: 3, kind: 'Typo', message: 'm1', messageHtml: 'h1' },
+        {
+          start: 8,
+          end: 10,
+          kind: 'Miscellaneous',
+          message: 'm2',
+          messageHtml: 'h2',
+        },
       ]),
     ).toEqual([
-      { start: 0, end: 3, kind: 'spelling' },
-      { start: 8, end: 10, kind: 'grammar' },
+      { start: 0, end: 3, kind: 'spelling', message: 'm1', messageHtml: 'h1' },
+      { start: 8, end: 10, kind: 'grammar', message: 'm2', messageHtml: 'h2' },
     ]);
   });
 });
