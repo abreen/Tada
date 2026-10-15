@@ -1,7 +1,0 @@
-title: Document Index
-symbol: DOC
-base: http://localhost:8080
-themeColor: darkturquoise
-extensionToShikiLanguage:
-  java: java
-shikiLanguages: [java]

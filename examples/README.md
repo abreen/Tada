@@ -10,11 +10,6 @@ package.
   Literata from the `@fontsource/literata` package.
 - [`custom-sass/`](custom-sass): the site config lists a script in `src/`
   that imports a Sass stylesheet, which styles every page.
-- [`document-index/`](document-index): `content/handbook/index.yml` orders
-  the handbook's pages into a tree, which gives them a sidebar, breadcrumbs,
-  and previous and next links.
-- [`wikilinks/`](wikilinks): pages link to each other by title with
-  `[[Title]]`, including a title that uses a site variable.
 
 To run one, from its directory (`bun install` is needed only when it has a
 `package.json`):

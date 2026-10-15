@@ -1,8 +1,0 @@
-page: index.md
-children:
-  - introduction.md
-  - page: setup/index.md
-    children:
-      - setup/install.md
-      - setup/configure.md
-  - Example.java

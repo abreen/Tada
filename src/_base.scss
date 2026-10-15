@@ -126,6 +126,13 @@ code {
   border-radius: var(--mono-border-radius);
 }
 
+// A code page's title is its file name in one `<code>`, shown as a plain
+// monospace label wherever the title appears
+.code-page code {
+  padding: 0;
+  background: none;
+}
+
 pre {
   padding: var(--gap);
   overflow: auto hidden;

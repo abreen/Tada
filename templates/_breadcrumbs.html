@@ -4,12 +4,20 @@
     <% page.breadcrumbs.forEach((entry, index) => { %>
     <li>
       <% if (index > 0) { %><span class="mask-icon mask-icon-breadcrumb-separator" aria-hidden="true"></span><% } %>
+      <% if (entry.isCodePage) { %>
+      <a class="code-page" href="<%- encodeAuthoredUrl(entry.url) %>"><code><%- entry.label %></code></a>
+      <% } else { %>
       <a href="<%- encodeAuthoredUrl(entry.url) %>"><%- entry.label %></a>
+      <% } %>
     </li>
     <% }); %>
     <li>
       <span class="mask-icon mask-icon-breadcrumb-separator" aria-hidden="true"></span>
+      <% if (page.template === 'code') { %>
+      <span class="code-page" aria-current="page"><code><%- page.title %></code></span>
+      <% } else { %>
       <span aria-current="page"><%- page.title %></span>
+      <% } %>
     </li>
   </ol>
 </nav>

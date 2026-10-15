@@ -7,7 +7,7 @@ This codebase is a static site generator written in TypeScript and uses Bun.
 - Watch mode lives under `build/watch/` for planning, runtime state, and file-system events
 - Client-side runtime code and styles live in `src/`, and internal Lodash HTML templates live in `templates/`
 - Default `tada init` content lives in `init/`, feature documentation lives in `spec/`, and end-to-end coverage lives in `functional_tests/` and `playwright/`
-- `examples/` holds small sites that each show one feature; they are not in the npm package
+- `examples/` holds small sites that each show one feature; they are not in the npm package. Do not add to `examples/` unless told to
 
 ## Feature specifications
 
@@ -50,7 +50,7 @@ Functional tests are CPU intensive and may take over 2 minutes, even on powerful
 
 ## Cloud sessions
 
-In Claude Code cloud sessions (`CLAUDE_CODE_REMOTE=true`), `scripts/test.ts` and a hook in `.claude/settings.json` block Playwright and functional tests. Run only lint, typecheck, and unit tests there.
+In Claude Code cloud sessions (`CLAUDE_CODE_REMOTE=true`), `scripts/test.ts` and a hook in `.claude/settings.json` block Playwright and functional tests. Run only lint, typecheck, and unit tests there. There, the pre-push hook runs only unit tests.
 
 ## Cross-platform tests
 
@@ -91,6 +91,10 @@ If there is an issue with the Python environment, stop and inform the user.
 ## Code style/formatting
 
 The pre-commit hook runs the code formatter. Do not run formatting commands manually.
+
+## Git hooks
+
+The pre-commit hook runs the formatter, lint, Sass lint, Python lint, and typecheck. The pre-push hook runs the tests. Do not run these checks manually before committing or pushing; let the hooks run them.
 
 ## Security threat model
 

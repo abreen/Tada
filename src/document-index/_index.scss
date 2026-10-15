@@ -167,33 +167,45 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gap);
-  padding-top: var(--gap);
   margin-top: 3rem;
-  border-top: 1px solid var(--fg2-color);
 
-  a {
+  a.button {
+    display: flex;
+    gap: calc(var(--gap) / 2);
+    align-items: center;
     min-width: 0;
+    padding: calc(var(--gap) / 2) var(--gap);
+    font-size: inherit;
     overflow-wrap: anywhere;
-    text-decoration: none;
+  }
 
-    .title {
-      @include link-underline;
-    }
+  a.previous {
+    justify-self: start;
 
-    &:focus-visible {
-      outline-offset: 2px;
+    // The chevron points back
+    .mask-icon {
+      transform: scaleX(-1);
     }
   }
 
   a.next {
     grid-column: 2;
+    justify-self: end;
     text-align: end;
   }
 
-  .direction {
-    display: block;
-    font-size: var(--font-size-small);
-    color: var(--fg2-color);
+  // The chevron is centered in a wider box; trim the empty space on its outer
+  // side so the button's padding is measured from the visible glyph
+  .mask-icon {
+    flex-shrink: 0;
+  }
+
+  a.previous .mask-icon {
+    margin-inline: -8px -3px;
+  }
+
+  a.next .mask-icon {
+    margin-inline: -3px -8px;
   }
 }
 

@@ -711,9 +711,10 @@ interface PreparePageVariablesInput {
 function getDocumentBreadcrumbs(
   navigation: DocumentNavigation,
 ): BreadcrumbEntry[] {
-  return navigation.ancestors.map(({ title, href }) => ({
+  return navigation.ancestors.map(({ title, href, isCodePage }) => ({
     label: title,
     url: href,
+    isCodePage,
   }));
 }
 

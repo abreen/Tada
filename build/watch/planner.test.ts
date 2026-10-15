@@ -480,6 +480,7 @@ test('pages whose document navigation changed are rendered', () => {
     title,
     titleHtml: title,
     href,
+    isCodePage: false,
   });
   const navigation = (title: string) => ({
     indexFile: 'content/index.yml',

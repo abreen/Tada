@@ -24,6 +24,8 @@ export interface DocumentPageTitle {
 export interface DocumentLink extends DocumentPageTitle {
   /** Root-relative and percent-encoded */
   href: string;
+  /** Titled by its file name, as one `<code>` element */
+  isCodePage: boolean;
 }
 
 /** An entry in the part of a document tree that one page shows */
@@ -193,6 +195,7 @@ function parseIndexFile(
       title: title.title,
       titleHtml: getEntryTitleHtml(title.titleHtml, href),
       href,
+      isCodePage: entry.renderKind === 'code-page',
       parent,
       children: [],
     };
@@ -205,8 +208,13 @@ function parseIndexFile(
   return parseNode(value as RawBranch);
 }
 
-function toLink({ title, titleHtml, href }: IndexNode): DocumentLink {
-  return { title, titleHtml, href };
+function toLink({
+  title,
+  titleHtml,
+  href,
+  isCodePage,
+}: IndexNode): DocumentLink {
+  return { title, titleHtml, href, isCodePage };
 }
 
 /** The root, the path to the current page, siblings along it, and its children */

@@ -100,6 +100,27 @@ describe('breadcrumb trail', () => {
     expect(html).toContain('>Counting &amp; <em>vowels</em></h1>');
   });
 
+  test('shows code page titles as code', () => {
+    const html = renderHeading({
+      page: {
+        template: 'code',
+        breadcrumbs: [
+          { label: 'Labs', url: '/labs/index.html' },
+          { label: 'A<B>.java', url: '/A.java.html', isCodePage: true },
+        ],
+        title: 'Foo.java',
+        titleHtml: '<code>Foo.java</code>',
+      },
+    });
+    expect(html).toContain('<a href="/labs/index.html">Labs</a>');
+    expect(html).toContain(
+      '<a class="code-page" href="/A.java.html"><code>A&lt;B&gt;.java</code></a>',
+    );
+    expect(html).toContain(
+      '<span class="code-page" aria-current="page"><code>Foo.java</code></span>',
+    );
+  });
+
   test.each([{ breadcrumbs: undefined }, { breadcrumbs: [] }])(
     'omits navigation for absent or empty ancestors: %j',
     ({ breadcrumbs }) => {

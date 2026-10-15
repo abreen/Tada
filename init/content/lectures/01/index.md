@@ -32,7 +32,7 @@ you should see a result for page 2 of `lecture1.pdf`.
 
 * [`Rectangle.java`](./Rectangle.java) (an example of a code page)
 * [`demo.py`](./demo.py) (another example of a code page)
-* [`Pair.java`](./Pair.java.html) (an example literate Java page)
+* [[A generic `Pair` class|`Pair.java`]] (an example literate Java page)
   - [A direct link](./Pair.java) to the source code
 
 !!! note
