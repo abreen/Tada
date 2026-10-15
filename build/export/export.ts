@@ -319,7 +319,7 @@ export function runExport({
     siteVariables,
     pageTitles: scan.pageTitles,
     exportPaths,
-    validTargets: new Set([...scan.validTargets, ...scan.generatedPageTargets]),
+    validTargets: scan.validTargets,
     readFile: filePath =>
       fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf-8') : null,
     readTraceFile: filePath => {

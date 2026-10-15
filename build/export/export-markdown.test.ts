@@ -396,6 +396,12 @@ describe('exportMarkdownPage', () => {
     ).toThrow('lectures/_p.md: broken wikilink "[[Nope]]"');
   });
 
+  test('keeps math as written in summaries', () => {
+    expect(exportPage('??? question Is $a*b$ or $c*d$?\nYes.\n???')).toBe(
+      '<details>\n<summary>Is $a*b$ or $c*d$?</summary>\n\nYes.\n\n</details>\n',
+    );
+  });
+
   test('keeps a list tight around an alert', () => {
     expect(exportPage('1. one\n   !!! note\n   two\n   !!!\n2. three')).toBe(
       '1. one\n   > [!NOTE]\n   > two\n2. three\n',

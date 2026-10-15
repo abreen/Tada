@@ -132,6 +132,8 @@ These are known differences from the built site:
 - GitHub shows alerts only at the top level. An alert inside a list item,
   blockquote, or another alert is exported the same way, and GitHub shows it
   as a plain blockquote that starts with `[!NOTE]` or `[!WARNING]`.
+- Inside an alert, lines indented with tabs, including code, are indented
+  with spaces instead, since after `> ` Markdown reads a tab as spaces.
 - A question, tab, or two-column layout inside a list item needs blank lines
   around its content (GitHub parses Markdown inside `<details>` only after a
   blank line), so the list renders loose, with spacing between items.

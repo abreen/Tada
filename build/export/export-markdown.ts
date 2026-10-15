@@ -2,6 +2,7 @@ import path from 'path';
 import { decodeHTMLAttribute } from 'entities';
 import MarkdownIt from 'markdown-it';
 import htmlBlockNames from 'markdown-it/lib/common/html_blocks.mjs';
+import markdownItKatex from '@vscode/markdown-it-katex';
 import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
 import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
 import type StateInline from 'markdown-it/lib/rules_inline/state_inline.mjs';
@@ -152,9 +153,24 @@ const EXPECTED_TOKENS: Record<SpanKind, string> = {
 
 const plainMarkdown = new MarkdownIt({ html: true });
 
+/**
+ * Renders inline Markdown for HTML, such as a summary, as the build does:
+ * with typography, and with math parsed but kept as written, since GitHub
+ * renders `$...$` math itself
+ */
+const summaryMarkdown = new MarkdownIt({ html: true, typographer: true }).use(
+  markdownItKatex,
+);
+const keepMath =
+  (open: string, close: string) => (tokens: Token[], idx: number) =>
+    summaryMarkdown.utils.escapeHtml(`${open}${tokens[idx].content}${close}`);
+summaryMarkdown.renderer.rules.math_inline = keepMath('$', '$');
+summaryMarkdown.renderer.rules.math_inline_block = keepMath('$$', '$$');
+summaryMarkdown.renderer.rules.math_inline_bare_block = keepMath('$$', '$$');
+
 /** Renders inline Markdown as HTML, for markup that GitHub does not parse */
 export function renderInlineHtml(markdown: string): string {
-  return plainMarkdown.renderInline(markdown).trim();
+  return summaryMarkdown.renderInline(markdown).trim();
 }
 
 interface RuleEntry<T> {
