@@ -48,6 +48,10 @@ Playwright tests pick free ports for their servers, so they can run in several w
 
 Functional tests are CPU intensive and may take over 2 minutes, even on powerful machines.
 
+## Cloud sessions
+
+In Claude Code cloud sessions (`CLAUDE_CODE_REMOTE=true`), `scripts/test.ts` and a hook in `.claude/settings.json` block Playwright and functional tests. Run only lint, typecheck, and unit tests there.
+
 ## Cross-platform tests
 
 Functional and Playwright tests must work on every supported operating system. Do not assume POSIX paths or path separators; construct and compare filesystem paths with platform-aware utilities.
