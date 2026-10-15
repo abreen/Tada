@@ -92,6 +92,10 @@ If there is an issue with the Python environment, stop and inform the user.
 
 The pre-commit hook runs the code formatter. Do not run formatting commands manually.
 
+## Git hooks
+
+The pre-commit hook runs the formatter, lint, Sass lint, Python lint, and typecheck. The pre-push hook runs the tests. Do not run these checks manually before committing or pushing; let the hooks run them.
+
 ## Security threat model
 
 When generating a site, the author's content is trusted. Authors can write raw HTML/JavaScript on their pages and insert `{{ name }}` site variables in content, front matter, and configuration files. Lodash is only used by Tada's internal templates.
