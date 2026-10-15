@@ -201,11 +201,11 @@
   }
 
   a.previous .mask-icon {
-    margin-inline-start: -8px;
+    margin-inline: -8px -3px;
   }
 
   a.next .mask-icon {
-    margin-inline-end: -8px;
+    margin-inline: -3px -8px;
   }
 }
 
