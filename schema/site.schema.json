@@ -85,11 +85,16 @@
     },
     "shikiLanguages": { "type": "array", "items": { "type": "string" } },
     "proofread": {
-      "type": ["boolean", "object"],
-      "properties": {
-        "words": { "type": "array", "items": { "type": "string" } }
-      },
-      "additionalProperties": false
+      "anyOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "properties": {
+            "words": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      ]
     }
   },
   "$defs": {
