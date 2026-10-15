@@ -71,6 +71,13 @@ export interface SiteVariables {
   /** Scripts in `src/` that every page loads */
   scripts?: string[];
   vars?: Record<string, unknown>;
+  /** Options for watch mode's spelling and grammar checks; only allowed in `site.dev.*` */
+  proofread?: ProofreadConfig | boolean;
+}
+
+export interface ProofreadConfig {
+  /** Words the spelling check accepts */
+  words?: string[];
 }
 
 export type FeatureConfig = {

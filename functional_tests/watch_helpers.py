@@ -8,8 +8,10 @@ from stat import S_ISREG
 import pytest
 from conftest import (
     _bun_command,
+    load_structured_file,
     process_group_popen_kwargs,
     terminate_process_group,
+    write_structured_file,
 )
 
 REBUILD_TIMEOUT_SEC = 30
@@ -56,10 +58,23 @@ def assert_trace_artifacts_exist(dist_dir: Path, html: str, base_path: str = '')
     return manifests
 
 
+def disable_proofreading(site_dir: Path):
+    """Turn off proofreading, whose underlines would split the page text tests look for."""
+    for name in ('site.dev.yaml', 'site.dev.yml', 'site.dev.json'):
+        config_path = site_dir / name
+        if config_path.is_file():
+            config = load_structured_file(config_path)
+            if isinstance(config, dict) and 'proofread' not in config:
+                config['proofread'] = False
+                write_structured_file(config_path, config)
+
+
 class WatchProcess:
     """Manages a tada watch subprocess for testing."""
 
-    def __init__(self, site_dir: Path):
+    def __init__(self, site_dir: Path, *, proofread: bool = False):
+        if not proofread:
+            disable_proofreading(site_dir)
         self.site_dir = site_dir
         self.dist_dir = site_dir / 'dist'
         self.stdout_log_path = site_dir / 'watch_stdout.log'

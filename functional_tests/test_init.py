@@ -35,6 +35,12 @@ class TestInitDefault:
         assert config['defaultContrast'] == 'standard'
         assert 'title' in config
 
+    def test_dev_config_accepts_words_in_default_content(self, site_dir):
+        dev = load_structured_file(site_dir / SITE_DEV_CONFIG_FILE)
+        prod = load_structured_file(site_dir / SITE_PROD_CONFIG_FILE)
+        assert {'Tada', 'superlink'} <= set(dev['proofread']['words'])
+        assert 'proofread' not in prod
+
     def test_creates_prod_config(self, site_dir):
         config_path = site_dir / SITE_PROD_CONFIG_FILE
         assert config_path.exists()
@@ -130,6 +136,10 @@ class TestInitBare:
         assert dev['shikiLanguages'] == []
         assert prod['extensionToShikiLanguage'] == {}
         assert prod['shikiLanguages'] == []
+
+    def test_bare_configs_have_no_proofread_words(self, site_dir):
+        for config_file in (SITE_DEV_CONFIG_FILE, SITE_PROD_CONFIG_FILE):
+            assert 'proofread' not in load_structured_file(site_dir / config_file)
 
     def test_creates_minimal_content(self, site_dir):
         content_dir = site_dir / 'content'

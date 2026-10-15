@@ -83,7 +83,19 @@
       "type": "object",
       "additionalProperties": { "type": "string" }
     },
-    "shikiLanguages": { "type": "array", "items": { "type": "string" } }
+    "shikiLanguages": { "type": "array", "items": { "type": "string" } },
+    "proofread": {
+      "anyOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "properties": {
+            "words": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
   },
   "$defs": {
     "serifFontOverride": {

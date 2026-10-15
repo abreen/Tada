@@ -343,6 +343,7 @@ vars:
 | `faviconColor` | *Optional*, background color for generated favicons (defaults to `themeColor`) |
 | `faviconFontWeight` | *Optional*, font weight used for generated favicon text (default `700`) |
 | `vars` | Arbitrary key/value variables inserted into content with `{{ name }}` (e.g., `{{ staffEmail }}`) |
+| `proofread` | *Optional*, `site.dev.*` only; `words` lists extra words the `tada watch` spelling check accepts, and `false` turns the check off (see [Proofreading](spec/proofread.md)) |
 
 ### Custom logo and favicon
 
