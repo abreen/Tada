@@ -126,7 +126,7 @@ class TestExport:
         assert (site_dir / 'exported' / 'index.md').exists()
 
     def test_removes_only_stale_marked_staging_directories(self, site_dir):
-        stale = site_dir / 'exported.tmp-1-1'
+        stale = site_dir / 'exported.tmp-999999999-1'
         stale.mkdir()
         (stale / '.tada-export').write_text('', encoding='utf-8')
         hour_ago = time.time() - 2 * 60 * 60

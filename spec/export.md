@@ -23,7 +23,7 @@ Every page is converted first, then the export is written to a new directory
 beside the output directory (`<dir>.tmp-<pid>-<time>`) and moved into place. An error
 at any step leaves an earlier export as it was. Nothing in `content/` changes.
 A staging directory that a stopped run left behind, marked as an export and
-untouched for an hour, is removed; a backup of an earlier export
+untouched for an hour, whose run is no longer going, is removed; a backup of an earlier export
 (`<dir>.old-*`) is kept.
 
 The export reports the build's errors for what it reads and converts:

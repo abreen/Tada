@@ -714,46 +714,58 @@ class PageExporter {
     // markdown-it does not count a line after a final newline
     const lineCount = text.endsWith('\n') ? lines.length - 1 : lines.length;
     const { tokens } = this.parse(text, { wikilinks: false });
-    const last = tokens.findLast(
-      token => token.level === 0 && token.map !== null,
-    );
-    if (!last || last.map![1] < lineCount) {
-      return text;
+    // Blocks that reach the end, at any depth, innermost first, each closed
+    // at its own indentation, such as inside a list item
+    const reaching = tokens
+      .filter(token => token.map !== null && token.map[1] >= lineCount)
+      .sort((a, b) => b.level - a.level);
+    let closed = text;
+    for (const token of reaching) {
+      const closer = this.closerOf(token, lines);
+      if (closer !== null) {
+        const prefix = continuationPrefix(linePrefix(lines[token.map![0]]));
+        closed += `\n${prefix}${closer}`;
+      }
     }
-    const [open, end] = last.map!;
-    const close = (closer: string) => `${text}\n${closer}`;
-    switch (last.type) {
+    return closed;
+  }
+
+  /** The line that would close a block that reaches the end, if it is open */
+  private closerOf(token: Token, lines: string[]): string | null {
+    const [open, end] = token.map!;
+    switch (token.type) {
       case 'fence': {
-        // A closing fence is indented less than 4 spaces
+        // A closing fence is indented less than 4 spaces past its container
+        const last = lines[end - 1];
+        const rest = last.slice(linePrefix(lines[open]).length);
         const closer = new RegExp(
-          `^ {0,3}${RegExp.escape(last.markup[0])}{${last.markup.length},}[ \\t]*$`,
+          `^ {0,3}${RegExp.escape(token.markup[0])}{${token.markup.length},}[ \\t]*$`,
         );
-        const closed = end - 1 > open && closer.test(lines[end - 1]);
-        return closed ? text : close(last.markup);
+        return end - 1 > open && closer.test(rest) ? null : token.markup;
       }
       case 'math_block': {
         const dollars =
           lines.slice(open, end).join('\n').split('$$').length - 1;
-        return dollars >= 2 ? text : close('$$');
+        return dollars >= 2 ? null : '$$';
       }
       // A container that reaches the end has no closing line
       case 'container_alert_open':
       case 'container_question_open':
-        return close(last.markup);
+        return token.markup;
       case 'question_multiple_choice':
-        return close('???');
+        return '???';
       case 'html_block': {
         const closer = HTML_BLOCK_CLOSERS.find(([start]) =>
-          start.test(last.content),
+          start.test(token.content),
         );
-        if (closer && !closer[1].test(last.content)) {
-          const tag = /^\s*<([a-z]+)/i.exec(last.content)?.[1] ?? '';
-          return close(closer[2].replace('$tag', tag));
+        if (closer && !closer[1].test(token.content)) {
+          const tag = /^\s*<([a-z]+)/i.exec(token.content)?.[1] ?? '';
+          return closer[2].replace('$tag', tag);
         }
-        return text;
+        return null;
       }
       default:
-        return text;
+        return null;
     }
   }
 

@@ -464,6 +464,19 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('ends blocks left open inside containers in a partial', () => {
+    expect(
+      exportPage('- a\n\n  {{{ _p.md }}}\n  more text', {
+        files: { 'lectures/_p.md': '- b\n  ```\n  code' },
+      }),
+    ).toBe('- a\n\n  - b\n    ```\n    code\n    ```\n\n  more text\n');
+    expect(
+      exportPage('{{{ _p.md }}}\n\nmore', {
+        files: { 'lectures/_p.md': '- a\n  !!! note\n  x' },
+      }),
+    ).toBe('- a\n  > [!NOTE]\n  > x\n\nmore\n');
+  });
+
   test('resolves page references in tab labels', () => {
     expect(exportPage('[See [docs]|\nbody\n]\n\n[docs]: /index.html')).toBe(
       '<details>\n<summary>See <a href="../index.md">docs</a></summary>\n\nbody\n\n</details>\n\n[docs]: ../index.md\n',

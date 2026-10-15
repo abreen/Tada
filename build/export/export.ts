@@ -115,6 +115,20 @@ function checkOutDir(outDir: string, force: boolean): void {
   }
 }
 
+/** Whether a process with this ID is running */
+function isRunning(pid: number): boolean {
+  if (pid === globals.pid()) {
+    return true;
+  }
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // It exists but belongs to another user
+    return (error as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
 /** How long a staging directory goes untouched before it counts as stale */
 const STALE_STAGING_MS = 60 * 60 * 1000;
 
@@ -135,7 +149,11 @@ function removeStaleStaging(outDir: string): void {
       if (
         pattern.test(name) &&
         fs.existsSync(path.join(dir, EXPORT_MARKER_FILE)) &&
-        globals.now() - fs.statSync(dir).mtimeMs > STALE_STAGING_MS
+        globals.now() - fs.statSync(dir).mtimeMs > STALE_STAGING_MS &&
+        // A run that is still going may be writing deep in its tree
+        !isRunning(
+          Number(name.slice(name.lastIndexOf('.tmp-') + 5).split('-')[0]),
+        )
       ) {
         fs.rmSync(dir, { recursive: true, force: true });
       }
@@ -221,8 +239,9 @@ function pageTitle(
 /**
  * Writes the site's content as plain GitHub Flavored Markdown: Markdown and
  * literate Java pages become Markdown without front matter, HTML pages lose
- * their front matter, and other files are copied. Code pages, partials,
- * document indexes, and skipped pages are left out.
+ * their front matter, code page sources have variables substituted, and
+ * other files are copied. Partials, document indexes, and skipped pages are
+ * left out.
  */
 export function runExport({
   env,
