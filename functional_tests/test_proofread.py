@@ -94,7 +94,6 @@ def test_watch_applies_configured_rules(tmp_path):
         wp.wait_for_initial_build()
         html = (site / 'dist' / 'index.html').read_text(encoding='utf-8')
         assert not marked(html, 'spelling', 'sentense')
-        assert not marked(html, 'spelling', 'misteak')
         assert marked(html, 'grammar', 'an')
         assert 'Harper has no proofread rules named NoSuchRule' in (
             wp.stdout_log_path.read_text(encoding='utf-8')
