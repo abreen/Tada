@@ -201,6 +201,60 @@ describe('site config schema', () => {
     ).not.toThrow();
   });
 
+  test('accepts proofread dialect and rules', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: {
+            dialect: 'british',
+            rules: { LongSentences: false, SpellCheck: true },
+          },
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
+  test('rejects unknown proofread dialects', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: { dialect: 'klingon' },
+        },
+        'site.dev.json',
+      ),
+    ).toThrow('/proofread/dialect: must be equal to one of the allowed values');
+  });
+
+  test('rejects proofread rules that are not true or false', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: { rules: { LongSentences: 'off' } },
+        },
+        'site.dev.json',
+      ),
+    ).toThrow('/proofread/rules/LongSentences: must be boolean');
+  });
+
   test('rejects unknown proofread options', () => {
     const validator = compile(siteSchema);
 
@@ -211,11 +265,11 @@ describe('site config schema', () => {
           base: 'https://example.edu',
           title: 'Test',
           themeColor: 'tomato',
-          proofread: { dialect: 'british' },
+          proofread: { language: 'en' },
         },
         'site.dev.json',
       ),
-    ).toThrow('/proofread: unknown property "dialect"');
+    ).toThrow('/proofread: unknown property "language"');
   });
 
   test('accepts configurable appearance defaults', () => {

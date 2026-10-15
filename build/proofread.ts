@@ -22,6 +22,18 @@ export function getProofreadConfig(
   return typeof proofread === 'object' ? proofread : {};
 }
 
+/** The message that sets up Harper for the site's proofread options */
+export function toConfigureRequest(
+  config: ProofreadConfig,
+): Extract<ProofreadRequest, { type: 'configure' }> {
+  return {
+    type: 'configure',
+    words: config.words ?? [],
+    dialect: config.dialect ?? 'american',
+    rules: config.rules ?? {},
+  };
+}
+
 /**
  * Checks text with Harper in a worker. Requests are posted at once, so the
  * worker checks pages while later ones render; results arrive once the main
@@ -32,7 +44,7 @@ export class Proofreader {
   private readonly pending = new Map<number, (issues: TextIssue[]) => void>();
   private nextId = 0;
   private failed = false;
-  private words: string | null = null;
+  private options: string | null = null;
 
   constructor() {
     log.info`Loading Harper`;
@@ -41,6 +53,10 @@ export class Proofreader {
     (this.worker as Worker & { unref(): void }).unref();
     this.worker.onmessage = (event: MessageEvent<ProofreadResponse>) => {
       const response = event.data;
+      if (response.type === 'warning') {
+        log.warn`${response.message}`;
+        return;
+      }
       if (response.type === 'failed' && response.id !== undefined) {
         // Only this text goes unchecked
         log.warn`Harper failed to check some text: ${response.message}`;
@@ -76,11 +92,12 @@ export class Proofreader {
     this.pending.clear();
   }
 
-  setWords(words: string[]) {
-    const key = JSON.stringify(words);
-    if (key !== this.words) {
-      this.post({ type: 'words', words });
-      this.words = key;
+  configure(config: ProofreadConfig) {
+    const request = toConfigureRequest(config);
+    const key = JSON.stringify(request);
+    if (key !== this.options) {
+      this.post(request);
+      this.options = key;
     }
   }
 
@@ -111,7 +128,7 @@ export function startProofreader(
     return null;
   }
   proofreader ??= new Proofreader();
-  proofreader.setWords(config.words ?? []);
+  proofreader.configure(config);
   return proofreader;
 }
 

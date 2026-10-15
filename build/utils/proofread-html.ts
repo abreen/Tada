@@ -7,6 +7,7 @@ import {
   adapter,
   type Htmlparser2TreeAdapterMap,
 } from 'parse5-htmlparser2-tree-adapter';
+import type { ProofreadDialect } from '../types';
 
 export type IssueKind = 'spelling' | 'grammar';
 
@@ -26,16 +27,43 @@ export type CheckText = (text: string) => Promise<TextIssue[]>;
 
 /** A message to the proofreading worker */
 export type ProofreadRequest =
-  | { type: 'words'; words: string[] }
+  | {
+      type: 'configure';
+      words: string[];
+      dialect: ProofreadDialect;
+      rules: Record<string, boolean>;
+    }
   | { type: 'check'; id: number; text: string };
 
 /** A message from the proofreading worker */
 export type ProofreadResponse =
   | { type: 'issues'; id: number; issues: TextIssue[] }
+  /** Something about the configuration that did not stop proofreading */
+  | { type: 'warning'; message: string }
   /** Harper failed to load, or to check the text of request `id` */
   | { type: 'failed'; id?: number; message: string };
 
 const SPELLING_KINDS = new Set(['Spelling', 'Typo']);
+
+/**
+ * Applies the configured rules over Harper's default lint config. Harper
+ * ignores rule names it does not have, so they are returned to be reported.
+ */
+export function toLintConfig(
+  defaults: Record<string, boolean | null>,
+  rules: Record<string, boolean>,
+): { config: Record<string, boolean | null>; unknown: string[] } {
+  const config = { ...defaults };
+  const unknown: string[] = [];
+  for (const [name, enabled] of Object.entries(rules)) {
+    if (Object.hasOwn(defaults, name)) {
+      config[name] = enabled;
+    } else {
+      unknown.push(name);
+    }
+  }
+  return { config, unknown };
+}
 
 /** Maps code point offsets, which Harper reports, to UTF-16 offsets */
 export function toUtf16Offsets(text: string): (offset: number) => number {

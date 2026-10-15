@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { getProofreadConfig, proofreadRecord } from './proofread';
+import {
+  getProofreadConfig,
+  proofreadRecord,
+  toConfigureRequest,
+} from './proofread';
 import type { TadaSourceRecord } from './source-records';
 import type { SiteVariables } from './types';
 
@@ -19,6 +23,32 @@ describe('getProofreadConfig', () => {
 
   test('returns null when proofread is false', () => {
     expect(getProofreadConfig(site(false))).toBeNull();
+  });
+});
+
+describe('toConfigureRequest', () => {
+  test('checks American English with no extra words or rule changes by default', () => {
+    expect(toConfigureRequest({})).toEqual({
+      type: 'configure',
+      words: [],
+      dialect: 'american',
+      rules: {},
+    });
+  });
+
+  test('passes the configured words, dialect, and rules', () => {
+    expect(
+      toConfigureRequest({
+        words: ['Tada'],
+        dialect: 'british',
+        rules: { LongSentences: false },
+      }),
+    ).toEqual({
+      type: 'configure',
+      words: ['Tada'],
+      dialect: 'british',
+      rules: { LongSentences: false },
+    });
   });
 });
 
