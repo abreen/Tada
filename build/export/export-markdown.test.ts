@@ -128,7 +128,7 @@ describe('exportMarkdownPage', () => {
       exportPage('- item\n  {{{ _p.md }}}\n- two', {
         files: { 'lectures/_p.md': 'Partial' },
       }),
-    ).toBe('- item\n\n  Partial\n\n- two\n');
+    ).toBe('- item\n\n  Partial\n- two\n');
     expect(
       exportPage('- item\n  {{{ _p.md }}}\n  more', {
         files: { 'lectures/_p.md': '> q' },
@@ -204,7 +204,7 @@ describe('exportMarkdownPage', () => {
           'lectures/_b.md': 'B text',
         },
       }),
-    ).toBe('- one\n\n  Intro\n\n  B text\n\n- two\n');
+    ).toBe('- one\n\n  Intro\n\n  B text\n- two\n');
   });
 
   test('escapes wikilink destinations', () => {
@@ -429,6 +429,29 @@ describe('exportMarkdownPage', () => {
         }),
       ).toBe(`${exported}\n\nafter [x](../index.md)\n`);
     }
+  });
+
+  test('separates the line after a list item partial', () => {
+    expect(
+      exportPage('- {{{ _p.md }}}\nlazy text', {
+        files: { 'lectures/_p.md': 'Para one' },
+      }),
+    ).toBe('- Para one\n\nlazy text\n');
+  });
+
+  test('places alert markers by column among tab-indented lines', () => {
+    expect(exportPage('- item\n\n\t!!! note\n    Body one\n\t!!!\n')).toBe(
+      '- item\n\n\t> [!NOTE]\n    > Body one\n',
+    );
+  });
+
+  test('checks anchors after HTML leaves SVG, and reads abrupt comments', () => {
+    expect(() =>
+      exportPage('<svg><p><a href="/missing.html">x</a></p></svg>'),
+    ).toThrow('broken internal link: "/missing.html"');
+    expect(() =>
+      exportPage('<p><!--> <a href="/missing.html">x</a> --></p>'),
+    ).toThrow('broken internal link: "/missing.html"');
   });
 
   test('resolves page references in tab labels', () => {

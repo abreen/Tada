@@ -51,6 +51,21 @@ const HTML_BLOCK_CLOSERS: [RegExp, RegExp, string][] = [
 const ESCAPED_HASH_SEPARATOR_PATTERN = /^ (?:\\#|&#35;|&#[xX]23;|&num;) /;
 /** List markers and definition markers, which later lines indent past */
 const LIST_MARKER_PATTERN = /[-+*]|\d{1,9}[.)]|[:~]/g;
+/**
+ * Whether a line starts a list item even right after a paragraph, so it is
+ * not lazy text: a bullet or `1.` with text, or an item of a list around the
+ * block that ends at column `col`
+ */
+function startsListItemAfterParagraph(line: string, col: number): boolean {
+  const prefix = line.match(CONTAINER_PREFIX_PATTERN)![0];
+  return (
+    LIST_ITEM_PREFIX_PATTERN.test(prefix) &&
+    line.trim() !== prefix.trim() &&
+    (/(?:^|[\s>])(?:[-+*]|1[.)])[ \t]+$/.test(prefix) ||
+      prefix.search(LIST_ITEM_PREFIX_PATTERN) < col)
+  );
+}
+
 /** A container prefix that ends in a list marker, which starts a list item */
 const LIST_ITEM_PREFIX_PATTERN = /(?:[-+*]|\d{1,9}[.)])[ \t]*$/;
 /** ASCII punctuation, which a backslash makes literal in Markdown */
@@ -779,7 +794,11 @@ class PageExporter {
         text === undefined || /^[\s>]*$/.test(text);
       const continuation = indent === prefix;
       const breakBefore = continuation && !isBlank(lines[line - 1]);
-      const breakAfter = continuation && !isBlank(lines[line + 1]);
+      // After it, even a list item partial, unless a new list item follows:
+      // other text would be read as part of the partial's last block
+      const next = lines[line + 1];
+      const breakAfter =
+        !isBlank(next) && !startsListItemAfterParagraph(next, prefix.length);
       const { extraIndent } = directive.meta as { extraIndent: number };
       const withoutExtra = (text: string) =>
         text.slice(
@@ -1445,11 +1464,41 @@ class PageExporter {
     }
     replace(start, lineEnd(open), opening);
 
+    // Indentation is measured in columns, where a tab reaches the next stop
+    // of 4, so lines indented with tabs and with spaces line up
+    const openPrefix = lines[open].slice(0, col);
+    const visual = /^[ \t]*$/.test(openPrefix)
+      ? expandedWidth(openPrefix, 0)
+      : null;
     for (let line = open + 1; line < end; line++) {
+      const lead = lines[line].match(/^[ \t]*/)![0];
+      if (visual !== null && lead.includes('\t')) {
+        // The marker goes at the opening line's column, inside the tabs,
+        // so they become the spaces they stood for
+        const width = expandedWidth(lead, 0);
+        const blankLine = lines[line].trim() === '';
+        const text =
+          ' '.repeat(visual) +
+          (blankLine ? '>' : '> ') +
+          ' '.repeat(Math.max(0, width - visual));
+        replace(lineStart(line), lineStart(line) + lead.length, text);
+        const changes = insertions.get(line) ?? [];
+        changes.push({ col: 0, text, remove: lead.length });
+        insertions.set(line, changes);
+        continue;
+      }
       const length = lines[line].length;
-      const at = Math.min(col, length);
+      const target = visual ?? col;
+      const at = Math.min(
+        target,
+        lines[line].trim() === ''
+          ? length
+          : visual !== null
+            ? lead.length
+            : length,
+      );
       const blank = lines[line].slice(at).trim() === '';
-      const padding = ' '.repeat(col - at);
+      const padding = ' '.repeat(target - at);
       replace(
         lineStart(line) + at,
         lineStart(line) + at,
@@ -1478,17 +1527,10 @@ class PageExporter {
     // tight.
     if (helpers.isMarkerLine(end, '!')) {
       const next = lines[end + 1];
-      const nextPrefix = next?.match(CONTAINER_PREFIX_PATTERN)![0] ?? '';
-      // A list item ends the quote if it can interrupt a paragraph (a bullet
-      // or `1.` with text) or belongs to a list around the alert
-      const endsWithItem =
-        next !== undefined &&
-        LIST_ITEM_PREFIX_PATTERN.test(nextPrefix) &&
-        next.trim() !== nextPrefix.trim() &&
-        (/(?:^|[\s>])(?:[-+*]|1[.)])[ \t]+$/.test(nextPrefix) ||
-          nextPrefix.search(LIST_ITEM_PREFIX_PATTERN) < col);
       const endsAnyway =
-        next === undefined || next.trim() === '' || endsWithItem;
+        next === undefined ||
+        next.trim() === '' ||
+        startsListItemAfterParagraph(next, col);
       if (endsAnyway && !insertions.has(end) && end + 1 < lines.length) {
         replace(lineStart(end), lineStart(end + 1), '');
       } else {
@@ -1668,6 +1710,53 @@ const TAG_NAME_PATTERN = /<([a-zA-Z][^\s/>]*)/y;
 const CLOSING_TAG_NAME_PATTERN = /<\/([a-zA-Z][^\s/>]*)/y;
 /** Elements whose content is not in the HTML namespace */
 const FOREIGN_ELEMENTS = new Set(['svg', 'math']);
+/** HTML elements whose start tag ends SVG or MathML content */
+const FOREIGN_BREAKOUT_ELEMENTS = new Set([
+  'b',
+  'big',
+  'blockquote',
+  'body',
+  'br',
+  'center',
+  'code',
+  'dd',
+  'div',
+  'dl',
+  'dt',
+  'em',
+  'embed',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'head',
+  'hr',
+  'i',
+  'img',
+  'li',
+  'listing',
+  'menu',
+  'meta',
+  'nobr',
+  'ol',
+  'p',
+  'pre',
+  'ruby',
+  's',
+  'small',
+  'span',
+  'strong',
+  'strike',
+  'sub',
+  'sup',
+  'table',
+  'tt',
+  'u',
+  'ul',
+  'var',
+]);
 /** Elements in SVG or MathML whose content is HTML again */
 const HTML_INTEGRATION_POINTS = new Set([
   'foreignobject',
@@ -1739,6 +1828,12 @@ function findUrlAttributes(
     if (open < 0) {
       break;
     }
+    // `<!-->` and `<!--->` are whole, empty comments to the HTML parser
+    const abrupt = /^<!---?>/.exec(html.slice(open, open + 6))?.[0];
+    if (abrupt) {
+      pos = open + abrupt.length;
+      continue;
+    }
     if (html.startsWith('<!--', open)) {
       const close = html.indexOf('-->', open + 4);
       if (close < 0) {
@@ -1761,6 +1856,15 @@ function findUrlAttributes(
     if (!name) {
       pos = open + 1;
       continue;
+    }
+    // Some HTML elements end SVG and MathML content, as the HTML parser reads
+    if (
+      !inHtmlNamespace(foreign) &&
+      FOREIGN_BREAKOUT_ELEMENTS.has(name.toLowerCase())
+    ) {
+      while (!inHtmlNamespace(foreign)) {
+        foreign.stack.pop();
+      }
     }
 
     let i = open + 1 + name.length;
