@@ -28,7 +28,7 @@ proofread:
 - **rules**: optional map from a Harper rule name to `true` (turn the rule on)
   or `false` (turn it off). Rules not listed keep Harper's defaults. Rule names
   are the keys of Harper's lint config, such as `SpellCheck` and
-  `LongSentences`.
+  `LongSentences`; [Proofreading rules](proofread-rules.md) lists them.
   A name Harper does not have is skipped with a warning, and the other rules
   still apply
 
