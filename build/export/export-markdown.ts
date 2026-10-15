@@ -358,6 +358,46 @@ function indentLines(text: string, prefix: string): string {
     .join('\n');
 }
 
+/**
+ * Whether a link span is an inline link, `[text](destination)`. markdown-it
+ * reads `[text]` as a shortcut reference when the destination is not valid.
+ */
+function isInlineLink(span: InlineSpan): boolean {
+  return span.src[span.labelEnd + 1] === '(' && span.end > span.labelEnd + 1;
+}
+
+/**
+ * Escapes unbalanced brackets outside code spans, which would end a link's
+ * text early or leave it open; balanced ones, such as an image's, stay
+ */
+function escapeBrackets(text: string): string {
+  // UTF-16 units, to match the string indexes below
+  const chars = text.split('');
+  const open: number[] = [];
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i];
+    if (char === '\\') {
+      i++;
+    } else if (char === '`') {
+      const run = /^`+/.exec(text.slice(i))![0];
+      const close = text.indexOf(run, i + run.length);
+      i = close < 0 ? i + run.length - 1 : close + run.length - 1;
+    } else if (char === '[') {
+      open.push(i);
+    } else if (char === ']') {
+      if (open.length > 0) {
+        open.pop();
+      } else {
+        chars[i] = '\\]';
+      }
+    }
+  }
+  for (const i of open) {
+    chars[i] = '\\[';
+  }
+  return chars.join('');
+}
+
 /** Columns that text starting at `column` takes, with tab stops every 4 */
 function expandedWidth(text: string, column: number): number {
   let end = column;
@@ -949,7 +989,7 @@ class PageExporter {
     // hrefs, which the build checks
     const linkedLabels = new Set<string>();
     for (const span of record.spans) {
-      if (span.kind !== 'link' || span.src[span.labelEnd + 1] === '(') {
+      if (span.kind !== 'link' || isInlineLink(span)) {
         continue;
       }
       const text = span.src.slice(span.start + 1, span.labelEnd);
@@ -999,6 +1039,12 @@ class PageExporter {
       }
     }
 
+    // Place every table cell left to right, so a cell is not found in an
+    // earlier cell with the same text
+    for (const cell of record.cells.keys()) {
+      inlineMapper(cell);
+    }
+
     const foreignDepths = new Map<Token, ForeignDepth>();
     for (const span of record.spans) {
       if (!span.inline.map && !record.cells.has(span.inline)) {
@@ -1046,7 +1092,8 @@ class PageExporter {
       replace(
         at(start),
         at(end),
-        render => `[${render(at(labelStart), at(labelEnd))}](${href})`,
+        render =>
+          `[${escapeBrackets(render(at(labelStart), at(labelEnd)))}](${href})`,
       );
     } else if (span.kind === 'superlink') {
       const { labelEnd: titleEnd, descriptionEnd } = span;
@@ -1077,7 +1124,7 @@ class PageExporter {
           lineBreak,
       );
     } else if (span.kind === 'link' || span.kind === 'image') {
-      if (span.labelEnd < 0 || src[span.labelEnd + 1] !== '(') {
+      if (span.labelEnd < 0 || !isInlineLink(span)) {
         return;
       }
       let pos = span.labelEnd + 2;

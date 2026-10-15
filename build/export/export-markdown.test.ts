@@ -158,6 +158,26 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('places each table cell, even ones without links', () => {
+    expect(
+      exportPage(
+        '| a | b |\n| - | - |\n| `[x](/index.html)` | [x](/index.html) |',
+      ),
+    ).toBe('| a | b |\n| - | - |\n| `[x](/index.html)` | [x](../index.md) |\n');
+  });
+
+  test('escapes brackets in wikilink text', () => {
+    expect(exportPage('[[Home|a]b]] and [[Home|`a]b`]]')).toBe(
+      '[a\\]b](../index.md) and [`a]b`](../index.md)\n',
+    );
+  });
+
+  test('checks the definition a link falls back to', () => {
+    expect(() => exportPage('[foo](bar baz)\n\n[foo]: /missing.html')).toThrow(
+      'broken internal link: "/missing.html"',
+    );
+  });
+
   test('keeps a title ending in # whole', () => {
     expect(exportPage('Body.', { title: 'Learn C #' })).toBe(
       '# Learn C \\#\n\nBody.\n',
