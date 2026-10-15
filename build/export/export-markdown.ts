@@ -5,17 +5,20 @@ import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
 import type StateInline from 'markdown-it/lib/rules_inline/state_inline.mjs';
 import type Token from 'markdown-it/lib/token.mjs';
 import type { PageTitleIndex } from '../source-model';
-import { createMarkdown } from '../utils/markdown';
-import { extensionIsMarkdown, isPartial } from '../utils/file-types';
-import { toDisplayPath } from '../utils/paths';
+import {
+  ALERT_PATTERN,
+  createMarkdown,
+  QUESTION_PATTERN,
+} from '../utils/markdown';
+import {
+  checkIncludeDepth,
+  checkPartialTarget,
+  parsePartialDirective,
+} from '../utils/markdown-partials';
+import { toDisplayPath, toUrlPath } from '../utils/paths';
 import { getSiteVars, substituteContent } from '../variables';
 import type { SiteVariables } from '../types';
 
-const MAX_INCLUDE_DEPTH = 10;
-const PARTIAL_DIRECTIVE_PATTERN = /^\{\{\{([\s\S]*?)\}\}\}$/;
-const ESCAPED_PARTIAL_DIRECTIVE_PATTERN = /^\\\{\{\{[\s\S]*\}\}\}$/;
-const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
-const QUESTION_PATTERN = /^question\s+(.+)$/;
 const URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
 /** Blockquote markers, list markers, and indentation before a block */
 const LINE_PREFIX_PATTERN =
@@ -220,23 +223,19 @@ function partialDirectivePlugin(md: MarkdownIt): void {
     'paragraph',
     'export_partial',
     (state, startLine, _endLine, silent) => {
-      const text = state.src
-        .slice(
+      const relativePath = parsePartialDirective(
+        state.src.slice(
           state.bMarks[startLine] + state.tShift[startLine],
           state.eMarks[startLine],
-        )
-        .trim();
-      if (ESCAPED_PARTIAL_DIRECTIVE_PATTERN.test(text)) {
-        return false;
-      }
-      const match = text.match(PARTIAL_DIRECTIVE_PATTERN);
-      if (!match) {
+        ),
+      );
+      if (relativePath === null) {
         return false;
       }
       if (!silent) {
         const token = state.push('export_partial', '', 0);
         token.map = [startLine, startLine + 1];
-        token.info = match[1].trim();
+        token.info = relativePath;
       }
       state.line = startLine + 1;
       return true;
@@ -284,17 +283,6 @@ function safeDecode(segment: string): string {
   } catch {
     return segment;
   }
-}
-
-function encodePath(urlPath: string): string {
-  return urlPath
-    .split('/')
-    .map(segment =>
-      segment === '.' || segment === '..'
-        ? segment
-        : encodeURIComponent(segment),
-    )
-    .join('/');
 }
 
 /**
@@ -417,21 +405,8 @@ class PageExporter {
         throw new Error(`${caller}: partial path is empty`);
       }
       const resolvedPath = path.resolve(path.dirname(fromFile), relativePath);
-      if (!isPartial(resolvedPath)) {
-        throw new Error(
-          `${caller}: partial target must start with "_": ${relativePath}`,
-        );
-      }
-      if (!extensionIsMarkdown(path.extname(resolvedPath).toLowerCase())) {
-        throw new Error(
-          `${caller}: partial target must be a Markdown file: ${relativePath}`,
-        );
-      }
-      if (depth >= MAX_INCLUDE_DEPTH) {
-        throw new Error(
-          `${caller}: maximum include depth (${MAX_INCLUDE_DEPTH}) exceeded`,
-        );
-      }
+      checkPartialTarget(caller, relativePath, resolvedPath);
+      checkIncludeDepth(caller, depth);
       const raw = this.context.readFile(resolvedPath);
       if (raw === null) {
         throw new Error(`${caller}: partial not found: ${relativePath}`);
@@ -507,7 +482,7 @@ class PageExporter {
     } else {
       return null;
     }
-    return encodePath(relative);
+    return toUrlPath(relative);
   }
 
   private rewriteDestination(raw: string): string {
@@ -756,10 +731,13 @@ class PageExporter {
       } else if (token.type === 'html_block') {
         const [open, end] = token.map!;
         const start = lineStart(open);
-        const html = text.slice(start, lineEnd(end - 1));
-        const rewritten = this.rewriteHtml(html);
-        if (rewritten !== html) {
-          replace(start, lineEnd(end - 1), rewritten);
+        for (const value of findUrlAttributes(
+          text.slice(start, lineEnd(end - 1)),
+        )) {
+          const rewritten = this.rewriteUrl(value.url);
+          if (rewritten !== null) {
+            replace(start + value.start, start + value.end, rewritten);
+          }
         }
       } else if (token.type === 'heading_open') {
         const inline = tokens[index + 1];
@@ -890,10 +868,13 @@ class PageExporter {
         replace(at(pos), at(destination.pos), rewritten);
       }
     } else {
-      const html = src.slice(start, end);
-      const rewritten = this.rewriteHtml(html);
-      if (rewritten !== html) {
-        replace(at(start), at(end), rewritten);
+      // Only the attribute values change, so a tag that spans lines keeps
+      // the markers an alert added to them
+      for (const value of findUrlAttributes(src.slice(start, end))) {
+        const rewritten = this.rewriteUrl(value.url);
+        if (rewritten !== null) {
+          replace(at(start + value.start), at(start + value.end), rewritten);
+        }
       }
     }
   }
@@ -1020,7 +1001,7 @@ class PageExporter {
     replace(
       start,
       lineStart(open) + markerEnd,
-      indentLines('<dd>\n\n', indent),
+      `<dd>\n${indent.trimEnd()}\n${indent}`,
     );
 
     let last = open;
@@ -1081,6 +1062,36 @@ class PageExporter {
       })
       .join('\n\n');
   }
+}
+
+const HTML_COMMENT_PATTERN = /<!--[\s\S]*?(?:-->|$)/g;
+const HTML_TAG_PATTERN = /<[a-zA-Z][^>]*>?/g;
+const URL_ATTRIBUTE_PATTERN =
+  /(\s(?:href|src)\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi;
+
+/** The `href` and `src` values in tags in raw HTML, outside comments */
+function findUrlAttributes(
+  html: string,
+): { start: number; end: number; url: string }[] {
+  const comments = [...html.matchAll(HTML_COMMENT_PATTERN)].map(match => [
+    match.index,
+    match.index + match[0].length,
+  ]);
+  const values = [];
+  for (const tag of html.matchAll(HTML_TAG_PATTERN)) {
+    if (
+      comments.some(([start, end]) => tag.index >= start && tag.index < end)
+    ) {
+      continue;
+    }
+    for (const attribute of tag[0].matchAll(URL_ATTRIBUTE_PATTERN)) {
+      const url = attribute[2] ?? attribute[3] ?? attribute[4];
+      const quoted = attribute[4] === undefined ? 1 : 0;
+      const start = tag.index + attribute.index + attribute[1].length + quoted;
+      values.push({ start, end: start + url.length, url });
+    }
+  }
+  return values;
 }
 
 /** Index of the `]` that closes the label opened at `open`, skipping escapes and code */

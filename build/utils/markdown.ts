@@ -24,8 +24,8 @@ import { toDisplayPath } from './paths';
 import type { PageTitleIndex } from '../source-model';
 import type { RenderDependencyCollector, SiteVariables } from '../types';
 
-const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
-const QUESTION_PATTERN = /^question\s+(.+)$/;
+export const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
+export const QUESTION_PATTERN = /^question\s+(.+)$/;
 const MULTIPLE_CHOICE_MARKER_LENGTH = 4;
 
 interface CreateMarkdownOptions {

@@ -56,7 +56,7 @@ class TestExport:
             '{{{ _part.md }}}\n',
         )
         write(site_dir, 'lectures/_part.md', 'From a partial.\n')
-        write(site_dir, 'lectures/Demo.java', 'public class Demo {}\n')
+        write(site_dir, 'lectures/Demo.java', '// {{ course }}\npublic class Demo {}\n')
         write(
             site_dir,
             'lectures/notes.html',
@@ -90,7 +90,9 @@ class TestExport:
         assert read_export(site_dir, 'lectures/notes.html') == (
             '<h1>Notes</h1>\n\n<a href="../index.md">Home</a>\n'
         )
-        assert read_export(site_dir, 'lectures/Demo.java') == 'public class Demo {}\n'
+        assert read_export(site_dir, 'lectures/Demo.java') == (
+            '// Dev course\npublic class Demo {}\n'
+        )
         assert not (site_dir / 'exported' / 'lectures' / '_part.md').exists()
         assert not (site_dir / 'exported' / 'draft.md').exists()
 
@@ -121,10 +123,38 @@ class TestExport:
         assert not (site_dir / 'exported' / 'old.md').exists()
         assert (site_dir / 'exported' / 'index.md').exists()
 
-    def test_refuses_to_export_into_content(self, site_dir):
-        result = run_tada('export', '--dev', '--out', 'content/out', cwd=str(site_dir))
+    def test_failed_export_keeps_the_previous_one(self, site_dir):
+        (site_dir / 'exported').mkdir()
+        (site_dir / 'exported' / 'old.md').write_text('old', encoding='utf-8')
+        # A file and a directory with the same path cannot both be written
+        (site_dir / 'public' / 'notes').write_text('notes', encoding='utf-8')
+        write(site_dir, 'notes/a.md', '---\ntitle: A\n---\n\nA.\n')
+
+        result = run_tada('export', '--dev', '--force', cwd=str(site_dir))
+        assert result.returncode != 0
+        assert (site_dir / 'exported' / 'old.md').read_text(encoding='utf-8') == 'old'
+        assert [p.name for p in site_dir.iterdir() if p.name.startswith('exported')] == ['exported']
+
+    @pytest.mark.parametrize('out', ['content/out', 'Content', 'PUBLIC', '.'])
+    def test_refuses_to_export_over_sources(self, site_dir, out):
+        result = run_tada('export', '--dev', '--out', out, '--force', cwd=str(site_dir))
         assert result.returncode != 0
         assert 'overlaps content/ or public/' in result.stderr
+        assert (site_dir / 'content' / 'index.md').exists()
+
+    def test_exports_literate_java_source(self, site_dir):
+        write(
+            site_dir,
+            'lectures/Foo.java.md',
+            '---\ntitle: Foo\n---\n\nA class.\n\n```java\npublic class Foo {}\n```\n',
+        )
+        write(site_dir, 'links.md', '---\ntitle: Links\n---\n\n[Download](/lectures/Foo.java)\n')
+        result = run_tada('export', '--dev', cwd=str(site_dir))
+        assert result.returncode == 0, result.stdout + result.stderr
+
+        assert read_export(site_dir, 'lectures/Foo.java.md').startswith('# Foo\n\nA class.')
+        assert 'public class Foo {}' in read_export(site_dir, 'lectures/Foo.java')
+        assert '[Download](lectures/Foo.java)' in read_export(site_dir, 'links.md')
 
     def test_broken_wikilink_fails_without_writing(self, site_dir):
         write(site_dir, 'broken.md', '---\ntitle: Broken\n---\n\n[[Nope]]\n')

@@ -183,6 +183,17 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('keeps alert markers on rewritten multi-line HTML', () => {
+    expect(
+      exportPage(
+        '!!! note\n<div>\n<a href="/index.html">Home</a>\n</div>\n!!!\n\n!!! note\nSee <a\nhref="/index.html">home</a>.\n!!!',
+      ),
+    ).toBe(
+      '> [!NOTE]\n> <div>\n> <a href="../index.md">Home</a>\n> </div>\n\n\n' +
+        '> [!NOTE]\n> See <a\n> href="../index.md">home</a>.\n',
+    );
+  });
+
   test('converts questions to details elements', () => {
     expect(
       exportPage(
@@ -253,6 +264,17 @@ describe('exportMarkdownPage', () => {
         '</dl>',
         '',
       ].join('\n'),
+    );
+  });
+
+  test('keeps definitions inside lists and blockquotes', () => {
+    expect(
+      exportPage('- item\n\n  Term\n  : Def [b](/index.html)\n\n- next'),
+    ).toBe(
+      '- item\n\n  <dl>\n  <dt>\n\n  Term\n\n  </dt>\n  <dd>\n\n  Def [b](../index.md)\n\n  </dd>\n  </dl>\n\n- next\n',
+    );
+    expect(exportPage('> Term\n> : Def')).toBe(
+      '> <dl>\n> <dt>\n>\n> Term\n>\n> </dt>\n> <dd>\n>\n> Def\n>\n> </dd>\n> </dl>\n',
     );
   });
 

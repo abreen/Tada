@@ -4,6 +4,8 @@ import { getDevSiteVariables, getProdSiteVariables } from '../site-variables';
 import { addGeneratedRouteAliases, scanProject } from '../source-model';
 import { parseFrontMatterAndContent } from '../utils/front-matter';
 import { extensionIsMarkdown } from '../utils/file-types';
+import { extractLiterateJavaCode } from '../utils/literate-java';
+import { createMarkdown } from '../utils/markdown';
 import {
   getContentDir,
   getProjectDir,
@@ -42,16 +44,38 @@ export interface ExportSummary {
 }
 
 type ExportJob =
-  | { kind: 'markdown'; filePath: string; relPath: string; literate: boolean }
+  | {
+      kind: 'markdown';
+      filePath: string;
+      relPath: string;
+      /** Where a literate Java page's extracted source goes */
+      javaRelPath?: string;
+    }
   | { kind: 'html'; filePath: string; relPath: string }
+  | { kind: 'source'; filePath: string; relPath: string }
   | { kind: 'copy'; filePath: string; relPath: string };
 
-function prepareOutDir(outDir: string, force: boolean): void {
-  const projectDir = path.resolve(getProjectDir());
+interface ExportOutput {
+  relPath: string;
+  /** Copied from here when there is no content */
+  filePath: string;
+  content?: string;
+  page: boolean;
+}
+
+/**
+ * Fails when the output directory overlaps the project's sources. Paths are
+ * compared without case, since macOS and Windows file systems ignore it.
+ */
+function checkOutDir(outDir: string, force: boolean): void {
+  const lower = (dir: string) => path.resolve(dir).toLowerCase();
+  const out = lower(outDir);
   const overlaps = (dir: string) =>
-    dir === outDir || isInside(dir, outDir) || isInside(outDir, dir);
+    lower(dir) === out ||
+    isInside(lower(dir), out) ||
+    isInside(out, lower(dir));
   if (
-    outDir === projectDir ||
+    out === lower(getProjectDir()) ||
     overlaps(getContentDir()) ||
     overlaps(getPublicDir())
   ) {
@@ -59,15 +83,44 @@ function prepareOutDir(outDir: string, force: boolean): void {
       `cannot export to ${toDisplayPath(outDir)}: it overlaps content/ or public/`,
     );
   }
-  if (fs.existsSync(outDir) && fs.readdirSync(outDir).length > 0) {
-    if (!force) {
-      throw new Error(
-        `${toDisplayPath(outDir)}/ is not empty; use --force to replace it`,
-      );
-    }
-    fs.rmSync(outDir, { recursive: true, force: true });
+  if (!force && fs.existsSync(outDir) && fs.readdirSync(outDir).length > 0) {
+    throw new Error(
+      `${toDisplayPath(outDir)}/ is not empty; use --force to replace it`,
+    );
   }
-  fs.mkdirSync(outDir, { recursive: true });
+}
+
+/**
+ * Writes the outputs to a new directory beside `outDir`, then puts it in
+ * place, so a failure leaves any earlier export as it was
+ */
+function publishOutputs(outDir: string, outputs: ExportOutput[]): void {
+  const staging = `${outDir}.tmp-${process.pid}`;
+  const backup = `${outDir}.old-${process.pid}`;
+  fs.rmSync(staging, { recursive: true, force: true });
+  try {
+    fs.mkdirSync(staging, { recursive: true });
+    for (const output of outputs) {
+      const outPath = path.join(staging, ...output.relPath.split('/'));
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      if (output.content === undefined) {
+        fs.copyFileSync(output.filePath, outPath);
+      } else {
+        fs.writeFileSync(outPath, output.content);
+      }
+    }
+    if (fs.existsSync(outDir)) {
+      fs.renameSync(outDir, backup);
+    }
+    fs.renameSync(staging, outDir);
+  } catch (error) {
+    fs.rmSync(staging, { recursive: true, force: true });
+    if (fs.existsSync(backup) && !fs.existsSync(outDir)) {
+      fs.renameSync(backup, outDir);
+    }
+    throw error;
+  }
+  fs.rmSync(backup, { recursive: true, force: true });
 }
 
 function pageTitle(
@@ -88,12 +141,6 @@ function pageTitle(
     : undefined;
 }
 
-function writeFile(outDir: string, relPath: string, content: string): void {
-  const outPath = path.join(outDir, ...relPath.split('/'));
-  fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, content);
-}
-
 /**
  * Writes the site's content as plain GitHub Flavored Markdown: Markdown and
  * literate Java pages become Markdown without front matter, HTML pages lose
@@ -109,33 +156,13 @@ export function runExport({
     env === 'dev' ? getDevSiteVariables() : getProdSiteVariables();
   const scan = scanProject(siteVariables);
   const resolvedOutDir = path.resolve(getProjectDir(), outDir);
+  checkOutDir(resolvedOutDir, force);
 
   const jobs: ExportJob[] = [];
   const exportPaths = new Map<string, string>();
   const producers = new Map<string, string>();
 
-  for (const [filePath, entry] of scan.sources) {
-    const rootDir = entry.kind === 'content' ? scan.contentDir : scan.publicDir;
-    const relPath = toPosix(path.relative(rootDir, filePath));
-    let job: ExportJob;
-    if (entry.kind === 'public') {
-      job = { kind: 'copy', filePath, relPath };
-    } else if (entry.renderKind === 'literate-java') {
-      job = { kind: 'markdown', filePath, relPath, literate: true };
-    } else if (entry.renderKind === 'plain-text-page') {
-      const ext = path.extname(filePath).toLowerCase();
-      job = extensionIsMarkdown(ext)
-        ? { kind: 'markdown', filePath, relPath, literate: false }
-        : { kind: 'html', filePath, relPath };
-    } else if (
-      entry.renderKind === 'code-page' ||
-      entry.renderKind === 'content-copy'
-    ) {
-      job = { kind: 'copy', filePath, relPath };
-    } else {
-      continue;
-    }
-
+  const claim = (relPath: string, filePath: string) => {
     const key = relPath.toLowerCase();
     const other = producers.get(key);
     if (other !== undefined) {
@@ -144,13 +171,45 @@ export function runExport({
       );
     }
     producers.set(key, toDisplayPath(filePath));
+  };
+
+  for (const [filePath, entry] of scan.sources) {
+    const rootDir = entry.kind === 'content' ? scan.contentDir : scan.publicDir;
+    const relPath = toPosix(path.relative(rootDir, filePath));
+    let job: ExportJob;
+    if (entry.kind === 'public') {
+      job = { kind: 'copy', filePath, relPath };
+    } else if (entry.renderKind === 'literate-java') {
+      // The build also publishes the extracted Java source
+      const javaRelPath = [...entry.outputs].find(
+        output => !output.endsWith('.html'),
+      );
+      job = { kind: 'markdown', filePath, relPath, javaRelPath };
+    } else if (entry.renderKind === 'plain-text-page') {
+      const ext = path.extname(filePath).toLowerCase();
+      job = extensionIsMarkdown(ext)
+        ? { kind: 'markdown', filePath, relPath }
+        : { kind: 'html', filePath, relPath };
+    } else if (entry.renderKind === 'code-page') {
+      job = { kind: 'source', filePath, relPath };
+    } else if (entry.renderKind === 'content-copy') {
+      job = { kind: 'copy', filePath, relPath };
+    } else {
+      continue;
+    }
+
+    claim(relPath, filePath);
+    const javaRelPath = job.kind === 'markdown' ? job.javaRelPath : undefined;
+    if (javaRelPath !== undefined) {
+      claim(javaRelPath, filePath);
+    }
     jobs.push(job);
 
     for (const output of entry.outputs) {
       const aliases = new Set<string>();
       addGeneratedRouteAliases(aliases, `/${output}`);
       for (const alias of aliases) {
-        exportPaths.set(alias, relPath);
+        exportPaths.set(alias, output === javaRelPath ? output : relPath);
       }
     }
   }
@@ -169,12 +228,20 @@ export function runExport({
     },
   };
 
-  // Convert everything before writing, so an error leaves no partial export
-  const outputs: { relPath: string; content?: string; filePath: string }[] = [];
+  const outputs: ExportOutput[] = [];
   const vars = getSiteVars(siteVariables);
   for (const job of jobs) {
     if (job.kind === 'copy') {
-      outputs.push(job);
+      outputs.push({ ...job, page: false });
+      continue;
+    }
+    if (job.kind === 'source') {
+      // As the build publishes it, with variables substituted
+      outputs.push({
+        ...job,
+        content: readSourceFile(job.filePath, scan.contentDir, siteVariables),
+        page: false,
+      });
       continue;
     }
     const ext =
@@ -190,7 +257,8 @@ export function runExport({
       filePath: job.filePath,
       relPath: job.relPath,
       title: pageTitle(pageVariables, siteVariables, job.filePath),
-      preserveHtmlComments: job.kind === 'markdown' && job.literate,
+      preserveHtmlComments:
+        job.kind === 'markdown' && job.javaRelPath !== undefined,
     };
     const body = substituteContent(
       content,
@@ -199,27 +267,32 @@ export function runExport({
       page.preserveHtmlComments,
     );
     outputs.push({
-      ...job,
+      relPath: job.relPath,
+      filePath: job.filePath,
       content:
         job.kind === 'markdown'
           ? exportMarkdownPage(context, page, body)
           : exportHtmlPage(context, page, body),
+      page: true,
     });
-  }
-
-  prepareOutDir(resolvedOutDir, force);
-  let pages = 0;
-  for (const output of outputs) {
-    if (output.content === undefined) {
-      const outPath = path.join(resolvedOutDir, ...output.relPath.split('/'));
-      fs.mkdirSync(path.dirname(outPath), { recursive: true });
-      fs.copyFileSync(output.filePath, outPath);
-    } else {
-      writeFile(resolvedOutDir, output.relPath, output.content);
-      pages++;
+    if (job.kind === 'markdown' && job.javaRelPath !== undefined) {
+      const md = createMarkdown(siteVariables, {
+        filePath: job.filePath,
+        vars,
+        preserveHtmlComments: true,
+        pageTitles: scan.pageTitles,
+      });
+      outputs.push({
+        relPath: job.javaRelPath,
+        filePath: job.filePath,
+        content: extractLiterateJavaCode(md.parse(body, {})).javaSource,
+        page: false,
+      });
     }
   }
 
+  publishOutputs(resolvedOutDir, outputs);
+  const pages = outputs.filter(output => output.page).length;
   return {
     outDir: toDisplayPath(resolvedOutDir),
     pages,

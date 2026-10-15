@@ -8,7 +8,7 @@ import type Token from 'markdown-it/lib/token.mjs';
 import { extensionIsMarkdown, isPartial } from './file-types';
 import type { RenderDependencyCollector } from '../types';
 
-const MAX_INCLUDE_DEPTH = 10;
+export const MAX_INCLUDE_DEPTH = 10;
 const PARTIAL_DIRECTIVE_PATTERN = /^\{\{\{([\s\S]*?)\}\}\}$/;
 const ESCAPED_PARTIAL_DIRECTIVE_PATTERN = /^\\\{\{\{[\s\S]*\}\}\}$/;
 const PARTIAL_CONTEXT_STACK_KEY = '__tadaMarkdownPartialContextStack';
@@ -23,6 +23,45 @@ export function getTokenSourceFile(token: Token): string | undefined {
   const meta = token.meta as Record<string, unknown> | null;
   const sourceFile = meta?.[SOURCE_FILE_META_KEY];
   return typeof sourceFile === 'string' ? sourceFile : undefined;
+}
+
+/**
+ * The path in a `{{{ path }}}` directive line, trimmed, or null when the line
+ * is not a directive (including an escaped `\{{{`)
+ */
+export function parsePartialDirective(line: string): string | null {
+  const trimmedLine = line.trim();
+  if (ESCAPED_PARTIAL_DIRECTIVE_PATTERN.test(trimmedLine)) {
+    return null;
+  }
+  return trimmedLine.match(PARTIAL_DIRECTIVE_PATTERN)?.[1].trim() ?? null;
+}
+
+/** Fails unless a directive's target can be included as a partial */
+export function checkPartialTarget(
+  callerPath: string,
+  relativePath: string,
+  resolvedPath: string,
+): void {
+  if (!isPartial(resolvedPath)) {
+    throw new Error(
+      `${callerPath}: partial target must start with "_": ${relativePath}`,
+    );
+  }
+  if (!extensionIsMarkdown(path.extname(resolvedPath).toLowerCase())) {
+    throw new Error(
+      `${callerPath}: partial target must be a Markdown file: ${relativePath}`,
+    );
+  }
+}
+
+/** Fails when including one more partial would exceed the nesting limit */
+export function checkIncludeDepth(callerPath: string, depth: number): void {
+  if (depth >= MAX_INCLUDE_DEPTH) {
+    throw new Error(
+      `${callerPath}: maximum include depth (${MAX_INCLUDE_DEPTH}) exceeded`,
+    );
+  }
 }
 
 interface MarkdownPartialContext {
@@ -70,23 +109,10 @@ function renderPartialContent(
       `${caller.filePath}: partial not found: ${relativePath} (resolved to ${resolvedPath})`,
     );
   }
-  if (!isPartial(resolvedPath)) {
-    throw new Error(
-      `${caller.filePath}: partial target must start with "_": ${relativePath}`,
-    );
-  }
-  if (!extensionIsMarkdown(path.extname(resolvedPath).toLowerCase())) {
-    throw new Error(
-      `${caller.filePath}: partial target must be a Markdown file: ${relativePath}`,
-    );
-  }
+  checkPartialTarget(caller.filePath, relativePath, resolvedPath);
 
   options.dependencyCollector?.partials?.add(resolvedPath);
-  if (caller.depth >= MAX_INCLUDE_DEPTH) {
-    throw new Error(
-      `${caller.filePath}: maximum include depth (${MAX_INCLUDE_DEPTH}) exceeded`,
-    );
-  }
+  checkIncludeDepth(caller.filePath, caller.depth);
 
   return {
     resolvedPath,
@@ -217,13 +243,8 @@ export default function markdownPartialsPlugin(
     'paragraph',
     'tada_markdown_partial',
     (state, startLine, _endLine, silent) => {
-      const trimmedLine = getLineText(state, startLine).trim();
-      if (ESCAPED_PARTIAL_DIRECTIVE_PATTERN.test(trimmedLine)) {
-        return false;
-      }
-
-      const match = trimmedLine.match(PARTIAL_DIRECTIVE_PATTERN);
-      if (!match) {
+      const relativePath = parsePartialDirective(getLineText(state, startLine));
+      if (relativePath === null) {
         return false;
       }
 
@@ -231,7 +252,6 @@ export default function markdownPartialsPlugin(
         return true;
       }
 
-      const relativePath = match[1].trim();
       if (!relativePath) {
         throw new Error(`${options.filePath}: partial path is empty`);
       }

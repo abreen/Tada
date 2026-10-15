@@ -12,13 +12,16 @@ tada export (--dev | --prod) [--out <dir>] [--force]
   required; the command does not assume either.
 - `--out <dir>` sets the output directory, relative to the project directory
   (default: `exported`). It cannot be, contain, or be inside `content/` or
-  `public/`, or be the project directory.
+  `public/`, or be the project directory. Paths are compared without case, so
+  `--out Content` is refused too.
 - The command fails if the output directory is not empty, unless `--force` is
-  passed, which deletes it first.
+  passed, which replaces it.
 
-Every page is converted before anything is written, so an error leaves the
-output directory untouched. Errors match the build's, such as a broken
-[wikilink](wikilinks.md) or an unknown variable. Nothing in `content/` changes.
+Every page is converted first, then the export is written to a new directory
+beside the output directory (`<dir>.tmp-<pid>`) and moved into place. An error
+at any step leaves an earlier export as it was. Errors match the build's, such
+as a broken [wikilink](wikilinks.md) or an unknown variable. Nothing in
+`content/` changes.
 
 ## Files
 
@@ -28,8 +31,10 @@ publishes them:
 | Source | Export |
 |---|---|
 | Markdown pages (`.md`, `.markdown`) and literate Java pages (`.java.md`) | Converted Markdown, at the same path |
+| Literate Java pages | Also the extracted Java source (`Foo.java`), as the build publishes it |
 | HTML pages | The same path, without front matter, with variables substituted and links rewritten |
-| Code page sources, other content files, `public/` files | Copied unchanged |
+| Code page sources | The same path, with variables substituted, as the build publishes them |
+| Other content files, `public/` files | Copied unchanged |
 | Partials, `index.yml`/`index.yaml` document indexes, pages with `skip: true` | Left out |
 
 ## Pages
@@ -69,7 +74,10 @@ Links in Markdown (inline links, images, reference definitions, superlinks)
 and `href` and `src` attributes in raw HTML point to exported files:
 
 - A link to a page built from Markdown points to its `.md` file, and a link to
-  a code page points to the source file.
+  a code page points to the source file. A link to a literate Java page's
+  source (`Foo.java`) points to the exported source.
+- In raw HTML, only the `href` and `src` values change, so a tag that spans
+  lines keeps any `> ` markers an alert added to it.
 - Root-relative links become relative to the page, since the export has no
   base path.
 - A relative link to a file exported at the same path is left as written.
