@@ -124,6 +124,21 @@ describe('proofreadHtml', () => {
     expect(texts).toEqual(['Click  to save a longword.']);
   });
 
+  test('separates text on either side of a nested block', async () => {
+    const { check, texts } = fakeCheck({});
+    await proofreadHtml(
+      page('<div>See the figure<p>Caption</p>below</div>'),
+      check,
+    );
+    expect(texts).toEqual(['See the figure\nbelow', 'Caption']);
+  });
+
+  test('separates text on either side of a skipped element', async () => {
+    const { check, texts } = fakeCheck({});
+    await proofreadHtml(page('<p>word<button>Go</button>s</p>'), check);
+    expect(texts).toEqual(['word\ns']);
+  });
+
   test('splits an underline across inline elements', async () => {
     const { check } = fakeCheck({ grammar: /an big/ });
     const html = await proofreadHtml(

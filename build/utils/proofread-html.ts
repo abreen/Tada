@@ -1,4 +1,4 @@
-import { is, selectOne } from 'css-select';
+import { compile, selectOne } from 'css-select';
 import { isTag, isText } from 'domhandler';
 import type { AnyNode, Element, ParentNode, Text } from 'domhandler';
 import { filter } from 'domutils';
@@ -204,8 +204,17 @@ const IGNORED_SELECTOR = [
 // Their text is part of the sentence, but problems that touch it are dropped
 const MASKED_SELECTOR = 'code, kbd, samp, tt, var, .katex';
 
+type Matcher = (element: Element) => boolean;
+
+// Compiled once, because css-select compiles a selector string on every call
+const isBlock: Matcher = compile<AnyNode, Element>(BLOCK_SELECTOR);
+const isIgnored: Matcher = compile<AnyNode, Element>(IGNORED_SELECTOR);
+const isMasked: Matcher = compile<AnyNode, Element>(MASKED_SELECTOR);
+const isKatex: Matcher = compile<AnyNode, Element>('.katex');
+const isAnnotation: Matcher = compile<AnyNode, Element>('annotation');
+
 interface Piece {
-  /** The text node this piece came from; a line break has none */
+  /** The text node this piece came from; a separator has none */
   node?: Text;
   start: number;
   end: number;
@@ -215,6 +224,8 @@ interface Piece {
 interface Block {
   text: string;
   pieces: Piece[];
+  /** The boundary count when the block last got text */
+  boundary: number;
 }
 
 interface Mark {
@@ -223,47 +234,67 @@ interface Mark {
   issue: TextIssue;
 }
 
-/** The element itself or its nearest ancestor that matches the selector */
-function closest(element: Element, selector: string): Element | null {
+/** The element itself or its nearest ancestor that matches */
+function closest(element: Element, matches: Matcher): Element | null {
   for (
     let node: ParentNode | null = element;
     node && isTag(node);
     node = node.parent
   ) {
-    if (is(node, selector)) {
+    if (matches(node)) {
       return node;
     }
   }
   return null;
 }
 
+function addPiece(block: Block, text: string, node?: Text, masked = false) {
+  const start = block.text.length;
+  block.text += text;
+  block.pieces.push({ node, start, end: block.text.length, masked });
+}
+
 /** Groups the checked text in `main` into blocks, in document order */
 function collectBlocks(main: Element): Block[] {
   const blocks = new Map<Element, Block>();
-  const nodes = filter(
-    node => isText(node) || (isTag(node) && node.name === 'br'),
-    main.children,
-  ) as (Text | Element)[];
+  // Counts the block and skipped elements passed, so that text on either side
+  // of one is separated, as a reader sees it
+  let boundaries = 0;
+  const nodes = filter(node => isText(node) || isTag(node), main.children) as (
+    | Text
+    | Element
+  )[];
   for (const node of nodes) {
     const element = isText(node) ? (node.parent as Element) : node;
+    const inKatex = closest(element, isKatex) !== null;
     // Of KaTeX output, only the TeX source annotation is read
-    const isKatexRendering =
-      closest(element, '.katex') !== null &&
-      closest(element, 'annotation') === null;
-    if (isKatexRendering || closest(element, IGNORED_SELECTOR)) {
+    const skipped =
+      (inKatex && closest(element, isAnnotation) === null) ||
+      closest(element, isIgnored) !== null;
+    if (isTag(node) && node.name !== 'br') {
+      // KaTeX's own elements stay inside the sentence
+      if (!inKatex && (isBlock(node) || skipped)) {
+        boundaries++;
+      }
       continue;
     }
-    const blockElement = closest(element, BLOCK_SELECTOR) ?? main;
-    const block = blocks.get(blockElement) ?? { text: '', pieces: [] };
-    blocks.set(blockElement, block);
-    const start = block.text.length;
-    block.text += isText(node) ? node.data : '\n';
-    block.pieces.push({
-      node: isText(node) ? node : undefined,
-      start,
-      end: block.text.length,
-      masked: isText(node) && closest(element, MASKED_SELECTOR) !== null,
-    });
+    if (skipped) {
+      continue;
+    }
+    const blockElement = closest(element, isBlock) ?? main;
+    let block = blocks.get(blockElement);
+    if (!block) {
+      block = { text: '', pieces: [], boundary: boundaries };
+      blocks.set(blockElement, block);
+    } else if (block.boundary !== boundaries) {
+      addPiece(block, '\n');
+    }
+    block.boundary = boundaries;
+    if (isText(node)) {
+      addPiece(block, node.data, node, closest(element, isMasked) !== null);
+    } else {
+      addPiece(block, '\n');
+    }
   }
   return [...blocks.values()].filter(block =>
     block.pieces.some(
