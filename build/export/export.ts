@@ -158,22 +158,25 @@ function publishOutputs(outDir: string, outputs: ExportOutput[]): void {
   }
 }
 
+/**
+ * A page's title with variables substituted. A title that is not text, such
+ * as `title: 2024`, gives no heading, as in the build. Unlike the scan's copy,
+ * an unknown variable fails, as it fails the build.
+ */
 function pageTitle(
   pageVariables: Record<string, unknown>,
   siteVariables: ExportContext['siteVariables'],
   filePath: string,
 ): string | undefined {
+  if (typeof pageVariables.title !== 'string') {
+    return undefined;
+  }
   const title = substituteFrontMatterValue(
     pageVariables.title,
     siteVariables,
     filePath,
-  );
-  if (typeof title === 'string') {
-    return title.trim() || undefined;
-  }
-  return typeof title === 'number' || typeof title === 'boolean'
-    ? String(title)
-    : undefined;
+  ) as string;
+  return title.trim() || undefined;
 }
 
 /**

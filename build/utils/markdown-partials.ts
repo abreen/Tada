@@ -8,7 +8,7 @@ import type Token from 'markdown-it/lib/token.mjs';
 import { extensionIsMarkdown, isPartial } from './file-types';
 import type { RenderDependencyCollector } from '../types';
 
-export const MAX_INCLUDE_DEPTH = 10;
+const MAX_INCLUDE_DEPTH = 10;
 const PARTIAL_DIRECTIVE_PATTERN = /^\{\{\{([\s\S]*?)\}\}\}$/;
 const ESCAPED_PARTIAL_DIRECTIVE_PATTERN = /^\\\{\{\{[\s\S]*\}\}\}$/;
 const PARTIAL_CONTEXT_STACK_KEY = '__tadaMarkdownPartialContextStack';

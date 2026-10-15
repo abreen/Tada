@@ -297,6 +297,38 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('includes a partial on a definition line', () => {
+    expect(
+      exportPage('Term\n: {{{ _p.md }}}', {
+        files: { 'lectures/_p.md': 'Partial\n\nSecond' },
+      }),
+    ).toBe(
+      '<dl>\n<dt>\n\nTerm\n\n</dt>\n<dd>\n\nPartial\n\nSecond\n\n</dd>\n</dl>\n',
+    );
+  });
+
+  test('does not check links in image alt text, as the build does not', () => {
+    expect(
+      exportPage(
+        '![see [x](/nope.html) <a href="/nope.html">y</a>](/lectures/photo.png)',
+      ),
+    ).toBe(
+      '![see [x](../nope.html) <a href="../nope.html">y</a>](photo.png)\n',
+    );
+  });
+
+  test('keeps wikilinks literal and links unchecked in titles', () => {
+    expect(
+      exportPage('Body.', { title: 'Arrays [[Nope]] [d](/nope.html)' }),
+    ).toBe('# Arrays [[Nope]] [d](../nope.html)\n\nBody.\n');
+  });
+
+  test('keeps character references in rewritten destinations', () => {
+    expect(exportPage('[x](/index.html?q=&amp;lt;)')).toBe(
+      '[x](../index.md?q=&amp;lt;)\n',
+    );
+  });
+
   test('keeps a list tight around an alert', () => {
     expect(exportPage('1. one\n   !!! note\n   two\n   !!!\n2. three')).toBe(
       '1. one\n   > [!NOTE]\n   > two\n2. three\n',
@@ -445,11 +477,8 @@ describe('exportMarkdownPage', () => {
 
   test('converts links in the title and joins its lines', () => {
     expect(
-      exportPage('Body.', { title: '[Intro](/index.html) and\n[[Home]]' }),
-    ).toBe('# [Intro](../index.md) and [Home](../index.md)\n\nBody.\n');
-    expect(() => exportPage('Body.', { title: '[x](/nope.html)' })).toThrow(
-      'broken internal link: "/nope.html"',
-    );
+      exportPage('Body.', { title: '[Intro](/index.html) and\nmore' }),
+    ).toBe('# [Intro](../index.md) and more\n\nBody.\n');
   });
 
   test('shows alert titles literally, as the build does', () => {

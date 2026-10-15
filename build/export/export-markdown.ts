@@ -31,7 +31,8 @@ const CONTAINER_PREFIX_PATTERN =
 /** A container prefix, then any definition list marker (`: ` or `~ `) */
 const LINE_PREFIX_PATTERN =
   /^(?:[ \t]*(?:>|[-+*](?=[ \t]|$)|\d{1,9}[.)](?=[ \t]|$)|[:~](?=[ \t])))*[ \t]*/;
-const LIST_MARKER_PATTERN = /[-+*]|\d{1,9}[.)]/g;
+/** List markers and definition markers, which later lines indent past */
+const LIST_MARKER_PATTERN = /[-+*]|\d{1,9}[.)]|[:~]/g;
 /** HTML block types 1 to 5, which can interrupt a paragraph */
 const INTERRUPTING_HTML_PATTERN =
   /^\s*(?:<(?:script|pre|style|textarea)(?=[\s>]|$)|<!--|<\?|<![A-Za-z]|<!\[CDATA\[)/i;
@@ -98,6 +99,11 @@ interface InlineSpan {
   labelEnd: number;
   /** Index of the `]` that ends a superlink's description */
   descriptionEnd: number;
+  /**
+   * Parsed from an image's alt text, which the build renders as plain text,
+   * so its links are not anchors
+   */
+  inAlt: boolean;
 }
 
 interface ParseRecord {
@@ -149,6 +155,15 @@ interface RuleEntry<T> {
   alt: string[];
 }
 
+function hasRule(
+  ruler: MarkdownIt['inline']['ruler'] | MarkdownIt['block']['ruler'],
+  name: string,
+): boolean {
+  const rules = (ruler as unknown as { __rules__: { name: string }[] })
+    .__rules__;
+  return rules.some(entry => entry.name === name);
+}
+
 /** A copy of a rule's entry, which `ruler.at` replaces in place */
 function findRule<T>(
   ruler: MarkdownIt['inline']['ruler'] | MarkdownIt['block']['ruler'],
@@ -172,7 +187,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
   // The text being parsed, innermost last: an inline token's content, then
   // labels that rules parse on their own, such as image alt text and inline
   // footnotes, each with its offset in the content
-  let sources: { src: string; base: number }[] = [];
+  let sources: { src: string; base: number; alt?: boolean }[] = [];
   const baseOf = (src: string) =>
     sources.findLast(source => source.src === src)?.base;
 
@@ -182,6 +197,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
     state: StateInline,
     silent: boolean,
     labelOpen: number,
+    alt: boolean,
   ) => {
     const base = baseOf(state.src);
     const start = state.pos;
@@ -195,6 +211,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
     sources.push({
       src: state.src.slice(labelOpen + 1, labelEnd),
       base: base + labelOpen + 1,
+      alt,
     });
     try {
       return rule(state, silent);
@@ -239,7 +256,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
       const start = state.pos;
       const base = baseOf(state.src);
       // `^[text]`
-      if (!parsingLabel(footnote.fn, state, silent, start + 1)) {
+      if (!parsingLabel(footnote.fn, state, silent, start + 1, false)) {
         return false;
       }
       if (!silent && current && base !== undefined) {
@@ -255,6 +272,10 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
   );
 
   for (const kind of Object.keys(EXPECTED_TOKENS) as SpanKind[]) {
+    // Wikilinks are off where no page titles are given
+    if (!hasRule(md.inline.ruler, kind)) {
+      continue;
+    }
     const rule = findRule<RuleInline>(md.inline.ruler, kind);
     md.inline.ruler.at(
       kind,
@@ -265,7 +286,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
         const matched =
           kind === 'image'
             ? // `![alt](src)`
-              parsingLabel(rule.fn, state, silent, start + 1)
+              parsingLabel(rule.fn, state, silent, start + 1, true)
             : rule.fn(state, silent);
         if (!matched) {
           return false;
@@ -303,6 +324,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
             end,
             labelEnd,
             descriptionEnd,
+            inAlt: sources.some(source => source.alt),
           });
         }
         return true;
@@ -392,10 +414,12 @@ function indentLines(text: string, prefix: string): string {
  * spaces, with the characters that would end it escaped
  */
 function markdownDestination(url: string, bracketed = false): string {
-  if (bracketed || /\s/.test(url)) {
-    return `<${url.replace(/[\\<>]/g, '\\$&')}>`;
+  // An `&` that would start a character reference is written as one
+  const escaped = url.replace(/&(?=#?[A-Za-z0-9]+;)/g, '&amp;');
+  if (bracketed || /\s/.test(escaped)) {
+    return `<${escaped.replace(/[\\<>]/g, '\\$&')}>`;
   }
-  return url.replace(/[\\()]/g, '\\$&');
+  return escaped.replace(/[\\()]/g, '\\$&');
 }
 
 /**
@@ -545,6 +569,11 @@ class PageExporter {
   constructor(
     private readonly context: ExportContext,
     private readonly page: ExportPage,
+    /**
+     * Exports a title, which the build renders without wikilinks and outside
+     * the page body, whose links it checks
+     */
+    private readonly forTitle = false,
   ) {}
 
   private get displayPath(): string {
@@ -554,7 +583,7 @@ class PageExporter {
   private createParser(record: ParseRecord): MarkdownIt {
     const md = createMarkdown(this.context.siteVariables, {
       filePath: this.page.filePath,
-      pageTitles: this.context.pageTitles,
+      pageTitles: this.forTitle ? undefined : this.context.pageTitles,
     });
     md.use(partialDirectivePlugin);
     md.use(recorderPlugin, record);
@@ -693,10 +722,11 @@ class PageExporter {
    * Rewrites a URL written on this page to point into the export. An anchor's
    * link must name something the build publishes, as the build checks.
    */
-  rewriteUrl(url: string, isAnchor = false): string | null {
+  rewriteUrl(url: string, checked = false): string | null {
     if (!isInternalLink(url) || url.startsWith('?')) {
       return null;
     }
+    const isAnchor = checked && !this.forTitle;
     const { pathname, suffix } = splitHref(url);
     const absolute = pathname.startsWith('/');
     const target = resolvePathname(`/${this.page.relPath}`, pathname);
@@ -783,6 +813,8 @@ class PageExporter {
   htmlUrlEdits(
     html: string,
     foreign?: HtmlScanState,
+    /** False where the build renders no anchors, such as image alt text */
+    checkAnchors = true,
   ): { start: number; end: number; url: string }[] {
     const edits = [];
     for (const value of findUrlAttributes(html, foreign)) {
@@ -790,7 +822,7 @@ class PageExporter {
       const url = value.url.includes('&')
         ? decodeHTMLAttribute(value.url)
         : value.url;
-      const rewritten = this.rewriteUrl(url, value.isAnchor);
+      const rewritten = this.rewriteUrl(url, checkAnchors && value.isAnchor);
       if (rewritten !== null) {
         edits.push({
           start: value.start,
@@ -1091,7 +1123,7 @@ class PageExporter {
     const linkedLabels = new Set<string>();
     const definedLabels = new Set<string>();
     for (const span of record.spans) {
-      if (span.kind !== 'link' || isInlineLink(span)) {
+      if (span.kind !== 'link' || span.inAlt || isInlineLink(span)) {
         continue;
       }
       const text = span.src.slice(span.start + 1, span.labelEnd);
@@ -1221,7 +1253,7 @@ class PageExporter {
         return;
       }
       const raw = src.slice(pos, destination.pos);
-      const href = this.rewriteDestination(raw, true);
+      const href = this.rewriteDestination(raw, !span.inAlt);
       // Each superlink was a block of its own: keep the next one on its own line
       const lineBreak = src[end] === '\n' ? '\\' : '';
       replace(
@@ -1249,14 +1281,21 @@ class PageExporter {
         return;
       }
       const raw = src.slice(pos, destination.pos);
-      const rewritten = this.rewriteDestination(raw, span.kind === 'link');
+      const rewritten = this.rewriteDestination(
+        raw,
+        span.kind === 'link' && !span.inAlt,
+      );
       if (rewritten !== raw) {
         replace(at(pos), at(destination.pos), rewritten);
       }
     } else {
       // Only the attribute values change, so a tag that spans lines keeps
       // the markers an alert added to them
-      for (const edit of this.htmlUrlEdits(src.slice(start, end), foreign)) {
+      for (const edit of this.htmlUrlEdits(
+        src.slice(start, end),
+        foreign,
+        !span.inAlt,
+      )) {
         replace(at(start + edit.start), at(start + edit.end), edit.url);
       }
     }
@@ -1757,7 +1796,7 @@ export function exportMarkdownPage(
     .transform(expanded)
     .replace(/^(?:[ \t]*\n)+/, '')
     .replace(/\n+$/, '\n');
-  const title = exportTitle(exporter, page);
+  const title = exportTitle(context, page);
   // A trailing run of `#` would be read as the heading's closing sequence
   const heading = title ? `# ${title.replace(/(^|\s)(#+)$/, '$1\\$2')}\n` : '';
   if (exported.trim() === '') {
@@ -1782,7 +1821,7 @@ export function exportHtmlPage(
     }));
   const html = applyEdits(body, edits).replace(/^(?:[ \t]*\r?\n)+/, '');
   return page.title
-    ? `<h1>${renderInlineHtml(exportTitle(exporter, page)!)}</h1>\n\n${html}`
+    ? `<h1>${renderInlineHtml(exportTitle(context, page)!)}</h1>\n\n${html}`
     : html;
 }
 
@@ -1791,10 +1830,12 @@ export function exportHtmlPage(
  * the body's. The build renders a title's line breaks as spaces.
  */
 function exportTitle(
-  exporter: PageExporter,
+  context: ExportContext,
   page: ExportPage,
 ): string | undefined {
   return page.title
-    ? exporter.exportInline(page.title.replace(/\s*\n\s*/g, ' '))
+    ? new PageExporter(context, page, true).exportInline(
+        page.title.replace(/\s*\n\s*/g, ' '),
+      )
     : undefined;
 }

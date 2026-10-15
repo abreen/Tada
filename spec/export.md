@@ -52,8 +52,9 @@ when two sources write the same build output.
 Front matter is removed. A page's `title`, after variable substitution, becomes
 a `# Title` heading at the top of a Markdown page, or an `<h1>` (with its
 inline Markdown rendered) at the top of an HTML page. A home page without a
-title gets no heading. Other front matter fields are dropped. Links and
-wikilinks in a title are converted like the body's, a title's line breaks
+title, or one that is not text (such as `title: 2024`), gets no heading. Other front matter fields are dropped. Links in a
+title point into the export but are not checked, and wikilinks in a title
+stay as written, as the build renders them, a title's line breaks
 become spaces, as they do in the build, and a trailing `#` is escaped so it
 stays part of the heading.
 
@@ -104,7 +105,8 @@ and `href` and `src` attributes in raw HTML point to exported files:
   inside `<foreignObject>` and other places where HTML resumes. A reference
   definition that a link uses is checked like the link; as in markdown-it,
   only a label's first definition counts. As in the build,
-  images, `src` attributes, and definitions only images use are not checked.
+  images, `src` attributes, definitions only images use, and links in image
+  alt text are not checked.
   A link to a file the build generates but the export leaves out is made
   relative and kept.
 - Attribute values in raw HTML are read with their character references
