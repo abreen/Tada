@@ -1,5 +1,6 @@
 import type MarkdownIt from 'markdown-it';
 import type StateInline from 'markdown-it/lib/rules_inline/state_inline.mjs';
+import type Token from 'markdown-it/lib/token.mjs';
 import { isExternalHref } from './external-links-plugin';
 import type { SiteVariables } from './types';
 
@@ -10,6 +11,14 @@ const CLOSE_PAREN = 0x29;
 const NEWLINE = 0x0a;
 const LESS_THAN = 0x3c;
 const RAW_ANCHOR_OPEN = /^<a[\s>]/i;
+
+/** Whether an inline token opens an anchor: a link or a raw `<a>` tag */
+export function opensAnchor(token: Token): boolean {
+  return (
+    token.type === 'link_open' ||
+    (token.type === 'html_inline' && RAW_ANCHOR_OPEN.test(token.content))
+  );
+}
 
 // Renders `[Title][Description](/destination.html)` as a two-line superlink.
 // It must run before the built-in `link` rule, which would otherwise
@@ -35,11 +44,7 @@ export default function superlinkPlugin(
   function isAnchorMarkup(state: StateInline, markup: string): boolean {
     const tokens: StateInline['tokens'] = [];
     state.md.inline.parse(markup, state.md, {}, tokens);
-    return tokens.some(
-      token =>
-        token.type === 'link_open' ||
-        (token.type === 'html_inline' && RAW_ANCHOR_OPEN.test(token.content)),
-    );
+    return tokens.some(opensAnchor);
   }
 
   // `parseLinkLabel` rejects bracketed links but not autolinks (`<https://…>`)

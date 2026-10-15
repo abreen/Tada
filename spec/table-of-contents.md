@@ -7,7 +7,9 @@ and displayed in a floating sidebar.
 
 TOC entries are collected from:
 
-- Headings (with auto-generated IDs for linking)
+- Headings (with auto-generated IDs for linking); links in a heading,
+  including [wikilinks](wikilinks.md), appear as plain text in its entry,
+  because the entry is itself a link
 - Alert blocks (notes and warnings), unless nested inside another alert or a
   question block
 - Horizontal rules (rendered as visual separators in the TOC), under the same

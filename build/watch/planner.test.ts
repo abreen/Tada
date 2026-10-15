@@ -34,8 +34,15 @@ function record(
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
+    wikiTitles: new Set(),
     ...deps,
   };
+}
+// Front matter titles of record fixtures, as the scan reads them
+const titles = new WeakMap<TadaSourceRecord, string>();
+function titled(record: TadaSourceRecord, title: string): TadaSourceRecord {
+  titles.set(record, title);
+  return record;
 }
 function scan(records: TadaSourceRecord[]) {
   return indexSources(
@@ -56,6 +63,7 @@ function scan(records: TadaSourceRecord[]) {
           targets: new Set(
             [...record.outputs.keys()].map(output => '/' + output),
           ),
+          ...(titles.has(record) ? { title: titles.get(record) } : {}),
         } satisfies SourceEntry,
       ]),
     ),
@@ -128,6 +136,50 @@ test('partial edits rebuild dependents', () => {
   expect(result.renderSources).toEqual(
     new Set([partial.sourcePath, page.sourcePath]),
   );
+});
+
+describe('wikilinks', () => {
+  const linker = record('content/linker.md', ['linker.html'], {
+    wikiTitles: new Set(['Foo']),
+  });
+
+  test('retitling a page re-renders pages that link to the old title', () => {
+    const before = titled(record('content/foo.md', ['foo.html']), 'Foo');
+    const after = titled(record('content/foo.md', ['foo.html']), 'Bar');
+    const result = plan([before, linker], [after, linker], ['content/foo.md']);
+    expect(result.renderSources).toEqual(
+      new Set([after.sourcePath, linker.sourcePath]),
+    );
+  });
+
+  test('a new page with a linked title re-renders the linking page', () => {
+    const added = titled(record('content/foo.md', ['foo.html']), 'Foo');
+    const result = plan([linker], [added, linker], ['content/foo.md']);
+    expect(result.renderSources.has(linker.sourcePath)).toBe(true);
+  });
+
+  test('moving a titled page re-renders the linking page', () => {
+    const before = titled(record('content/foo.md', ['foo.html']), 'Foo');
+    const after = titled(record('content/moved.md', ['moved.html']), 'Foo');
+    const result = plan(
+      [before, linker],
+      [after, linker],
+      ['content/foo.md', 'content/moved.md'],
+    );
+    expect(result.renderSources.has(linker.sourcePath)).toBe(true);
+  });
+
+  test('retitling an unlinked page leaves the linking page alone', () => {
+    const foo = titled(record('content/foo.md', ['foo.html']), 'Foo');
+    const before = titled(record('content/bar.md', ['bar.html']), 'Bar');
+    const after = titled(record('content/bar.md', ['bar.html']), 'Baz');
+    const result = plan(
+      [foo, before, linker],
+      [foo, after, linker],
+      ['content/bar.md'],
+    );
+    expect(result.renderSources).toEqual(new Set([after.sourcePath]));
+  });
 });
 
 test('deleting an unreferenced page leaves the root untouched', () => {

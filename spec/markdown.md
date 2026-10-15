@@ -187,6 +187,12 @@ middle of a paragraph, or in a heading: it breaks the surrounding text onto
 separate lines, and in a heading it would nest a block-level link in the table
 of contents entry. Superlinks belong on their own lines.
 
+## Wikilinks
+
+`[[Title]]` links to the page with that front matter title. See
+[Wikilinks](wikilinks.md).
+
+
 ## Slides
 
 When a Markdown page's front matter sets `slides: true`, top-level thematic

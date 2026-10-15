@@ -1,5 +1,6 @@
 import fm from 'front-matter';
 import { extensionIsMarkdown } from './file-types';
+import { parseYamlWithVariables } from '../variables';
 import type { ParsedContent } from '../types';
 
 interface RawParsedFrontMatter {
@@ -7,12 +8,22 @@ interface RawParsedFrontMatter {
   content: string;
 }
 
+/**
+ * Splits a page into front matter fields and content. Every reader of page
+ * front matter uses this, so they all agree on its fields and its errors.
+ */
 export function parseFrontMatterAndContent(
   raw: string,
   ext: string,
+  displayPath = 'front matter',
 ): ParsedContent {
   const { frontMatter, content } = parseFrontMatter(raw, ext);
-  return { pageVariables: parseFrontMatterYaml(frontMatter ?? ''), content };
+  const pageVariables = parseYamlWithVariables(
+    frontMatter ?? '',
+    displayPath,
+    parseFrontMatterYaml,
+  ) as Record<string, unknown>;
+  return { pageVariables, content };
 }
 
 export function parseFrontMatterYaml(text: string): Record<string, unknown> {

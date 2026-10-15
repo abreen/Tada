@@ -2,6 +2,7 @@ import type { BundledLanguage } from 'shiki';
 import type { TraceCache } from './build-types';
 import type { AuthorScripts } from './author-scripts';
 import type { DocumentNavigation } from './document-index';
+import type { PageTitleIndex } from './source-model';
 
 /** An explicitly authored ancestor in a page's breadcrumb trail. */
 export interface BreadcrumbEntry {
@@ -126,6 +127,8 @@ export interface RenderPlainTextOptions {
   documentNavigation?: DocumentNavigation;
   traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
+  /** Page titles that `[[Title]]` links resolve against */
+  pageTitles?: PageTitleIndex;
 }
 
 export interface TraceToolAvailability {
@@ -170,6 +173,8 @@ export interface RenderLiterateJavaOptions {
   dependencyCollector?: RenderDependencyCollector;
   /** The page's place in a document index, if one lists it */
   documentNavigation?: DocumentNavigation;
+  /** Page titles that `[[Title]]` links resolve against */
+  pageTitles?: PageTitleIndex;
 }
 
 /** Options for copied content asset rendering */
@@ -185,6 +190,8 @@ export interface RenderDependencyCollector {
   partials?: Set<string>;
   traceFiles?: Set<string>;
   internalTargets?: Set<string>;
+  /** Titles the page's `[[Title]]` links look up, resolved or not */
+  wikiTitles?: Set<string>;
   /** Files a page generates besides its own assets, by output path */
   traceOutputs?: Map<string, string>;
   setAuthorKey?: (authorKey: string) => void;

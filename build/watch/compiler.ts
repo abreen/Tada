@@ -17,7 +17,11 @@ import {
 import { loadProjectConfig } from '../config-loader';
 import { getKeptOutputPrefixes } from '../pagefind';
 import { getDevSiteVariables } from '../site-variables';
-import { getScriptEntries, scanProject } from '../source-model';
+import {
+  forgetFrontMatter,
+  getScriptEntries,
+  scanProject,
+} from '../source-model';
 import {
   buildAuthorScripts,
   buildDocumentIndexForScan,
@@ -111,6 +115,11 @@ export class TadaWatchCompiler {
     snapshot: TadaSnapshot | undefined,
     paths?: ReadonlySet<string>,
   ): Promise<CompileOutcome> {
+    // Before any scan, full or incremental: an edit can keep a file's size
+    // and, on a coarse clock, its modification time
+    if (paths) {
+      forgetFrontMatter(paths);
+    }
     const configKinds = new Set(
       [...(paths ?? [])].map(classifyWatchConfigPath),
     );

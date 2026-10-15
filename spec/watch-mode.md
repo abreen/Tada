@@ -78,6 +78,13 @@ sources that depend on it.
 Editing, adding, or deleting a partial source rebuilds only page sources that
 include that partial source, including transitive includes.
 
+### Page title change
+
+Adding, changing, or removing a page's `title`, or adding, deleting, or moving a
+titled page, re-renders the pages whose [wikilinks](wikilinks.md) name
+a title that now belongs to different pages. A wikilink that no longer
+resolves fails the build until a page has the title again.
+
 ### Skipped content source edit
 
 Editing, adding, or deleting a source that is skipped does not update `dist/`.
@@ -199,6 +206,6 @@ rebuilt `dist/` bytes are unchanged.
 The watcher collects changed paths and runs one build at a time. Each build
 rescans `content/` and `public/` to get the current list of sources, then
 re-renders changed sources and the pages that depend on them through partials,
-traces, authors, or internal link targets. Configuration and file contents are
+traces, authors, internal link targets, or wikilink titles. Configuration and file contents are
 read by the build, not by the watcher. Closing watch mode waits for the current
 build to finish and does not send a reload.

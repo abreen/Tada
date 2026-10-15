@@ -29,6 +29,8 @@ export interface TadaSourceRecord {
   partialDeps: Set<string>;
   traceDeps: Set<string>;
   internalTargets: Set<string>;
+  /** Titles the page's wikilinks look up */
+  wikiTitles: Set<string>;
   authorKey?: string;
 }
 
@@ -37,12 +39,14 @@ function createDependencyCollector(): {
   partials: Set<string>;
   traceFiles: Set<string>;
   internalTargets: Set<string>;
+  wikiTitles: Set<string>;
   traceOutputs: Map<string, string>;
   authorKey: string | undefined;
 } {
   const partials = new Set<string>();
   const traceFiles = new Set<string>();
   const internalTargets = new Set<string>();
+  const wikiTitles = new Set<string>();
   const traceOutputs = new Map<string, string>();
   let authorKey: string | undefined;
 
@@ -51,6 +55,7 @@ function createDependencyCollector(): {
       partials,
       traceFiles,
       internalTargets,
+      wikiTitles,
       traceOutputs,
       setAuthorKey(value: string) {
         authorKey = value;
@@ -59,6 +64,7 @@ function createDependencyCollector(): {
     partials,
     traceFiles,
     internalTargets,
+    wikiTitles,
     traceOutputs,
     get authorKey() {
       return authorKey;
@@ -75,6 +81,7 @@ function createEmptyContentRecord(filePath: string): TadaSourceRecord {
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
+    wikiTitles: new Set(),
   };
 }
 
@@ -140,6 +147,7 @@ export function createContentRecord({
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
           documentNavigation,
+          pageTitles: scan.pageTitles,
         }),
       );
       break;
@@ -160,6 +168,7 @@ export function createContentRecord({
           documentNavigation,
           traceCache,
           traceToolAvailability,
+          pageTitles: scan.pageTitles,
         }),
       );
       break;
@@ -206,6 +215,7 @@ export function createContentRecord({
     partialDeps: deps.partials,
     traceDeps: deps.traceFiles,
     internalTargets: deps.internalTargets,
+    wikiTitles: deps.wikiTitles,
     authorKey: deps.authorKey,
   };
 }
@@ -223,6 +233,7 @@ export function createPublicRecord(
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
+    wikiTitles: new Set(),
   };
 }
 

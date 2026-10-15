@@ -67,8 +67,11 @@ export function tocPlugin(md: MarkdownIt): void {
 
         const level = token.tag[1]; // 'h2' -> '2'
         const id = token.attrGet('id') || '';
+        // The entry is itself a link, and anchors cannot nest
         const innerHtml = md.renderer.renderInline(
-          inline.children ?? [],
+          (inline.children ?? []).filter(
+            child => child.type !== 'link_open' && child.type !== 'link_close',
+          ),
           md.options,
           state.env,
         );

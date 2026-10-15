@@ -39,12 +39,11 @@ import {
 } from './paths';
 import {
   getSiteVars,
-  parseYamlWithVariables,
   substituteContent,
-  substituteVariables,
+  substituteFrontMatterValue,
 } from '../variables';
 import pkg from '../../package.json' with { type: 'json' };
-import { parseFrontMatter, parseFrontMatterYaml } from './front-matter';
+import { parseFrontMatterAndContent } from './front-matter';
 import {
   getPageAuthorAssets,
   getPageScripts,
@@ -60,7 +59,7 @@ import {
   executeLiterateJava,
 } from './literate-java';
 import type { DocumentNavigation, DocumentPageTitle } from '../document-index';
-import type { TadaSourceRenderKind } from '../source-model';
+import type { SourceEntry } from '../source-model';
 import type {
   Asset,
   BreadcrumbEntry,
@@ -115,16 +114,11 @@ function readPage(
   filePath: string,
   ext: string,
 ): { pageVariables: Record<string, unknown>; content: string } {
-  const { frontMatter, content } = parseFrontMatter(
+  return parseFrontMatterAndContent(
     fs.readFileSync(filePath, 'utf-8'),
     ext,
-  );
-  const pageVariables = parseYamlWithVariables(
-    frontMatter ?? '',
     toDisplayPath(filePath),
-    parseFrontMatterYaml,
   );
-  return { pageVariables: pageVariables as Record<string, unknown>, content };
 }
 
 /** Returns only the front matter fields Tada reads, warning about others */
@@ -161,21 +155,6 @@ function renderInlineField(
 function getCodePageTitle(filePath: string): DocumentPageTitle {
   const fileName = path.basename(filePath);
   return { title: fileName, titleHtml: `<code>${escapeUTF8(fileName)}</code>` };
-}
-
-/** Substitutes site variables in a front matter string value */
-function substituteFrontMatterValue(
-  value: unknown,
-  siteVariables: SiteVariables,
-  filePath: string,
-): unknown {
-  return typeof value === 'string'
-    ? substituteVariables(
-        value,
-        getSiteVars(siteVariables),
-        toDisplayPath(filePath),
-      )
-    : value;
 }
 
 /**
@@ -226,23 +205,30 @@ export function retainPageTitles(
 
 /**
  * A page's title as its own render produces it, without rendering the page;
- * undefined for a page whose title is missing or has no text
+ * undefined for a page whose title is missing or has no text. The title comes
+ * from the front matter the project scan already read, so the page is read
+ * again only when its front matter is invalid, to report the error.
  */
 export function readPageTitle(
   filePath: string,
-  renderKind: TadaSourceRenderKind,
+  entry: Pick<SourceEntry, 'renderKind' | 'title' | 'titleFields'>,
   siteVariables: SiteVariables,
 ): DocumentPageTitle | undefined {
-  if (renderKind === 'code-page') {
+  if (entry.renderKind === 'code-page') {
     return getCodePageTitle(filePath);
   }
-  const { pageVariables: raw } = readPage(
-    filePath,
-    path.extname(filePath).toLowerCase(),
-  );
+  // Front matter that rendering rejects is read again to report its error
+  const raw =
+    entry.titleFields && !entry.titleFields.invalid
+      ? entry.titleFields
+      : readPage(filePath, path.extname(filePath).toLowerCase()).pageVariables;
   requireTextTitle(raw.title, filePath);
   const pageVariables: Record<string, unknown> = {
-    title: substituteFrontMatterValue(raw.title, siteVariables, filePath),
+    // The scan substituted the title, unless substitution fails: then this
+    // reports the error
+    title:
+      entry.title ??
+      substituteFrontMatterValue(raw.title, siteVariables, filePath),
     slides: raw.slides,
   };
 
@@ -510,6 +496,7 @@ export function renderPlainTextPageAsset({
   traceCache,
   traceToolAvailability,
   documentNavigation,
+  pageTitles,
 }: RenderPlainTextOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
@@ -527,6 +514,7 @@ export function renderPlainTextPageAsset({
       contentDir,
       traceToolAvailability,
       documentNavigation,
+      pageTitles,
     },
   );
 
@@ -827,6 +815,7 @@ function renderPlainTextContent(
     contentDir,
     traceToolAvailability,
     documentNavigation,
+    pageTitles,
   }: Pick<
     RenderPlainTextOptions,
     | 'dependencyCollector'
@@ -834,6 +823,7 @@ function renderPlainTextContent(
     | 'contentDir'
     | 'traceToolAvailability'
     | 'documentNavigation'
+    | 'pageTitles'
   >,
 ): {
   content: string | null;
@@ -877,6 +867,7 @@ function renderPlainTextContent(
       vars,
       renderTrace,
       dependencyCollector,
+      pageTitles,
     });
     const env: Record<string, unknown> = {};
     html = md.render(html, env);
@@ -900,6 +891,7 @@ export function renderLiterateJavaPageAsset({
   codePageSourceTargets,
   dependencyCollector,
   documentNavigation,
+  pageTitles,
 }: RenderLiterateJavaOptions): Asset[] {
   const { dir, name } = path.parse(filePath);
   const className = deriveClassName(filePath);
@@ -928,6 +920,7 @@ export function renderLiterateJavaPageAsset({
     vars,
     preserveHtmlComments: true,
     dependencyCollector,
+    pageTitles,
   });
   const env: Record<string, unknown> = {};
   const tokens = md.parse(

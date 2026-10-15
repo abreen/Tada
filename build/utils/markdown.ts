@@ -13,6 +13,7 @@ import headingSubtitlePlugin from '../heading-subtitle-plugin';
 import deflistIdPlugin from '../deflist-id-plugin';
 import externalLinksPlugin from '../external-links-plugin';
 import superlinkPlugin from '../superlink-plugin';
+import wikilinkPlugin from '../wikilink-plugin';
 import { tocPlugin } from '../toc-plugin';
 import columnsPlugin from '../columns-plugin';
 import tabsPlugin from '../tabs-plugin';
@@ -20,6 +21,7 @@ import katexPlugin from './katex';
 import markdownPartialsPlugin from './markdown-partials';
 import { hiddenCodeBlock } from './html-comments';
 import { toDisplayPath } from './paths';
+import type { PageTitleIndex } from '../source-model';
 import type { RenderDependencyCollector, SiteVariables } from '../types';
 
 const ALERT_PATTERN = /^(note|warning)(?:\s+"(.+)"|\s+(.+))?$/;
@@ -41,6 +43,8 @@ interface CreateMarkdownOptions {
   dependencyCollector?: RenderDependencyCollector;
   /** Prefix of tab group IDs, for Markdown rendered apart from the page */
   tabsIdPrefix?: string;
+  /** Page titles that `[[Title]]` links resolve against; off when omitted */
+  pageTitles?: PageTitleIndex;
 }
 
 interface MultipleChoiceOption {
@@ -74,6 +78,14 @@ export function createMarkdown(
     .use(columnsPlugin)
     .use(tabsPlugin, { idPrefix: options.tabsIdPrefix })
     .use(katexPlugin);
+
+  if (options.pageTitles) {
+    markdown.use(wikilinkPlugin, {
+      pageTitles: options.pageTitles,
+      filePath,
+      dependencyCollector: options.dependencyCollector,
+    });
+  }
 
   if (filePath && options.vars) {
     markdown.use(markdownPartialsPlugin, {

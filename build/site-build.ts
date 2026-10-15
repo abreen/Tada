@@ -54,6 +54,8 @@ export interface TadaSnapshot {
   outputs: ReadonlyMap<string, OutputFile>;
   fileDependents: ReadonlyMap<string, ReadonlySet<string>>;
   targetDependents: ReadonlyMap<string, ReadonlySet<string>>;
+  /** Pages by the titles their wikilinks look up */
+  titleDependents: ReadonlyMap<string, ReadonlySet<string>>;
   authorDependents: ReadonlyMap<string, ReadonlySet<string>>;
   scan: TadaProjectScan;
 }
@@ -97,6 +99,7 @@ export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
   }
   const fileDependents = new Map<string, Set<string>>();
   const targetDependents = new Map<string, Set<string>>();
+  const titleDependents = new Map<string, Set<string>>();
   const authorDependents = new Map<string, Set<string>>();
   for (const record of inputs.records.values()) {
     for (const [outputPath, content] of record.outputs) {
@@ -105,6 +108,7 @@ export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
     for (const [index, keys] of [
       [fileDependents, [...record.partialDeps, ...record.traceDeps]],
       [targetDependents, record.internalTargets],
+      [titleDependents, record.wikiTitles],
       [authorDependents, record.authorKey ? [record.authorKey] : []],
     ] as const) {
       for (const key of keys) {
@@ -121,6 +125,7 @@ export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
     outputs,
     fileDependents,
     targetDependents,
+    titleDependents,
     authorDependents,
   };
 }
@@ -255,11 +260,7 @@ export function buildDocumentIndexForScan(
   siteVariables: SiteVariables,
 ): ReturnType<typeof loadDocumentIndex> {
   const result = loadDocumentIndex(scan, siteVariables, sourcePath =>
-    readPageTitle(
-      sourcePath,
-      scan.sources.get(sourcePath)!.renderKind,
-      siteVariables,
-    ),
+    readPageTitle(sourcePath, scan.sources.get(sourcePath)!, siteVariables),
   );
   if (result.ok) {
     retainPageTitles(siteVariables, new Set(result.value.keys()));

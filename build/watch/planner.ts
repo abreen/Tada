@@ -150,6 +150,29 @@ export function createTadaWatchPlan({
       include(snapshot.targetDependents, target);
     }
   }
+  // Wikilinks to a title that gained, lost, or moved a page. Only a changed
+  // source can move a title, so only their titles are compared.
+  const changedTitles = new Set<string>();
+  for (const source of changedSources) {
+    for (const entry of [
+      snapshot.scan.sources.get(source),
+      scan.sources.get(source),
+    ]) {
+      if (entry?.title !== undefined) {
+        changedTitles.add(entry.title);
+      }
+    }
+  }
+  for (const title of changedTitles) {
+    const before = snapshot.scan.pageTitles.byTitle.get(title) ?? [];
+    const after = scan.pageTitles.byTitle.get(title) ?? [];
+    if (
+      before.length !== after.length ||
+      before.some((url, i) => url !== after[i])
+    ) {
+      include(snapshot.titleDependents, title);
+    }
+  }
   for (const [output, producers] of scan.outputProducers) {
     for (const source of producers) {
       if (snapshot.outputs.get(output)?.sourcePath !== source) {

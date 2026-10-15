@@ -112,6 +112,7 @@ describe('createContentRecord', () => {
       partialDeps: new Set(),
       traceDeps: new Set(),
       internalTargets: new Set(),
+      wikiTitles: new Set(),
     });
   });
 
@@ -159,6 +160,7 @@ describe('createPublicRecord', () => {
       partialDeps: new Set(),
       traceDeps: new Set(),
       internalTargets: new Set(),
+      wikiTitles: new Set(),
     });
   });
 });

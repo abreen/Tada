@@ -47,7 +47,9 @@ results; choose one per file.
 ## Fields
 
 - **title** (required, except on the home page): page title for `<title>` and
-  the page heading (see [Home page without a title](#home-page-without-a-title))
+  the page heading (see [Home page without a title](#home-page-without-a-title));
+  [wikilinks](wikilinks.md) such as `[[My Page]]` link to a page by
+  its exact title
 - **author**: author handle, resolved against the authors config file
 - **description**: meta description
 - **published**: publication date, displayed below the title

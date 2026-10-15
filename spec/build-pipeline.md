@@ -85,7 +85,12 @@ rebuilds everything on the next change.
 
 - `build/source-model.ts` scans `content/` and `public/`, classifies which
   content files are processed, and records output ownership, valid internal
-  link targets, and generated route aliases. Watch mode rescans on every build
+  link targets, and generated route aliases. It also reads each page's front
+  matter once for the fields other pages need (`skip`, `scripts`, `title`, and
+  `slides`), so document indexes and wikilinks get titles without reading
+  pages again. Watch mode rescans on every build, full or incremental,
+  rereading front matter only for files whose size or modification time
+  changed or that the watcher reported as changed
 - `build/source-records.ts` turns individual content or public sources into
   source records containing rendered/copied outputs (including generated trace
   files) plus dependency metadata such as partial, trace, internal-target, and

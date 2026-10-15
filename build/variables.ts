@@ -74,6 +74,21 @@ function valueText(
   return String(value);
 }
 
+/** Substitutes site variables in a front matter value if it is a string */
+export function substituteFrontMatterValue(
+  value: unknown,
+  siteVariables: Pick<SiteVariables, 'vars'>,
+  filePath: string,
+): unknown {
+  return typeof value === 'string'
+    ? substituteVariables(
+        value,
+        getSiteVars(siteVariables),
+        toDisplayPath(filePath),
+      )
+    : value;
+}
+
 export function substituteVariables(
   text: string,
   vars: Record<string, unknown>,
