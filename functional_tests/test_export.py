@@ -1,4 +1,6 @@
+import os
 import re
+import time
 
 import pytest
 from conftest import (
@@ -122,6 +124,27 @@ class TestExport:
         assert result.returncode == 0, result.stdout + result.stderr
         assert not (site_dir / 'exported' / 'old.md').exists()
         assert (site_dir / 'exported' / 'index.md').exists()
+
+    def test_removes_only_stale_marked_staging_directories(self, site_dir):
+        stale = site_dir / 'exported.tmp-1-1'
+        stale.mkdir()
+        (stale / '.tada-export').write_text('', encoding='utf-8')
+        hour_ago = time.time() - 2 * 60 * 60
+        os.utime(stale, (hour_ago, hour_ago))
+        fresh = site_dir / 'exported.tmp-2-2'
+        fresh.mkdir()
+        (fresh / '.tada-export').write_text('', encoding='utf-8')
+        mine = site_dir / 'exported.tmp-notes'
+        mine.mkdir()
+        backup = site_dir / 'exported.old-1-1'
+        backup.mkdir()
+
+        run_tada('export', '--dev', cwd=str(site_dir), check=True)
+
+        assert not stale.exists()
+        assert fresh.exists()
+        assert mine.exists()
+        assert backup.exists()
 
     def test_never_replaces_a_directory_it_did_not_write(self, site_dir):
         (site_dir / 'src').mkdir(exist_ok=True)

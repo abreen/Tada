@@ -145,12 +145,12 @@ describe('exportMarkdownPage', () => {
       exportPage('   {{{ _p.md }}}', {
         files: { 'lectures/_p.md': 'Intro\n\n  Second paragraph' },
       }),
-    ).toBe('   Intro\n\n  Second paragraph\n');
+    ).toBe('Intro\n\n  Second paragraph\n');
     expect(
       exportPage('>  {{{ _p.md }}}', {
         files: { 'lectures/_p.md': 'Intro\n\n  Second' },
       }),
-    ).toBe('>  Intro\n>\n>   Second\n');
+    ).toBe('> Intro\n>\n>   Second\n');
   });
 
   test('finds a heading subtitle only in text, as the build does', () => {
@@ -360,6 +360,18 @@ describe('exportMarkdownPage', () => {
         files: { 'lectures/_p.md': '1. one' },
       }),
     ).toBe('- item\n  1. one\n');
+  });
+
+  test('drops extra indentation before a partial directive', () => {
+    expect(
+      exportPage('  {{{ _p.md }}}', {
+        files: { 'lectures/_p.md': '    code' },
+      }),
+    ).toBe('    code\n');
+  });
+
+  test('reads an escaped # as the build does when splitting a subtitle', () => {
+    expect(exportPage('## A \\# B # C')).toBe('## A - B # C\n');
   });
 
   test('keeps a list tight around an alert', () => {

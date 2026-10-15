@@ -726,13 +726,17 @@ class PageExporter {
       const before = breakBefore ? `${indent.trimEnd()}\n` : '';
       const after = breakAfter ? `\n${indent.trimEnd()}` : '';
       const { extraIndent } = directive.meta as { extraIndent: number };
-      const extra = indent.match(/ *$/)![0].length;
-      const partialIndent = indent.slice(
-        0,
-        indent.length - Math.min(extra, Math.max(0, extraIndent)),
-      );
+      const withoutExtra = (text: string) =>
+        text.slice(
+          0,
+          text.length -
+            Math.min(text.match(/ *$/)![0].length, Math.max(0, extraIndent)),
+        );
       lines[line] =
-        before + prefix + indentLines(partial, partialIndent) + after;
+        before +
+        withoutExtra(prefix) +
+        indentLines(partial, withoutExtra(indent)) +
+        after;
     }
     return lines.join('\n');
   }
@@ -1130,9 +1134,9 @@ class PageExporter {
           content,
           nonTextRanges(inline, record),
         );
-        if (separator >= 0) {
+        if (separator) {
           const map = inlineMapper(inline);
-          replace(map(separator), map(separator + 3), ' - ');
+          replace(map(separator[0]), map(separator[1]), ' - ');
         }
       }
     });
@@ -1785,25 +1789,31 @@ function findSubtitleSeparator(
   content: string,
   /** Ranges the build does not look in */
   skipped: [number, number][] = [],
-): number {
+): [number, number] | null {
+  // The build first checks the source text, as written, for a ` # `
+  const parts = content.split(/ # /);
+  if (parts.length < 2 || !parts[0] || !parts.slice(1).join(' # ').trim()) {
+    return null;
+  }
   for (let i = 0; i < content.length; i++) {
     const char = content[i];
     const covering = skipped.filter(([start, end]) => start <= i && i < end);
     if (covering.length > 0) {
       i = Math.max(...covering.map(([, end]) => end)) - 1;
+    } else if (content.startsWith(' # ', i)) {
+      return [i, i + 3];
+    } else if (content.startsWith(' \\# ', i)) {
+      // Then splits the text, where an escaped `#` is plain `#`
+      return [i, i + 4];
     } else if (char === '\\') {
       i++;
     } else if (char === '`') {
       const run = /^`+/.exec(content.slice(i))![0];
       const close = content.indexOf(run, i + run.length);
       i = close < 0 ? i + run.length - 1 : close + run.length - 1;
-    } else if (content.startsWith(' # ', i)) {
-      const main = content.slice(0, i).trim();
-      const subtitle = content.slice(i + 3).trim();
-      return main && subtitle ? i : -1;
     }
   }
-  return -1;
+  return null;
 }
 
 /**
