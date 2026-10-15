@@ -91,13 +91,13 @@ describe('_document-index.html', () => {
 });
 
 describe('_document-pagination.html', () => {
-  test('links to the previous and next pages as superlinks', () => {
+  test('links to the previous and next pages as buttons', () => {
     const html = render(PAGINATION_TEMPLATE, NAVIGATION);
     expect(html).toContain(
-      '<a class="button superlink previous" rel="prev" href="/index.html"><span class="superlink-description">Previous</span><span class="superlink-title">Guide</span></a>',
+      '<a class="button previous" rel="prev" href="/index.html"><span class="mask-icon mask-icon-breadcrumb-separator" aria-hidden="true"></span><span class="title"><span class="visually-hidden">Previous:</span>Guide</span></a>',
     );
     expect(html).toContain(
-      '<a class="button superlink next" rel="next" href="/deep.html"><span class="superlink-description">Next</span><span class="superlink-title"><em>Deep</em></span></a>',
+      '<a class="button next" rel="next" href="/deep.html"><span class="title"><span class="visually-hidden">Next:</span><em>Deep</em></span><span class="mask-icon mask-icon-breadcrumb-separator" aria-hidden="true"></span></a>',
     );
   });
 
@@ -107,7 +107,7 @@ describe('_document-pagination.html', () => {
       next: link('<code>Foo.java</code>', '/Foo.java.html', true),
     });
     expect(html).toContain(
-      '<span class="superlink-title code-page"><code>Foo.java</code></span>',
+      '<span class="title code-page"><span class="visually-hidden">Next:</span><code>Foo.java</code></span>',
     );
   });
 
@@ -117,7 +117,7 @@ describe('_document-pagination.html', () => {
       previous: undefined,
     });
     expect(html).not.toContain('previous');
-    expect(html).toContain('superlink next');
+    expect(html).toContain('button next');
   });
 
   test('renders nothing without neighbors or outside every index', () => {

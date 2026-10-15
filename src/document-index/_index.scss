@@ -169,28 +169,33 @@
   gap: var(--gap);
   margin-top: 3rem;
 
-  a.superlink {
+  a.button {
+    display: flex;
+    gap: calc(var(--gap) / 2);
+    align-items: center;
     min-width: 0;
+    padding: calc(var(--gap) / 2) var(--gap);
+    font-size: inherit;
     overflow-wrap: anywhere;
   }
 
-  // Mirror the superlink chevron to point back
-  a.superlink.previous {
-    padding-inline: calc(var(--gap) * 2 + var(--icon-breadcrumb-separator-size))
-      var(--gap);
+  a.previous {
+    justify-self: start;
 
-    &::after {
-      right: auto;
-      left: var(--gap);
-      transform: translateY(-50%) scaleX(-1);
+    // The chevron points back
+    .mask-icon {
+      transform: scaleX(-1);
     }
   }
 
-  // Undo the spacing between stacked superlinks
-  a.superlink.next {
+  a.next {
     grid-column: 2;
-    margin-top: 0;
+    justify-self: end;
     text-align: end;
+  }
+
+  .mask-icon {
+    flex-shrink: 0;
   }
 }
 

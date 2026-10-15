@@ -84,11 +84,12 @@ The tree's order is depth first: a page, then each of its children in order.
 At the end of an indexed page's content, a `<nav aria-label="Previous and next
 pages">` links to the pages before and after it in that order, with
 `rel="prev"` and `rel="next"`. The root has no previous link and the last page
-has no next link. The links are [superlinks](markdown.md#superlinks) side by side, with
-"Previous" or "Next" above the page's title, which keeps its inline formatting.
-The next link's chevron points right and its text is end-aligned; the previous
-link's chevron is mirrored to point left at its start. A code page's title is
-plain monospace text, as in the sidebar.
+has no next link. Each link is a button showing a chevron and the page's
+title, which keeps its inline formatting: the previous link sits at the start
+with a chevron pointing back, and the next link sits at the end with a chevron
+pointing forward. "Previous" or "Next" is visually hidden text before the title,
+so screen readers announce the direction. A code page's title is plain
+monospace text, as in the sidebar.
 
 Search results for pages below a tree's root name the root, as in
 "Labs › Counting vowels" (see [Search](search.md)).

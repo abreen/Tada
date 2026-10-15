@@ -2,15 +2,15 @@
 <% if (documentNavigation && (documentNavigation.previous || documentNavigation.next)) { %>
 <nav class="document-pagination" aria-label="Previous and next pages" data-pagefind-ignore>
   <% if (documentNavigation.previous) { %>
-  <a class="button superlink previous" rel="prev" href="<%- encodeAuthoredUrl(documentNavigation.previous.href) %>">
-    <span class="superlink-description">Previous</span>
-    <span class="superlink-title<% if (documentNavigation.previous.isCodePage) { %> code-page<% } %>"><%= documentNavigation.previous.titleHtml %></span>
+  <a class="button previous" rel="prev" href="<%- encodeAuthoredUrl(documentNavigation.previous.href) %>">
+    <span class="mask-icon mask-icon-breadcrumb-separator" aria-hidden="true"></span>
+    <span class="title<% if (documentNavigation.previous.isCodePage) { %> code-page<% } %>"><span class="visually-hidden">Previous: </span><%= documentNavigation.previous.titleHtml %></span>
   </a>
   <% } %>
   <% if (documentNavigation.next) { %>
-  <a class="button superlink next" rel="next" href="<%- encodeAuthoredUrl(documentNavigation.next.href) %>">
-    <span class="superlink-description">Next</span>
-    <span class="superlink-title<% if (documentNavigation.next.isCodePage) { %> code-page<% } %>"><%= documentNavigation.next.titleHtml %></span>
+  <a class="button next" rel="next" href="<%- encodeAuthoredUrl(documentNavigation.next.href) %>">
+    <span class="title<% if (documentNavigation.next.isCodePage) { %> code-page<% } %>"><span class="visually-hidden">Next: </span><%= documentNavigation.next.titleHtml %></span>
+    <span class="mask-icon mask-icon-breadcrumb-separator" aria-hidden="true"></span>
   </a>
   <% } %>
 </nav>
