@@ -1,3 +1,5 @@
+import re
+
 from conftest import SITE_PROD_CONFIG_FILE, init_site, run_tada, set_site_config
 from watch_helpers import WatchProcess
 
@@ -8,6 +10,15 @@ def site_with_typos(tmp_path):
     site = init_site(tmp_path)
     (site / 'content' / 'index.md').write_text(TYPO_PAGE, encoding='utf-8')
     return site
+
+
+def marked(html, kind, text):
+    """Whether `text` is underlined as a `kind` problem, with Harper's message."""
+    pattern = (
+        rf'<span class="proofread-{kind}" title="[^"]+" data-proofread-message="[^"]+">'
+        rf'{re.escape(text)}</span>'
+    )
+    return re.search(pattern, html) is not None
 
 
 def html_files(dist):
@@ -21,9 +32,9 @@ def test_watch_underlines_spelling_and_grammar(tmp_path):
         wp.wait_for_initial_build()
         index_html = site / 'dist' / 'index.html'
         html = index_html.read_text(encoding='utf-8')
-        assert '<span class="proofread-spelling">sentense</span>' in html
-        assert '<span class="proofread-spelling">misteak</span>' in html
-        assert '<span class="proofread-grammar">an</span>' in html
+        assert marked(html, 'spelling', 'sentense')
+        assert marked(html, 'spelling', 'misteak')
+        assert marked(html, 'grammar', 'an')
         assert '--proofread-spelling-color' in html
 
         mtime = index_html.stat().st_mtime
@@ -31,9 +42,7 @@ def test_watch_underlines_spelling_and_grammar(tmp_path):
             TYPO_PAGE + '\nAnother paragraf.\n', encoding='utf-8'
         )
         wp.wait_for_rebuild(index_html, 'modified', before_mtime=mtime)
-        assert '<span class="proofread-spelling">paragraf</span>' in index_html.read_text(
-            encoding='utf-8'
-        )
+        assert marked(index_html.read_text(encoding='utf-8'), 'spelling', 'paragraf')
     finally:
         wp.stop()
 
@@ -45,8 +54,8 @@ def test_watch_accepts_configured_words(tmp_path):
     try:
         wp.wait_for_initial_build()
         html = (site / 'dist' / 'index.html').read_text(encoding='utf-8')
-        assert '<span class="proofread-spelling">sentense</span>' not in html
-        assert '<span class="proofread-spelling">misteak</span>' in html
+        assert not marked(html, 'spelling', 'sentense')
+        assert marked(html, 'spelling', 'misteak')
     finally:
         wp.stop()
 
