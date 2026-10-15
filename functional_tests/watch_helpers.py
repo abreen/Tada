@@ -20,6 +20,9 @@ WEBSOCKET_TIMEOUT_SEC = 15
 POLL_SEC = 0.05
 ANSI_RE = re.compile(r'\x1b\[[0-9;]*m')
 SUCCESS_RE = re.compile(r'^.+! 🎉$', re.MULTILINE)
+# The logger writes the level label, the message and the newline separately, so
+# an error only counts once its whole line has reached the log
+ERROR_LINE_RE = re.compile(r' error .*\n')
 TRACE_MANIFEST_RE = re.compile(r'data-trace-manifest="([^"]+)"')
 # Windows refuses to open a file while another process is copying over it (a
 # sharing violation, which Python reports as PermissionError), so a read that
@@ -160,7 +163,7 @@ class WatchProcess:
         return TimeoutError('\n'.join(details))
 
     def _has_error_since(self, start: int) -> bool:
-        return ' error ' in self._clean(self._stdout_since(start)).lower()
+        return ERROR_LINE_RE.search(self._clean(self._stdout_since(start)).lower()) is not None
 
     def _has_success_since(self, start: int) -> bool:
         return SUCCESS_RE.search(self._clean(self._stdout_since(start))) is not None
