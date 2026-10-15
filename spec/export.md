@@ -100,7 +100,8 @@ and `href` and `src` attributes in raw HTML point to exported files:
   not publish fails the export with the build's `broken internal link` error,
   and a link to a directory with an `index.html` fails with the build's
   `directory link must reference index.html explicitly` error. Like the build,
-  the export does not check `<a>` elements inside SVG or MathML. A reference
+  the export does not check `<a>` elements inside SVG or MathML, except
+  inside `<foreignObject>` and other places where HTML resumes. A reference
   definition that a link uses is checked like the link; as in markdown-it,
   only a label's first definition counts. As in the build,
   images, `src` attributes, and definitions only images use are not checked.

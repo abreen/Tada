@@ -1,6 +1,7 @@
 import path from 'path';
 import { decodeHTMLAttribute } from 'entities';
 import MarkdownIt from 'markdown-it';
+import htmlBlockNames from 'markdown-it/lib/common/html_blocks.mjs';
 import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
 import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
 import type StateInline from 'markdown-it/lib/rules_inline/state_inline.mjs';
@@ -31,6 +32,17 @@ const CONTAINER_PREFIX_PATTERN =
 const LINE_PREFIX_PATTERN =
   /^(?:[ \t]*(?:>|[-+*](?=[ \t]|$)|\d{1,9}[.)](?=[ \t]|$)|[:~](?=[ \t])))*[ \t]*/;
 const LIST_MARKER_PATTERN = /[-+*]|\d{1,9}[.)]/g;
+/** HTML block types 1 to 5, which can interrupt a paragraph */
+const INTERRUPTING_HTML_PATTERN =
+  /^\s*(?:<(?:script|pre|style|textarea)(?=[\s>]|$)|<!--|<\?|<![A-Za-z]|<!\[CDATA\[)/i;
+const BLOCK_TAG_PATTERN = /^\s*<\/?([A-Za-z][A-Za-z0-9-]*)(?=[\s/>]|$)/;
+
+/** Whether HTML starts with a block-level tag: HTML block type 6 */
+function isBlockTag(html: string): boolean {
+  const name = BLOCK_TAG_PATTERN.exec(html)?.[1].toLowerCase();
+  return name !== undefined && htmlBlockNames.includes(name);
+}
+
 /** A container prefix that ends in a list marker, which starts a list item */
 const LIST_ITEM_PREFIX_PATTERN = /(?:[-+*]|\d{1,9}[.)])[ \t]*$/;
 /** ASCII punctuation, which a backslash makes literal in Markdown */
@@ -566,8 +578,22 @@ class PageExporter {
    * an indented code block or some HTML blocks would join the paragraph
    */
   private canInterruptParagraph(markdown: string): boolean {
-    const first = this.parse(markdown).tokens[0]?.type;
-    return first !== 'code_block' && first !== 'html_block';
+    const { tokens, record } = this.parse(markdown);
+    const firstLine = markdown.split('\n').findIndex(line => line.trim());
+    // A reference definition leaves no token
+    if (record.references.some(([start]) => start === firstLine)) {
+      return false;
+    }
+    const first = tokens[0];
+    if (first?.type === 'code_block') {
+      return false;
+    }
+    // Only HTML blocks of types 1 to 6 can interrupt a paragraph
+    return (
+      first?.type !== 'html_block' ||
+      INTERRUPTING_HTML_PATTERN.test(first.content) ||
+      isBlockTag(first.content)
+    );
   }
 
   /** Replaces partial directives with the partials' text, recursively */
@@ -756,7 +782,7 @@ class PageExporter {
   /** Edits for the `href` and `src` values in raw HTML */
   htmlUrlEdits(
     html: string,
-    foreign?: ForeignDepth,
+    foreign?: HtmlScanState,
   ): { start: number; end: number; url: string }[] {
     const edits = [];
     for (const value of findUrlAttributes(html, foreign)) {
@@ -776,9 +802,15 @@ class PageExporter {
     return edits;
   }
 
-  /** Exports a short piece of inline Markdown, such as a question */
+  /**
+   * Exports a short piece of inline Markdown, such as a question. A letter in
+   * front keeps it from reading as a block, such as `??? question`, since
+   * the build renders it with renderInline.
+   */
   exportInline(markdown: string): string {
-    return this.transform(normalizeNewlines(markdown)).trim();
+    return this.transform(normalizeNewlines(`x${markdown.trimStart()}`))
+      .slice(1)
+      .trim();
   }
 
   transform(text: string): string {
@@ -934,7 +966,7 @@ class PageExporter {
     // and paragraphs is known in all of them
     const htmlScans: {
       offset: number;
-      scan: (foreign: ForeignDepth) => void;
+      scan: (foreign: HtmlScanState) => void;
     }[] = [];
 
     // Block constructs, outermost first, so nested blocks see the
@@ -1065,8 +1097,8 @@ class PageExporter {
       const text = span.src.slice(span.start + 1, span.labelEnd);
       let label = text;
       if (span.src[span.labelEnd + 1] === '[') {
-        const close = span.src.indexOf(']', span.labelEnd + 2);
-        const written = span.src.slice(span.labelEnd + 2, close);
+        // The link rule ends a full reference at its label's `]`
+        const written = span.src.slice(span.labelEnd + 2, span.end - 1);
         label = written.trim() === '' ? text : written;
       }
       linkedLabels.add(plainMarkdown.utils.normalizeReference(label));
@@ -1128,11 +1160,11 @@ class PageExporter {
           scan: foreign => this.exportSpan(span, at, replace, foreign),
         });
       } else {
-        this.exportSpan(span, at, replace, { depth: 0 });
+        this.exportSpan(span, at, replace, { stack: [] });
       }
     }
 
-    const foreign: ForeignDepth = { depth: 0 };
+    const foreign: HtmlScanState = { stack: [] };
     for (const { scan } of htmlScans.sort((a, b) => a.offset - b.offset)) {
       scan(foreign);
     }
@@ -1148,7 +1180,7 @@ class PageExporter {
       end: number,
       replacement: Edit['replace'] | string,
     ) => void,
-    foreign: ForeignDepth,
+    foreign: HtmlScanState,
   ): void {
     const { src, start, end } = span;
     if (span.kind === 'wikilink') {
@@ -1294,10 +1326,17 @@ class PageExporter {
     // tight.
     if (helpers.isMarkerLine(end, '!')) {
       const next = lines[end + 1];
+      const nextPrefix = next?.match(CONTAINER_PREFIX_PATTERN)![0] ?? '';
+      // A list item ends the quote if it can interrupt a paragraph (a bullet
+      // or `1.` with text) or belongs to a list around the alert
+      const endsWithItem =
+        next !== undefined &&
+        LIST_ITEM_PREFIX_PATTERN.test(nextPrefix) &&
+        next.trim() !== nextPrefix.trim() &&
+        (/(?:^|[\s>])(?:[-+*]|1[.)])[ \t]+$/.test(nextPrefix) ||
+          nextPrefix.search(LIST_ITEM_PREFIX_PATTERN) < col);
       const endsAnyway =
-        next === undefined ||
-        next.trim() === '' ||
-        LIST_ITEM_PREFIX_PATTERN.test(next.match(CONTAINER_PREFIX_PATTERN)![0]);
+        next === undefined || next.trim() === '' || endsWithItem;
       if (endsAnyway && !insertions.has(end) && end + 1 < lines.length) {
         replace(lineStart(end), lineStart(end + 1), '');
       } else {
@@ -1475,18 +1514,37 @@ const TAG_NAME_PATTERN = /<([a-zA-Z][^\s/>]*)/y;
 const CLOSING_TAG_NAME_PATTERN = /<\/([a-zA-Z][^\s/>]*)/y;
 /** Elements whose content is not in the HTML namespace */
 const FOREIGN_ELEMENTS = new Set(['svg', 'math']);
+/** Elements in SVG or MathML whose content is HTML again */
+const HTML_INTEGRATION_POINTS = new Set([
+  'foreignobject',
+  'desc',
+  'title',
+  'mi',
+  'mo',
+  'mn',
+  'ms',
+  'mtext',
+]);
 
 /**
- * How deep a scan is inside SVG or MathML, whose `<a>` elements the build does
- * not check; shared by the tags of one paragraph, which are parsed one by one
+ * Where a scan of raw HTML is, shared by the pieces of HTML on a page, such
+ * as the tags of one paragraph, which are parsed one by one
  */
-interface ForeignDepth {
-  depth: number;
+interface HtmlScanState {
+  /**
+   * Open SVG and MathML elements, and HTML integration points in them;
+   * the build checks `<a>` elements only in the HTML namespace
+   */
+  stack: { name: string; html: boolean }[];
   /**
    * An element whose content is text, such as `<script>`, left open at the
    * end of an earlier piece of HTML
    */
   rawText?: string;
+}
+
+function inHtmlNamespace(state: HtmlScanState): boolean {
+  return state.stack.length === 0 || state.stack.at(-1)!.html;
 }
 const ATTRIBUTE_PATTERN =
   /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/y;
@@ -1509,7 +1567,7 @@ const RAW_TEXT_ELEMENTS = new Set([
  */
 function findUrlAttributes(
   html: string,
-  foreign: ForeignDepth = { depth: 0 },
+  foreign: HtmlScanState = { stack: [] },
 ): { start: number; end: number; url: string; isAnchor: boolean }[] {
   const values = [];
   const lower = html.toLowerCase();
@@ -1538,8 +1596,8 @@ function findUrlAttributes(
     if (html.startsWith('</', open)) {
       CLOSING_TAG_NAME_PATTERN.lastIndex = open;
       const closing = CLOSING_TAG_NAME_PATTERN.exec(html)?.[1].toLowerCase();
-      if (closing && FOREIGN_ELEMENTS.has(closing) && foreign.depth > 0) {
-        foreign.depth--;
+      if (closing && foreign.stack.at(-1)?.name === closing) {
+        foreign.stack.pop();
       }
       pos = open + 2;
       continue;
@@ -1573,7 +1631,7 @@ function findUrlAttributes(
           url,
           // The build checks only links of HTML `<a>` elements
           isAnchor:
-            foreign.depth === 0 &&
+            inHtmlNamespace(foreign) &&
             name.toLowerCase() === 'a' &&
             attribute[1].toLowerCase() === 'href',
         });
@@ -1581,11 +1639,18 @@ function findUrlAttributes(
       i += attribute[0].length;
     }
     pos = i + 1;
-    if (FOREIGN_ELEMENTS.has(name.toLowerCase()) && html[i - 1] !== '/') {
-      foreign.depth++;
+    const lowerName = name.toLowerCase();
+    const htmlNamespace = inHtmlNamespace(foreign);
+    if (html[i - 1] !== '/') {
+      if (htmlNamespace && FOREIGN_ELEMENTS.has(lowerName)) {
+        foreign.stack.push({ name: lowerName, html: false });
+      } else if (!htmlNamespace && HTML_INTEGRATION_POINTS.has(lowerName)) {
+        foreign.stack.push({ name: lowerName, html: true });
+      }
     }
 
-    if (RAW_TEXT_ELEMENTS.has(name.toLowerCase())) {
+    // In SVG and MathML, these elements hold markup
+    if (htmlNamespace && RAW_TEXT_ELEMENTS.has(lowerName)) {
       const close = lower.indexOf(`</${name.toLowerCase()}`, pos);
       if (close < 0) {
         // Its text goes on in the next piece of HTML, such as the next tag

@@ -258,6 +258,45 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('keeps the closing line before a list item that cannot interrupt', () => {
+    expect(exportPage('!!! note\ntext\n!!!\n2. foo')).toBe(
+      '> [!NOTE]\n> text\n\n2. foo\n',
+    );
+  });
+
+  test('separates partials in a list by whether they can interrupt', () => {
+    expect(
+      exportPage('- text\n  {{{ _p.md }}}', {
+        files: { 'lectures/_p.md': '<div>x</div>' },
+      }),
+    ).toBe('- text\n  <div>x</div>\n');
+    expect(
+      exportPage('- text\n  {{{ _p.md }}}\n\n  [y][a]', {
+        files: { 'lectures/_p.md': '[a]: /index.html' },
+      }),
+    ).toBe('- text\n\n  [a]: ../index.md\n\n  [y][a]\n');
+  });
+
+  test('checks anchors inside an SVG foreignObject', () => {
+    expect(() =>
+      exportPage(
+        '<svg><foreignObject><a href="/missing.html">x</a></foreignObject></svg>',
+      ),
+    ).toThrow('broken internal link: "/missing.html"');
+  });
+
+  test('exports a title that looks like a block as inline text', () => {
+    expect(exportPage('Body.', { title: '??? question Why' })).toBe(
+      '# ??? question Why\n\nBody.\n',
+    );
+  });
+
+  test('reads escaped brackets in a full reference label', () => {
+    expect(() => exportPage('[x][a\\]b]\n\n[a\\]b]: /missing.html')).toThrow(
+      'broken internal link: "/missing.html"',
+    );
+  });
+
   test('keeps a list tight around an alert', () => {
     expect(exportPage('1. one\n   !!! note\n   two\n   !!!\n2. three')).toBe(
       '1. one\n   > [!NOTE]\n   > two\n2. three\n',
