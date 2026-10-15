@@ -2,6 +2,7 @@ import path from 'path';
 import { decodeHTMLAttribute } from 'entities';
 import MarkdownIt from 'markdown-it';
 import markdownItKatex from '@vscode/markdown-it-katex';
+import { convertMarkdown as curlyQuote } from 'quote-quote';
 import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
 import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
 import type StateInline from 'markdown-it/lib/rules_inline/state_inline.mjs';
@@ -139,8 +140,8 @@ interface ParseRecord {
   cells: Map<Token, number>;
   /** Line ranges of link reference definitions */
   references: [number, number][];
-  /** Ranges of inline footnotes (`^[...]`) in inline tokens' content */
-  footnotes: { inline: Token; start: number; end: number }[];
+  /** Ranges of inline footnotes (`^[...]`) and inline math in inline tokens' content, which are not text */
+  nonText: { inline: Token; start: number; end: number }[];
   /** The file each line came from, for errors in included partials */
   origins?: readonly string[];
 }
@@ -320,7 +321,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
         return false;
       }
       if (!silent && current && base !== undefined) {
-        record.footnotes.push({
+        record.nonText.push({
           inline: current,
           start: base + start,
           end: base + state.pos,
@@ -330,6 +331,37 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
     },
     { alt: footnote.alt },
   );
+
+  // Inline math is not text either
+  for (const name of [
+    'math_inline',
+    'math_inline_block',
+    'math_inline_bare_block',
+  ]) {
+    if (!hasRule(md.inline.ruler, name)) {
+      continue;
+    }
+    const rule = findRule<RuleInline>(md.inline.ruler, name);
+    md.inline.ruler.at(
+      name,
+      (state, silent) => {
+        const start = state.pos;
+        const base = baseOf(state.src);
+        if (!rule.fn(state, silent)) {
+          return false;
+        }
+        if (!silent && current && base !== undefined) {
+          record.nonText.push({
+            inline: current,
+            start: base + start,
+            end: base + state.pos,
+          });
+        }
+        return true;
+      },
+      { alt: rule.alt },
+    );
+  }
 
   for (const kind of Object.keys(EXPECTED_TOKENS) as SpanKind[]) {
     // Wikilinks are off where no page titles are given
@@ -664,7 +696,7 @@ class PageExporter {
       contents: new Map(),
       cells: new Map(),
       references: [],
-      footnotes: [],
+      nonText: [],
       origins,
     };
     const env: ParseEnv = {};
@@ -854,12 +886,12 @@ class PageExporter {
       );
       if (indexPath !== target && isPublished(indexPath)) {
         throw new Error(
-          `${this.displayPath}: directory link must reference index.html explicitly: "${url}" (resolved to "${target}", expected "${indexPath}")`,
+          `${this.page.filePath}: directory link must reference index.html explicitly: "${url}" (resolved to "${target}", expected "${indexPath}")`,
         );
       }
       if (!isPublished(target)) {
         throw new Error(
-          `${this.displayPath}: broken internal link: "${url}" (resolved to "${target}")`,
+          `${this.page.filePath}: broken internal link: "${url}" (resolved to "${target}")`,
         );
       }
     }
@@ -1460,7 +1492,7 @@ class PageExporter {
 
     let opening = `> [!${type}]`;
     if (title) {
-      opening += `\n${indent}> **${escapeMarkdown(title)}**\n${indent}>`;
+      opening += `\n${indent}> **${escapeMarkdown(curlyQuote(title))}**\n${indent}>`;
     }
     replace(start, lineEnd(open), opening);
 
@@ -1943,7 +1975,7 @@ function findReferenceLabelEnd(definition: string): number {
 /**
  * Ranges of an inline token's content that the build's subtitle rule does not
  * look in, since they are not text: raw HTML, images, link destinations and
- * titles, a wikilink's title before `|`, and inline footnotes
+ * titles, a wikilink's title before `|`, inline footnotes, and math
  */
 function nonTextRanges(inline: Token, record: ParseRecord): [number, number][] {
   const ranges: [number, number][] = [];
@@ -1965,7 +1997,7 @@ function nonTextRanges(inline: Token, record: ParseRecord): [number, number][] {
       }
     }
   }
-  for (const footnote of record.footnotes) {
+  for (const footnote of record.nonText) {
     if (footnote.inline === inline) {
       ranges.push([footnote.start, footnote.end]);
     }

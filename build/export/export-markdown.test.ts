@@ -454,6 +454,16 @@ describe('exportMarkdownPage', () => {
     ).toThrow('broken internal link: "/missing.html"');
   });
 
+  test('finds no subtitle inside math in a heading', () => {
+    expect(exportPage('## Eq $a \\# b$ # sub')).toBe('## Eq $a \\# b$ - sub\n');
+  });
+
+  test('curls quotes in alert titles, as the build does', () => {
+    expect(exportPage('!!! note Don\'t "panic"\nText.\n!!!')).toBe(
+      '> [!NOTE]\n> **Don’t “panic”**\n>\n> Text.\n',
+    );
+  });
+
   test('resolves page references in tab labels', () => {
     expect(exportPage('[See [docs]|\nbody\n]\n\n[docs]: /index.html')).toBe(
       '<details>\n<summary>See <a href="../index.md">docs</a></summary>\n\nbody\n\n</details>\n\n[docs]: ../index.md\n',
