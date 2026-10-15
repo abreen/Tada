@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { parseHTML } from 'linkedom';
 import {
   PROOFREAD_HEAD,
   proofreadHtml,
@@ -34,7 +35,12 @@ function page(content: string): string {
 }
 
 function mainOf(html: string): string {
-  return html.match(/<main class="body">([\s\S]*)<\/main>/)![1];
+  return parseHTML(html).document.querySelector('main')!.innerHTML;
+}
+
+/** The HTML as the parser serializes it, so tests ignore attribute order */
+function serialized(content: string): string {
+  return mainOf(page(content));
 }
 
 describe('proofreadHtml', () => {
@@ -42,7 +48,9 @@ describe('proofreadHtml', () => {
     const { check } = fakeCheck({ spelling: /teh/, grammar: /I has/ });
     const html = await proofreadHtml(page('<p>I has teh cat.</p>'), check);
     expect(mainOf(html)).toBe(
-      '<p><span class="proofread-grammar">I has</span> <span class="proofread-spelling">teh</span> cat.</p>',
+      serialized(
+        '<p><span class="proofread-grammar">I has</span> <span class="proofread-spelling">teh</span> cat.</p>',
+      ),
     );
   });
 
@@ -57,15 +65,27 @@ describe('proofreadHtml', () => {
       },
     ];
     const html = await proofreadHtml(page('<p>Use teh cat.</p>'), check);
-    expect(mainOf(html)).toBe(
-      '<p>Use <span class="proofread-spelling" title="Did you mean to spell \u201cteh\u201d this way?" data-proofread-message="<p>Did you mean <code>&quot;the&quot;</code>?</p>">teh</span> cat.</p>',
+    const span = parseHTML(html).document.querySelector('main span')!;
+    expect(span.className).toBe('proofread-spelling');
+    expect(span.textContent).toBe('teh');
+    expect(span.getAttribute('title')).toBe(
+      'Did you mean to spell \u201cteh\u201d this way?',
+    );
+    expect(span.getAttribute('data-proofread-message')).toBe(
+      '<p>Did you mean <code>"the"</code>?</p>',
     );
   });
 
   test('adds the underline style to the head', async () => {
     const { check } = fakeCheck({});
     const html = await proofreadHtml(page('<p>Fine.</p>'), check);
-    expect(html).toContain(`${PROOFREAD_HEAD}</head>`);
+    const { document } = parseHTML(html);
+    expect(document.head.querySelector('style')!.textContent).toBe(
+      PROOFREAD_HEAD.css,
+    );
+    expect(document.head.querySelector('script')!.textContent).toBe(
+      PROOFREAD_HEAD.js,
+    );
   });
 
   test('checks only text inside main', async () => {
@@ -84,6 +104,15 @@ describe('proofreadHtml', () => {
     expect(texts).toEqual(['Title', 'One two.', 'Three']);
   });
 
+  test('keeps images and word breaks inside the sentence', async () => {
+    const { check, texts } = fakeCheck({});
+    await proofreadHtml(
+      page('<p>Click <img src="i.png" alt=""> to save a long<wbr>word.</p>'),
+      check,
+    );
+    expect(texts).toEqual(['Click  to save a longword.']);
+  });
+
   test('splits an underline across inline elements', async () => {
     const { check } = fakeCheck({ grammar: /an big/ });
     const html = await proofreadHtml(
@@ -91,7 +120,9 @@ describe('proofreadHtml', () => {
       check,
     );
     expect(mainOf(html)).toBe(
-      '<p>It is <span class="proofread-grammar">an </span><strong><span class="proofread-grammar">big</span></strong> deal.</p>',
+      serialized(
+        '<p>It is <span class="proofread-grammar">an </span><strong><span class="proofread-grammar">big</span></strong> deal.</p>',
+      ),
     );
   });
 
@@ -106,7 +137,9 @@ describe('proofreadHtml', () => {
     );
     expect(texts).toEqual(['Call a fooBar on teh list.']);
     expect(mainOf(html)).toBe(
-      '<p>Call a <code>fooBar</code> on <span class="proofread-spelling">teh</span> list.</p>',
+      serialized(
+        '<p>Call a <code>fooBar</code> on <span class="proofread-spelling">teh</span> list.</p>',
+      ),
     );
   });
 
@@ -125,7 +158,7 @@ describe('proofreadHtml', () => {
     const { check, texts } = fakeCheck({ spelling: /teh/ });
     const html = await proofreadHtml(page(content), check);
     expect(texts).toEqual([]);
-    expect(mainOf(html)).toBe(content);
+    expect(mainOf(html)).toBe(serialized(content));
   });
 
   test('checks answers that are hidden from search', async () => {
@@ -160,14 +193,16 @@ describe('proofreadHtml', () => {
     );
     expect(texts).toEqual(["Tom & I dont't go."]);
     expect(mainOf(html)).toBe(
-      '<p>Tom &amp; I <span class="proofread-spelling">dont&#39;t</span> go.</p>',
+      serialized(
+        '<p>Tom &amp; I <span class="proofread-spelling">dont&#39;t</span> go.</p>',
+      ),
     );
   });
 
   test('ignores problems with whitespace only', async () => {
     const { check } = fakeCheck({ grammar: / {2,}/ });
     const html = await proofreadHtml(page('<p>Two    spaces.</p>'), check);
-    expect(mainOf(html)).toBe('<p>Two    spaces.</p>');
+    expect(mainOf(html)).toBe(serialized('<p>Two    spaces.</p>'));
   });
 
   test('treats a line break as whitespace in the sentence', async () => {
@@ -176,13 +211,19 @@ describe('proofreadHtml', () => {
     expect(texts).toEqual(['One\ntwo']);
   });
 
-  test('leaves the page unchanged apart from the style when nothing is found', async () => {
+  test('leaves the content unchanged when nothing is found', async () => {
     const { check } = fakeCheck({});
     const content = '<p>All <a href="/x">good</a> here.</p>';
     const html = await proofreadHtml(page(content), check);
-    expect(html).toBe(
-      page(content).replace('</head>', `${PROOFREAD_HEAD}</head>`),
-    );
+    expect(mainOf(html)).toBe(serialized(content));
+    expect(html).toContain('<p>Teh header</p>');
+  });
+
+  test('returns a page without main unchanged', async () => {
+    const { check, texts } = fakeCheck({});
+    const html = '<html><body><p>Teh</p></body></html>';
+    expect(await proofreadHtml(html, check)).toBe(html);
+    expect(texts).toEqual([]);
   });
 });
 

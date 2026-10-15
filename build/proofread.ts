@@ -40,6 +40,13 @@ export class Proofreader {
     (this.worker as Worker & { unref(): void }).unref();
     this.worker.onmessage = (event: MessageEvent<ProofreadResponse>) => {
       const response = event.data;
+      if (response.type === 'failed' && response.id !== undefined) {
+        // Only this text goes unchecked
+        log.warn`Harper failed to check some text: ${response.message}`;
+        this.pending.get(response.id)?.([]);
+        this.pending.delete(response.id);
+        return;
+      }
       if (response.type === 'failed') {
         this.fail(response.message);
         return;

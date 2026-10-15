@@ -1,4 +1,4 @@
-import re
+from html.parser import HTMLParser
 
 from conftest import SITE_PROD_CONFIG_FILE, init_site, run_tada, set_site_config
 from watch_helpers import WatchProcess
@@ -12,13 +12,39 @@ def site_with_typos(tmp_path):
     return site
 
 
+class _MarkParser(HTMLParser):
+    """Collects (kind, text) for proofread spans that carry Harper's message."""
+
+    def __init__(self):
+        super().__init__()
+        self.marks = []
+        self._open = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        kinds = [
+            name.removeprefix('proofread-')
+            for name in (attrs.get('class') or '').split()
+            if name.startswith('proofread-')
+        ]
+        if tag == 'span' and kinds and attrs.get('title') and attrs.get('data-proofread-message'):
+            self._open = [kinds[0], '']
+
+    def handle_data(self, data):
+        if self._open is not None:
+            self._open[1] += data
+
+    def handle_endtag(self, tag):
+        if tag == 'span' and self._open is not None:
+            self.marks.append(tuple(self._open))
+            self._open = None
+
+
 def marked(html, kind, text):
     """Whether `text` is underlined as a `kind` problem, with Harper's message."""
-    pattern = (
-        rf'<span class="proofread-{kind}" title="[^"]+" data-proofread-message="[^"]+">'
-        rf'{re.escape(text)}</span>'
-    )
-    return re.search(pattern, html) is not None
+    parser = _MarkParser()
+    parser.feed(html)
+    return (kind, text) in parser.marks
 
 
 def html_files(dist):

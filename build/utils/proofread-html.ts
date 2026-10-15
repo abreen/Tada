@@ -1,4 +1,4 @@
-import { decodeHTML, escapeAttribute } from 'entities';
+import { parseHTML } from 'linkedom';
 
 export type IssueKind = 'spelling' | 'grammar';
 
@@ -24,7 +24,8 @@ export type ProofreadRequest =
 /** A message from the proofreading worker */
 export type ProofreadResponse =
   | { type: 'issues'; id: number; issues: TextIssue[] }
-  | { type: 'failed'; message: string };
+  /** Harper failed to load, or to check the text of request `id` */
+  | { type: 'failed'; id?: number; message: string };
 
 const SPELLING_KINDS = new Set(['Spelling', 'Typo']);
 
@@ -65,8 +66,7 @@ export function toTextIssues(
 }
 
 // Same red and green as multiple-choice question results
-const PROOFREAD_STYLE =
-  '<style>' +
+const PROOFREAD_CSS =
   ':root{--proofread-spelling-color:hsl(0deg 72% 48%);--proofread-grammar-color:hsl(142deg 58% 36%)}' +
   '@media (prefers-color-scheme:dark){:root{--proofread-spelling-color:hsl(0deg 82% 62%);--proofread-grammar-color:hsl(142deg 58% 52%)}}' +
   '.proofread-spelling,.proofread-grammar{text-decoration:underline;text-decoration-style:wavy;' +
@@ -80,12 +80,11 @@ const PROOFREAD_STYLE =
   // Harper marks quoted words with code; show them as quotes in the text font
   '.proofread-tooltip code{padding:0;border:0;border-radius:0;background:none;color:inherit;font:inherit}' +
   '.proofread-tooltip code::before{content:open-quote}' +
-  '.proofread-tooltip code::after{content:close-quote}' +
-  '</style>';
+  '.proofread-tooltip code::after{content:close-quote}';
 
 // Replaces the native title tooltip with one that shows the HTML message.
 // Delegated from document, so it keeps working across client-side navigation.
-const PROOFREAD_SCRIPT = `<script>(() => {
+const PROOFREAD_JS = `(() => {
   let tooltip = null;
   let owner = null;
   function hide() {
@@ -115,46 +114,58 @@ const PROOFREAD_SCRIPT = `<script>(() => {
     tooltip.style.left = left + scrollX + 'px';
     tooltip.style.top = rect.bottom + scrollY + 4 + 'px';
   });
+  // Leaving the window fires no pointerover in the page
+  document.addEventListener('pointerout', event => {
+    if (!event.relatedTarget) {
+      hide();
+    }
+  });
   addEventListener('scroll', hide, true);
-})();</script>`;
+})();`;
 
-/** Added to the head of every proofread page */
-export const PROOFREAD_HEAD = PROOFREAD_STYLE + PROOFREAD_SCRIPT;
+/** The style and script added to the head of every proofread page */
+export const PROOFREAD_HEAD = { css: PROOFREAD_CSS, js: PROOFREAD_JS };
 
-// Elements that continue the surrounding sentence; every other element ends it
-const INLINE_ELEMENTS = new Set([
-  'a',
-  'abbr',
-  'b',
-  'bdi',
-  'bdo',
-  'cite',
-  'data',
-  'del',
-  'dfn',
-  'em',
-  'i',
-  'ins',
-  'mark',
-  'q',
-  's',
-  'small',
-  'span',
-  'strong',
-  'sub',
-  'sup',
-  'time',
-  'u',
-]);
+// Each text node is checked as part of the nearest of these that contains it
+const BLOCK_SELECTOR = [
+  'address',
+  'article',
+  'aside',
+  'blockquote',
+  'caption',
+  'dd',
+  'details',
+  'div',
+  'dl',
+  'dt',
+  'fieldset',
+  'figcaption',
+  'figure',
+  'footer',
+  'form',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'header',
+  'legend',
+  'li',
+  'main',
+  'ol',
+  'p',
+  'section',
+  'summary',
+  'table',
+  'td',
+  'th',
+  'tr',
+  'ul',
+].join(', ');
 
-// Labels Tada generates, which are not sentences
-const IGNORED_CLASSES = ['question-label', 'question-a-label'];
-
-// Their text is part of the sentence, but problems that touch it are dropped
-const MASKED_ELEMENTS = new Set(['code', 'kbd', 'samp', 'tt', 'var']);
-
-// Their text is never checked
-const IGNORED_ELEMENTS = new Set([
+// Text in these is never checked
+const IGNORED_SELECTOR = [
   'audio',
   'button',
   'canvas',
@@ -170,32 +181,27 @@ const IGNORED_ELEMENTS = new Set([
   'template',
   'textarea',
   'video',
-]);
+  // Not shown to readers at build time
+  '[hidden]',
+  '[inert]',
+  '[aria-hidden="true"]',
+  '[spellcheck="false"]',
+  // Answers are hidden from search, but they are the author's writing
+  '[data-pagefind-ignore]:not(.question-a-body)',
+  // Labels Tada generates, which are not sentences
+  '.question-label',
+  '.question-a-label',
+].join(', ');
 
-interface Frame {
-  inMain: boolean;
-  ignored: boolean;
-  masked: boolean;
-  /** Inside KaTeX output, only the TeX source annotation is read */
-  math: 'none' | 'katex' | 'annotation';
-}
+// Their text is part of the sentence, but problems that touch it are dropped
+const MASKED_SELECTOR = 'code, kbd, samp, tt, var, .katex';
 
-const ROOT: Frame = {
-  inMain: false,
-  ignored: false,
-  masked: false,
-  math: 'none',
-};
-
-/** A run of raw HTML text and what it decodes to; entities are never split */
-interface TextToken {
-  raw: string;
-  text: string;
-}
+const TEXT_NODE = 3;
+const SHOW_ELEMENT_AND_TEXT = 0x1 | 0x4;
 
 interface Piece {
-  /** The text node this piece came from; separators have none */
-  node?: number;
+  /** The text node this piece came from; a line break has none */
+  node?: Text;
   start: number;
   end: number;
   masked: boolean;
@@ -209,175 +215,51 @@ interface Block {
 interface Mark {
   start: number;
   end: number;
-  kind: IssueKind;
-  message?: string;
-  messageHtml?: string;
+  issue: TextIssue;
 }
 
-const TOKEN_PATTERN = /&(?:#[0-9]+|#x[0-9a-f]+|[a-z][a-z0-9]*);|[^&]+|&/gi;
-
-function tokenize(raw: string): TextToken[] {
-  return Array.from(raw.matchAll(TOKEN_PATTERN), ([match]) => ({
-    raw: match,
-    text: match.startsWith('&') ? decodeHTML(match) : match,
-  }));
-}
-
-function childFrame(parent: Frame, el: HTMLRewriterTypes.Element): Frame {
-  const tag = el.tagName.toLowerCase();
-  const classes = (el.getAttribute('class') ?? '').split(/\s+/);
-  let math = parent.math;
-  if (classes.includes('katex')) {
-    math = 'katex';
-  } else if (math === 'katex' && tag === 'annotation') {
-    math = 'annotation';
-  }
-  const pagefindIgnored =
-    el.hasAttribute('data-pagefind-ignore') &&
-    // Answers are hidden from search, but they are the author's writing
-    !classes.includes('question-a-body');
-  return {
-    inMain: parent.inMain || tag === 'main',
-    ignored:
-      parent.ignored ||
-      IGNORED_ELEMENTS.has(tag) ||
-      pagefindIgnored ||
-      IGNORED_CLASSES.some(name => classes.includes(name)) ||
-      // Not shown to readers at build time
-      el.hasAttribute('hidden') ||
-      el.hasAttribute('inert') ||
-      el.getAttribute('aria-hidden') === 'true' ||
-      el.getAttribute('spellcheck') === 'false',
-    masked: parent.masked || MASKED_ELEMENTS.has(tag) || math !== 'none',
-    math,
-  };
-}
-
-function endsSentence(tag: string, frame: Frame): boolean {
-  return (
-    frame.math === 'none' &&
-    !INLINE_ELEMENTS.has(tag) &&
-    !MASKED_ELEMENTS.has(tag)
-  );
-}
-
-function isChecked(frame: Frame): boolean {
-  return (
-    frame.inMain &&
-    !frame.ignored &&
-    (frame.math === 'none' || frame.math === 'annotation')
-  );
-}
-
-/**
- * Runs `onText` for every text node in the page, numbered in document order,
- * with the element context it is in. `onBoundary` runs where a checked
- * sentence must end, and `onLineBreak` at each checked `<br>`.
- */
-function walk(
-  rewriter: HTMLRewriter,
-  {
-    onBoundary,
-    onLineBreak,
-    onText,
-  }: {
-    onBoundary?: () => void;
-    onLineBreak?: () => void;
-    onText: (chunk: HTMLRewriterTypes.Text, node: number, frame: Frame) => void;
-  },
-): HTMLRewriter {
-  const stack: Frame[] = [];
-  let node = 0;
-  return rewriter
-    .on('*', {
-      element(el) {
-        const parent = stack.at(-1) ?? ROOT;
-        const frame = childFrame(parent, el);
-        const tag = el.tagName.toLowerCase();
-        const boundary = isChecked(parent) && endsSentence(tag, frame);
-        if (tag === 'br' && isChecked(parent)) {
-          onLineBreak?.();
-        } else if (boundary) {
-          onBoundary?.();
-        }
-        if (el.selfClosing || !el.canHaveContent) {
-          return;
-        }
-        stack.push(frame);
-        el.onEndTag(() => {
-          // An element closed implicitly never sees its end tag
-          const index = stack.lastIndexOf(frame);
-          if (index !== -1) {
-            stack.splice(index);
-          }
-          if (boundary) {
-            onBoundary?.();
-          }
-        });
-      },
-    })
-    .onDocument({
-      text(chunk) {
-        onText(chunk, node, stack.at(-1) ?? ROOT);
-        if (chunk.lastInTextNode) {
-          node++;
-        }
-      },
-    });
-}
-
-function collectBlocks(html: string): {
-  blocks: Block[];
-  tokensByNode: Map<number, TextToken[]>;
-} {
-  const blocks: Block[] = [];
-  const tokensByNode = new Map<number, TextToken[]>();
-  let current: Block = { text: '', pieces: [] };
-  let raw = '';
-
-  function addPiece(text: string, node: number | undefined, masked: boolean) {
-    const start = current.text.length;
-    current.text += text;
-    current.pieces.push({ node, start, end: current.text.length, masked });
-  }
-
-  function endBlock() {
-    const hasCheckedText = current.pieces.some(
-      piece =>
-        !piece.masked &&
-        current.text.slice(piece.start, piece.end).trim() !== '',
-    );
-    if (hasCheckedText) {
-      blocks.push(current);
+/** Groups the checked text in `main` into blocks, in document order */
+function collectBlocks(document: Document, main: Element): Block[] {
+  const blocks = new Map<Element, Block>();
+  const walker = document.createTreeWalker(main, SHOW_ELEMENT_AND_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const isText = node.nodeType === TEXT_NODE;
+    const element = isText ? node.parentElement : (node as Element);
+    if (!element || (!isText && element.tagName !== 'BR')) {
+      continue;
     }
-    current = { text: '', pieces: [] };
+    // Of KaTeX output, only the TeX source annotation is read
+    const isKatexRendering =
+      element.closest('.katex') !== null && !element.closest('annotation');
+    if (isKatexRendering || element.closest(IGNORED_SELECTOR)) {
+      continue;
+    }
+    const blockElement = element.closest(BLOCK_SELECTOR) ?? main;
+    const block = blocks.get(blockElement) ?? { text: '', pieces: [] };
+    blocks.set(blockElement, block);
+    const start = block.text.length;
+    block.text += isText ? node.textContent : '\n';
+    block.pieces.push({
+      node: isText ? (node as Text) : undefined,
+      start,
+      end: block.text.length,
+      masked: isText && element.closest(MASKED_SELECTOR) !== null,
+    });
   }
-
-  walk(new HTMLRewriter(), {
-    onBoundary: endBlock,
-    onLineBreak: () => addPiece('\n', undefined, false),
-    onText(chunk, node, frame) {
-      raw += chunk.text;
-      if (!chunk.lastInTextNode) {
-        return;
-      }
-      if (isChecked(frame) && raw !== '') {
-        const tokens = tokenize(raw);
-        tokensByNode.set(node, tokens);
-        addPiece(tokens.map(token => token.text).join(''), node, frame.masked);
-      }
-      raw = '';
-    },
-  }).transform(html);
-  endBlock();
-  return { blocks, tokensByNode };
+  return [...blocks.values()].filter(block =>
+    block.pieces.some(
+      piece =>
+        !piece.masked && block.text.slice(piece.start, piece.end).trim() !== '',
+    ),
+  );
 }
 
+/** The parts of each text node that the issues cover */
 function marksForIssues(
   blocks: Block[],
   issuesByBlock: TextIssue[][],
-): Map<number, Mark[]> {
-  const marksByNode = new Map<number, Mark[]>();
+): Map<Text, Mark[]> {
+  const marksByNode = new Map<Text, Mark[]>();
   blocks.forEach((block, i) => {
     for (const issue of issuesByBlock[i]) {
       // Browsers collapse whitespace, so problems with it are not visible
@@ -390,135 +272,88 @@ function marksForIssues(
       if (pieces.some(piece => piece.masked)) {
         continue;
       }
-      for (const piece of pieces) {
-        if (piece.node === undefined) {
+      for (const { node, start, end } of pieces) {
+        if (!node) {
           continue;
         }
-        const marks = marksByNode.get(piece.node) ?? [];
+        const marks = marksByNode.get(node) ?? [];
         marks.push({
-          start: Math.max(issue.start, piece.start) - piece.start,
-          end: Math.min(issue.end, piece.end) - piece.start,
-          kind: issue.kind,
-          message: issue.message,
-          messageHtml: issue.messageHtml,
+          start: Math.max(issue.start, start) - start,
+          end: Math.min(issue.end, end) - start,
+          issue,
         });
-        marksByNode.set(piece.node, marks);
+        marksByNode.set(node, marks);
       }
     }
   });
-  for (const [node, marks] of marksByNode) {
-    marks.sort((a, b) => a.start - b.start);
-    let lastEnd = 0;
-    marksByNode.set(
-      node,
-      marks.filter(mark => {
-        if (mark.start < lastEnd) {
-          return false;
-        }
-        lastEnd = mark.end;
-        return true;
-      }),
-    );
-  }
   return marksByNode;
 }
 
-function openMark({ kind, message, messageHtml }: Mark): string {
-  let attributes = `class="proofread-${kind}"`;
-  if (message) {
+function createMark(document: Document, text: string, issue: TextIssue) {
+  const span = document.createElement('span');
+  span.className = `proofread-${issue.kind}`;
+  if (issue.message) {
     // Harper marks quoted words with backticks
-    const quoted = message.replace(/`([^`]*)`/g, '\u201c$1\u201d');
-    attributes += ` title="${escapeAttribute(quoted)}"`;
+    span.setAttribute('title', issue.message.replace(/`([^`]*)`/g, '“$1”'));
   }
-  if (messageHtml) {
-    attributes += ` data-proofread-message="${escapeAttribute(messageHtml.trim())}"`;
+  if (issue.messageHtml) {
+    span.setAttribute('data-proofread-message', issue.messageHtml.trim());
   }
-  return `<span ${attributes}>`;
+  span.append(document.createTextNode(text));
+  return span;
 }
 
-/** Wraps each mark's text in a span; an entity is never split */
-function renderMarkedText(tokens: TextToken[], marks: Mark[]): string {
-  const boundaries = [
-    ...new Set(marks.flatMap(mark => [mark.start, mark.end])),
-  ].sort((a, b) => a - b);
-  let html = '';
-  let index = 0;
-  let open = false;
-
-  function sync(position: number) {
-    if (open && position >= marks[index].end) {
-      html += '</span>';
-      open = false;
-      index++;
-    }
-    while (index < marks.length && marks[index].end <= position) {
-      index++;
-    }
-    if (!open && index < marks.length && position >= marks[index].start) {
-      html += openMark(marks[index]);
-      open = true;
-    }
-  }
-
+/** Replaces a text node with its text, with each mark's part in a span */
+function wrapMarks(document: Document, node: Text, marks: Mark[]) {
+  const text = node.data;
+  const parts: Node[] = [];
   let position = 0;
-  for (const token of tokens) {
-    const end = position + token.text.length;
-    if (token.raw !== token.text) {
-      sync(position);
-      html += token.raw;
-    } else {
-      let cut = position;
-      for (const boundary of boundaries) {
-        if (boundary > cut && boundary < end) {
-          sync(cut);
-          html += token.raw.slice(cut - position, boundary - position);
-          cut = boundary;
-        }
-      }
-      sync(cut);
-      html += token.raw.slice(cut - position);
+  for (const mark of marks.sort((a, b) => a.start - b.start)) {
+    // Of overlapping problems, the first is kept
+    if (mark.start < position) {
+      continue;
     }
-    position = end;
+    if (mark.start > position) {
+      parts.push(document.createTextNode(text.slice(position, mark.start)));
+    }
+    parts.push(
+      createMark(document, text.slice(mark.start, mark.end), mark.issue),
+    );
+    position = mark.end;
   }
-  if (open) {
-    html += '</span>';
+  if (position < text.length) {
+    parts.push(document.createTextNode(text.slice(position)));
   }
-  return html;
+  node.replaceWith(...parts);
 }
 
 /**
  * Underlines the problems `check` finds in the page's main content and adds
- * the style that draws the underlines
+ * the style and script for the underlines and their tooltips
  */
 export async function proofreadHtml(
   html: string,
   check: CheckText,
 ): Promise<string> {
-  const { blocks, tokensByNode } = collectBlocks(html);
+  const { document } = parseHTML(html);
+  const main = document.querySelector('main');
+  if (!main) {
+    return html;
+  }
+  // The parser splits text at character references; merge it back
+  main.normalize();
+  const blocks = collectBlocks(document, main);
   const issuesByBlock = await Promise.all(
     blocks.map(block => check(block.text)),
   );
-  const marksByNode = marksForIssues(blocks, issuesByBlock);
+  for (const [node, marks] of marksForIssues(blocks, issuesByBlock)) {
+    wrapMarks(document, node, marks);
+  }
 
-  return walk(new HTMLRewriter(), {
-    onText(chunk, node) {
-      const marks = marksByNode.get(node);
-      if (!marks) {
-        return;
-      }
-      if (chunk.lastInTextNode) {
-        chunk.replace(renderMarkedText(tokensByNode.get(node)!, marks), {
-          html: true,
-        });
-      } else {
-        chunk.remove();
-      }
-    },
-  })
-    .on('head', {
-      element(el) {
-        el.append(PROOFREAD_HEAD, { html: true });
-      },
-    })
-    .transform(html);
+  const style = document.createElement('style');
+  style.textContent = PROOFREAD_HEAD.css;
+  const script = document.createElement('script');
+  script.textContent = PROOFREAD_HEAD.js;
+  document.head.append(style, script);
+  return document.toString();
 }

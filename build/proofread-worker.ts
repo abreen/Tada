@@ -80,6 +80,10 @@ self.onmessage = (event: MessageEvent<ProofreadRequest>) => {
   queue = queue
     .then(() => handle(event.data))
     .catch((error: unknown) =>
-      respond({ type: 'failed', message: (error as Error).message }),
+      respond({
+        type: 'failed',
+        id: event.data.type === 'check' ? event.data.id : undefined,
+        message: (error as Error).message,
+      }),
     );
 };
