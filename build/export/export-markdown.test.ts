@@ -57,6 +57,7 @@ function createContext(files: Record<string, string> = {}): ExportContext {
       ['/lectures/photo.png', 'lectures/photo.png'],
       ['/about.html', 'about.html'],
     ]),
+    validTargets: new Set(['/feed.xml']),
     readFile: read,
     readTraceFile: filePath => {
       const text = read(filePath);
@@ -132,7 +133,7 @@ describe('exportMarkdownPage', () => {
         [
           '[a](/index.html) [b](../index.html#top) [c](/lectures/)',
           '[d](Demo.java.html) [e](./photo.png) [f](https://example.com/x.html)',
-          '[g](#local) [h](/missing/page.html) ![i](/lectures/photo.png)',
+          '[g](#local) [h](/feed.xml) ![i](/lectures/photo.png)',
           '[j](</lectures/linked lists.html>) [k](/about.html "About")',
         ].join('\n'),
       ),
@@ -140,10 +141,25 @@ describe('exportMarkdownPage', () => {
       [
         '[a](../index.md) [b](../index.md#top) [c](index.md)',
         '[d](Demo.java) [e](./photo.png) [f](https://example.com/x.html)',
-        '[g](#local) [h](../missing/page.html) ![i](photo.png)',
+        '[g](#local) [h](../feed.xml) ![i](photo.png)',
         '[j](<linked%20lists.md>) [k](../about.html "About")',
         '',
       ].join('\n'),
+    );
+  });
+
+  test('fails on a broken internal link, as the build does', () => {
+    expect(() => exportPage('[x](/missing.html)')).toThrow(
+      'broken internal link: "/missing.html" (resolved to "/missing.html")',
+    );
+    expect(() => exportPage('<a href="nope.html">x</a>')).toThrow(
+      'broken internal link: "nope.html" (resolved to "/lectures/nope.html")',
+    );
+  });
+
+  test('finds superlink labels as the build does', () => {
+    expect(exportPage('[<img alt="]">][Desc](/index.html)')).toBe(
+      '[<img alt="]">](../index.md) - Desc\n',
     );
   });
 
@@ -278,6 +294,14 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('treats any fence whose first word is trace as a trace', () => {
+    expect(
+      exportPage('```trace extra\nhelper.py\n```', {
+        files: { 'lectures/helper.py': 'x = 1\n' },
+      }),
+    ).toBe('```python\nx = 1\n```\n');
+  });
+
   test('converts trace blocks to code blocks of their files', () => {
     expect(
       exportPage('- Step\n\n  ```trace\n  Demo.java\n  helper.py\n  ```', {
@@ -312,6 +336,14 @@ describe('exportMarkdownPage', () => {
     expect(() => exportPage('{{{ missing.md }}}')).toThrow(
       'partial not found: missing.md',
     );
+  });
+
+  test('keeps the list item of a partial directive', () => {
+    expect(
+      exportPage('- one\n- {{{ _p.md }}}\n- three', {
+        files: { 'lectures/_p.md': 'Partial text' },
+      }),
+    ).toBe('- one\n- Partial text\n- three\n');
   });
 
   test('keeps partials apart from the lines around them', () => {

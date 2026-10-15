@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { globals } from '../globals';
 import { getDevSiteVariables, getProdSiteVariables } from '../site-variables';
 import {
   addGeneratedRouteAliases,
@@ -87,6 +88,11 @@ function checkOutDir(outDir: string, force: boolean): void {
       `cannot export to ${toDisplayPath(outDir)}: it overlaps content/ or public/`,
     );
   }
+  if (fs.existsSync(outDir) && !fs.statSync(outDir).isDirectory()) {
+    throw new Error(
+      `cannot export to ${toDisplayPath(outDir)}: it is a file, not a directory`,
+    );
+  }
   if (!force && fs.existsSync(outDir) && fs.readdirSync(outDir).length > 0) {
     throw new Error(
       `${toDisplayPath(outDir)}/ is not empty; use --force to replace it`,
@@ -99,9 +105,12 @@ function checkOutDir(outDir: string, force: boolean): void {
  * place, so a failure leaves any earlier export as it was
  */
 function publishOutputs(outDir: string, outputs: ExportOutput[]): void {
-  const staging = `${outDir}.tmp-${process.pid}`;
-  const backup = `${outDir}.old-${process.pid}`;
+  // Unique per run: a pid alone repeats, such as pid 1 in containers
+  const suffix = `${globals.pid()}-${globals.now()}`;
+  const staging = `${outDir}.tmp-${suffix}`;
+  const backup = `${outDir}.old-${suffix}`;
   fs.rmSync(staging, { recursive: true, force: true });
+  fs.rmSync(backup, { recursive: true, force: true });
   try {
     fs.mkdirSync(staging, { recursive: true });
     for (const output of outputs) {
@@ -238,6 +247,7 @@ export function runExport({
     siteVariables,
     pageTitles: scan.pageTitles,
     exportPaths,
+    validTargets: new Set([...scan.validTargets, ...scan.generatedPageTargets]),
     readFile: filePath =>
       fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf-8') : null,
     readTraceFile: filePath => {

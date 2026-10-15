@@ -35,6 +35,11 @@ export interface ExportContext {
    * to paths in the export, relative to its root (`a/b.md`)
    */
   exportPaths: ReadonlyMap<string, string>;
+  /**
+   * Every URL path an internal link can name in the build, including ones the
+   * export leaves out, such as generated files
+   */
+  validTargets: ReadonlySet<string>;
   /** Reads a file as written, or returns null when there is none */
   readFile: (filePath: string) => string | null;
   /** Reads a traced source file as the build publishes it */
@@ -64,8 +69,10 @@ interface InlineSpan {
   base: number;
   start: number;
   end: number;
-  /** Index of the `]` that ends a link's or image's label */
+  /** Index of the `]` that ends a link's, image's, or superlink's first label */
   labelEnd: number;
+  /** Index of the `]` that ends a superlink's description */
+  descriptionEnd: number;
 }
 
 interface ParseRecord {
@@ -221,15 +228,24 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
           .find(t => t.type === EXPECTED_TOKENS[kind]);
         if (!silent && current && token && base !== undefined) {
           const end = state.pos;
+          // Labels found as the rules found them
           let labelEnd = -1;
+          let descriptionEnd = -1;
           if (kind === 'link' || kind === 'image') {
             labelEnd = state.md.helpers.parseLinkLabel(
               state,
               kind === 'image' ? start + 1 : start,
               kind === 'link',
             );
-            state.pos = end;
+          } else if (kind === 'superlink') {
+            labelEnd = state.md.helpers.parseLinkLabel(state, start, true);
+            descriptionEnd = state.md.helpers.parseLinkLabel(
+              state,
+              labelEnd + 1,
+              true,
+            );
           }
+          state.pos = end;
           record.spans.push({
             kind,
             token,
@@ -239,6 +255,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
             start,
             end,
             labelEnd,
+            descriptionEnd,
           });
         }
         return true;
@@ -488,14 +505,16 @@ class PageExporter {
       const indent = continuationPrefix(prefix);
       // The build parses a partial as blocks of their own, so blank lines keep
       // it from joining a paragraph or list around it
+      // it from joining a paragraph or list around it. A directive that is a
+      // list item already starts a block of its own.
       const isBlank = (text: string | undefined) =>
         text === undefined || /^[\s>]*$/.test(text);
-      const before = isBlank(lines[line - 1]) ? '' : `${indent.trimEnd()}\n`;
-      const after = isBlank(lines[line + 1]) ? '' : `\n${indent.trimEnd()}`;
-      lines[line] =
-        (before ? before + indent : prefix) +
-        indentLines(partial, indent) +
-        after;
+      const separate = indent === prefix;
+      const before =
+        separate && !isBlank(lines[line - 1]) ? `${indent.trimEnd()}\n` : '';
+      const after =
+        separate && !isBlank(lines[line + 1]) ? `\n${indent.trimEnd()}` : '';
+      lines[line] = before + prefix + indentLines(partial, indent) + after;
     }
     return lines.join('\n');
   }
@@ -520,6 +539,14 @@ class PageExporter {
     );
     if (!target.startsWith('/') || target.startsWith('/..')) {
       return null;
+    }
+    if (
+      !this.context.exportPaths.has(target) &&
+      !this.context.validTargets.has(target)
+    ) {
+      throw new Error(
+        `${this.displayPath}: broken internal link: "${url}" (resolved to "${target}")`,
+      );
     }
     // A relative link to a file exported at its own path already works
     if (!absolute && this.context.exportPaths.get(target) === target.slice(1)) {
@@ -788,7 +815,11 @@ class PageExporter {
           lineEnd,
           replace,
         });
-      } else if (token.type === 'fence' && token.info.trim() === 'trace') {
+      } else if (
+        token.type === 'fence' &&
+        // As the build reads a fence's language
+        token.info.trim().split(/\s+/)[0] === 'trace'
+      ) {
         const [open, end] = token.map!;
         const { start, indent } = blockStart(open);
         replace(
@@ -886,15 +917,17 @@ class PageExporter {
         render => `[${render(at(labelStart), at(labelEnd))}](${href})`,
       );
     } else if (span.kind === 'superlink') {
-      const md = plainMarkdown;
-      const titleEnd = findLabelEnd(src, start);
+      const { labelEnd: titleEnd, descriptionEnd } = span;
       const descriptionStart = titleEnd + 2;
-      const descriptionEnd = findLabelEnd(src, titleEnd + 1);
       let pos = descriptionEnd + 2;
       while (pos < end && /\s/.test(src[pos])) {
         pos++;
       }
-      const destination = md.helpers.parseLinkDestination(src, pos, end);
+      const destination = plainMarkdown.helpers.parseLinkDestination(
+        src,
+        pos,
+        end,
+      );
       const raw = src.slice(pos, destination.pos);
       // Each superlink was a block of its own: keep the next one on its own line
       const lineBreak = src[end] === '\n' ? '\\' : '';
@@ -1192,26 +1225,6 @@ function findUrlAttributes(
     }
   }
   return values;
-}
-
-/** Index of the `]` that closes the label opened at `open`, skipping escapes and code */
-function findLabelEnd(src: string, open: number): number {
-  let depth = 0;
-  for (let i = open; i < src.length; i++) {
-    const char = src[i];
-    if (char === '\\') {
-      i++;
-    } else if (char === '`') {
-      const run = /^`+/.exec(src.slice(i))![0];
-      const close = src.indexOf(run, i + run.length);
-      i = close < 0 ? i + run.length - 1 : close + run.length - 1;
-    } else if (char === '[') {
-      depth++;
-    } else if (char === ']' && --depth === 0) {
-      return i;
-    }
-  }
-  return -1;
 }
 
 /** Index of the `]` before `:` in a reference definition */

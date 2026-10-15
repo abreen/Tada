@@ -58,7 +58,7 @@ them as the build does.
 
 | Tada | Export |
 |---|---|
-| `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it |
+| `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it (not when the directive is a list item) |
 | `[[Title]]`, `[[Title\|text]]` | `[Title](path.md)`, `[text](path.md)` |
 | `[Title][Description](url)` | `[Title](url) - Description`; a superlink followed by a line break ends with `\` so the next one stays on its own line |
 | `!!! note` / `!!! warning` | `> [!NOTE]` / `> [!WARNING]`; a custom title becomes a bold line under the marker |
@@ -67,7 +67,7 @@ them as the build does.
 | `+++` columns | Fence lines become blank lines; the columns follow one another |
 | `## Main # Subtitle` | `## Main - Subtitle` |
 | Definition lists | `<dl>` with `<dt>` and `<dd>` elements, each holding Markdown between blank lines |
-| ` ```trace ` blocks | One fenced code block per listed file, with the file's contents as the build publishes them, in the language mapped from its extension |
+| ` ```trace ` blocks (any fence whose first info word is `trace`) | One fenced code block per listed file, with the file's contents as the build publishes them, in the language mapped from its extension |
 
 Summaries are rendered to HTML, since GitHub does not parse Markdown inside
 `<summary>`. Everything else is kept as written, including math, footnotes,
@@ -88,5 +88,8 @@ and `href` and `src` attributes in raw HTML point to exported files:
   base path.
 - A relative link to a file exported at the same path is left as written.
 - External links, fragments, and `mailto:` links are unchanged.
+- An internal link to a path the build does not publish fails the export with
+  the build's `broken internal link` error. A link to a file the build
+  generates but the export leaves out is made relative and kept.
 
 Query strings and fragments are kept.
