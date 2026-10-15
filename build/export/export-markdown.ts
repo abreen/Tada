@@ -32,6 +32,21 @@ const CONTAINER_PREFIX_PATTERN =
 /** A container prefix, then any definition list marker (`: ` or `~ `) */
 const LINE_PREFIX_PATTERN =
   /^(?:[ \t]*(?:>|[-+*](?=[ \t]|$)|\d{1,9}[.)](?=[ \t]|$)|[:~](?=[ \t])))*[ \t]*/;
+/**
+ * HTML blocks that end only at a closing tag or marker (types 1 to 5): how
+ * each starts, how it ends, and a line that ends it
+ */
+const HTML_BLOCK_CLOSERS: [RegExp, RegExp, string][] = [
+  [
+    /^\s*<(?:script|pre|style|textarea)(?=[\s>]|$)/i,
+    /<\/(?:script|pre|style|textarea)>/i,
+    '</$tag>',
+  ],
+  [/^\s*<!--/, /-->/, '-->'],
+  [/^\s*<\?/, /\?>/, '?>'],
+  [/^\s*<![A-Za-z]/, /^\s*<![A-Za-z][^>]*>/, '>'],
+  [/^\s*<!\[CDATA\[/, /\]\]>/, ']]>'],
+];
 /** ` # ` with its `#` escaped or written as a character reference */
 const ESCAPED_HASH_SEPARATOR_PATTERN = /^ (?:\\#|&#35;|&#[xX]23;|&num;) /;
 /** List markers and definition markers, which later lines indent past */
@@ -115,6 +130,13 @@ interface ParseRecord {
   origins?: readonly string[];
 }
 
+/** Reference definitions, by normalized label, as markdown-it keeps them */
+type References = Record<string, { href: string; title: string }>;
+
+interface ParseEnv {
+  references?: References;
+}
+
 interface ParseOptions {
   wikilinks?: boolean;
   origins?: readonly string[];
@@ -159,8 +181,11 @@ summaryMarkdown.renderer.rules.math_inline_block = keepMath('$$', '$$');
 summaryMarkdown.renderer.rules.math_inline_bare_block = keepMath('$$', '$$');
 
 /** Renders inline Markdown as HTML, for markup that GitHub does not parse */
-export function renderInlineHtml(markdown: string): string {
-  return summaryMarkdown.renderInline(markdown).trim();
+export function renderInlineHtml(
+  markdown: string,
+  references?: Record<string, { href: string; title: string }>,
+): string {
+  return summaryMarkdown.renderInline(markdown, { references }).trim();
 }
 
 interface RuleEntry<T> {
@@ -618,7 +643,7 @@ class PageExporter {
   private parse(
     text: string,
     { wikilinks = !this.forTitle, origins }: ParseOptions = {},
-  ): { tokens: Token[]; record: ParseRecord } {
+  ): { tokens: Token[]; record: ParseRecord; references: References } {
     const record: ParseRecord = {
       spans: [],
       contents: new Map(),
@@ -627,8 +652,42 @@ class PageExporter {
       footnotes: [],
       origins,
     };
-    const tokens = this.createParser(record, wikilinks).parse(text, {});
-    return { tokens, record };
+    const env: ParseEnv = {};
+    const tokens = this.createParser(record, wikilinks).parse(text, env);
+    return { tokens, record, references: env.references ?? {} };
+  }
+
+  /**
+   * Closes a fence or an HTML block (types 1 to 5, which end only at a
+   * closing tag or marker) that runs to the end of the text
+   */
+  private closeOpenBlocks(text: string): string {
+    const lines = text.split('\n');
+    const { tokens } = this.parse(text, { wikilinks: false });
+    const last = tokens.findLast(
+      token => token.level === 0 && token.map !== null,
+    );
+    if (!last || last.map![1] < lines.length) {
+      return text;
+    }
+    if (last.type === 'fence') {
+      const close = lines[last.map![1] - 1].trim();
+      const closed =
+        last.map![1] - 1 > last.map![0] &&
+        close.length >= last.markup.length &&
+        [...close].every(char => char === last.markup[0]);
+      return closed ? text : `${text}\n${last.markup}`;
+    }
+    if (last.type === 'html_block') {
+      const closer = HTML_BLOCK_CLOSERS.find(([start]) =>
+        start.test(last.content),
+      );
+      if (closer && !closer[1].test(last.content)) {
+        const tag = /^\s*<([a-z]+)/i.exec(last.content)?.[1] ?? '';
+        return `${text}\n${closer[2].replace('$tag', tag)}`;
+      }
+    }
+    return text;
   }
 
   /**
@@ -684,8 +743,9 @@ class PageExporter {
         resolvedPath,
         depth + 1,
       );
-      const partialLines = partial.text.replace(/\n$/, '').split('\n');
-      const partialText = partialLines.join('\n');
+      // The build parses a partial on its own, so a block left open ends
+      // with it; once included, it would run on into the page
+      const partialText = this.closeOpenBlocks(partial.text.replace(/\n$/, ''));
 
       const line = directive.map![0];
       const original = lines[line];
@@ -723,7 +783,7 @@ class PageExporter {
         line,
         1,
         ...(breakBefore ? [fromFile] : []),
-        ...partial.origins.slice(0, included.length),
+        ...included.map((_, i) => partial.origins[i] ?? resolvedPath),
         ...(breakAfter ? [fromFile] : []),
       );
     }
@@ -858,7 +918,18 @@ class PageExporter {
   }
 
   transform(text: string, origins?: readonly string[]): string {
-    const { tokens, record } = this.parse(text, { origins });
+    const { tokens, record, references } = this.parse(text, { origins });
+    // Definitions as tab labels need them: a label is part of the page in
+    // the build, but is rendered here on its own
+    const exportedReferences: References = Object.fromEntries(
+      Object.entries(references).map(([label, reference]) => [
+        label,
+        {
+          ...reference,
+          href: this.rewriteUrl(reference.href) ?? reference.href,
+        },
+      ]),
+    );
     const lines = text.split('\n');
     const lineStarts: number[] = [];
     let offset = 0;
@@ -1048,14 +1119,14 @@ class PageExporter {
       } else if (token.type === 'tabs_panel_open') {
         const [open, end] = token.map!;
         const label = tokens[index + 2].content;
-        this.exportDetails(label, open, end - 1, end, {
-          blockStart,
-          blankStart,
-          isBlankLine,
-          lineStart,
-          lineEnd,
-          replace,
-        });
+        this.exportDetails(
+          label,
+          open,
+          end - 1,
+          end,
+          { blockStart, blankStart, isBlankLine, lineStart, lineEnd, replace },
+          exportedReferences,
+        );
       } else if (token.type === 'columns_open') {
         const [open, end] = token.map!;
         const separator =
@@ -1424,10 +1495,12 @@ class PageExporter {
       lineEnd: (line: number) => number;
       replace: (start: number, end: number, replacement: string) => void;
     },
+    /** The page's reference definitions, for a summary the page parses */
+    references?: References,
   ): void {
     const { blockStart, isBlankLine, lineStart, lineEnd, replace } = helpers;
     const { start, indent } = blockStart(open);
-    const html = renderInlineHtml(this.exportInline(summary));
+    const html = renderInlineHtml(this.exportInline(summary), references);
     replace(
       start,
       lineEnd(open),
@@ -1797,10 +1870,8 @@ function findSubtitleSeparator(
     } else if (ESCAPED_HASH_SEPARATOR_PATTERN.test(content.slice(i, i + 9))) {
       // Then splits the text, where an escaped `#` or a character reference
       // for it is plain `#`
-      const separator = ESCAPED_HASH_SEPARATOR_PATTERN.exec(
-        content.slice(i, i + 9),
-      )![0];
-      return [i, i + separator.length];
+      const separator = content.slice(i).match(ESCAPED_HASH_SEPARATOR_PATTERN)!;
+      return [i, i + separator[0].length];
     } else if (char === '\\') {
       i++;
     } else if (char === '`') {

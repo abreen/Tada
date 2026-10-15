@@ -397,6 +397,25 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('ends an open fence or HTML block with its partial', () => {
+    expect(
+      exportPage('{{{ _fence.md }}}\n\n[x](/index.html)', {
+        files: { 'lectures/_fence.md': '```\ncode' },
+      }),
+    ).toBe('```\ncode\n```\n\n[x](../index.md)\n');
+    expect(
+      exportPage('{{{ _c.md }}}\n\n[x](/index.html)', {
+        files: { 'lectures/_c.md': '<!-- note' },
+      }),
+    ).toBe('<!-- note\n-->\n\n[x](../index.md)\n');
+  });
+
+  test('resolves page references in tab labels', () => {
+    expect(exportPage('[See [docs]|\nbody\n]\n\n[docs]: /index.html')).toBe(
+      '<details>\n<summary>See <a href="../index.md">docs</a></summary>\n\nbody\n\n</details>\n\n[docs]: ../index.md\n',
+    );
+  });
+
   test('keeps a list tight around an alert', () => {
     expect(exportPage('1. one\n   !!! note\n   two\n   !!!\n2. three')).toBe(
       '1. one\n   > [!NOTE]\n   > two\n2. three\n',
