@@ -37,6 +37,12 @@ publishes them:
 | Other content files, `public/` files | Copied unchanged |
 | Partials, `index.yml`/`index.yaml` document indexes, pages with `skip: true` | Left out |
 
+The export fails when two sources would be exported at the same path, even
+where the build publishes them at different URLs: `content/notes.md` (built
+as `notes.html`) and `public/notes.md` would both be `notes.md`. Paths that
+differ only in case count as the same. It also fails, as the build does, when
+two sources write the same build output.
+
 ## Pages
 
 Front matter is removed. A page's `title`, after variable substitution, becomes
@@ -52,7 +58,7 @@ them as the build does.
 
 | Tada | Export |
 |---|---|
-| `{{{ _partial.md }}}` | The partial's text, with nested partials included, and each line prefixed like the directive's line (for example `> ` in a blockquote) |
+| `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it |
 | `[[Title]]`, `[[Title\|text]]` | `[Title](path.md)`, `[text](path.md)` |
 | `[Title][Description](url)` | `[Title](url) - Description`; a superlink followed by a line break ends with `\` so the next one stays on its own line |
 | `!!! note` / `!!! warning` | `> [!NOTE]` / `> [!WARNING]`; a custom title becomes a bold line under the marker |

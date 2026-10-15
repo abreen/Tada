@@ -307,7 +307,42 @@ describe('exportMarkdownPage', () => {
 
   test('fails on a missing partial', () => {
     expect(() => exportPage('{{{ _missing.md }}}')).toThrow(
-      'partial not found: _missing.md',
+      `partial not found: _missing.md (resolved to ${contentPath('lectures/_missing.md')})`,
+    );
+    expect(() => exportPage('{{{ missing.md }}}')).toThrow(
+      'partial not found: missing.md',
+    );
+  });
+
+  test('keeps partials apart from the lines around them', () => {
+    expect(
+      exportPage('Intro text\n{{{ _note.md }}}\nNext line', {
+        files: { 'lectures/_note.md': '- Item' },
+      }),
+    ).toBe('Intro text\n\n- Item\n\nNext line\n');
+  });
+
+  test('outdents definitions to their content', () => {
+    expect(
+      exportPage('Term\n\n:   ```js\n    code\n    ```\n\n    More.'),
+    ).toBe(
+      '<dl>\n<dt>\n\nTerm\n\n</dt>\n\n<dd>\n\n```js\ncode\n```\n\nMore.\n\n</dd>\n</dl>\n',
+    );
+  });
+
+  test('rewrites the link in an inline footnote, not its twin', () => {
+    expect(
+      exportPage('See [docs](/index.html) and ^[[docs](/index.html)]'),
+    ).toBe('See [docs](../index.md) and ^[[docs](../index.md)]\n');
+  });
+
+  test('leaves URLs in scripts and styles alone', () => {
+    expect(
+      exportPage(
+        `<script>el.innerHTML = '<img src="/index.html">'</script>\n\n<a title="x>y" href="/index.html">a</a>\n\n<style>a { background: url(/index.html) }</style>`,
+      ),
+    ).toBe(
+      `<script>el.innerHTML = '<img src="/index.html">'</script>\n\n<a title="x>y" href="../index.md">a</a>\n\n<style>a { background: url(/index.html) }</style>\n`,
     );
   });
 });

@@ -1,7 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { getDevSiteVariables, getProdSiteVariables } from '../site-variables';
-import { addGeneratedRouteAliases, scanProject } from '../source-model';
+import {
+  addGeneratedRouteAliases,
+  assertNoOutputPathConflicts,
+  scanProject,
+} from '../source-model';
 import { parseFrontMatterAndContent } from '../utils/front-matter';
 import { extensionIsMarkdown } from '../utils/file-types';
 import { extractLiterateJavaCode } from '../utils/literate-java';
@@ -158,16 +162,32 @@ export function runExport({
   const resolvedOutDir = path.resolve(getProjectDir(), outDir);
   checkOutDir(resolvedOutDir, force);
 
+  // The build fails when two sources write one output, and a link to that
+  // output could not tell which source to export
+  const conflicts = assertNoOutputPathConflicts(scan).map(output => {
+    const sources = [...scan.outputProducers.get(output)!]
+      .map(toDisplayPath)
+      .sort();
+    return `${sources.join(', ')}: ${sources.length === 2 ? 'both write' : 'all write'} ${output}`;
+  });
+  if (conflicts.length > 0) {
+    throw new Error(conflicts.join('\n'));
+  }
+
   const jobs: ExportJob[] = [];
   const exportPaths = new Map<string, string>();
   const producers = new Map<string, string>();
 
+  // The export keeps source paths, so a page and a file the build publishes
+  // at different URLs, such as content/notes.md (notes.html) and
+  // public/notes.md, can still land on the same path. Paths that differ only
+  // in case are one file on macOS and Windows.
   const claim = (relPath: string, filePath: string) => {
     const key = relPath.toLowerCase();
     const other = producers.get(key);
     if (other !== undefined) {
       throw new Error(
-        `${toDisplayPath(filePath)} and ${other} would both be exported as ${relPath}`,
+        `${toDisplayPath(filePath)} and ${other} would both be exported as ${relPath}; rename one of them`,
       );
     }
     producers.set(key, toDisplayPath(filePath));

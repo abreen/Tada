@@ -142,6 +142,21 @@ class TestExport:
         assert 'overlaps content/ or public/' in result.stderr
         assert (site_dir / 'content' / 'index.md').exists()
 
+    def test_fails_when_two_sources_write_one_output(self, site_dir):
+        write(site_dir, 'foo.md', '---\ntitle: Foo\n---\n\nFoo.\n')
+        write(site_dir, 'foo.html', '---\ntitle: Foo too\n---\n\n<p>Foo.</p>\n')
+        result = run_tada('export', '--dev', cwd=str(site_dir))
+        assert result.returncode != 0
+        assert 'content/foo.html, content/foo.md: both write foo.html' in result.stderr
+        assert not (site_dir / 'exported').exists()
+
+    def test_fails_when_two_sources_share_an_export_path(self, site_dir):
+        (site_dir / 'public' / 'notes.md').write_text('notes', encoding='utf-8')
+        write(site_dir, 'notes.md', '---\ntitle: Notes page\n---\n\nNotes.\n')
+        result = run_tada('export', '--dev', cwd=str(site_dir))
+        assert result.returncode != 0
+        assert 'would both be exported as notes.md; rename one of them' in result.stderr
+
     def test_exports_literate_java_source(self, site_dir):
         write(
             site_dir,

@@ -60,6 +60,8 @@ interface InlineSpan {
   token: Token;
   inline: Token;
   src: string;
+  /** Offset of `src` in the inline token's content */
+  base: number;
   start: number;
   end: number;
   /** Index of the `]` that ends a link's or image's label */
@@ -124,7 +126,41 @@ function findRule<T>(
  * reference definitions were parsed from, so they can be rewritten in place
  */
 function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
+  type RuleInline = (state: StateInline, silent: boolean) => boolean;
   let current: Token | null = null;
+  // The text being parsed, innermost last: an inline token's content, then
+  // labels that rules parse on their own, such as image alt text and inline
+  // footnotes, each with its offset in the content
+  let sources: { src: string; base: number }[] = [];
+  const baseOf = (src: string) =>
+    sources.findLast(source => source.src === src)?.base;
+
+  /** Runs a rule that parses the label opened at `labelOpen` as its own text */
+  const parsingLabel = (
+    rule: RuleInline,
+    state: StateInline,
+    silent: boolean,
+    labelOpen: number,
+  ) => {
+    const base = baseOf(state.src);
+    const start = state.pos;
+    const labelEnd = silent
+      ? -1
+      : state.md.helpers.parseLinkLabel(state, labelOpen, false);
+    state.pos = start;
+    if (base === undefined || labelEnd < 0) {
+      return rule(state, silent);
+    }
+    sources.push({
+      src: state.src.slice(labelOpen + 1, labelEnd),
+      base: base + labelOpen + 1,
+    });
+    try {
+      return rule(state, silent);
+    } finally {
+      sources.pop();
+    }
+  };
 
   md.core.ruler.at('inline', (state: StateCore) => {
     let previous: Token | undefined;
@@ -135,6 +171,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
       }
       if (token.type === 'inline') {
         current = token;
+        sources = [{ src: token.content, base: 0 }];
         record.contents.set(token, token.content);
         if (
           (previous?.type === 'th_open' || previous?.type === 'td_open') &&
@@ -154,21 +191,35 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
     current = null;
   });
 
+  const footnote = findRule<RuleInline>(md.inline.ruler, 'footnote_inline');
+  md.inline.ruler.at(
+    'footnote_inline',
+    (state, silent) =>
+      // `^[text]`
+      parsingLabel(footnote.fn, state, silent, state.pos + 1),
+    { alt: footnote.alt },
+  );
+
   for (const kind of Object.keys(EXPECTED_TOKENS) as SpanKind[]) {
-    type RuleInline = (state: StateInline, silent: boolean) => boolean;
     const rule = findRule<RuleInline>(md.inline.ruler, kind);
     md.inline.ruler.at(
       kind,
       (state, silent) => {
         const start = state.pos;
+        const base = baseOf(state.src);
         const tokenCount = state.tokens.length;
-        if (!rule.fn(state, silent)) {
+        const matched =
+          kind === 'image'
+            ? // `![alt](src)`
+              parsingLabel(rule.fn, state, silent, start + 1)
+            : rule.fn(state, silent);
+        if (!matched) {
           return false;
         }
         const token = state.tokens
           .slice(tokenCount)
           .find(t => t.type === EXPECTED_TOKENS[kind]);
-        if (!silent && current && token) {
+        if (!silent && current && token && base !== undefined) {
           const end = state.pos;
           let labelEnd = -1;
           if (kind === 'link' || kind === 'image') {
@@ -184,6 +235,7 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
             token,
             inline: current,
             src: state.src,
+            base,
             start,
             end,
             labelEnd,
@@ -392,6 +444,9 @@ class PageExporter {
 
   /** Replaces partial directives with the partials' text, recursively */
   expandPartials(text: string, fromFile: string, depth = 0): string {
+    if (!text.includes('{{{')) {
+      return text;
+    }
     const { tokens } = this.parse(text);
     const directives = tokens.filter(token => token.type === 'export_partial');
     if (directives.length === 0) {
@@ -405,12 +460,15 @@ class PageExporter {
         throw new Error(`${caller}: partial path is empty`);
       }
       const resolvedPath = path.resolve(path.dirname(fromFile), relativePath);
-      checkPartialTarget(caller, relativePath, resolvedPath);
-      checkIncludeDepth(caller, depth);
+      // In the build's order, with its messages
       const raw = this.context.readFile(resolvedPath);
       if (raw === null) {
-        throw new Error(`${caller}: partial not found: ${relativePath}`);
+        throw new Error(
+          `${caller}: partial not found: ${relativePath} (resolved to ${resolvedPath})`,
+        );
       }
+      checkPartialTarget(caller, relativePath, resolvedPath);
+      checkIncludeDepth(caller, depth);
       const partial = this.expandPartials(
         normalizeNewlines(
           substituteContent(
@@ -427,7 +485,17 @@ class PageExporter {
       const line = directive.map![0];
       const original = lines[line];
       const prefix = original.slice(0, original.indexOf('{{{'));
-      lines[line] = prefix + indentLines(partial, continuationPrefix(prefix));
+      const indent = continuationPrefix(prefix);
+      // The build parses a partial as blocks of their own, so blank lines keep
+      // it from joining a paragraph or list around it
+      const isBlank = (text: string | undefined) =>
+        text === undefined || /^[\s>]*$/.test(text);
+      const before = isBlank(lines[line - 1]) ? '' : `${indent.trimEnd()}\n`;
+      const after = isBlank(lines[line + 1]) ? '' : `\n${indent.trimEnd()}`;
+      lines[line] =
+        (before ? before + indent : prefix) +
+        indentLines(partial, indent) +
+        after;
     }
     return lines.join('\n');
   }
@@ -776,19 +844,11 @@ class PageExporter {
     }
 
     for (const span of record.spans) {
-      const content = record.contents.get(span.inline);
-      if (
-        content === undefined ||
-        (!span.inline.map && !record.cells.has(span.inline))
-      ) {
-        continue;
-      }
-      const base = span.src === content ? 0 : content.indexOf(span.src);
-      if (base < 0) {
+      if (!span.inline.map && !record.cells.has(span.inline)) {
         continue;
       }
       const map = inlineMapper(span.inline);
-      const at = (srcOffset: number) => map(base + srcOffset);
+      const at = (srcOffset: number) => map(span.base + srcOffset);
       this.exportSpan(span, at, replace);
     }
 
@@ -1004,11 +1064,13 @@ class PageExporter {
       `<dd>\n${indent.trimEnd()}\n${indent}`,
     );
 
+    // Later lines are indented to the text after the marker
+    const contentIndent = new RegExp(`^ {0,${markerEnd - col}}`);
     let last = open;
     for (let line = open + 1; line < end; line++) {
       if (lines[line].trim() !== '') {
         last = line;
-        const spaces = lines[line].slice(col).match(/^ {0,2}/)![0].length;
+        const spaces = lines[line].slice(col).match(contentIndent)![0].length;
         if (spaces > 0) {
           replace(lineStart(line) + col, lineStart(line) + col + spaces, '');
         }
@@ -1064,31 +1126,69 @@ class PageExporter {
   }
 }
 
-const HTML_COMMENT_PATTERN = /<!--[\s\S]*?(?:-->|$)/g;
-const HTML_TAG_PATTERN = /<[a-zA-Z][^>]*>?/g;
-const URL_ATTRIBUTE_PATTERN =
-  /(\s(?:href|src)\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi;
+const TAG_NAME_PATTERN = /^<([a-zA-Z][^\s/>]*)/;
+const ATTRIBUTE_PATTERN =
+  /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/y;
+/** Elements whose content is text, not markup */
+const RAW_TEXT_ELEMENTS = new Set(['script', 'style', 'textarea', 'title']);
 
-/** The `href` and `src` values in tags in raw HTML, outside comments */
+/**
+ * The `href` and `src` values in tags in raw HTML, skipping comments and the
+ * content of elements such as `<script>`
+ */
 function findUrlAttributes(
   html: string,
 ): { start: number; end: number; url: string }[] {
-  const comments = [...html.matchAll(HTML_COMMENT_PATTERN)].map(match => [
-    match.index,
-    match.index + match[0].length,
-  ]);
   const values = [];
-  for (const tag of html.matchAll(HTML_TAG_PATTERN)) {
-    if (
-      comments.some(([start, end]) => tag.index >= start && tag.index < end)
-    ) {
+  const lower = html.toLowerCase();
+  let pos = 0;
+  while (pos < html.length) {
+    const open = html.indexOf('<', pos);
+    if (open < 0) {
+      break;
+    }
+    if (html.startsWith('<!--', open)) {
+      const close = html.indexOf('-->', open + 4);
+      if (close < 0) {
+        break;
+      }
+      pos = close + 3;
       continue;
     }
-    for (const attribute of tag[0].matchAll(URL_ATTRIBUTE_PATTERN)) {
+    const name = TAG_NAME_PATTERN.exec(html.slice(open))?.[1];
+    if (!name) {
+      pos = open + 1;
+      continue;
+    }
+
+    let i = open + 1 + name.length;
+    while (i < html.length && html[i] !== '>') {
+      if (/[\s/]/.test(html[i])) {
+        i++;
+        continue;
+      }
+      ATTRIBUTE_PATTERN.lastIndex = i;
+      const attribute = ATTRIBUTE_PATTERN.exec(html);
+      if (!attribute) {
+        i++;
+        continue;
+      }
       const url = attribute[2] ?? attribute[3] ?? attribute[4];
-      const quoted = attribute[4] === undefined ? 1 : 0;
-      const start = tag.index + attribute.index + attribute[1].length + quoted;
-      values.push({ start, end: start + url.length, url });
+      if (url !== undefined && /^(?:href|src)$/i.test(attribute[1])) {
+        const end =
+          i + attribute[0].length - (attribute[4] === undefined ? 1 : 0);
+        values.push({ start: end - url.length, end, url });
+      }
+      i += attribute[0].length;
+    }
+    pos = i + 1;
+
+    if (RAW_TEXT_ELEMENTS.has(name.toLowerCase())) {
+      const close = lower.indexOf(`</${name.toLowerCase()}`, pos);
+      if (close < 0) {
+        break;
+      }
+      pos = close;
     }
   }
   return values;
