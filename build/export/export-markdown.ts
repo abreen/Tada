@@ -27,7 +27,8 @@ import type { SiteVariables } from '../types';
 const LINE_PREFIX_PATTERN =
   /^(?:[ \t]*(?:>|[-+*](?=[ \t]|$)|\d{1,9}[.)](?=[ \t]|$)))*[ \t]*/;
 const LIST_MARKER_PATTERN = /[-+*]|\d{1,9}[.)]/g;
-const MARKDOWN_PUNCTUATION_PATTERN = /[\\`*_[\]<>]/g;
+/** ASCII punctuation, which a backslash makes literal in Markdown */
+const MARKDOWN_PUNCTUATION_PATTERN = /[!-/:-@[-`{-~]/g;
 
 /** What exporting a page needs to know about the rest of the site */
 export interface ExportContext {
@@ -596,7 +597,12 @@ class PageExporter {
     if (rewritten === null) {
       return raw;
     }
-    return bracketed ? `<${rewritten}>` : rewritten;
+    // Written back as a destination: bracketed when it has spaces, with the
+    // characters that would end it escaped
+    if (bracketed || /\s/.test(rewritten)) {
+      return `<${rewritten.replace(/[\\<>]/g, '\\$&')}>`;
+    }
+    return rewritten.replace(/[\\()]/g, '\\$&');
   }
 
   /** Edits for the `href` and `src` values in raw HTML */
@@ -1201,7 +1207,7 @@ class PageExporter {
   }
 }
 
-const TAG_NAME_PATTERN = /^<([a-zA-Z][^\s/>]*)/;
+const TAG_NAME_PATTERN = /<([a-zA-Z][^\s/>]*)/y;
 const ATTRIBUTE_PATTERN =
   /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/y;
 /** Elements whose content is text, not markup */
@@ -1230,7 +1236,8 @@ function findUrlAttributes(
       pos = close + 3;
       continue;
     }
-    const name = TAG_NAME_PATTERN.exec(html.slice(open))?.[1];
+    TAG_NAME_PATTERN.lastIndex = open;
+    const name = TAG_NAME_PATTERN.exec(html)?.[1];
     if (!name) {
       pos = open + 1;
       continue;
@@ -1329,7 +1336,8 @@ export function exportMarkdownPage(
     .transform(expanded)
     .replace(/^(?:[ \t]*\n)+/, '')
     .replace(/\n+$/, '\n');
-  const heading = page.title ? `# ${page.title}\n` : '';
+  const title = exportTitle(exporter, page);
+  const heading = title ? `# ${title}\n` : '';
   if (exported.trim() === '') {
     return heading;
   }
@@ -1352,6 +1360,19 @@ export function exportHtmlPage(
     }));
   const html = applyEdits(body, edits).replace(/^(?:[ \t]*\r?\n)+/, '');
   return page.title
-    ? `<h1>${renderInlineHtml(page.title)}</h1>\n\n${html}`
+    ? `<h1>${renderInlineHtml(exportTitle(exporter, page)!)}</h1>\n\n${html}`
     : html;
+}
+
+/**
+ * A page title as inline Markdown on one line, with its links converted like
+ * the body's. The build renders a title's line breaks as spaces.
+ */
+function exportTitle(
+  exporter: PageExporter,
+  page: ExportPage,
+): string | undefined {
+  return page.title
+    ? exporter.exportInline(page.title.replace(/\s*\n\s*/g, ' '))
+    : undefined;
 }

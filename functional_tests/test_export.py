@@ -109,8 +109,8 @@ class TestExport:
         run_tada('export', '--prod', '--out', 'out', cwd=str(site_dir), check=True)
         assert 'Welcome to Prod course.' in read_export(site_dir, 'index.md', 'out')
 
-    def test_refuses_a_directory_that_is_not_empty(self, site_dir):
-        (site_dir / 'exported').mkdir()
+    def test_replaces_an_earlier_export_only_with_force(self, site_dir):
+        run_tada('export', '--dev', cwd=str(site_dir), check=True)
         (site_dir / 'exported' / 'old.md').write_text('old', encoding='utf-8')
 
         result = run_tada('export', '--dev', cwd=str(site_dir))
@@ -123,8 +123,17 @@ class TestExport:
         assert not (site_dir / 'exported' / 'old.md').exists()
         assert (site_dir / 'exported' / 'index.md').exists()
 
+    def test_never_replaces_a_directory_it_did_not_write(self, site_dir):
+        (site_dir / 'src').mkdir(exist_ok=True)
+        (site_dir / 'src' / 'main.ts').write_text('keep', encoding='utf-8')
+
+        result = run_tada('export', '--dev', '--out', 'src', '--force', cwd=str(site_dir))
+        assert result.returncode != 0
+        assert 'was not written by tada export' in result.stderr
+        assert (site_dir / 'src' / 'main.ts').read_text(encoding='utf-8') == 'keep'
+
     def test_file_and_directory_clash_keeps_the_previous_export(self, site_dir):
-        (site_dir / 'exported').mkdir()
+        run_tada('export', '--dev', cwd=str(site_dir), check=True)
         (site_dir / 'exported' / 'old.md').write_text('old', encoding='utf-8')
         # A file and a directory with the same path cannot both be written
         (site_dir / 'public' / 'notes').write_text('notes', encoding='utf-8')

@@ -15,7 +15,9 @@ tada export (--dev | --prod) [--out <dir>] [--force]
   `public/`, or be the project directory. Paths are compared without case, so
   `--out Content` is refused too.
 - The command fails if the output directory is not empty, unless `--force` is
-  passed, which replaces it.
+  passed, which replaces it. `--force` only replaces an earlier export, which
+  Tada marks with an empty `.tada-export` file; any other directory that is
+  not empty, such as `src/` or `.git/`, is never replaced.
 
 Every page is converted first, then the export is written to a new directory
 beside the output directory (`<dir>.tmp-<pid>-<time>`) and moved into place. An error
@@ -50,7 +52,9 @@ when two sources write the same build output.
 Front matter is removed. A page's `title`, after variable substitution, becomes
 a `# Title` heading at the top of a Markdown page, or an `<h1>` (with its
 inline Markdown rendered) at the top of an HTML page. A home page without a
-title gets no heading. Other front matter fields are dropped.
+title gets no heading. Other front matter fields are dropped. Links and
+wikilinks in a title are converted like the body's, and a title's line breaks
+become spaces, as they do in the build.
 
 Site variables are substituted and `\{{` escapes are resolved as in the build.
 `<!--- -->` comments are removed, except on literate Java pages, which keep
@@ -63,7 +67,7 @@ them as the build does.
 | `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it (not when the directive is a list item) |
 | `[[Title]]`, `[[Title\|text]]` | `[Title](path.md)`, `[text](path.md)` |
 | `[Title][Description](url)` | `[Title](url) - Description`; a superlink followed by a line break ends with `\` so the next one stays on its own line |
-| `!!! note` / `!!! warning` | `> [!NOTE]` / `> [!WARNING]`; a custom title becomes a bold line under the marker |
+| `!!! note` / `!!! warning` | `> [!NOTE]` / `> [!WARNING]`; a custom title becomes a bold line under the marker, with its punctuation escaped so it shows literally, as in the build |
 | `??? question Q`, including multiple choice | `<details>` with `<summary>Q</summary>` and the answer, or the options' task list, as its body |
 | `[Label\|` … `]` tabs, including steppers | One `<details>` per tab, with the label as its `<summary>` |
 | `+++` columns | Fence lines become blank lines; the columns follow one another |

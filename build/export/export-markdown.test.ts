@@ -196,6 +196,27 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('escapes rewritten destinations for Markdown', () => {
+    expect(exportPage('[x](/index.html#a\\)b) [y](</index.html#a b>)')).toBe(
+      '[x](../index.md#a\\)b) [y](<../index.md#a b>)\n',
+    );
+  });
+
+  test('converts links in the title and joins its lines', () => {
+    expect(
+      exportPage('Body.', { title: '[Intro](/index.html) and\n[[Home]]' }),
+    ).toBe('# [Intro](../index.md) and [Home](../index.md)\n\nBody.\n');
+    expect(() => exportPage('Body.', { title: '[x](/nope.html)' })).toThrow(
+      'broken internal link: "/nope.html"',
+    );
+  });
+
+  test('shows alert titles literally, as the build does', () => {
+    expect(exportPage('!!! note Use &amp; or ~~old~~\nText.\n!!!')).toBe(
+      '> [!NOTE]\n> **Use \\&amp\\; or \\~\\~old\\~\\~**\n>\n> Text.\n',
+    );
+  });
+
   test('fails on a directory link, as the build does', () => {
     expect(() => exportPage('[Lectures](/lectures/)')).toThrow(
       'directory link must reference index.html explicitly: "/lectures/" (resolved to "/lectures/", expected "/lectures/index.html")',

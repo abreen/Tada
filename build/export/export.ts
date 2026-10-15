@@ -34,6 +34,9 @@ import type { SiteEnv } from '../config-files';
 
 export const DEFAULT_EXPORT_DIR = 'exported';
 
+/** Marks a directory as an export, which `--force` may replace */
+const EXPORT_MARKER_FILE = '.tada-export';
+
 interface ExportOptions {
   env: SiteEnv;
   /** Output directory, relative to the project directory */
@@ -93,10 +96,19 @@ function checkOutDir(outDir: string, force: boolean): void {
       `cannot export to ${toDisplayPath(outDir)}: it is a file, not a directory`,
     );
   }
-  if (!force && fs.existsSync(outDir) && fs.readdirSync(outDir).length > 0) {
-    throw new Error(
-      `${toDisplayPath(outDir)}/ is not empty; use --force to replace it`,
-    );
+  if (fs.existsSync(outDir) && fs.readdirSync(outDir).length > 0) {
+    // --force deletes the directory, so it only replaces an earlier export,
+    // never a directory such as src/ or .git/
+    if (!fs.existsSync(path.join(outDir, EXPORT_MARKER_FILE))) {
+      throw new Error(
+        `${toDisplayPath(outDir)}/ is not empty and was not written by tada export; choose another --out`,
+      );
+    }
+    if (!force) {
+      throw new Error(
+        `${toDisplayPath(outDir)}/ is not empty; use --force to replace it`,
+      );
+    }
   }
 }
 
@@ -113,6 +125,7 @@ function publishOutputs(outDir: string, outputs: ExportOutput[]): void {
   fs.rmSync(backup, { recursive: true, force: true });
   try {
     fs.mkdirSync(staging, { recursive: true });
+    fs.writeFileSync(path.join(staging, EXPORT_MARKER_FILE), '');
     for (const output of outputs) {
       const outPath = path.join(staging, ...output.relPath.split('/'));
       fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -265,7 +278,7 @@ export function runExport({
       fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf-8') : null,
     readTraceFile: filePath => {
       if (!fs.existsSync(filePath)) {
-        throw new Error(`trace file not found: ${toDisplayPath(filePath)}`);
+        throw new Error(`Trace target not found: ${filePath}`);
       }
       return readSourceFile(filePath, scan.contentDir, siteVariables);
     },
