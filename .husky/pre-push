@@ -1,1 +1,6 @@
-bun run test:all
+# Claude Code cloud sessions cannot run Playwright or functional tests
+if [ "$CLAUDE_CODE_REMOTE" = true ]; then
+  bun run test:unit
+else
+  bun run test:all
+fi
