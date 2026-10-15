@@ -71,6 +71,7 @@ A static site generator. The successor to Presto.
     - To display clickable multiple choice options, use a [task list][task-list]
   * `+++ ... +++ ... +++` renders a two-column layout
   * `[Title][Description](url)` renders a two-line superlink
+  * `[[Page Title]]` or `[[Page Title|link text]]` wikilinks link to a page by its title
   * Special heading subtitles with `## Heading # A subtitle here`
   * `{{{ _partial.md }}}` syntax for including partials
   * Styled `<details>` elements, including "Show more" previews (see [Details elements](#details-elements))
