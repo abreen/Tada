@@ -58,7 +58,7 @@ describe('proofreadHtml', () => {
     ];
     const html = await proofreadHtml(page('<p>Use teh cat.</p>'), check);
     expect(mainOf(html)).toBe(
-      '<p>Use <span class="proofread-spelling" title="Did you mean to spell `teh` this way?" data-proofread-message="<p>Did you mean <code>&quot;the&quot;</code>?</p>">teh</span> cat.</p>',
+      '<p>Use <span class="proofread-spelling" title="Did you mean to spell \u201cteh\u201d this way?" data-proofread-message="<p>Did you mean <code>&quot;the&quot;</code>?</p>">teh</span> cat.</p>',
     );
   });
 

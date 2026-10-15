@@ -69,7 +69,8 @@ in each:
 - `<span class="proofread-grammar">` for every other kind
 
 Every proofread page gets a `<style>` in its `<head>` that underlines these
-spans with `text-decoration: underline` and `text-decoration-style: wavy`, red
+spans with `text-decoration: underline` and `text-decoration-style: wavy`,
+`text-decoration-thickness: 0.1em`, and `text-underline-offset: 4px`, red
 for spelling and green for grammar. The colors are the `--proofread-spelling-color`
 and `--proofread-grammar-color` custom properties, which have separate light and
 dark values (`prefers-color-scheme`) matching the colors of multiple-choice
@@ -82,12 +83,14 @@ otherwise unchanged.
 Each span carries Harper's message about the problem:
 
 - `title`, the message as plain text, which the browser shows on hover without
-  JavaScript
+  JavaScript; words Harper quotes with backticks are shown in curly quotes
 - `data-proofread-message`, the message as HTML, such as words in `<code>`
 
 Every proofread page also gets an inline `<script>` in its `<head>`. When the
 pointer moves over a span, the script removes its `title` and shows a
 `role="tooltip"` element below the span with the HTML message. The tooltip
-uses the theme's `--bg2-color`, `--fg-color`, and `--box-shadow`, and it goes
+has inverted theme colors (`--fg-color` background, `--bg-color` text) and
+`--box-shadow`. Harper wraps quoted words in `<code>`; the tooltip shows them in
+the tooltip's own font with curly quotes instead of as monospace code. It goes
 away when the pointer leaves the span or the page scrolls. The script listens
 on `document`, so it keeps working across client-side navigation.

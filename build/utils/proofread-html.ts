@@ -69,13 +69,18 @@ const PROOFREAD_STYLE =
   '<style>' +
   ':root{--proofread-spelling-color:hsl(0deg 72% 48%);--proofread-grammar-color:hsl(142deg 58% 36%)}' +
   '@media (prefers-color-scheme:dark){:root{--proofread-spelling-color:hsl(0deg 82% 62%);--proofread-grammar-color:hsl(142deg 58% 52%)}}' +
-  '.proofread-spelling,.proofread-grammar{text-decoration:underline;text-decoration-style:wavy}' +
+  '.proofread-spelling,.proofread-grammar{text-decoration:underline;text-decoration-style:wavy;' +
+  'text-decoration-thickness:0.1em;text-underline-offset:4px}' +
   '.proofread-spelling{text-decoration-color:var(--proofread-spelling-color)}' +
   '.proofread-grammar{text-decoration-color:var(--proofread-grammar-color)}' +
   '.proofread-tooltip{position:absolute;z-index:1000;max-width:min(24rem,calc(100vw - 16px));padding:0.25em 0.5em;' +
-  'border-radius:var(--mono-border-radius);background:var(--bg2-color);color:var(--fg-color);box-shadow:var(--box-shadow);' +
+  'border-radius:var(--mono-border-radius);background:var(--fg-color);color:var(--bg-color);box-shadow:var(--box-shadow);' +
   'font-size:var(--font-size-small);pointer-events:none}' +
   '.proofread-tooltip p{margin:0}' +
+  // Harper marks quoted words with code; show them as quotes in the text font
+  '.proofread-tooltip code{padding:0;border:0;border-radius:0;background:none;color:inherit;font:inherit}' +
+  '.proofread-tooltip code::before{content:open-quote}' +
+  '.proofread-tooltip code::after{content:close-quote}' +
   '</style>';
 
 // Replaces the native title tooltip with one that shows the HTML message.
@@ -421,7 +426,9 @@ function marksForIssues(
 function openMark({ kind, message, messageHtml }: Mark): string {
   let attributes = `class="proofread-${kind}"`;
   if (message) {
-    attributes += ` title="${escapeAttribute(message)}"`;
+    // Harper marks quoted words with backticks
+    const quoted = message.replace(/`([^`]*)`/g, '\u201c$1\u201d');
+    attributes += ` title="${escapeAttribute(quoted)}"`;
   }
   if (messageHtml) {
     attributes += ` data-proofread-message="${escapeAttribute(messageHtml.trim())}"`;
