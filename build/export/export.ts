@@ -124,8 +124,15 @@ function publishOutputs(outDir: string, outputs: ExportOutput[]): void {
   const suffix = `${globals.pid()}-${globals.now()}`;
   const staging = `${outDir}.tmp-${suffix}`;
   const backup = `${outDir}.old-${suffix}`;
-  fs.rmSync(staging, { recursive: true, force: true });
-  fs.rmSync(backup, { recursive: true, force: true });
+  // Staging directories of runs that were stopped hold nothing else. Backups
+  // are kept, since one may hold the only copy of an earlier export.
+  const parent = path.dirname(outDir);
+  const stale = `${path.basename(outDir)}.tmp-`;
+  for (const name of fs.existsSync(parent) ? fs.readdirSync(parent) : []) {
+    if (name.startsWith(stale)) {
+      fs.rmSync(path.join(parent, name), { recursive: true, force: true });
+    }
+  }
   try {
     fs.mkdirSync(staging, { recursive: true });
     fs.writeFileSync(path.join(staging, EXPORT_MARKER_FILE), '');

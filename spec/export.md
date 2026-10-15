@@ -21,9 +21,13 @@ tada export (--dev | --prod) [--out <dir>] [--force]
 
 Every page is converted first, then the export is written to a new directory
 beside the output directory (`<dir>.tmp-<pid>-<time>`) and moved into place. An error
-at any step leaves an earlier export as it was. Errors match the build's, such
-as a broken [wikilink](wikilinks.md) or an unknown variable. Nothing in
-`content/` changes.
+at any step leaves an earlier export as it was. Nothing in `content/` changes.
+
+The export reports the build's errors for what it reads and converts:
+variables, partials, [wikilinks](wikilinks.md), internal links, traces, and
+output conflicts. It does not run the build's other checks, such as fence
+languages, front matter fields, or KaTeX; run `tada dev` or `tada prod` to
+check a site.
 
 ## Files
 
@@ -113,3 +117,15 @@ and `href` and `src` attributes in raw HTML point to exported files:
   decoded, as the build reads them, and written back escaped.
 
 Query strings and fragments are kept.
+
+## Limitations
+
+These are known differences from the built site:
+
+- Fragments keep the build's heading IDs, but GitHub makes its own from a
+  heading's text, and a subtitle heading's text changes (`## Main # Sub`
+  becomes `## Main - Sub`). A `#section` link can land at the top of the page
+  instead.
+- A question, tab, or two-column layout inside a list item needs blank lines
+  around its content (GitHub parses Markdown inside `<details>` only after a
+  blank line), so the list renders loose, with spacing between items.

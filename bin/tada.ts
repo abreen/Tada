@@ -631,7 +631,7 @@ function diffCommand(args: string[]): void {
 }
 
 async function exportCommand(args: string[]): Promise<void> {
-  let values: { dev?: boolean; prod?: boolean; out?: string; force?: boolean };
+  let values: { dev: boolean; prod: boolean; out?: string; force: boolean };
   try {
     ({ values } = parseArgs({
       args,
@@ -662,7 +662,7 @@ async function exportCommand(args: string[]): Promise<void> {
   const summary = runExport({
     env,
     outDir: values.out ?? DEFAULT_EXPORT_DIR,
-    force: values.force ?? false,
+    force: values.force,
   });
   const noun = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   console.log(
