@@ -84,7 +84,7 @@ class TestExport:
             '# Lecture One\n\n'
             '## Intro - Week 1\n\n'
             'See [the home page](../index.md) and [the code](Demo.java).\n\n'
-            '> [!NOTE]\n> Remember this.\n\n\n'
+            '> [!NOTE]\n> Remember this.\n\n'
             'From a partial.\n'
         )
         assert read_export(site_dir, 'lectures/notes.html') == (

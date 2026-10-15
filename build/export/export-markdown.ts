@@ -31,6 +31,8 @@ const CONTAINER_PREFIX_PATTERN =
 const LINE_PREFIX_PATTERN =
   /^(?:[ \t]*(?:>|[-+*](?=[ \t]|$)|\d{1,9}[.)](?=[ \t]|$)|[:~](?=[ \t])))*[ \t]*/;
 const LIST_MARKER_PATTERN = /[-+*]|\d{1,9}[.)]/g;
+/** A container prefix that ends in a list marker, which starts a list item */
+const LIST_ITEM_PREFIX_PATTERN = /(?:[-+*]|\d{1,9}[.)])[ \t]*$/;
 /** ASCII punctuation, which a backslash makes literal in Markdown */
 const MARKDOWN_PUNCTUATION_PATTERN = /[!-/:-@[-`{-~]/g;
 
@@ -97,6 +99,8 @@ interface ParseRecord {
   cells: Map<Token, number>;
   /** Line ranges of link reference definitions */
   references: [number, number][];
+  /** Ranges of inline footnotes (`^[...]`) in inline tokens' content */
+  footnotes: { inline: Token; start: number; end: number }[];
 }
 
 /** Text inserted at a column of a line, after removing some characters */
@@ -219,9 +223,22 @@ function recorderPlugin(md: MarkdownIt, record: ParseRecord): void {
   const footnote = findRule<RuleInline>(md.inline.ruler, 'footnote_inline');
   md.inline.ruler.at(
     'footnote_inline',
-    (state, silent) =>
+    (state, silent) => {
+      const start = state.pos;
+      const base = baseOf(state.src);
       // `^[text]`
-      parsingLabel(footnote.fn, state, silent, state.pos + 1),
+      if (!parsingLabel(footnote.fn, state, silent, start + 1)) {
+        return false;
+      }
+      if (!silent && current && base !== undefined) {
+        record.footnotes.push({
+          inline: current,
+          start: base + start,
+          end: base + state.pos,
+        });
+      }
+      return true;
+    },
     { alt: footnote.alt },
   );
 
@@ -538,6 +555,7 @@ class PageExporter {
       contents: new Map(),
       cells: new Map(),
       references: [],
+      footnotes: [],
     };
     const tokens = this.createParser(record).parse(text, {});
     return { tokens, record };
@@ -1025,13 +1043,10 @@ class PageExporter {
       } else if (token.type === 'heading_open') {
         const inline = tokens[index + 1];
         const content = record.contents.get(inline) ?? '';
-        const html = record.spans
-          .filter(span => span.inline === inline && span.kind === 'html_inline')
-          .map((span): [number, number] => [
-            span.base + span.start,
-            span.base + span.end,
-          ]);
-        const separator = findSubtitleSeparator(content, html);
+        const separator = findSubtitleSeparator(
+          content,
+          nonTextRanges(inline, record),
+        );
         if (separator >= 0) {
           const map = inlineMapper(inline);
           replace(map(separator), map(separator + 3), ' - ');
@@ -1274,9 +1289,20 @@ class PageExporter {
       }
     }
 
-    // A blank line ends the blockquote
+    // A blank line ends the blockquote. Before a blank line or a new list
+    // item, which end it too, the closing line goes, so a tight list stays
+    // tight.
     if (helpers.isMarkerLine(end, '!')) {
-      replace(helpers.blankStart(end), lineEnd(end), '');
+      const next = lines[end + 1];
+      const endsAnyway =
+        next === undefined ||
+        next.trim() === '' ||
+        LIST_ITEM_PREFIX_PATTERN.test(next.match(CONTAINER_PREFIX_PATTERN)![0]);
+      if (endsAnyway && !insertions.has(end) && end + 1 < lines.length) {
+        replace(lineStart(end), lineStart(end + 1), '');
+      } else {
+        replace(helpers.blankStart(end), lineEnd(end), '');
+      }
     }
   }
 
@@ -1456,11 +1482,26 @@ const FOREIGN_ELEMENTS = new Set(['svg', 'math']);
  */
 interface ForeignDepth {
   depth: number;
+  /**
+   * An element whose content is text, such as `<script>`, left open at the
+   * end of an earlier piece of HTML
+   */
+  rawText?: string;
 }
 const ATTRIBUTE_PATTERN =
   /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/y;
-/** Elements whose content is text, not markup */
-const RAW_TEXT_ELEMENTS = new Set(['script', 'style', 'textarea', 'title']);
+/** Elements whose content is text, not markup, as the HTML parser reads it */
+const RAW_TEXT_ELEMENTS = new Set([
+  'script',
+  'style',
+  'textarea',
+  'title',
+  'xmp',
+  'iframe',
+  'noembed',
+  'noframes',
+  'plaintext',
+]);
 
 /**
  * The `href` and `src` values in tags in raw HTML, skipping comments and the
@@ -1473,6 +1514,14 @@ function findUrlAttributes(
   const values = [];
   const lower = html.toLowerCase();
   let pos = 0;
+  if (foreign.rawText) {
+    const close = lower.indexOf(`</${foreign.rawText}`);
+    if (close < 0) {
+      return [];
+    }
+    foreign.rawText = undefined;
+    pos = close;
+  }
   while (pos < html.length) {
     const open = html.indexOf('<', pos);
     if (open < 0) {
@@ -1539,6 +1588,9 @@ function findUrlAttributes(
     if (RAW_TEXT_ELEMENTS.has(name.toLowerCase())) {
       const close = lower.indexOf(`</${name.toLowerCase()}`, pos);
       if (close < 0) {
+        // Its text goes on in the next piece of HTML, such as the next tag
+        // of the same paragraph
+        foreign.rawText = name.toLowerCase();
         break;
       }
       pos = close;
@@ -1562,17 +1614,50 @@ function findReferenceLabelEnd(definition: string): number {
   return -1;
 }
 
+/**
+ * Ranges of an inline token's content that the build's subtitle rule does not
+ * look in, since they are not text: raw HTML, images, link destinations and
+ * titles, a wikilink's title before `|`, and inline footnotes
+ */
+function nonTextRanges(inline: Token, record: ParseRecord): [number, number][] {
+  const ranges: [number, number][] = [];
+  for (const span of record.spans) {
+    if (span.inline !== inline) {
+      continue;
+    }
+    const at = (offset: number) => span.base + offset;
+    if (span.kind === 'html_inline' || span.kind === 'image') {
+      ranges.push([at(span.start), at(span.end)]);
+    } else if (span.kind === 'link') {
+      ranges.push([at(span.labelEnd), at(span.end)]);
+    } else if (span.kind === 'superlink') {
+      ranges.push([at(span.descriptionEnd), at(span.end)]);
+    } else if (span.kind === 'wikilink') {
+      const pipe = span.src.indexOf('|', span.start);
+      if (pipe >= 0 && pipe < span.end) {
+        ranges.push([at(span.start), at(pipe + 1)]);
+      }
+    }
+  }
+  for (const footnote of record.footnotes) {
+    if (footnote.inline === inline) {
+      ranges.push([footnote.start, footnote.end]);
+    }
+  }
+  return ranges;
+}
+
 /** Index of the ` # ` that starts a heading subtitle, outside code spans */
 function findSubtitleSeparator(
   content: string,
-  /** Ranges of raw HTML, which the build does not look in */
-  html: [number, number][] = [],
+  /** Ranges the build does not look in */
+  skipped: [number, number][] = [],
 ): number {
   for (let i = 0; i < content.length; i++) {
     const char = content[i];
-    const tag = html.find(([start]) => start === i);
-    if (tag) {
-      i = tag[1] - 1;
+    const covering = skipped.filter(([start, end]) => start <= i && i < end);
+    if (covering.length > 0) {
+      i = Math.max(...covering.map(([, end]) => end)) - 1;
     } else if (char === '\\') {
       i++;
     } else if (char === '`') {

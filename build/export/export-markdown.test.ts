@@ -236,6 +236,34 @@ describe('exportMarkdownPage', () => {
     );
   });
 
+  test('finds no subtitle in alt text, link destinations, or footnotes', () => {
+    expect(exportPage('## Title ![a # b](/lectures/photo.png)')).toBe(
+      '## Title ![a # b](photo.png)\n',
+    );
+    expect(exportPage('## See [x](</index.html> "t # u")')).toBe(
+      '## See [x](<../index.md> "t # u")\n',
+    );
+    expect(exportPage('## See ^[a # b]')).toBe('## See ^[a # b]\n');
+    expect(exportPage('## See [a # b](/index.html)')).toBe(
+      '## See [a - b](../index.md)\n',
+    );
+  });
+
+  test('skips anchors in script text split across inline tags', () => {
+    expect(
+      exportPage(`Text <script>x='<a href="/nope.html">'</script> end`),
+    ).toBe(`Text <script>x='<a href="/nope.html">'</script> end\n`);
+    expect(exportPage('<noembed><a href="/old.html">x</a></noembed>')).toBe(
+      '<noembed><a href="/old.html">x</a></noembed>\n',
+    );
+  });
+
+  test('keeps a list tight around an alert', () => {
+    expect(exportPage('1. one\n   !!! note\n   two\n   !!!\n2. three')).toBe(
+      '1. one\n   > [!NOTE]\n   > two\n2. three\n',
+    );
+  });
+
   test('keeps a title ending in # whole', () => {
     expect(exportPage('Body.', { title: 'Learn C #' })).toBe(
       '# Learn C \\#\n\nBody.\n',
@@ -431,7 +459,7 @@ describe('exportMarkdownPage', () => {
         '!!! note\nA note.\n\nMore.\n!!!\n\n!!! warning Be *careful*\nA warning.\n!!!',
       ),
     ).toBe(
-      '> [!NOTE]\n> A note.\n>\n> More.\n\n\n> [!WARNING]\n> **Be \\*careful\\***\n>\n> A warning.\n',
+      '> [!NOTE]\n> A note.\n>\n> More.\n\n> [!WARNING]\n> **Be \\*careful\\***\n>\n> A warning.\n',
     );
   });
 
@@ -441,7 +469,7 @@ describe('exportMarkdownPage', () => {
         '- Item\n\n  !!! warning Title\n  Text.\n  !!!\n\n!!!! note\n!!! warning\nInner.\n!!!\n!!!!',
       ),
     ).toBe(
-      '- Item\n\n  > [!WARNING]\n  > **Title**\n  >\n  > Text.\n\n\n> [!NOTE]\n> > [!WARNING]\n> > Inner.\n> \n',
+      '- Item\n\n  > [!WARNING]\n  > **Title**\n  >\n  > Text.\n\n> [!NOTE]\n> > [!WARNING]\n> > Inner.\n> \n',
     );
   });
 
@@ -451,7 +479,7 @@ describe('exportMarkdownPage', () => {
         '!!! note\n<div>\n<a href="/index.html">Home</a>\n</div>\n!!!\n\n!!! note\nSee <a\nhref="/index.html">home</a>.\n!!!',
       ),
     ).toBe(
-      '> [!NOTE]\n> <div>\n> <a href="../index.md">Home</a>\n> </div>\n\n\n' +
+      '> [!NOTE]\n> <div>\n> <a href="../index.md">Home</a>\n> </div>\n\n' +
         '> [!NOTE]\n> See <a\n> href="../index.md">home</a>.\n',
     );
   });
