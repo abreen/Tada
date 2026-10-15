@@ -63,7 +63,9 @@ made root-relative so it works from every page, and its `srcset` is dropped;
 an image with only a `srcset` uses its first candidate as its `src`. `<source>`
 elements, as in a `<picture>`, are dropped in favor of its fallback image. Nested entries hang from tree
 guide lines. A branch has a junction dot on its connector: open when its
-children are shown and filled when they are not.
+children are shown and filled when they are not. A code page's label, its
+file name in one `<code>`, is plain monospace text without the code
+background and padding, as in search results.
 
 On screens at least 900px wide, the index sits in the left column beside the
 page body and scrolls away with the page, above the
@@ -82,7 +84,11 @@ The tree's order is depth first: a page, then each of its children in order.
 At the end of an indexed page's content, a `<nav aria-label="Previous and next
 pages">` links to the pages before and after it in that order, with
 `rel="prev"` and `rel="next"`. The root has no previous link and the last page
-has no next link. The links show the pages' titles with inline formatting.
+has no next link. The links are [superlinks](markdown.md#superlinks) side by side, with
+"Previous" or "Next" above the page's title, which keeps its inline formatting.
+The next link's chevron points right and its text is end-aligned; the previous
+link's chevron is mirrored to point left at its start. A code page's title is
+plain monospace text, as in the sidebar.
 
 Search results for pages below a tree's root name the root, as in
 "Labs › Counting vowels" (see [Search](search.md)).
@@ -94,7 +100,9 @@ indexing, hidden in printed output, and hidden while presenting
 ## Breadcrumbs
 
 An indexed page's [breadcrumbs](breadcrumbs.md) are its ancestors in the tree,
-from the root down to its parent, labeled with their plain-text titles. The
+from the root down to its parent, labeled with their plain-text titles. A
+code page's file name, in an ancestor or as the current item, is shown in the
+monospace font without the code background and padding. The
 root of a tree has no breadcrumbs. Indexed code pages show their breadcrumbs
 above the file header, and during client-side navigation their trail moves as
 one group like a page heading's trail (see [Breadcrumbs](breadcrumbs.md)). Because the index provides them, an indexed

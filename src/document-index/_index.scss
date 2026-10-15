@@ -167,33 +167,30 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gap);
-  padding-top: var(--gap);
   margin-top: 3rem;
-  border-top: 1px solid var(--fg2-color);
 
-  a {
+  a.superlink {
     min-width: 0;
     overflow-wrap: anywhere;
-    text-decoration: none;
+  }
 
-    .title {
-      @include link-underline;
-    }
+  // Mirror the superlink chevron to point back
+  a.superlink.previous {
+    padding-inline: calc(var(--gap) * 2 + var(--icon-breadcrumb-separator-size))
+      var(--gap);
 
-    &:focus-visible {
-      outline-offset: 2px;
+    &::after {
+      right: auto;
+      left: var(--gap);
+      transform: translateY(-50%) scaleX(-1);
     }
   }
 
-  a.next {
+  // Undo the spacing between stacked superlinks
+  a.superlink.next {
     grid-column: 2;
+    margin-top: 0;
     text-align: end;
-  }
-
-  .direction {
-    display: block;
-    font-size: var(--font-size-small);
-    color: var(--fg2-color);
   }
 }
 

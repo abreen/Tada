@@ -160,6 +160,22 @@ describe('buildDocumentIndex', () => {
     ]);
   });
 
+  test('marks code pages', () => {
+    const { index } = build([
+      guideIndex({ page: 'index.md', children: ['Foo.java', 'Hello.java.md'] }),
+    ]);
+    const navigation = index.get(contentPath('guide/Foo.java'))!;
+    expect(navigation.tree.isCodePage).toBe(false);
+    expect(navigation.tree.children.map(child => child.isCodePage)).toEqual([
+      true,
+      false,
+    ]);
+    expect(navigation.previous?.isCodePage).toBe(false);
+    expect(
+      index.get(contentPath('guide/Hello.java.md'))!.previous?.isCodePage,
+    ).toBe(true);
+  });
+
   test('shows the root, the path to the page, siblings along it, and its children', () => {
     const { index } = build([GUIDE]);
 

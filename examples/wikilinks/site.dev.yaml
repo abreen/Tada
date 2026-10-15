@@ -1,6 +1,0 @@
-title: Wikilinks
-symbol: WIKI
-base: http://localhost:8080
-themeColor: seagreen
-vars:
-  course: CS 101

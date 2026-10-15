@@ -258,14 +258,16 @@ class TestDocumentIndexNavigation:
         assert f'<a href="/types.html">{label}</a>' in index
         assert '<a href="/index.html" aria-current="page">Home</a>' in index
         assert 'example.com' not in index
-        assert f'<span class="title">{label}</span>' in document_nav(home, 'document-pagination')
+        assert f'<span class="superlink-title">{label}</span>' in document_nav(
+            home, 'document-pagination'
+        )
 
         code = (site_dir / 'dist' / 'Foo.java.html').read_text()
         assert (
-            '<a href="/Foo.java.html" aria-current="page"><code>Foo.java</code></a>'
-            in document_nav(code, 'document-index')
+            '<a class="code-page" href="/Foo.java.html" aria-current="page">'
+            '<code>Foo.java</code></a>' in document_nav(code, 'document-index')
         )
-        assert 'class="previous" rel="prev" href="/types.html"' in document_nav(
+        assert 'class="button superlink previous" rel="prev" href="/types.html"' in document_nav(
             code, 'document-pagination'
         )
         assert breadcrumb_nav(code) is not None

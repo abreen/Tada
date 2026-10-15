@@ -2,15 +2,15 @@
 <% if (documentNavigation && (documentNavigation.previous || documentNavigation.next)) { %>
 <nav class="document-pagination" aria-label="Previous and next pages" data-pagefind-ignore>
   <% if (documentNavigation.previous) { %>
-  <a class="previous" rel="prev" href="<%- encodeAuthoredUrl(documentNavigation.previous.href) %>">
-    <span class="direction">Previous</span>
-    <span class="title"><%= documentNavigation.previous.titleHtml %></span>
+  <a class="button superlink previous" rel="prev" href="<%- encodeAuthoredUrl(documentNavigation.previous.href) %>">
+    <span class="superlink-description">Previous</span>
+    <span class="superlink-title<% if (documentNavigation.previous.isCodePage) { %> code-page<% } %>"><%= documentNavigation.previous.titleHtml %></span>
   </a>
   <% } %>
   <% if (documentNavigation.next) { %>
-  <a class="next" rel="next" href="<%- encodeAuthoredUrl(documentNavigation.next.href) %>">
-    <span class="direction">Next</span>
-    <span class="title"><%= documentNavigation.next.titleHtml %></span>
+  <a class="button superlink next" rel="next" href="<%- encodeAuthoredUrl(documentNavigation.next.href) %>">
+    <span class="superlink-description">Next</span>
+    <span class="superlink-title<% if (documentNavigation.next.isCodePage) { %> code-page<% } %>"><%= documentNavigation.next.titleHtml %></span>
   </a>
   <% } %>
 </nav>

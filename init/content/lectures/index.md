@@ -44,8 +44,8 @@ questions and get hints for the problem sets.
 Click on each of the links below to access the lecture notes, source code files,
 and other relevant information.
 
-[Lecture 1](/lectures/01/index.html)
+[[Lecture 1]]
 :   Introduction, computation, models of a computer
 
-[Lecture 2](/lectures/02/index.html)
+[[Lecture 2]]
 :   Algorithms

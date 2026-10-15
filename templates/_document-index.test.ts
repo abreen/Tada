@@ -9,8 +9,8 @@ import type {
 import INDEX_TEMPLATE from './_document-index.html' with { type: 'text' };
 import PAGINATION_TEMPLATE from './_document-pagination.html' with { type: 'text' };
 
-function link(title: string, href: string): DocumentLink {
-  return { title, titleHtml: title, href };
+function link(title: string, href: string, isCodePage = false): DocumentLink {
+  return { title, titleHtml: title, href, isCodePage };
 }
 
 function entry(
@@ -50,6 +50,7 @@ const NAVIGATION: DocumentNavigation = {
       }),
       entry('Topics', '/topics/index.html', { isBranch: true }),
       entry('<code>a b</code>', '/a%20b.html'),
+      entry('<code>Foo.java</code>', '/Foo.java.html', { isCodePage: true }),
     ],
   }),
   previous: link('Guide', '/index.html'),
@@ -80,16 +81,33 @@ describe('_document-index.html', () => {
     const html = render(INDEX_TEMPLATE, NAVIGATION);
     expect(html).toContain('<a href="/a%20b.html"><code>a b</code></a>');
   });
+
+  test('marks code pages', () => {
+    const html = render(INDEX_TEMPLATE, NAVIGATION);
+    expect(html).toContain(
+      '<a class="code-page" href="/Foo.java.html"><code>Foo.java</code></a>',
+    );
+  });
 });
 
 describe('_document-pagination.html', () => {
-  test('links to the previous and next pages', () => {
+  test('links to the previous and next pages as superlinks', () => {
     const html = render(PAGINATION_TEMPLATE, NAVIGATION);
     expect(html).toContain(
-      '<a class="previous" rel="prev" href="/index.html"><span class="direction">Previous</span><span class="title">Guide</span></a>',
+      '<a class="button superlink previous" rel="prev" href="/index.html"><span class="superlink-description">Previous</span><span class="superlink-title">Guide</span></a>',
     );
     expect(html).toContain(
-      '<a class="next" rel="next" href="/deep.html"><span class="direction">Next</span><span class="title"><em>Deep</em></span></a>',
+      '<a class="button superlink next" rel="next" href="/deep.html"><span class="superlink-description">Next</span><span class="superlink-title"><em>Deep</em></span></a>',
+    );
+  });
+
+  test('marks a code page title', () => {
+    const html = render(PAGINATION_TEMPLATE, {
+      ...NAVIGATION,
+      next: link('<code>Foo.java</code>', '/Foo.java.html', true),
+    });
+    expect(html).toContain(
+      '<span class="superlink-title code-page"><code>Foo.java</code></span>',
     );
   });
 
@@ -98,8 +116,8 @@ describe('_document-pagination.html', () => {
       ...NAVIGATION,
       previous: undefined,
     });
-    expect(html).not.toContain('class="previous"');
-    expect(html).toContain('class="next"');
+    expect(html).not.toContain('previous');
+    expect(html).toContain('superlink next');
   });
 
   test('renders nothing without neighbors or outside every index', () => {

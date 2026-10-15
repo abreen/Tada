@@ -7,7 +7,7 @@ This codebase is a static site generator written in TypeScript and uses Bun.
 - Watch mode lives under `build/watch/` for planning, runtime state, and file-system events
 - Client-side runtime code and styles live in `src/`, and internal Lodash HTML templates live in `templates/`
 - Default `tada init` content lives in `init/`, feature documentation lives in `spec/`, and end-to-end coverage lives in `functional_tests/` and `playwright/`
-- `examples/` holds small sites that each show one feature; they are not in the npm package
+- `examples/` holds small sites that each show one feature; they are not in the npm package. Do not add to `examples/` unless told to
 
 ## Feature specifications
 

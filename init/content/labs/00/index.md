@@ -4,7 +4,7 @@ author: alex
 description: An example lab page.
 ---
 
-In this lab, we'll explore the [`VowelCounter` program](./VowelCounter.java.html).
+In this lab, we'll explore the [[Counting vowels|`VowelCounter` program]].
 
 ## Review questions
 

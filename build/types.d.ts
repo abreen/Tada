@@ -8,6 +8,8 @@ import type { PageTitleIndex } from './source-model';
 export interface BreadcrumbEntry {
   label: string;
   url: string;
+  /** Set by a document index for a code page, whose label is a file name */
+  isCodePage?: boolean;
 }
 
 export type PlainTextLanguage = 'text' | 'txt' | 'plain';

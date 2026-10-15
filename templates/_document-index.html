@@ -4,7 +4,7 @@
   <ol>
     <% for (const entry of entries) { %>
     <li<% if (entry.isBranch) { %> class="document-index-branch<% if (entry.children.length > 0) { %> document-index-branch-open<% } %>"<% } %>>
-      <a href="<%- encodeAuthoredUrl(entry.href) %>"<% if (entry.current) { %> aria-current="page"<% } %>><%= entry.titleHtml %></a>
+      <a<% if (entry.isCodePage) { %> class="code-page"<% } %> href="<%- encodeAuthoredUrl(entry.href) %>"<% if (entry.current) { %> aria-current="page"<% } %>><%= entry.titleHtml %></a>
       <% if (entry.children.length > 0) { renderEntries(entry.children); } %>
     </li>
     <% } %>
