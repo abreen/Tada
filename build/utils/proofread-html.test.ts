@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { parseHTML } from 'linkedom';
+import { selectOne } from 'css-select';
+import { getAttributeValue, textContent } from 'domutils';
+import type { AnyNode, Element } from 'domhandler';
+import { parse, serialize } from 'parse5';
+import {
+  adapter,
+  type Htmlparser2TreeAdapterMap,
+} from 'parse5-htmlparser2-tree-adapter';
 import {
   PROOFREAD_HEAD,
   proofreadHtml,
@@ -34,8 +41,17 @@ function page(content: string): string {
   return `<html><head><title>T</title></head><body><header><p>Teh header</p></header><main class="body">${content}</main></body></html>`;
 }
 
+function select(selector: string, html: string): Element {
+  const document = parse<Htmlparser2TreeAdapterMap>(html, {
+    treeAdapter: adapter,
+  });
+  return selectOne<AnyNode, Element>(selector, document)!;
+}
+
 function mainOf(html: string): string {
-  return parseHTML(html).document.querySelector('main')!.innerHTML;
+  return serialize<Htmlparser2TreeAdapterMap>(select('main', html), {
+    treeAdapter: adapter,
+  });
 }
 
 /** The HTML as the parser serializes it, so tests ignore attribute order */
@@ -65,13 +81,13 @@ describe('proofreadHtml', () => {
       },
     ];
     const html = await proofreadHtml(page('<p>Use teh cat.</p>'), check);
-    const span = parseHTML(html).document.querySelector('main span')!;
-    expect(span.className).toBe('proofread-spelling');
-    expect(span.textContent).toBe('teh');
-    expect(span.getAttribute('title')).toBe(
+    const span = select('main span', html);
+    expect(getAttributeValue(span, 'class')).toBe('proofread-spelling');
+    expect(textContent(span)).toBe('teh');
+    expect(getAttributeValue(span, 'title')).toBe(
       'Did you mean to spell \u201cteh\u201d this way?',
     );
-    expect(span.getAttribute('data-proofread-message')).toBe(
+    expect(getAttributeValue(span, 'data-proofread-message')).toBe(
       '<p>Did you mean <code>"the"</code>?</p>',
     );
   });
@@ -79,13 +95,8 @@ describe('proofreadHtml', () => {
   test('adds the underline style to the head', async () => {
     const { check } = fakeCheck({});
     const html = await proofreadHtml(page('<p>Fine.</p>'), check);
-    const { document } = parseHTML(html);
-    expect(document.head.querySelector('style')!.textContent).toBe(
-      PROOFREAD_HEAD.css,
-    );
-    expect(document.head.querySelector('script')!.textContent).toBe(
-      PROOFREAD_HEAD.js,
-    );
+    expect(textContent(select('head style', html))).toBe(PROOFREAD_HEAD.css);
+    expect(textContent(select('head script', html))).toBe(PROOFREAD_HEAD.js);
   });
 
   test('checks only text inside main', async () => {
@@ -217,6 +228,16 @@ describe('proofreadHtml', () => {
     const html = await proofreadHtml(page(content), check);
     expect(mainOf(html)).toBe(serialized(content));
     expect(html).toContain('<p>Teh header</p>');
+  });
+
+  test('keeps escaped markup in the title and textarea escaped', async () => {
+    const { check } = fakeCheck({});
+    const html = await proofreadHtml(
+      '<html><head><title>The &lt;/title&gt; element</title></head><body><main><p>Hi.</p><textarea>&lt;/textarea&gt;</textarea></main></body></html>',
+      check,
+    );
+    expect(html).toContain('<title>The &lt;/title&gt; element</title>');
+    expect(html).toContain('<textarea>&lt;/textarea&gt;</textarea>');
   });
 
   test('returns a page without main unchanged', async () => {

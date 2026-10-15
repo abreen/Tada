@@ -1,4 +1,12 @@
-import { parseHTML } from 'linkedom';
+import { is, selectOne } from 'css-select';
+import { isTag, isText } from 'domhandler';
+import type { AnyNode, Element, ParentNode, Text } from 'domhandler';
+import { filter } from 'domutils';
+import { html as spec, parse, serialize } from 'parse5';
+import {
+  adapter,
+  type Htmlparser2TreeAdapterMap,
+} from 'parse5-htmlparser2-tree-adapter';
 
 export type IssueKind = 'spelling' | 'grammar';
 
@@ -196,9 +204,6 @@ const IGNORED_SELECTOR = [
 // Their text is part of the sentence, but problems that touch it are dropped
 const MASKED_SELECTOR = 'code, kbd, samp, tt, var, .katex';
 
-const TEXT_NODE = 3;
-const SHOW_ELEMENT_AND_TEXT = 0x1 | 0x4;
-
 interface Piece {
   /** The text node this piece came from; a line break has none */
   node?: Text;
@@ -218,32 +223,46 @@ interface Mark {
   issue: TextIssue;
 }
 
-/** Groups the checked text in `main` into blocks, in document order */
-function collectBlocks(document: Document, main: Element): Block[] {
-  const blocks = new Map<Element, Block>();
-  const walker = document.createTreeWalker(main, SHOW_ELEMENT_AND_TEXT);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const isText = node.nodeType === TEXT_NODE;
-    const element = isText ? node.parentElement : (node as Element);
-    if (!element || (!isText && element.tagName !== 'BR')) {
-      continue;
+/** The element itself or its nearest ancestor that matches the selector */
+function closest(element: Element, selector: string): Element | null {
+  for (
+    let node: ParentNode | null = element;
+    node && isTag(node);
+    node = node.parent
+  ) {
+    if (is(node, selector)) {
+      return node;
     }
+  }
+  return null;
+}
+
+/** Groups the checked text in `main` into blocks, in document order */
+function collectBlocks(main: Element): Block[] {
+  const blocks = new Map<Element, Block>();
+  const nodes = filter(
+    node => isText(node) || (isTag(node) && node.name === 'br'),
+    main.children,
+  ) as (Text | Element)[];
+  for (const node of nodes) {
+    const element = isText(node) ? (node.parent as Element) : node;
     // Of KaTeX output, only the TeX source annotation is read
     const isKatexRendering =
-      element.closest('.katex') !== null && !element.closest('annotation');
-    if (isKatexRendering || element.closest(IGNORED_SELECTOR)) {
+      closest(element, '.katex') !== null &&
+      closest(element, 'annotation') === null;
+    if (isKatexRendering || closest(element, IGNORED_SELECTOR)) {
       continue;
     }
-    const blockElement = element.closest(BLOCK_SELECTOR) ?? main;
+    const blockElement = closest(element, BLOCK_SELECTOR) ?? main;
     const block = blocks.get(blockElement) ?? { text: '', pieces: [] };
     blocks.set(blockElement, block);
     const start = block.text.length;
-    block.text += isText ? node.textContent : '\n';
+    block.text += isText(node) ? node.data : '\n';
     block.pieces.push({
-      node: isText ? (node as Text) : undefined,
+      node: isText(node) ? node : undefined,
       start,
       end: block.text.length,
-      masked: isText && element.closest(MASKED_SELECTOR) !== null,
+      masked: isText(node) && closest(element, MASKED_SELECTOR) !== null,
     });
   }
   return [...blocks.values()].filter(block =>
@@ -289,24 +308,41 @@ function marksForIssues(
   return marksByNode;
 }
 
-function createMark(document: Document, text: string, issue: TextIssue) {
-  const span = document.createElement('span');
-  span.className = `proofread-${issue.kind}`;
+/** An HTML element made through the tree adapter, so it serializes as HTML */
+function createElement(
+  tagName: string,
+  attributes: Record<string, string>,
+  text: string,
+): Element {
+  const element = adapter.createElement(
+    tagName,
+    spec.NS.HTML,
+    Object.entries(attributes).map(([name, value]) => ({ name, value })),
+  );
+  adapter.insertText(element, text);
+  return element;
+}
+
+function createMark(text: string, issue: TextIssue): Element {
+  const attributes: Record<string, string> = {
+    class: `proofread-${issue.kind}`,
+  };
   if (issue.message) {
     // Harper marks quoted words with backticks
-    span.setAttribute('title', issue.message.replace(/`([^`]*)`/g, '“$1”'));
+    attributes.title = issue.message.replace(/`([^`]*)`/g, '“$1”');
   }
   if (issue.messageHtml) {
-    span.setAttribute('data-proofread-message', issue.messageHtml.trim());
+    attributes['data-proofread-message'] = issue.messageHtml.trim();
   }
-  span.append(document.createTextNode(text));
-  return span;
+  return createElement('span', attributes, text);
 }
 
 /** Replaces a text node with its text, with each mark's part in a span */
-function wrapMarks(document: Document, node: Text, marks: Mark[]) {
+function wrapMarks(node: Text, marks: Mark[]) {
+  const parent = node.parent!;
   const text = node.data;
-  const parts: Node[] = [];
+  const insert = (part: Text | Element) =>
+    adapter.insertBefore(parent, part, node);
   let position = 0;
   for (const mark of marks.sort((a, b) => a.start - b.start)) {
     // Of overlapping problems, the first is kept
@@ -314,17 +350,15 @@ function wrapMarks(document: Document, node: Text, marks: Mark[]) {
       continue;
     }
     if (mark.start > position) {
-      parts.push(document.createTextNode(text.slice(position, mark.start)));
+      insert(adapter.createTextNode(text.slice(position, mark.start)));
     }
-    parts.push(
-      createMark(document, text.slice(mark.start, mark.end), mark.issue),
-    );
+    insert(createMark(text.slice(mark.start, mark.end), mark.issue));
     position = mark.end;
   }
   if (position < text.length) {
-    parts.push(document.createTextNode(text.slice(position)));
+    insert(adapter.createTextNode(text.slice(position)));
   }
-  node.replaceWith(...parts);
+  adapter.detachNode(node);
 }
 
 /**
@@ -335,25 +369,25 @@ export async function proofreadHtml(
   html: string,
   check: CheckText,
 ): Promise<string> {
-  const { document } = parseHTML(html);
-  const main = document.querySelector('main');
-  if (!main) {
+  const document = parse<Htmlparser2TreeAdapterMap>(html, {
+    treeAdapter: adapter,
+  });
+  const main = selectOne<AnyNode, Element>('main', document);
+  const head = selectOne<AnyNode, Element>('head', document);
+  if (!main || !head) {
     return html;
   }
-  // The parser splits text at character references; merge it back
-  main.normalize();
-  const blocks = collectBlocks(document, main);
+  const blocks = collectBlocks(main);
   const issuesByBlock = await Promise.all(
     blocks.map(block => check(block.text)),
   );
   for (const [node, marks] of marksForIssues(blocks, issuesByBlock)) {
-    wrapMarks(document, node, marks);
+    wrapMarks(node, marks);
   }
 
-  const style = document.createElement('style');
-  style.textContent = PROOFREAD_HEAD.css;
-  const script = document.createElement('script');
-  script.textContent = PROOFREAD_HEAD.js;
-  document.head.append(style, script);
-  return document.toString();
+  adapter.appendChild(head, createElement('style', {}, PROOFREAD_HEAD.css));
+  adapter.appendChild(head, createElement('script', {}, PROOFREAD_HEAD.js));
+  return serialize<Htmlparser2TreeAdapterMap>(document, {
+    treeAdapter: adapter,
+  });
 }
