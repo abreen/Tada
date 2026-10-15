@@ -77,6 +77,7 @@ describe('proofreadHtml', () => {
         start: 4,
         end: 7,
         kind: 'spelling',
+        rule: 'SpellCheck',
         message: 'Did you mean to spell `teh` this way?',
         messageHtml: '<p>Did you mean <code>"the"</code>?</p>\n',
       },
@@ -86,10 +87,46 @@ describe('proofreadHtml', () => {
     expect(getAttributeValue(span, 'class')).toBe('proofread-spelling');
     expect(textContent(span)).toBe('teh');
     expect(getAttributeValue(span, 'title')).toBe(
-      'Did you mean to spell \u201cteh\u201d this way?',
+      'Did you mean to spell \u201cteh\u201d this way?\nSpellCheck',
     );
     expect(getAttributeValue(span, 'data-proofread-message')).toBe(
-      '<p>Did you mean <code>"the"</code>?</p>',
+      '<p>Did you mean <code>"the"</code>?</p><p class="proofread-rule"><code>SpellCheck</code></p>',
+    );
+  });
+
+  test('leaves the rule line out when the rule is not known', async () => {
+    const check: CheckText = async () => [
+      {
+        start: 4,
+        end: 7,
+        kind: 'spelling',
+        message: 'Misspelled.',
+        messageHtml: '<p>Misspelled.</p>',
+      },
+    ];
+    const html = await proofreadHtml(page('<p>Use teh cat.</p>'), check);
+    const span = select('main span', html);
+    expect(getAttributeValue(span, 'title')).toBe('Misspelled.');
+    expect(getAttributeValue(span, 'data-proofread-message')).toBe(
+      '<p>Misspelled.</p>',
+    );
+  });
+
+  test('escapes the rule name in the tooltip HTML', async () => {
+    const check: CheckText = async () => [
+      {
+        start: 4,
+        end: 7,
+        kind: 'grammar',
+        rule: 'A<b>&',
+        message: 'Odd.',
+        messageHtml: '<p>Odd.</p>',
+      },
+    ];
+    const html = await proofreadHtml(page('<p>Use teh cat.</p>'), check);
+    const span = select('main span', html);
+    expect(getAttributeValue(span, 'data-proofread-message')).toBe(
+      '<p>Odd.</p><p class="proofread-rule"><code>A&lt;b>&amp;</code></p>',
     );
   });
 
@@ -281,18 +318,40 @@ describe('toTextIssues', () => {
   test('marks spelling and typo lints as spelling and others as grammar', () => {
     expect(
       toTextIssues('teh cat an dog', [
-        { start: 0, end: 3, kind: 'Typo', message: 'm1', messageHtml: 'h1' },
+        {
+          start: 0,
+          end: 3,
+          kind: 'Typo',
+          rule: 'SpellCheck',
+          message: 'm1',
+          messageHtml: 'h1',
+        },
         {
           start: 8,
           end: 10,
           kind: 'Miscellaneous',
+          rule: 'AnA',
           message: 'm2',
           messageHtml: 'h2',
         },
       ]),
     ).toEqual([
-      { start: 0, end: 3, kind: 'spelling', message: 'm1', messageHtml: 'h1' },
-      { start: 8, end: 10, kind: 'grammar', message: 'm2', messageHtml: 'h2' },
+      {
+        start: 0,
+        end: 3,
+        kind: 'spelling',
+        rule: 'SpellCheck',
+        message: 'm1',
+        messageHtml: 'h1',
+      },
+      {
+        start: 8,
+        end: 10,
+        kind: 'grammar',
+        rule: 'AnA',
+        message: 'm2',
+        messageHtml: 'h2',
+      },
     ]);
   });
 });

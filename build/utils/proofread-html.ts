@@ -16,6 +16,8 @@ export interface TextIssue {
   start: number;
   end: number;
   kind: IssueKind;
+  /** The name of the Harper rule that found it, as `rules` takes it */
+  rule?: string;
   /** What is wrong, as plain text */
   message?: string;
   /** What is wrong, as HTML */
@@ -87,6 +89,7 @@ export function toTextIssues(
     start: number;
     end: number;
     kind: string;
+    rule: string;
     message: string;
     messageHtml: string;
   }[],
@@ -96,6 +99,7 @@ export function toTextIssues(
     start: toUtf16(lint.start),
     end: toUtf16(lint.end),
     kind: SPELLING_KINDS.has(lint.kind) ? 'spelling' : 'grammar',
+    rule: lint.rule,
     message: lint.message,
     messageHtml: lint.messageHtml,
   }));
@@ -114,9 +118,13 @@ const PROOFREAD_CSS =
   'font-size:var(--font-size-small);pointer-events:none}' +
   '.proofread-tooltip p{margin:0}' +
   // Harper marks quoted words with code; show them as quotes in the text font
-  '.proofread-tooltip code{padding:0;border:0;border-radius:0;background:none;color:inherit;font:inherit}' +
-  '.proofread-tooltip code::before{content:open-quote}' +
-  '.proofread-tooltip code::after{content:close-quote}';
+  '.proofread-tooltip p:not(.proofread-rule) code{padding:0;border:0;border-radius:0;background:none;color:inherit;font:inherit}' +
+  '.proofread-tooltip p:not(.proofread-rule) code::before{content:open-quote}' +
+  '.proofread-tooltip p:not(.proofread-rule) code::after{content:close-quote}' +
+  // The rule name, styled like the label of the table of contents
+  '.proofread-rule{font-family:var(--mono-font);font-size-adjust:var(--mono-font-size-adjust);' +
+  'font-style:italic;font-feature-settings:var(--mono-font-feature-settings)}' +
+  '.proofread-rule code{padding:0;border:0;border-radius:0;background:none;color:inherit;font:inherit}';
 
 // Replaces the native title tooltip with one that shows the HTML message.
 // Delegated from document, so it keeps working across client-side navigation.
@@ -386,12 +394,17 @@ function createMark(text: string, issue: TextIssue): Element {
   const attributes: Record<string, string> = {
     class: `proofread-${issue.kind}`,
   };
+  // The rule name goes on its own line, so authors can copy it into `rules`
   if (issue.message) {
     // Harper marks quoted words with backticks
-    attributes.title = issue.message.replace(/`([^`]*)`/g, '“$1”');
+    const title = issue.message.replace(/`([^`]*)`/g, '“$1”');
+    attributes.title = issue.rule ? `${title}\n${issue.rule}` : title;
   }
   if (issue.messageHtml) {
-    attributes['data-proofread-message'] = issue.messageHtml.trim();
+    const rule = issue.rule
+      ? `<p class="proofread-rule"><code>${issue.rule.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</code></p>`
+      : '';
+    attributes['data-proofread-message'] = issue.messageHtml.trim() + rule;
   }
   return createElement('span', attributes, text);
 }
