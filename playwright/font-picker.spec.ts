@@ -6,6 +6,7 @@ import {
   type Locator,
   type Page,
 } from './test-fixtures';
+import { appearanceSiteUrl } from './ports';
 
 async function getKnobTransform(locator: Locator) {
   return locator.evaluate(
@@ -126,7 +127,7 @@ test.describe('configured appearance defaults', () => {
   }) => {
     const context = await browser.newContext({ javaScriptEnabled: false });
     const page = await context.newPage();
-    await page.goto('http://localhost:8082/custom/index.html');
+    await page.goto(appearanceSiteUrl('/index.html'));
 
     await expect(page.locator('html')).toHaveAttribute(
       'data-default-font-preference',
@@ -170,7 +171,7 @@ test.describe('configured appearance defaults', () => {
       }
     });
 
-    await page.goto('http://localhost:8082/custom/index.html');
+    await page.goto(appearanceSiteUrl('/index.html'));
     await page.waitForLoadState('networkidle');
 
     for (const family of ['body', 'mono']) {
@@ -202,7 +203,7 @@ test.describe('configured appearance defaults', () => {
   test('persists opposite overrides and clears configured defaults', async ({
     page,
   }) => {
-    await page.goto('http://localhost:8082/custom/index.html');
+    await page.goto(appearanceSiteUrl('/index.html'));
     const fontSwitch = page.getByRole('switch', { name: 'Use serif fonts' });
     const contrastSwitch = page.getByRole('switch', {
       name: 'Use high contrast',
@@ -235,7 +236,7 @@ test.describe('configured appearance defaults', () => {
     ).toHaveAttribute('aria-checked', 'false');
 
     await page.getByRole('link', { name: 'Next page' }).click();
-    await expect(page).toHaveURL('http://localhost:8082/custom/next.html');
+    await expect(page).toHaveURL(appearanceSiteUrl('/next.html'));
     await expect(
       page.getByRole('switch', { name: 'Use serif fonts' }),
     ).toHaveAttribute('aria-checked', 'false');
@@ -261,7 +262,7 @@ test.describe('configured appearance defaults', () => {
       localStorage.setItem('contrastPreference', 'standard');
     });
 
-    await page.goto('http://localhost:8082/custom/index.html');
+    await page.goto(appearanceSiteUrl('/index.html'));
 
     await expect(page.locator('html')).not.toHaveAttribute(
       'data-font-preference',

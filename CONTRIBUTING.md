@@ -86,6 +86,12 @@ bun run test:all              # Run all unit & functional tests
 The functional tests exercise the CLI end-to-end and may be slow on older
 machines.
 
+The Playwright tests start their own test servers on free ports, so several
+checkouts or worktrees can run them at the same time. To pin a server's port,
+set `TADA_PW_PORT_TEST`, `TADA_PW_PORT_APPEARANCE`,
+`TADA_PW_PORT_NO_NAV_SEARCH`, or `TADA_PW_PORT_NO_NAV_STATIC` (see
+`playwright/ports.ts`).
+
 
 ## Code style
 

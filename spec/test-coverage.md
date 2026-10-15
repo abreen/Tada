@@ -12,8 +12,7 @@ Do not enable test coverage with environment variables.
   `bun run test:functional --coverage` and write to `coverage/functional/`.
 - Playwright tests collect Istanbul JSON coverage with
   `bun run test:playwright --coverage` and write to `coverage/playwright/`.
-  The coverage run uses an instrumented Playwright web server and does not reuse
-  an existing local server.
+  The coverage run uses instrumented Playwright web servers.
 - `bun run test:all --coverage` runs all three suites with coverage enabled.
 - `bun run test:coverage` clears prior suite/report coverage, runs unit,
   Playwright, and functional tests with coverage, then writes the merged LCOV

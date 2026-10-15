@@ -9,6 +9,7 @@ import {
 import path from 'path';
 import { installCustomFontFixtures } from './custom-font-fixtures';
 import { installPageLayoutFixtures } from './page-layout-fixtures';
+import { portArgument } from './ports';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
@@ -19,6 +20,7 @@ const coveragePreload = path.join(
 );
 const siteDir = path.join(repoDir, 'playwright', '.appearance-defaults-site');
 const coverageEnabled = process.argv.slice(2).includes('--coverage');
+const port = portArgument(process.argv.slice(2));
 
 async function runTada(args: string[], cwd = siteDir): Promise<void> {
   const command = ['bun'];
@@ -114,4 +116,4 @@ for (const entry of readdirSync(distDir)) {
     });
   }
 }
-await runTada(['serve', '--port', '8082']);
+await runTada(['serve', '--port', port]);

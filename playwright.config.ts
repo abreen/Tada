@@ -1,4 +1,7 @@
 import { defineConfig } from '@playwright/test';
+import { assignPorts } from './playwright/ports';
+
+const ports = await assignPorts();
 
 // Chromium runs every spec. WebKit and Firefox run the specs where engines
 // differ most: client-side navigation, history and scroll restoration, and
@@ -47,7 +50,7 @@ export default defineConfig({
   testDir: './playwright',
   timeout: 20_000,
   retries: 0,
-  use: { baseURL: 'http://localhost:8081', headless: true },
+  use: { baseURL: `http://localhost:${ports.test}`, headless: true },
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },
     {
@@ -63,27 +66,27 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'bun run playwright/serve-test-site.ts',
-      url: 'http://localhost:8081/index.html',
-      reuseExistingServer: !process.env.CI,
+      command: `bun run playwright/serve-test-site.ts --port ${ports.test}`,
+      url: `http://localhost:${ports.test}/index.html`,
+      reuseExistingServer: false,
       timeout: 60_000,
     },
     {
-      command: 'bun run playwright/serve-appearance-defaults-site.ts',
-      url: 'http://localhost:8082/custom/index.html',
-      reuseExistingServer: !process.env.CI,
+      command: `bun run playwright/serve-appearance-defaults-site.ts --port ${ports.appearance}`,
+      url: `http://localhost:${ports.appearance}/custom/index.html`,
+      reuseExistingServer: false,
       timeout: 60_000,
     },
     {
-      command: 'bun run playwright/serve-no-nav-site.ts',
-      url: 'http://localhost:8083/index.html',
-      reuseExistingServer: !process.env.CI,
+      command: `bun run playwright/serve-no-nav-site.ts --port ${ports.noNavSearch}`,
+      url: `http://localhost:${ports.noNavSearch}/index.html`,
+      reuseExistingServer: false,
       timeout: 60_000,
     },
     {
-      command: 'bun run playwright/serve-no-nav-site.ts --no-search',
-      url: 'http://localhost:8084/index.html',
-      reuseExistingServer: !process.env.CI,
+      command: `bun run playwright/serve-no-nav-site.ts --no-search --port ${ports.noNavStatic}`,
+      url: `http://localhost:${ports.noNavStatic}/index.html`,
+      reuseExistingServer: false,
       timeout: 60_000,
     },
   ],

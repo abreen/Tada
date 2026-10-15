@@ -1,11 +1,12 @@
 import { test, expect, type Page } from './test-fixtures';
+import { appearanceSiteUrl } from './ports';
 
 const templates = ['.html', '-toc.html', '.py.html', '.java.html'];
 const sites = [
   { name: 'pickers only', base: '', footer: false },
   {
     name: 'footer, pickers, and banner',
-    base: 'http://localhost:8082/custom',
+    base: appearanceSiteUrl(),
     footer: true,
   },
 ];

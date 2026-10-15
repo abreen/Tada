@@ -44,6 +44,8 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 - Run the entire test suite: `bun run test:all`
 - Run all test suites, collecting coverage: `bun run test:coverage`
 
+Playwright tests pick free ports for their servers, so they can run in several worktrees at once. Never hard-code a server port in a Playwright spec or config; use `playwright/ports.ts`.
+
 Functional tests are CPU intensive and may take over 2 minutes, even on powerful machines.
 
 ## Cross-platform tests
