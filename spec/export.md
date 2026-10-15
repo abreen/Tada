@@ -53,8 +53,9 @@ Front matter is removed. A page's `title`, after variable substitution, becomes
 a `# Title` heading at the top of a Markdown page, or an `<h1>` (with its
 inline Markdown rendered) at the top of an HTML page. A home page without a
 title gets no heading. Other front matter fields are dropped. Links and
-wikilinks in a title are converted like the body's, and a title's line breaks
-become spaces, as they do in the build.
+wikilinks in a title are converted like the body's, a title's line breaks
+become spaces, as they do in the build, and a trailing `#` is escaped so it
+stays part of the heading.
 
 Site variables are substituted and `\{{` escapes are resolved as in the build.
 `<!--- -->` comments are removed, except on literate Java pages, which keep
@@ -64,16 +65,16 @@ them as the build does.
 
 | Tada | Export |
 |---|---|
-| `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it (not when the directive is a list item) |
+| `{{{ _partial.md }}}` | The partial's text, with nested partials included, each line prefixed like the directive's line (for example `> ` in a blockquote), and blank lines added around it so it does not join the text before or after it (not inside a list item, where they would make a tight list loose) |
 | `[[Title]]`, `[[Title\|text]]` | `[Title](path.md)`, `[text](path.md)` |
 | `[Title][Description](url)` | `[Title](url) - Description`; a superlink followed by a line break ends with `\` so the next one stays on its own line |
 | `!!! note` / `!!! warning` | `> [!NOTE]` / `> [!WARNING]`; a custom title becomes a bold line under the marker, with its punctuation escaped so it shows literally, as in the build |
-| `??? question Q`, including multiple choice | `<details>` with `<summary>Q</summary>` and the answer, or the options' task list, as its body |
-| `[Label\|` … `]` tabs, including steppers | One `<details>` per tab, with the label as its `<summary>` |
+| `??? question Q`, including multiple choice | `<details>` with `<summary>Q</summary>` and the answer, or the options' task list, as its body, followed by a blank line so the text after it stays Markdown |
+| `[Label\|` … `]` tabs, including steppers | One `<details>` per tab, with the label as its `<summary>`, each followed by a blank line |
 | `+++` columns | Fence lines become blank lines; the columns follow one another |
 | `## Main # Subtitle` | `## Main - Subtitle` |
 | Definition lists | `<dl>` with `<dt>` and `<dd>` elements, each holding Markdown between blank lines |
-| ` ```trace ` blocks (any fence whose first info word is `trace`) | One fenced code block per listed file, with the file's contents as the build publishes them, in the language mapped from its extension. A trace the build rejects, such as one mixing languages or repeating a basename, fails the export with the build's error |
+| ` ```trace ` blocks (any fence whose first info word is `trace`) | One fenced code block per listed file, with the file's contents as the build publishes them, in the language mapped from its extension. A trace the build rejects, such as one mixing languages, repeating a basename, or on a literate Java page, fails the export with the build's error |
 
 Summaries are rendered to HTML, since GitHub does not parse Markdown inside
 `<summary>`. Everything else is kept as written, including math, footnotes,
@@ -97,7 +98,8 @@ and `href` and `src` attributes in raw HTML point to exported files:
 - A link (a Markdown link, superlink, or `<a href>`) to a path the build does
   not publish fails the export with the build's `broken internal link` error,
   and a link to a directory with an `index.html` fails with the build's
-  `directory link must reference index.html explicitly` error. A reference
+  `directory link must reference index.html explicitly` error. Like the build,
+  the export does not check `<a>` elements inside SVG or MathML. A reference
   definition that a link uses is checked like the link. As in the build,
   images, `src` attributes, and definitions only images use are not checked.
   A link to a file the build generates but the export leaves out is made

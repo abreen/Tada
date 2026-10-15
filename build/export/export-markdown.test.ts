@@ -77,16 +77,65 @@ function exportPage(
     relPath = 'lectures/page.md',
     title,
     files,
-  }: { relPath?: string; title?: string; files?: Record<string, string> } = {},
+    literateJava,
+  }: {
+    relPath?: string;
+    title?: string;
+    files?: Record<string, string>;
+    literateJava?: boolean;
+  } = {},
 ): string {
   return exportMarkdownPage(
     createContext(files),
-    { filePath: contentPath(relPath), relPath, title },
+    { filePath: contentPath(relPath), relPath, title, literateJava },
     body,
   );
 }
 
 describe('exportMarkdownPage', () => {
+  test('separates text after a closing details element', () => {
+    expect(exportPage('??? question Q\nA\n???\nafter [x](/index.html)')).toBe(
+      '<details>\n<summary>Q</summary>\n\nA\n\n</details>\n\nafter [x](../index.md)\n',
+    );
+    expect(exportPage('[Tab|\nA\n]\nafter')).toBe(
+      '<details>\n<summary>Tab</summary>\n\nA\n\n</details>\n\nafter\n',
+    );
+  });
+
+  test('does not check links inside SVG, as the build does not', () => {
+    expect(
+      exportPage(
+        '<svg><a href="/nope.html">x</a></svg>\n\n<a href="/index.html">y</a>',
+      ),
+    ).toBe(
+      '<svg><a href="../nope.html">x</a></svg>\n\n<a href="../index.md">y</a>\n',
+    );
+  });
+
+  test('fails on a trace block in a literate Java page, as the build does', () => {
+    expect(() =>
+      exportPage('```trace\nDemo.java\n```', {
+        relPath: 'lectures/Foo.java.md',
+        literateJava: true,
+        files: { 'lectures/Demo.java': '' },
+      }),
+    ).toThrow('trace blocks are not supported here');
+  });
+
+  test('keeps a list tight around a partial on a continuation line', () => {
+    expect(
+      exportPage('- item\n  {{{ _p.md }}}\n- two', {
+        files: { 'lectures/_p.md': 'Partial' },
+      }),
+    ).toBe('- item\n  Partial\n- two\n');
+  });
+
+  test('keeps a title ending in # whole', () => {
+    expect(exportPage('Body.', { title: 'Learn C #' })).toBe(
+      '# Learn C \\#\n\nBody.\n',
+    );
+  });
+
   test('starts with the title as a heading', () => {
     expect(exportPage('\n\nSome text.\n', { title: 'My `Page`' })).toBe(
       '# My `Page`\n\nSome text.\n',
@@ -316,7 +365,7 @@ describe('exportMarkdownPage', () => {
     expect(
       exportPage('[Java|\nJava code.\n]\n[1. *Python*|\nPython code.\n]'),
     ).toBe(
-      '<details>\n<summary>Java</summary>\n\nJava code.\n\n</details>\n' +
+      '<details>\n<summary>Java</summary>\n\nJava code.\n\n</details>\n\n' +
         '<details>\n<summary>1. <em>Python</em></summary>\n\nPython code.\n\n</details>\n',
     );
   });

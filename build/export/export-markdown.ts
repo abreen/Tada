@@ -60,6 +60,8 @@ export interface ExportPage {
   title?: string;
   /** Keeps `<!--- -->` comments, as literate Java pages do */
   preserveHtmlComments?: boolean;
+  /** A literate Java page, where the build does not allow trace blocks */
+  literateJava?: boolean;
 }
 
 type SpanKind = 'link' | 'image' | 'superlink' | 'wikilink' | 'html_inline';
@@ -478,7 +480,21 @@ class PageExporter {
       return text;
     }
     const { tokens } = this.parse(text);
-    const directives = tokens.filter(token => token.type === 'export_partial');
+    const directives: Token[] = [];
+    const inListItem = new Set<Token>();
+    let listItemDepth = 0;
+    for (const token of tokens) {
+      if (token.type === 'list_item_open') {
+        listItemDepth++;
+      } else if (token.type === 'list_item_close') {
+        listItemDepth--;
+      } else if (token.type === 'export_partial') {
+        directives.push(token);
+        if (listItemDepth > 0) {
+          inListItem.add(token);
+        }
+      }
+    }
     if (directives.length === 0) {
       return text;
     }
@@ -518,10 +534,11 @@ class PageExporter {
       const indent = continuationPrefix(prefix);
       // The build parses a partial as blocks of their own, so blank lines keep
       // it from joining a paragraph or list around it. A directive that is a
-      // list item already starts a block of its own.
+      // list item already starts a block of its own, and inside a list item
+      // blank lines would make a tight list loose, which the build avoids.
       const isBlank = (text: string | undefined) =>
         text === undefined || /^[\s>]*$/.test(text);
-      const separate = indent === prefix;
+      const separate = indent === prefix && !inListItem.has(directive);
       const before =
         separate && !isBlank(lines[line - 1]) ? `${indent.trimEnd()}\n` : '';
       const after =
@@ -616,9 +633,12 @@ class PageExporter {
   }
 
   /** Edits for the `href` and `src` values in raw HTML */
-  htmlUrlEdits(html: string): { start: number; end: number; url: string }[] {
+  htmlUrlEdits(
+    html: string,
+    foreign?: ForeignDepth,
+  ): { start: number; end: number; url: string }[] {
     const edits = [];
-    for (const value of findUrlAttributes(html)) {
+    for (const value of findUrlAttributes(html, foreign)) {
       // Character references only: backslashes mean nothing in HTML
       const url = value.url.includes('&')
         ? decodeHTMLAttribute(value.url)
@@ -692,6 +712,9 @@ class PageExporter {
     /** Where a line's text starts after its prefix, without the prefix's trailing spaces */
     const blankStart = (line: number) =>
       lineStarts[line] + linePrefix(lines[line]).trimEnd().length;
+    /** Whether a line is empty but for blockquote markers, or past the end */
+    const isBlankLine = (line: number) =>
+      line >= lines.length || /^[\s>]*$/.test(lines[line]);
     const isMarkerLine = (line: number, marker: string) => {
       if (line >= lines.length) {
         return false;
@@ -811,6 +834,7 @@ class PageExporter {
         this.exportDetails(question, open, closed ? end : -1, end, {
           blockStart,
           blankStart,
+          isBlankLine,
           lineStart,
           lineEnd,
           replace,
@@ -821,6 +845,7 @@ class PageExporter {
         this.exportDetails(label, open, end - 1, end, {
           blockStart,
           blankStart,
+          isBlankLine,
           lineStart,
           lineEnd,
           replace,
@@ -943,13 +968,19 @@ class PageExporter {
       }
     }
 
+    const foreignDepths = new Map<Token, ForeignDepth>();
     for (const span of record.spans) {
       if (!span.inline.map && !record.cells.has(span.inline)) {
         continue;
       }
       const map = inlineMapper(span.inline);
       const at = (srcOffset: number) => map(span.base + srcOffset);
-      this.exportSpan(span, at, replace);
+      let foreign = foreignDepths.get(span.inline);
+      if (!foreign) {
+        foreign = { depth: 0 };
+        foreignDepths.set(span.inline, foreign);
+      }
+      this.exportSpan(span, at, replace, foreign);
     }
 
     return applyEdits(text, edits);
@@ -963,6 +994,7 @@ class PageExporter {
       end: number,
       replacement: Edit['replace'] | string,
     ) => void,
+    foreign: ForeignDepth,
   ): void {
     const { src, start, end } = span;
     if (span.kind === 'wikilink') {
@@ -1037,7 +1069,7 @@ class PageExporter {
     } else {
       // Only the attribute values change, so a tag that spans lines keeps
       // the markers an alert added to them
-      for (const edit of this.htmlUrlEdits(src.slice(start, end))) {
+      for (const edit of this.htmlUrlEdits(src.slice(start, end), foreign)) {
         replace(at(start + edit.start), at(start + edit.end), edit.url);
       }
     }
@@ -1121,12 +1153,13 @@ class PageExporter {
         indent: string;
       };
       blankStart: (line: number) => number;
+      isBlankLine: (line: number) => boolean;
       lineStart: (line: number) => number;
       lineEnd: (line: number) => number;
       replace: (start: number, end: number, replacement: string) => void;
     },
   ): void {
-    const { blockStart, lineStart, lineEnd, replace } = helpers;
+    const { blockStart, isBlankLine, lineStart, lineEnd, replace } = helpers;
     const { start, indent } = blockStart(open);
     const html = renderInlineHtml(this.exportInline(summary));
     replace(
@@ -1134,15 +1167,22 @@ class PageExporter {
       lineEnd(open),
       indentLines(`<details>\n<summary>${html}</summary>\n`, indent),
     );
+    // A blank line ends the HTML block, so the text after it is Markdown
+    const after = (line: number) =>
+      isBlankLine(line) ? '' : `\n${indent.trimEnd()}`;
     if (close >= 0) {
       replace(
         helpers.blankStart(close),
         lineEnd(close),
-        `\n${indent}</details>`,
+        `\n${indent}</details>${after(close + 1)}`,
       );
     } else {
       const at = lineStart(end);
-      replace(at, at, `${indent.trimEnd()}\n${indent}</details>\n`);
+      replace(
+        at,
+        at,
+        `${indent.trimEnd()}\n${indent}</details>${after(end)}\n`,
+      );
     }
   }
 
@@ -1212,6 +1252,11 @@ class PageExporter {
 
   /** Code blocks with the contents of a trace block's files */
   private exportTrace(content: string): string {
+    if (this.page.literateJava) {
+      throw new Error(
+        `${this.displayPath}: trace blocks are not supported here`,
+      );
+    }
     const files = content
       .split('\n')
       .map(line => line.trim())
@@ -1252,6 +1297,17 @@ class PageExporter {
 }
 
 const TAG_NAME_PATTERN = /<([a-zA-Z][^\s/>]*)/y;
+const CLOSING_TAG_NAME_PATTERN = /<\/([a-zA-Z][^\s/>]*)/y;
+/** Elements whose content is not in the HTML namespace */
+const FOREIGN_ELEMENTS = new Set(['svg', 'math']);
+
+/**
+ * How deep a scan is inside SVG or MathML, whose `<a>` elements the build does
+ * not check; shared by the tags of one paragraph, which are parsed one by one
+ */
+interface ForeignDepth {
+  depth: number;
+}
 const ATTRIBUTE_PATTERN =
   /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/y;
 /** Elements whose content is text, not markup */
@@ -1263,6 +1319,7 @@ const RAW_TEXT_ELEMENTS = new Set(['script', 'style', 'textarea', 'title']);
  */
 function findUrlAttributes(
   html: string,
+  foreign: ForeignDepth = { depth: 0 },
 ): { start: number; end: number; url: string; isAnchor: boolean }[] {
   const values = [];
   const lower = html.toLowerCase();
@@ -1278,6 +1335,15 @@ function findUrlAttributes(
         break;
       }
       pos = close + 3;
+      continue;
+    }
+    if (html.startsWith('</', open)) {
+      CLOSING_TAG_NAME_PATTERN.lastIndex = open;
+      const closing = CLOSING_TAG_NAME_PATTERN.exec(html)?.[1].toLowerCase();
+      if (closing && FOREIGN_ELEMENTS.has(closing) && foreign.depth > 0) {
+        foreign.depth--;
+      }
+      pos = open + 2;
       continue;
     }
     TAG_NAME_PATTERN.lastIndex = open;
@@ -1307,14 +1373,19 @@ function findUrlAttributes(
           start: end - url.length,
           end,
           url,
-          // The build checks only links of `<a>` elements
+          // The build checks only links of HTML `<a>` elements
           isAnchor:
-            name.toLowerCase() === 'a' && attribute[1].toLowerCase() === 'href',
+            foreign.depth === 0 &&
+            name.toLowerCase() === 'a' &&
+            attribute[1].toLowerCase() === 'href',
         });
       }
       i += attribute[0].length;
     }
     pos = i + 1;
+    if (FOREIGN_ELEMENTS.has(name.toLowerCase()) && html[i - 1] !== '/') {
+      foreign.depth++;
+    }
 
     if (RAW_TEXT_ELEMENTS.has(name.toLowerCase())) {
       const close = lower.indexOf(`</${name.toLowerCase()}`, pos);
@@ -1381,7 +1452,8 @@ export function exportMarkdownPage(
     .replace(/^(?:[ \t]*\n)+/, '')
     .replace(/\n+$/, '\n');
   const title = exportTitle(exporter, page);
-  const heading = title ? `# ${title}\n` : '';
+  // A trailing run of `#` would be read as the heading's closing sequence
+  const heading = title ? `# ${title.replace(/(^|\s)(#+)$/, '$1\\$2')}\n` : '';
   if (exported.trim() === '') {
     return heading;
   }

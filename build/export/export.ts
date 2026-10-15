@@ -180,9 +180,9 @@ export function runExport({
 }: ExportOptions): ExportSummary {
   const siteVariables =
     env === 'dev' ? getDevSiteVariables() : getProdSiteVariables();
-  const scan = scanProject(siteVariables);
   const resolvedOutDir = path.resolve(getProjectDir(), outDir);
   checkOutDir(resolvedOutDir, force);
+  const scan = scanProject(siteVariables);
 
   // The build fails when two sources write one output, and a link to that
   // output could not tell which source to export
@@ -315,6 +315,7 @@ export function runExport({
       title: pageTitle(pageVariables, siteVariables, job.filePath),
       preserveHtmlComments:
         job.kind === 'markdown' && job.javaRelPath !== undefined,
+      literateJava: job.kind === 'markdown' && job.javaRelPath !== undefined,
     };
     const body = substituteContent(
       content,
