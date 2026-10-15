@@ -26,8 +26,21 @@ import {
   type SiteEnv,
 } from '../build/config-files';
 import { isEmojiSymbol } from '../build/utils/symbol';
+import type { SiteVariables } from '../build/types';
 
 const { version } = packageJson;
+
+const INIT_PROOFREAD_WORDS = [
+  'Tada',
+  "Tada's",
+  'superlink',
+  'superlinks',
+  'KaTeX',
+  'MarkdownIt',
+  'MuPDF',
+  'Shiki',
+  'flextree',
+];
 
 const packageDir = path.resolve(import.meta.dir, '..');
 
@@ -325,7 +338,7 @@ async function initCommand(args: string[]): Promise<void> {
   };
 
   // Generate site configs
-  const devConfig = createSiteConfig({
+  const devConfig: SiteVariables = createSiteConfig({
     title,
     symbol,
     themeColor,
@@ -338,6 +351,10 @@ async function initCommand(args: string[]): Promise<void> {
     extensionToShikiLanguage: bare ? {} : { java: 'java', py: 'python' },
     shikiLanguages: bare ? [] : ['java', 'python', 'html'],
   });
+  if (!bare) {
+    // Names in the default content that the spelling check does not know
+    devConfig.proofread = { words: INIT_PROOFREAD_WORDS };
+  }
 
   const prodConfig = createSiteConfig({
     title,

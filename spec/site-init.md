@@ -37,7 +37,10 @@ The generated config files include `site.dev.yaml` (pointing at localhost) and
 automatically extracted from the production base URL. Both site configs
 explicitly include `defaultFont: sans` and `defaultContrast: standard` so their
 initial appearance is easy to discover and change. The normal mode also generates
-starter nav and author data files as YAML by default.
+starter nav and author data files as YAML by default. In normal mode, `site.dev.yaml`
+also lists names from the starter content, such as `Tada` and `superlink`, in
+`proofread.words`, so [proofreading](proofread.md) does not underline them;
+bare mode and `site.prod.yaml` have no `proofread` key.
 
 The normal mode also writes a `package.json` that is private and lists the current
 Tada version of `@abreen/tada` in `devDependencies`, and a `tsconfig.json` that
