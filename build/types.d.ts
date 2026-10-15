@@ -75,9 +75,20 @@ export interface SiteVariables {
   proofread?: ProofreadConfig | boolean;
 }
 
+export type ProofreadDialect =
+  | 'american'
+  | 'british'
+  | 'australian'
+  | 'canadian'
+  | 'indian';
+
 export interface ProofreadConfig {
   /** Words the spelling check accepts */
   words?: string[];
+  /** The English dialect to check against; American by default */
+  dialect?: ProofreadDialect;
+  /** Harper rules to turn on (`true`) or off (`false`), by name */
+  rules?: Record<string, boolean>;
 }
 
 export type FeatureConfig = {

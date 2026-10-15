@@ -10,6 +10,7 @@ import {
 import {
   PROOFREAD_HEAD,
   proofreadHtml,
+  toLintConfig,
   toTextIssues,
   toUtf16Offsets,
   type CheckText,
@@ -293,5 +294,34 @@ describe('toTextIssues', () => {
       { start: 0, end: 3, kind: 'spelling', message: 'm1', messageHtml: 'h1' },
       { start: 8, end: 10, kind: 'grammar', message: 'm2', messageHtml: 'h2' },
     ]);
+  });
+});
+
+describe('toLintConfig', () => {
+  const defaults = { SpellCheck: true, LongSentences: true, Dashes: false };
+
+  test('overrides only the configured rules', () => {
+    expect(
+      toLintConfig(defaults, { LongSentences: false, Dashes: true }),
+    ).toEqual({
+      config: { SpellCheck: true, LongSentences: false, Dashes: true },
+      unknown: [],
+    });
+  });
+
+  test('keeps the defaults when no rules are configured', () => {
+    expect(toLintConfig(defaults, {})).toEqual({
+      config: defaults,
+      unknown: [],
+    });
+  });
+
+  test('skips and reports rules Harper does not have', () => {
+    expect(toLintConfig(defaults, { Bogus: false, SpellCheck: false })).toEqual(
+      {
+        config: { SpellCheck: false, LongSentences: true, Dashes: false },
+        unknown: ['Bogus'],
+      },
+    );
   });
 });

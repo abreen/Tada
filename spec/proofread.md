@@ -8,17 +8,29 @@ and their output is the same whether or not `proofread` is configured.
 
 ## Configuration
 
-Proofreading needs no configuration. To accept extra words, add a `proofread`
-object to `site.dev.*`:
+Proofreading needs no configuration. To change how it checks, add a
+`proofread` object to `site.dev.*`:
 
 ```yaml
 proofread:
   words:
     - Tada
     - KaTeX
+  dialect: british
+  rules:
+    LongSentences: false
+    SpellCheck: true
 ```
 
 - **words**: optional list of words the spelling check accepts
+- **dialect**: optional English dialect to check against: `american` (the
+  default), `british`, `australian`, `canadian`, or `indian`
+- **rules**: optional map from a Harper rule name to `true` (turn the rule on)
+  or `false` (turn it off). Rules not listed keep Harper's defaults. Rule names
+  are the keys of Harper's lint config, such as `SpellCheck` and
+  `LongSentences`.
+  A name Harper does not have is skipped with a warning, and the other rules
+  still apply
 
 To turn proofreading off, set `proofread: false`.
 
@@ -28,7 +40,8 @@ file that sets it fails to load.
 ## Checker
 
 Tada uses [Harper](https://writewithharper.com) (`harper.js`), which runs
-locally in WebAssembly with American English rules. Harper runs in a worker
+locally in WebAssembly with the configured dialect's rules (American English by
+default). Harper runs in a worker
 thread that watch mode starts when its first build begins, so Harper loads while
 scripts compile and pages render, and each page is checked as soon as it
 renders. A build writes its output once every page it rendered is checked;

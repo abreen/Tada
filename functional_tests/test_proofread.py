@@ -86,6 +86,44 @@ def test_watch_accepts_configured_words(tmp_path):
         wp.stop()
 
 
+def test_watch_applies_configured_rules(tmp_path):
+    site = site_with_typos(tmp_path)
+    set_site_config(site, {'proofread': {'rules': {'SpellCheck': False, 'NoSuchRule': False}}})
+    wp = WatchProcess(site, proofread=True)
+    try:
+        wp.wait_for_initial_build()
+        html = (site / 'dist' / 'index.html').read_text(encoding='utf-8')
+        assert not marked(html, 'spelling', 'sentense')
+        assert marked(html, 'grammar', 'an')
+        assert 'Harper has no proofread rules named NoSuchRule' in (
+            wp.stdout_log_path.read_text(encoding='utf-8')
+        )
+    finally:
+        wp.stop()
+
+
+def test_watch_checks_the_configured_dialect(tmp_path):
+    site = init_site(tmp_path)
+    (site / 'content' / 'index.md').write_text(
+        '---\ntitle: Home\n---\n\nThe colour is red.\n', encoding='utf-8'
+    )
+    set_site_config(site, {'proofread': {'dialect': 'british'}})
+    wp = WatchProcess(site, proofread=True)
+    try:
+        wp.wait_for_initial_build()
+        index_html = site / 'dist' / 'index.html'
+        assert not marked(index_html.read_text(encoding='utf-8'), 'spelling', 'colour')
+
+        mtime = index_html.stat().st_mtime
+        (site / 'content' / 'index.md').write_text(
+            '---\ntitle: Home\n---\n\nThe color is red.\n', encoding='utf-8'
+        )
+        wp.wait_for_rebuild(index_html, 'modified', before_mtime=mtime)
+        assert marked(index_html.read_text(encoding='utf-8'), 'spelling', 'color')
+    finally:
+        wp.stop()
+
+
 def test_watch_does_not_proofread_when_turned_off(tmp_path):
     site = site_with_typos(tmp_path)
     set_site_config(site, {'proofread': False})
