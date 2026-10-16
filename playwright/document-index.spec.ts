@@ -360,6 +360,10 @@ test('a wider viewport keeps where the reader scrolled the index', async ({
   await page.goto('/document-index-tall-tests/page-20.html');
   await waitForClientMount(page);
   const list = documentIndex(page).locator(':scope > ol');
+  // The client centers the entry once after mounting; scroll after that
+  await expect
+    .poll(() => list.evaluate(element => element.scrollTop))
+    .toBeGreaterThan(0);
   await list.evaluate(element => element.scrollTo({ top: 0 }));
   await page.setViewportSize({ width: 430, height: 800 });
   // Let a resize observer run before checking that nothing moved
