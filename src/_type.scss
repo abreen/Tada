@@ -1,0 +1,622 @@
+// The type scale, and Inter's optical size and letter-spacing at each step.
+// Each step is a nominal size in px at a 16px body size, set relative to
+// `--font-size` so serif scaling and slides resize the whole scale together.
+@use 'sass:list';
+@use 'sass:map';
+@use 'sass:math';
+@use 'sass:meta';
+
+$steps: (12, 13, 14, 15, 16, 19, 24, 40);
+
+// Opinionated opsz and letter-spacing (in px) for Inter by size (in px) and
+// weight, mimicking San Francisco. From inter-optical-sizing:
+// https://github.com/nanxstats/inter-optical-sizing
+
+// Copyright (c) 2025, Nan Xiao
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+$inter-optical-map: (
+  12: (
+    400: (
+      opsz: 15.1,
+      ls: 0,
+    ),
+    450: (
+      opsz: 14,
+      ls: 0.01px,
+    ),
+    500: (
+      opsz: 14,
+      ls: 0.04px,
+    ),
+    600: (
+      opsz: 14,
+      ls: 0.11px,
+    ),
+    700: (
+      opsz: 14,
+      ls: 0.18px,
+    ),
+  ),
+  13: (
+    400: (
+      opsz: 17.5,
+      ls: 0,
+    ),
+    450: (
+      opsz: 16.4,
+      ls: 0,
+    ),
+    500: (
+      opsz: 15.1,
+      ls: 0,
+    ),
+    600: (
+      opsz: 14,
+      ls: 0.05px,
+    ),
+    700: (
+      opsz: 14,
+      ls: 0.13px,
+    ),
+  ),
+  14: (
+    400: (
+      opsz: 19.5,
+      ls: 0,
+    ),
+    450: (
+      opsz: 18.5,
+      ls: 0,
+    ),
+    500: (
+      opsz: 17.4,
+      ls: 0,
+    ),
+    600: (
+      opsz: 14.7,
+      ls: 0,
+    ),
+    700: (
+      opsz: 14,
+      ls: 0.07px,
+    ),
+  ),
+  15: (
+    400: (
+      opsz: 21.5,
+      ls: 0,
+    ),
+    450: (
+      opsz: 20.6,
+      ls: 0,
+    ),
+    500: (
+      opsz: 19.6,
+      ls: 0,
+    ),
+    600: (
+      opsz: 17.2,
+      ls: 0,
+    ),
+    700: (
+      opsz: 14.1,
+      ls: 0,
+    ),
+  ),
+  16: (
+    400: (
+      opsz: 23.1,
+      ls: 0,
+    ),
+    450: (
+      opsz: 22.3,
+      ls: 0,
+    ),
+    500: (
+      opsz: 21.4,
+      ls: 0,
+    ),
+    600: (
+      opsz: 19.2,
+      ls: 0,
+    ),
+    700: (
+      opsz: 16.4,
+      ls: 0,
+    ),
+  ),
+  17: (
+    400: (
+      opsz: 25.5,
+      ls: 0,
+    ),
+    450: (
+      opsz: 24.8,
+      ls: 0,
+    ),
+    500: (
+      opsz: 24.1,
+      ls: 0,
+    ),
+    600: (
+      opsz: 22.1,
+      ls: 0,
+    ),
+    700: (
+      opsz: 19.8,
+      ls: 0,
+    ),
+  ),
+  18: (
+    400: (
+      opsz: 26.3,
+      ls: 0,
+    ),
+    450: (
+      opsz: 25.6,
+      ls: 0,
+    ),
+    500: (
+      opsz: 24.9,
+      ls: 0,
+    ),
+    600: (
+      opsz: 23,
+      ls: 0,
+    ),
+    700: (
+      opsz: 20.7,
+      ls: 0,
+    ),
+  ),
+  19: (
+    400: (
+      opsz: 27.1,
+      ls: 0,
+    ),
+    450: (
+      opsz: 26.4,
+      ls: 0,
+    ),
+    500: (
+      opsz: 25.7,
+      ls: 0,
+    ),
+    600: (
+      opsz: 23.8,
+      ls: 0,
+    ),
+    700: (
+      opsz: 21.7,
+      ls: 0,
+    ),
+  ),
+  20: (
+    400: (
+      opsz: 30.4,
+      ls: 0,
+    ),
+    450: (
+      opsz: 29.8,
+      ls: 0,
+    ),
+    500: (
+      opsz: 29.2,
+      ls: 0,
+    ),
+    600: (
+      opsz: 27.7,
+      ls: 0,
+    ),
+    700: (
+      opsz: 25.8,
+      ls: 0,
+    ),
+  ),
+  21: (
+    400: (
+      opsz: 31.7,
+      ls: 0,
+    ),
+    450: (
+      opsz: 31.3,
+      ls: 0,
+    ),
+    500: (
+      opsz: 30.8,
+      ls: 0,
+    ),
+    600: (
+      opsz: 29.2,
+      ls: 0,
+    ),
+    700: (
+      opsz: 27.5,
+      ls: 0,
+    ),
+  ),
+  22: (
+    400: (
+      opsz: 32,
+      ls: -0.07px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -0.04px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.01px,
+    ),
+    600: (
+      opsz: 30.9,
+      ls: 0,
+    ),
+    700: (
+      opsz: 29,
+      ls: 0,
+    ),
+  ),
+  23: (
+    400: (
+      opsz: 32,
+      ls: -0.11px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -0.08px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.04px,
+    ),
+    600: (
+      opsz: 31.5,
+      ls: 0,
+    ),
+    700: (
+      opsz: 29.5,
+      ls: 0,
+    ),
+  ),
+  24: (
+    400: (
+      opsz: 32,
+      ls: -0.15px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -0.11px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.07px,
+    ),
+    600: (
+      opsz: 31.8,
+      ls: 0,
+    ),
+    700: (
+      opsz: 29.9,
+      ls: 0,
+    ),
+  ),
+  28: (
+    400: (
+      opsz: 32,
+      ls: -0.15px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -0.12px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.05px,
+    ),
+    600: (
+      opsz: 31.7,
+      ls: 0,
+    ),
+    700: (
+      opsz: 29.4,
+      ls: 0,
+    ),
+  ),
+  32: (
+    400: (
+      opsz: 32,
+      ls: -0.26px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -0.2px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.14px,
+    ),
+    600: (
+      opsz: 32,
+      ls: -0.01px,
+    ),
+    700: (
+      opsz: 30.6,
+      ls: 0,
+    ),
+  ),
+  40: (
+    400: (
+      opsz: 32,
+      ls: -0.45px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -0.4px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.3px,
+    ),
+    600: (
+      opsz: 32,
+      ls: -0.17px,
+    ),
+    700: (
+      opsz: 32,
+      ls: -0.03px,
+    ),
+  ),
+  48: (
+    400: (
+      opsz: 32,
+      ls: -0.63px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -0.56px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.48px,
+    ),
+    600: (
+      opsz: 32,
+      ls: -0.3px,
+    ),
+    700: (
+      opsz: 32,
+      ls: -0.12px,
+    ),
+  ),
+  56: (
+    400: (
+      opsz: 32,
+      ls: -0.87px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -0.77px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.66px,
+    ),
+    600: (
+      opsz: 32,
+      ls: -0.43px,
+    ),
+    700: (
+      opsz: 32,
+      ls: -0.19px,
+    ),
+  ),
+  64: (
+    400: (
+      opsz: 32,
+      ls: -1.01px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -0.91px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.79px,
+    ),
+    600: (
+      opsz: 32,
+      ls: -0.54px,
+    ),
+    700: (
+      opsz: 32,
+      ls: -0.3px,
+    ),
+  ),
+  72: (
+    400: (
+      opsz: 32,
+      ls: -1.26px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -1.13px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -0.99px,
+    ),
+    600: (
+      opsz: 32,
+      ls: -0.73px,
+    ),
+    700: (
+      opsz: 32,
+      ls: -0.45px,
+    ),
+  ),
+  80: (
+    400: (
+      opsz: 32,
+      ls: -1.56px,
+    ),
+    450: (
+      opsz: 32,
+      ls: -1.41px,
+    ),
+    500: (
+      opsz: 32,
+      ls: -1.28px,
+    ),
+    600: (
+      opsz: 32,
+      ls: -0.97px,
+    ),
+    700: (
+      opsz: 32,
+      ls: -0.72px,
+    ),
+  ),
+);
+
+// Every step passes its tuning for these weights down, so a descendant that
+// only changes the weight (such as `strong`) picks the values for its size
+$inherited-weights: (400, 500, 600, 700);
+
+@function -values($step, $weight) {
+  @if not list.index($steps, $step) {
+    @error '#{$step} is not a type scale step';
+  }
+
+  $values: map.get($inter-optical-map, $step, $weight);
+
+  @if not $values {
+    @error 'No Inter tuning for #{$step}px at weight #{$weight}';
+  }
+
+  @return $values;
+}
+
+@function -opsz($step, $weight) {
+  @return map.get(-values($step, $weight), opsz);
+}
+
+// The map's letter-spacing in em, so it follows the rendered size
+@function -tracking($step, $weight) {
+  $px: map.get(-values($step, $weight), ls);
+
+  @if not math.is-unitless($px) {
+    $px: math.div($px, 1px);
+  }
+
+  @if $px == 0 {
+    @return 0;
+  }
+
+  @return math.div(math.round(math.div($px, $step) * 100000), 100000) * 1em;
+}
+
+// The map weight for a `font-weight` value; `var(--font-weight)` is regular
+@function -tuning-weight($weight) {
+  @if meta.type-of($weight) == number {
+    @return $weight;
+  }
+
+  @if $weight == bold {
+    @return 700;
+  }
+
+  @return 400;
+}
+
+// `--inter-tuning` is empty in sans mode and invalid elsewhere, which makes
+// these declarations inherit instead
+@mixin -tune($opsz, $tracking) {
+  font-variation-settings: var(--inter-tuning) 'opsz' #{$opsz};
+  letter-spacing: var(--inter-tuning) #{$tracking};
+}
+
+@function size($step) {
+  @if not list.index($steps, $step) {
+    @error '#{$step} is not a type scale step';
+  }
+
+  @if $step == 16 {
+    @return var(--font-size);
+  }
+
+  @return calc(var(--font-size) * #{math.div($step, 16)});
+}
+
+// Sets a step's size, an optional weight, and Inter's tuning for both. Without
+// a weight, the tuning assumes regular text.
+@mixin font($step, $weight: null) {
+  font-size: size($step);
+
+  @if $weight {
+    font-weight: $weight;
+  }
+
+  @each $w in $inherited-weights {
+    --inter-opsz-#{$w}: #{-opsz($step, $w)};
+    --inter-tracking-#{$w}: #{-tracking($step, $w)};
+  }
+
+  $tuning-weight: 400;
+
+  @if $weight {
+    $tuning-weight: -tuning-weight($weight);
+  }
+
+  @include -tune(
+    -opsz($step, $tuning-weight),
+    -tracking($step, $tuning-weight)
+  );
+}
+
+// Tunes text that renders at a weight for the inherited step's size
+@mixin weight-tuning($weight) {
+  $w: -tuning-weight($weight);
+
+  @if not list.index($inherited-weights, $w) {
+    @error 'Weight #{$weight} needs a size; use font() instead';
+  }
+
+  @include -tune(var(--inter-opsz-#{$w}), var(--inter-tracking-#{$w}));
+}
+
+// Sets a weight at the inherited step's size, with its tuning
+@mixin weight($weight) {
+  font-weight: $weight;
+
+  @include weight-tuning($weight);
+}
+
+// Inherits the size and its tuning, undoing a step set by another rule
+@mixin inherit {
+  font-size: inherit;
+  font-variation-settings: inherit;
+  letter-spacing: inherit;
+
+  @each $w in $inherited-weights {
+    --inter-opsz-#{$w}: inherit;
+    --inter-tracking-#{$w}: inherit;
+  }
+}

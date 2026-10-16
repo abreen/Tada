@@ -1,4 +1,5 @@
 @use 'mixins' as *;
+@use 'type';
 
 :root {
   --toc-width: 260px;
@@ -217,7 +218,9 @@ body.literate main table {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-size: var(--font-size-smaller);
+
+  @include type.font(15);
+
   color: var(--fg2-color);
 
   @media (width < 450px) {
@@ -276,8 +279,8 @@ body.literate main table {
 
 footer {
   @include user-select(none);
+  @include type.font(15);
 
-  font-size: var(--font-size-smaller);
   color: var(--fg2-color);
   text-align: center;
 

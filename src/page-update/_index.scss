@@ -1,3 +1,5 @@
+@use '../type';
+
 .page-update-container {
   position: fixed;
   right: 0;
@@ -40,7 +42,8 @@
 
   .page-update-message {
     min-width: 0;
-    font-size: var(--font-size-small);
+
+    @include type.font(13);
   }
 
   .page-update-actions {

@@ -40,7 +40,9 @@ Clicking `Present` enables a client-side presentation view without rebuilding
 the page. Slides Mode applies `body.is-presenting` and shows one slide at a
 time in a fixed viewport-sized layer above the rest of the page. Presentation
 slides scale their content with the viewport while capping their width so they
-remain readable on wide screens. Slides are anchored to the top of the viewport
+remain readable on wide screens. A slide sets its own `--font-size`, between
+one and two times the page's, so the whole [type scale](type-scale.md) follows
+it. Slides are anchored to the top of the viewport
 and fill its height. Content that exceeds the viewport scrolls internally.
 
 When `Full screen` is checked, clicking `Present` starts the presentation in

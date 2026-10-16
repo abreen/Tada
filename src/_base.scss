@@ -1,4 +1,5 @@
 @use 'mixins' as *;
+@use 'type';
 
 // How far the body of a details element fades out under its stuck summary
 $details-fade: 1.5em;
@@ -44,15 +45,34 @@ h6 {
 }
 
 h1 {
-  font-size: 250%;
-  font-weight: 700;
+  @include type.font(40, 700);
+}
+
+h2 {
+  @include type.font(24, 700);
+}
+
+h3 {
+  @include type.font(19, 700);
+}
+
+h4 {
+  @include type.font(16, 700);
+}
+
+h5 {
+  @include type.font(13, 700);
+}
+
+h6 {
+  @include type.font(12, 700);
 }
 
 body {
+  @include type.font(16, var(--font-weight));
+
   font-family: var(--font);
-  font-size: var(--font-size);
   font-size-adjust: var(--font-size-adjust);
-  font-weight: var(--font-weight);
   font-feature-settings: var(--font-feature-settings);
   line-height: var(--line-height);
   color: var(--fg-color);
@@ -62,6 +82,11 @@ body {
     text-rendering: optimizelegibility;
     -webkit-font-smoothing: antialiased;
   }
+}
+
+b,
+strong {
+  @include type.weight-tuning(700);
 }
 
 html {
@@ -417,9 +442,9 @@ main details.details-preview[open] > summary > .open-label {
     align-items: center;
 
     // Room inside the rounded focus outline (about 8px at the small size)
+    @include type.font(13, 500);
+
     padding-left: 0.625em;
-    font-size: var(--font-size-small);
-    font-weight: 500;
     line-height: var(--line-height);
     color: var(--link-color);
 
@@ -467,7 +492,7 @@ main details.details-preview[open] > summary > .open-label {
     main details.details-preview:not(details details)[open] {
       // The label's height, the gaps around it, and the bottom border
       --details-summary-height: calc(
-        var(--line-height) * var(--font-size-small) + 2 * var(--gap) +
+        var(--line-height) * #{type.size(13)} + 2 * var(--gap) +
           var(--details-border-width)
       );
     }
@@ -539,9 +564,10 @@ main details.details-preview[open] > summary > .open-label {
 
 input[type='text'],
 input[type='search'] {
+  @include type.font(16);
+
   padding: 4px;
   font-family: var(--font);
-  font-size: 12pt;
   color: var(--fg-color);
   background: var(--bg-color);
   border: var(--control-border-width) solid var(--fg2-color);
@@ -564,9 +590,8 @@ label:has(> input[type='checkbox']) {
   display: inline-flex;
   gap: 0.45em;
   align-items: center;
-  font-size: var(--font-size-small);
-  font-weight: 500;
 
+  @include type.font(13, 500);
   @include user-select(none);
 }
 
@@ -631,8 +656,9 @@ figure {
   margin: 1rem 0;
 
   figcaption {
+    @include type.font(15);
+
     margin: 0 3rem;
-    font-size: var(--font-size-smaller);
     color: var(--fg2-color);
   }
 }

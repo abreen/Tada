@@ -1,4 +1,5 @@
 @use '../mixins' as *;
+@use '../type';
 
 body.code {
   --code-gutter-width: 4rem;
@@ -63,8 +64,9 @@ body.code .file-header {
   h1 {
     padding: 0;
     margin: 0;
-    font-size: inherit;
     font-weight: inherit;
+
+    @include type.inherit;
   }
 }
 

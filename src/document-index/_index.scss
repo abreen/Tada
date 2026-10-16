@@ -1,4 +1,5 @@
 @use '../mixins' as *;
+@use '../type';
 
 // How far entries fade out at an edge of the index that has more above or
 // below it
@@ -27,7 +28,9 @@ $document-index-fade: 1.5em;
   min-height: 0;
   padding: var(--document-index-padding);
   overflow: hidden;
-  font-size: var(--font-size-smaller);
+
+  @include type.font(15);
+
   line-height: 1.4;
   background: var(--bg2-color);
   border-radius: var(--border-radius);
@@ -129,7 +132,7 @@ $document-index-fade: 1.5em;
 }
 
 .document-index li > a[aria-current='page'] {
-  font-weight: 600;
+  @include type.weight(600);
 }
 
 // Only the current page is in the foreground color. The other entries are
@@ -267,8 +270,9 @@ $document-index-fade: 1.5em;
     align-items: center;
     min-width: 0;
     padding: calc(var(--gap) / 2) var(--gap);
-    font-size: inherit;
     overflow-wrap: anywhere;
+
+    @include type.inherit;
   }
 
   // The global press colors turn the label's text the page background color,
