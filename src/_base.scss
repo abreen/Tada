@@ -564,10 +564,13 @@ main details.details-preview[open] > summary > .open-label {
 
 input[type='text'],
 input[type='search'] {
-  @include type.font(16);
+  @include type.font(16, $descendants: false);
 
   padding: 4px;
   font-family: var(--font);
+
+  // At least 16px, so iOS Safari doesn't zoom in on focus
+  font-size: max(12pt, #{type.size(16)});
   color: var(--fg-color);
   background: var(--bg-color);
   border: var(--control-border-width) solid var(--fg2-color);

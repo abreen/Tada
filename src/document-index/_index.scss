@@ -272,7 +272,7 @@ $document-index-fade: 1.5em;
     padding: calc(var(--gap) / 2) var(--gap);
     overflow-wrap: anywhere;
 
-    @include type.inherit;
+    @include type.inherit(500);
   }
 
   // The global press colors turn the label's text the page background color,

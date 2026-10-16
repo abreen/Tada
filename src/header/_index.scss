@@ -240,7 +240,9 @@ header .logo-emoji {
   font-family:
     'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
   font-size: 22px;
-  font-weight: normal;
+
+  @include type.weight(normal);
+
   line-height: 24px;
   background: none;
 }

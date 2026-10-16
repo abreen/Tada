@@ -14,12 +14,15 @@ presentation slides resize the whole scale together.
 | 16 | body text, `h4`, styled-list items, text and search inputs |
 | 15 | tables, figure captions, the page info row, the footer, the table of contents (levels 1–3 and labels), the document index, the header logo badge, the trace step counter |
 | 14 | footnotes |
-| 13 | `h5`, buttons, `kbd`, checkbox labels, footnote references, details-preview labels, tab labels, search hints and excerpts, output labels, the page update message, the TOC label and levels 4–6 |
+| 13 | `h5`, buttons, `kbd`, checkbox labels, details-preview labels, tab labels, search hints and excerpts, output labels, the page update message, the TOC label and levels 4–6 |
 | 12 | `h6` |
 
-Headings are bold, except where Tada already sets another weight. Selects,
-superlinks, the document pagination buttons, and code-page file titles inherit
-their surrounding size. Monospaced text stays relative to the surrounding
+Headings are bold, except where Tada already sets another weight. Text and
+search inputs stay at least 12pt, so iOS Safari doesn't zoom in when they are
+focused at a smaller serif `scale`. Selects, superlinks, the document
+pagination buttons, and code-page file titles inherit their surrounding size.
+Footnote references are 0.8 times the text they mark, including headings and
+tables, and are left to the browser's automatic optical sizing. Monospaced text stays relative to the surrounding
 prose with `--mono-font-size`, and the emoji logo and trace memory diagrams
 keep their fixed sizes.
 

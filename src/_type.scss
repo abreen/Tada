@@ -566,17 +566,21 @@ $inherited-weights: (400, 500, 600, 700);
 }
 
 // Sets a step's size, an optional weight, and Inter's tuning for both. Without
-// a weight, the tuning assumes regular text.
-@mixin font($step, $weight: null) {
+// a weight, the tuning assumes regular text. Elements whose descendants never
+// change their weight, such as pseudo-elements and inputs, can skip passing the
+// tuning down.
+@mixin font($step, $weight: null, $descendants: true) {
   font-size: size($step);
 
   @if $weight {
     font-weight: $weight;
   }
 
-  @each $w in $inherited-weights {
-    --inter-opsz-#{$w}: #{-opsz($step, $w)};
-    --inter-tracking-#{$w}: #{-tracking($step, $w)};
+  @if $descendants {
+    @each $w in $inherited-weights {
+      --inter-opsz-#{$w}: #{-opsz($step, $w)};
+      --inter-tracking-#{$w}: #{-tracking($step, $w)};
+    }
   }
 
   $tuning-weight: 400;
@@ -609,14 +613,26 @@ $inherited-weights: (400, 500, 600, 700);
   @include weight-tuning($weight);
 }
 
-// Inherits the size and its tuning, undoing a step set by another rule
-@mixin inherit {
+// Inherits the size and its tuning, undoing a step set by another rule. With a
+// weight, tunes for that weight at the inherited size instead.
+@mixin inherit($weight: null) {
   font-size: inherit;
-  font-variation-settings: inherit;
-  letter-spacing: inherit;
 
   @each $w in $inherited-weights {
     --inter-opsz-#{$w}: inherit;
     --inter-tracking-#{$w}: inherit;
   }
+
+  @if $weight {
+    @include weight-tuning($weight);
+  } @else {
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+  }
+}
+
+// Leaves text off the scale to the browser's automatic optical sizing
+@mixin untuned {
+  font-variation-settings: normal;
+  letter-spacing: normal;
 }

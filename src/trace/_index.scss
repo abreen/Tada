@@ -145,7 +145,8 @@
     background: var(--bg-trace-line-active);
 
     .line-number {
-      font-weight: bold;
+      @include type.weight(bold);
+
       color: var(--fg-color);
       background: var(--bg-trace-line-active);
     }
@@ -163,7 +164,7 @@
 }
 
 .trace-output::before {
-  @include type.font(13);
+  @include type.font(13, $descendants: false);
 
   display: block;
   font-style: italic;
@@ -195,7 +196,8 @@
   }
 
   .trace-frame-title {
-    font-weight: bold;
+    @include type.weight(bold);
+
     fill: var(--fg-color);
   }
 

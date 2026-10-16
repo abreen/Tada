@@ -84,8 +84,10 @@ a.footnote-ref {
   position: relative;
   top: -0.5em;
 
-  @include type.font(13);
+  // Relative to the text it marks, which may be a heading or a table
+  @include type.untuned;
 
+  font-size: 0.8em;
   line-height: 1;
   vertical-align: baseline;
   border-bottom: none;
@@ -181,7 +183,7 @@ a.superlink {
     calc(var(--gap) * 2 + var(--icon-breadcrumb-separator-size));
   text-align: left;
 
-  @include type.inherit;
+  @include type.inherit(500);
 
   + a.superlink {
     margin-top: var(--gap);
@@ -498,7 +500,7 @@ figure.bio {
 }
 
 kbd {
-  @include type.font(13, 500);
+  @include type.font(13, 500, $descendants: false);
 
   display: inline-block;
   padding: 1px 5px;

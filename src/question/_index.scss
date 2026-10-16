@@ -98,7 +98,7 @@
 }
 
 .js .question-a-body::after {
-  @include type.font(13);
+  @include type.font(13, $descendants: false);
 
   display: block;
   font-style: italic;
