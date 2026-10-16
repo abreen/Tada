@@ -54,7 +54,9 @@ its tree: the root, the path from the root to the page, the siblings of every
 page on that path, and the page's own children. Branches off that path are
 collapsed, so a page never includes its whole tree; following a branch's link
 shows that branch's children on its page. The current page's link has
-`aria-current="page"` and is bold.
+`aria-current="page"` and is bold. Only the current page is in the
+foreground color; every other entry, including the root, is in the secondary
+foreground color and turns to the foreground color on hover.
 
 Labels keep their inline formatting, such as code and emphasis, and wrap onto
 as many lines as needed, including long unbroken words. Links in a title are
@@ -65,14 +67,35 @@ elements, as in a `<picture>`, are dropped in favor of its fallback image. Neste
 guide lines. A branch has a junction dot on its connector: open when its
 children are shown and filled when they are not. A code page's label, its
 file name in one `<code>`, is plain monospace text without the code
-background and padding, as in search results.
+background and padding, as in search results. The index has a rounded box in
+the secondary background color, the same as the inline code background, so
+inline code in other labels keeps its padding and gets a 1px border in the
+secondary foreground color instead of a background.
 
 On screens at least 900px wide, the index sits in the left column beside the
-page body and scrolls away with the page, above the
-[table of contents](table-of-contents.md) when the page has one, which stays in
-view. On narrower screens, it is stacked above the body, below the heading and
-above the table of contents. Code pages, which hide their table of contents on
-narrow screens, keep their index.
+page body, above the [table of contents](table-of-contents.md) when the page
+has one. The two share a sidebar that sticks under the header and is never
+taller than the viewport, so both stay in view while the page scrolls. The
+table of contents takes priority: it is shown whole when it fits, and the index
+takes the rest of the sidebar. When the sidebar runs out of room, the index
+gives up its height first, down to its minimum, and only then does the table
+of contents scroll. Without a table of contents, the index can take the whole
+sidebar. On narrower screens, the
+index is stacked above the body, below the heading and above the table of
+contents. Code pages, which hide their table of contents on narrow screens,
+keep their index.
+
+The index is never shorter than about six single-line entries, or than all
+of its entries when it shows fewer than six; the build records how many
+entries it shows on the index as the `--document-index-entries` custom
+property. On narrow screens, a tall index is at most half the viewport's
+height.
+
+An index taller than its space scrolls inside its rounded box. Entries fade
+out at an edge of the box while there are more entries past it, using
+scroll-driven animations; browsers without them show no fade. The index starts
+scrolled to show the current page's entry in its middle, in browsers that
+support `scroll-initial-target`; others start at the top of the tree.
 
 The index is rendered at build time from ordinary links, with no client-side
 behavior, so it works the same without JavaScript. Client-side navigation

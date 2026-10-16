@@ -65,7 +65,7 @@ describe('_document-index.html', () => {
   test('renders the shown tree as nested lists', () => {
     const html = render(INDEX_TEMPLATE, NAVIGATION);
     expect(html).toStartWith(
-      '<nav class="document-index" aria-label="Document navigation" data-pagefind-ignore><ol><li class="document-index-branch document-index-branch-open"><a href="/index.html">Guide</a><ol>',
+      '<nav class="document-index" aria-label="Document navigation" style="--document-index-entries: 6" data-pagefind-ignore><ol><li class="document-index-branch document-index-branch-open"><a href="/index.html">Guide</a><ol>',
     );
     expect(html).toContain(
       '<li class="document-index-branch document-index-branch-open"><a href="/install.html" aria-current="page">Install</a><ol><li><a href="/deep.html">Deep</a></li></ol></li>',
@@ -75,6 +75,18 @@ describe('_document-index.html', () => {
       '<li class="document-index-branch"><a href="/topics/index.html">Topics</a></li>',
     );
     expect(html.match(/aria-current/g)).toHaveLength(1);
+  });
+
+  test('records how many entries are shown, for the minimum height', () => {
+    const html = render(INDEX_TEMPLATE, {
+      ...NAVIGATION,
+      tree: entry('Guide', '/index.html', {
+        isBranch: true,
+        current: true,
+        children: [entry('Install', '/install.html')],
+      }),
+    });
+    expect(html).toContain('style="--document-index-entries: 2"');
   });
 
   test('keeps title HTML and existing URL escapes', () => {

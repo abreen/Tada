@@ -1,5 +1,6 @@
 <% if (page.documentNavigation) { %>
-<nav class="document-index" aria-label="Document navigation" data-pagefind-ignore>
+<% const countEntries = entry => 1 + entry.children.reduce((sum, child) => sum + countEntries(child), 0); %>
+<nav class="document-index" aria-label="Document navigation" style="--document-index-entries: <%- countEntries(page.documentNavigation.tree) %>" data-pagefind-ignore>
   <% const renderEntries = entries => { %>
   <ol>
     <% for (const entry of entries) { %>

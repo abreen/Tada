@@ -152,25 +152,151 @@ test('narrow code pages keep the index but hide their TOC', async ({
   ).toBeVisible();
 });
 
-test('the index scrolls away while the TOC stays under the header', async ({
+async function headerBottom(page: Page) {
+  const header = await page.locator('body > header').boundingBox();
+  return header!.y + header!.height;
+}
+
+async function scrollToBottom(page: Page) {
+  await page.evaluate(() =>
+    window.scrollTo(0, document.documentElement.scrollHeight),
+  );
+}
+
+// Whether the index's list has more entries than it shows
+function indexOverflows(page: Page) {
+  return documentIndex(page)
+    .locator(':scope > ol')
+    .evaluate(list => list.scrollHeight > list.clientHeight + 1);
+}
+
+test('the index and TOC stay under the header while the page scrolls', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 600 });
   await page.goto('/document-index-tests/long.html');
-  const index = documentIndex(page);
-  const toc = page.locator('nav.toc');
-  const indexBox = await index.boundingBox();
-  expect(indexBox).not.toBeNull();
+  await scrollToBottom(page);
 
-  await page.evaluate(
-    y => window.scrollTo(0, y),
-    indexBox!.y + indexBox!.height + 200,
-  );
-  const header = await page.locator('body > header').boundingBox();
-  await expect(index).not.toBeInViewport();
-  await expect(toc).toBeInViewport();
-  const tocBox = await toc.boundingBox();
-  expect(tocBox!.y).toBeGreaterThanOrEqual(header!.y + header!.height - 1);
+  const top = await headerBottom(page);
+  const indexBox = await documentIndex(page).boundingBox();
+  const tocBox = await page.locator('nav.toc').boundingBox();
+  expect(indexBox!.y).toBeGreaterThanOrEqual(top - 1);
+  expect(tocBox!.y).toBeGreaterThanOrEqual(indexBox!.y + indexBox!.height);
+  expect(tocBox!.y + tocBox!.height).toBeLessThanOrEqual(600 + 1);
+});
+
+async function indexHeight(page: Page) {
+  return (await documentIndex(page).boundingBox())!.height;
+}
+
+// The height of one entry in the index, a single-line link
+async function entryHeight(page: Page) {
+  return (await documentIndex(page)
+    .getByRole('link', { name: 'Tall guide', exact: true })
+    .boundingBox())!.height;
+}
+
+// The TOC's list has more entries than it shows
+function tocOverflows(page: Page) {
+  return page
+    .locator('nav.toc')
+    .evaluate(toc => toc.scrollHeight > toc.clientHeight + 1);
+}
+
+// The index's height without its padding, in single-line entries
+async function indexEntries(page: Page) {
+  const list = (await documentIndex(page).locator(':scope > ol').boundingBox())!
+    .height;
+  return list / (await entryHeight(page));
+}
+
+test('a short TOC is shown whole and a tall index takes the rest', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/document-index-tall-tests/page-20.html');
+  await scrollToBottom(page);
+
+  const top = await headerBottom(page);
+  const indexBox = await documentIndex(page).boundingBox();
+  const tocBox = await page.locator('nav.toc').boundingBox();
+  expect(await tocOverflows(page)).toBe(false);
+  expect(await indexOverflows(page)).toBe(true);
+  expect(await indexEntries(page)).toBeGreaterThan(7);
+  expect(indexBox!.y).toBeGreaterThanOrEqual(top - 1);
+  expect(tocBox!.y).toBeGreaterThanOrEqual(indexBox!.y + indexBox!.height);
+  expect(tocBox!.y + tocBox!.height).toBeLessThanOrEqual(800 + 1);
+});
+
+test('a long TOC pushes a tall index down to about six entries', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/document-index-tall-tests/page-25.html');
+  await scrollToBottom(page);
+
+  const entries = await indexEntries(page);
+  expect(entries).toBeGreaterThan(5.5);
+  expect(entries).toBeLessThan(6.5);
+  expect(await tocOverflows(page)).toBe(true);
+  const tocBox = await page.locator('nav.toc').boundingBox();
+  expect(tocBox!.y + tocBox!.height).toBeLessThanOrEqual(800 + 1);
+});
+
+test('a short index is not stretched to the minimum height', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/labs/index.html');
+  const list = documentIndex(page).locator(':scope > ol');
+  const { height, content } = await list.evaluate(element => ({
+    height: element.getBoundingClientRect().height,
+    content: element.scrollHeight,
+  }));
+  expect(await documentIndex(page).locator('li').count()).toBeLessThan(6);
+  expect(Math.abs(height - content)).toBeLessThanOrEqual(1);
+});
+
+test('a tall index without a TOC fits in the viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/document-index-tall-tests/page-30.html');
+  await scrollToBottom(page);
+
+  const top = await headerBottom(page);
+  const indexBox = await documentIndex(page).boundingBox();
+  expect(await indexOverflows(page)).toBe(true);
+  expect(indexBox!.y).toBeGreaterThanOrEqual(top - 1);
+  expect(indexBox!.y + indexBox!.height).toBeLessThanOrEqual(800 + 1);
+});
+
+test('a tall index is capped above the body on narrow screens', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/document-index-tall-tests/page-20.html');
+  const indexBox = await documentIndex(page).boundingBox();
+  expect(await indexOverflows(page)).toBe(true);
+  expect(indexBox!.height).toBeLessThanOrEqual(800 / 2 + 1);
+});
+
+test('a tall index starts with the current page in view', async ({
+  page,
+  browserName,
+}) => {
+  // Only Chromium supports scroll-initial-target
+  test.skip(browserName !== 'chromium');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/document-index-tall-tests/page-25.html');
+  const list = documentIndex(page).locator(':scope > ol');
+  await expect
+    .poll(() => list.evaluate(element => element.scrollTop))
+    .toBeGreaterThan(0);
+  await expect(
+    documentIndex(page).getByRole('link', {
+      name: 'Tall page 25',
+      exact: true,
+    }),
+  ).toBeInViewport({ ratio: 1 });
 });
 
 test('presenting slides hides document navigation', async ({ page }) => {

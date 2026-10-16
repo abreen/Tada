@@ -82,13 +82,18 @@ body.code .toc ol a {
     margin-bottom: var(--gap);
   }
 
+  // The label stays at the top of the TOC while a long list scrolls under it
   .toc ol::before {
-    display: none;
-    content: '';
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding-bottom: 4px;
+    background: var(--bg-color);
   }
 }
 
-// The highlight is positioned in the sticky TOC, which is only on screens
+// The highlight is positioned in the TOC, which scrolls on its own in the
+// sticky sidebar, only on screens
 @media screen and (width >= 900px) {
   // Positioned and sized by the client to sit behind the current item's link,
   // relative to its static position at the top-left corner of the list

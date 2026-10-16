@@ -3,6 +3,11 @@
 When a page's front matter sets `toc: true`, a table of contents is generated
 and displayed in a floating sidebar.
 
+The list starts with an "On this page" label at every screen width, so the TOC
+reads as this page's contents rather than site or document navigation. On
+screens at least 900px wide, where the TOC scrolls on its own, the label sticks
+to the top of the TOC while the list scrolls under it.
+
 ## Sources
 
 TOC entries are collected from:

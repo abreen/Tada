@@ -29,8 +29,8 @@ body > .container {
 .main-content {
   display: grid;
   flex: 1;
-  grid-template-areas: 'heading' 'index' 'toc' 'body';
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-areas: 'heading' 'sidebar' 'body';
+  grid-template-rows: auto auto 1fr;
   width: 100%;
 }
 
@@ -44,13 +44,33 @@ body > .container {
   margin-bottom: var(--gap);
 }
 
-.main-content > nav.document-index {
-  grid-area: index;
+// The document index above the TOC
+.main-content > .sidebar {
+  display: flex;
+  flex-direction: column;
+  grid-area: sidebar;
+  gap: var(--gap);
+  min-width: 0;
   margin-bottom: var(--gap);
 }
 
-.main-content > nav.toc {
-  grid-area: toc;
+// The index never gets shorter than about six single-line entries, so the
+// current page's entry can still show, or than all of its entries when it has
+// fewer (the build counts them). Narrow screens stack it above the body, so a
+// tall one is capped at half the viewport.
+.sidebar > .document-index {
+  --document-index-min-height: calc(
+    min(var(--document-index-entries, 6), 6) *
+      var(--document-index-entry-height) + 2 * var(--document-index-padding)
+  );
+
+  max-height: max(var(--document-index-min-height), 50vh);
+}
+
+@media print {
+  .main-content > .sidebar {
+    display: none;
+  }
 }
 
 .body {
@@ -77,9 +97,7 @@ body > .container {
 }
 
 body.default .title-and-info,
-body.default nav.toc,
-body.literate .title-and-info,
-body.literate nav.toc {
+body.literate .title-and-info {
   margin-bottom: var(--gap);
 }
 
@@ -114,6 +132,10 @@ body.literate main table {
   body.code.toc-is-active nav.toc {
     display: none;
   }
+
+  body.code .sidebar:not(:has(> .document-index)) {
+    display: none;
+  }
 }
 
 @media (width >= 900px) {
@@ -126,7 +148,9 @@ body.literate main table {
 }
 
 // Screen only: in print the TOC and document index are hidden, so the content
-// takes the full width. The document index scrolls away above the sticky TOC.
+// takes the full width. The sidebar sticks under the header and is never
+// taller than the viewport: the index is on top and the TOC below it. Each
+// scrolls on its own.
 @media screen and (width >= 900px) {
   :not(.toc-is-active, .document-index-is-active) > .container > .main-content {
     max-width: var(--main-width);
@@ -134,27 +158,47 @@ body.literate main table {
   }
 
   :is(.toc-is-active, .document-index-is-active) .main-content {
+    // Where the sidebar sticks
+    --sidebar-top: var(--header-offset);
+
     grid-template:
       'heading heading' auto
-      'index body' auto
-      'toc body' 1fr / var(--toc-width) minmax(0, 1fr);
+      'sidebar body' 1fr / var(--toc-width) minmax(0, 1fr);
     gap: 0 var(--gap);
   }
 
-  body.toc-is-active nav.toc {
+  body.code .main-content {
+    --sidebar-top: calc(var(--header-offset) + var(--gap));
+  }
+
+  .main-content > .sidebar {
+    --sidebar-height: calc(100vh - var(--sidebar-top));
+
     position: sticky;
-    top: var(--header-offset);
+    top: var(--sidebar-top);
     box-sizing: border-box;
     align-self: start;
     width: var(--toc-width);
-    max-height: calc(100vh - var(--header-offset));
+    max-height: var(--sidebar-height);
     margin-bottom: 0;
-    overflow-y: auto;
   }
 
-  body.code.toc-is-active nav.toc {
-    top: calc(var(--header-offset) + var(--gap));
-    max-height: calc(100vh - var(--header-offset) - var(--gap));
+  // The TOC takes priority: when the sidebar runs out of room, the index gives
+  // up its height first, down to its minimum, before the TOC scrolls
+  .sidebar > .document-index {
+    flex: 0 1000 auto;
+    min-height: var(--document-index-min-height);
+    max-height: none;
+  }
+
+  // Positioned and isolated so the TOC highlight scrolls with the list and
+  // stays behind its links
+  .sidebar > nav.toc {
+    position: relative;
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    isolation: isolate;
   }
 }
 
