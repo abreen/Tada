@@ -14,6 +14,9 @@ are in `src/util.ts`.
   title headings also get a presentation icon button
 - **Table of contents**: a floating sidebar highlighting the current section
   based on scroll position
+- **Document index**: keeps the current page's entry centered in a scrolling
+  index, on load and when the index changes size (see
+  [Document Index](document-index.md))
 - **Search**: a search field in the header querying the Pagefind index (see
   [Search](search.md))
 - **Q&A toggle**: reveals answers in question-and-answer blocks on click and

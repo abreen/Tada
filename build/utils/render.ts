@@ -62,7 +62,6 @@ import type { DocumentNavigation, DocumentPageTitle } from '../document-index';
 import type { SourceEntry } from '../source-model';
 import type {
   Asset,
-  BreadcrumbEntry,
   SiteVariables,
   RenderPlainTextOptions,
   RenderCodePageOptions,
@@ -615,12 +614,7 @@ export function renderCodePageAsset({
     downloadName: `${name}${ext}`,
     tocItems,
     tocHtml,
-    ...(documentNavigation
-      ? {
-          breadcrumbs: getDocumentBreadcrumbs(documentNavigation),
-          documentNavigation,
-        }
-      : {}),
+    ...(documentNavigation ? { documentNavigation } : {}),
   };
 
   // Code pages have no front matter, so they load only site-wide scripts
@@ -707,23 +701,12 @@ interface PreparePageVariablesInput {
   documentNavigation?: DocumentNavigation;
 }
 
-/** An indexed page's ancestors in its document tree */
-function getDocumentBreadcrumbs(
-  navigation: DocumentNavigation,
-): BreadcrumbEntry[] {
-  return navigation.ancestors.map(({ title, href, isCodePage }) => ({
-    label: title,
-    url: href,
-    isCodePage,
-  }));
-}
-
 /**
  * Turns parsed front matter into page variables. Shared by every renderer
  * whose source has front matter, so each one applies the same rules:
  * site variable substitution in string values, inline Markdown for the title
  * and description, required fields, author lookup, and breadcrumb validation.
- * A document index provides an indexed page's breadcrumbs.
+ * An indexed page has no breadcrumbs: its document index shows its ancestors.
  */
 function preparePageVariables({
   rawPageVariables,
@@ -742,7 +725,7 @@ function preparePageVariables({
   );
   if (documentNavigation && knownPageVariables.breadcrumbs !== undefined) {
     throw new Error(
-      `${filePath}: front matter "breadcrumbs" is not allowed on a page listed in ${documentNavigation.indexFile}, which provides its breadcrumbs`,
+      `${filePath}: front matter "breadcrumbs" is not allowed on a page listed in ${documentNavigation.indexFile}, whose sidebar shows its ancestors instead`,
     );
   }
   if (knownPageVariables.slides === true && !allowSlides) {
@@ -777,7 +760,6 @@ function preparePageVariables({
 
   renderFrontMatterText(pageVariables, siteVariables, filePath);
   if (documentNavigation) {
-    pageVariables.breadcrumbs = getDocumentBreadcrumbs(documentNavigation);
     pageVariables.documentNavigation = documentNavigation;
   }
 

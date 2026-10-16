@@ -243,14 +243,12 @@ const TITLE_TRANSITION_NAMES = [
   ['.info', 'page-info'],
 ] as const;
 
-// The page heading block, or on code pages, which have none, their breadcrumbs
-const TITLE_BLOCK_SELECTOR = '.title-and-info, .main-content > nav.breadcrumbs';
+// The page heading block. Code pages have none.
+const TITLE_BLOCK_SELECTOR = '.title-and-info';
 
 function setTitleTransitionNames(titleEl: Element, enabled: boolean): void {
   for (const [selector, name] of TITLE_TRANSITION_NAMES) {
-    const element = titleEl.matches(selector)
-      ? (titleEl as HTMLElement)
-      : titleEl.querySelector<HTMLElement>(selector);
+    const element = titleEl.querySelector<HTMLElement>(selector);
     if (element) {
       element.style.viewTransitionName = enabled ? name : '';
     }

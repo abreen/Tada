@@ -316,10 +316,9 @@
   background: var(--bg-color) !important;
 }
 
-// The global press colors turn the label's text the page background color,
-// which would not stand out on code's usual secondary background fill
-.tabs-tab:not([data-selected], :disabled):active code {
-  background: var(--fg2-color);
+// Unselected tabs sit on the track; the selected tab on the page background
+.tabs-tab:not([data-selected]) code {
+  @include code-outline;
 }
 
 // Like the appearance picker's indicator
@@ -452,10 +451,6 @@
 
   > .tabs-tab[data-selected]:active {
     color: var(--fg-color) !important;
-  }
-
-  > .tabs-tab:active code {
-    background: var(--bg2-color);
   }
 }
 

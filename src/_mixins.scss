@@ -56,3 +56,17 @@ $icon-stroke-width: 1.65;
 @function icon-svg($size, $body) {
   @return url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='#{$size}' height='#{$size}' viewBox='0 0 #{$size} #{$size}' fill='none' stroke='black' stroke-width='#{$icon-stroke-width}' stroke-linecap='round' stroke-linejoin='round'>#{$body}</svg>");
 }
+
+// Inline code on the secondary background, where the chip would not show.
+// It colors the chip's transparent border, so a plain label stays borderless.
+@mixin code-outline {
+  background: none;
+  border-color: currentcolor;
+}
+
+// Code that is a whole label, such as a code page's file name
+@mixin code-plain {
+  padding: 0;
+  background: none;
+  border: none;
+}

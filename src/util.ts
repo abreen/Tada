@@ -142,3 +142,26 @@ export function formatDuration(ms: number): string {
     return sign + formatMinutesFromMs(absMs);
   }
 }
+
+/** Scrolls a container, when it overflows, to center an element in it */
+export function centerInScrollContainer(
+  element: HTMLElement,
+  container: HTMLElement,
+) {
+  const containerHasScrollbar = container.scrollHeight > container.clientHeight;
+  if (!containerHasScrollbar) {
+    return;
+  }
+
+  // Calculate element center relative to container's scroll space
+  const elementRect = element.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const elementCenter =
+    elementRect.top -
+    containerRect.top +
+    container.scrollTop +
+    elementRect.height / 2;
+  const desiredScrollTop = elementCenter - container.clientHeight / 2;
+
+  container.scrollTo({ top: desiredScrollTop });
+}

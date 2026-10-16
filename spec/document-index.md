@@ -43,7 +43,7 @@ and the file name for code pages. Index files do not repeat or override titles.
 Every indexed page needs a title with text, including the home page, which
 otherwise may omit one (see
 [Front Matter](front-matter.md#home-page-without-a-title)). A title of only an
-image has no text to use in breadcrumbs. The title must be a string: one YAML
+image has no text to use in the index or in search results. The title must be a string: one YAML
 reads as a number, such as `title: 1.10`, fails the build because the text the
 author wrote is lost, and must be quoted (`title: "1.10"`).
 
@@ -68,14 +68,18 @@ guide lines. A branch has a junction dot on its connector: open when its
 children are shown and filled when they are not. A code page's label, its
 file name in one `<code>`, is plain monospace text without the code
 background and padding, as in search results. The index has a rounded box in
-the secondary background color, the same as the inline code background, so
-inline code in other labels keeps its padding and gets a 1px border in the
-secondary foreground color instead of a background.
+the secondary background color, so inline code in other labels keeps its
+padding and gets a 1px border in the label's text color, in every state,
+instead of a background.
 
 On screens at least 900px wide, the index sits in the left column beside the
-page body, above the [table of contents](table-of-contents.md) when the page
-has one. The two share a sidebar that sticks under the header and is never
-taller than the viewport, so both stay in view while the page scrolls. The
+page heading and body, above the [table of contents](table-of-contents.md) when
+the page has one. The heading (title and page info) moves into the right
+column, so nothing is above the sidebar and it starts level with the heading.
+The index and table of contents share a sidebar that sticks `var(--gap)` below
+the header, where it starts, so the index's box does not touch the header and
+stays put while the page scrolls. The sidebar is never taller than the
+viewport, so both stay in view. The
 table of contents takes priority: it is shown whole when it fits, and the index
 takes the rest of the sidebar. When the sidebar runs out of room, the index
 gives up its height first, down to its minimum, and only then does the table
@@ -93,12 +97,16 @@ height.
 
 An index taller than its space scrolls inside its rounded box. Entries fade
 out at an edge of the box while there are more entries past it, using
-scroll-driven animations; browsers without them show no fade. The index starts
-scrolled to show the current page's entry in its middle, in browsers that
-support `scroll-initial-target`; others start at the top of the tree.
+scroll-driven animations; browsers without them show no fade. A client component
+centers the current page's entry in the index once the page loads, and again
+whenever the index's height changes, such as when a shorter viewport shrinks
+it. Other resizes, such as a wider viewport, keep where the reader scrolled
+the index. Without JavaScript, browsers that support `scroll-initial-target`
+start with the entry in view, and others start at the top of the tree.
 
-The index is rendered at build time from ordinary links, with no client-side
-behavior, so it works the same without JavaScript. Client-side navigation
+The index is rendered at build time from ordinary links; its only client-side
+behavior is keeping the current entry centered, so it works without
+JavaScript. Client-side navigation
 replaces it with the destination page's index like the rest of the page.
 
 ## Previous and next
@@ -107,14 +115,17 @@ The tree's order is depth first: a page, then each of its children in order.
 At the end of an indexed page's content, a `<nav aria-label="Previous and next
 pages">` links to the pages before and after it in that order, with
 `rel="prev"` and `rel="next"`. The root has no previous link and the last page
-has no next link. Each link is a button showing a chevron and the page's
+has no next link. Like the page heading's bottom border, a 1px border in the
+secondary foreground color, `var(--gap)` above the links, separates them from
+the content. Each link is a borderless button showing a chevron and the page's
 title, which keeps its inline formatting: the previous link sits at the start
 with a chevron pointing back, and the next link sits at the end with a chevron
-pointing forward. "Previous" or "Next" is visually hidden text before the title,
+pointing forward. While a link shows the press colors, its chevron takes the
+label's color. "Previous" or "Next" is visually hidden text before the title,
 so screen readers announce the direction. A code page's title is plain
-monospace text, as in the sidebar. While a link shows the press colors, code in
-its title is filled with the secondary foreground color instead of the
-secondary background.
+monospace text, as in the sidebar. Code in other titles is a chip at rest and,
+while the link is hovered, focused, or pressed, has no background and a 1px
+border in the text color, like code in every button.
 
 Search results for pages below a tree's root name the root, as in
 "Labs › Counting vowels" (see [Search](search.md)).
@@ -125,13 +136,8 @@ indexing, hidden in printed output, and hidden while presenting
 
 ## Breadcrumbs
 
-An indexed page's [breadcrumbs](breadcrumbs.md) are its ancestors in the tree,
-from the root down to its parent, labeled with their plain-text titles. The
-page's own title is not repeated. A code page's file name in an ancestor is
-shown in the monospace font without the code background and padding. The
-root of a tree has no breadcrumbs. Indexed code pages show their breadcrumbs
-above the file header, and during client-side navigation their trail moves as
-one group like a page heading's trail (see [Breadcrumbs](breadcrumbs.md)). Because the index provides them, an indexed
+Indexed pages have no [breadcrumbs](breadcrumbs.md): the index already shows
+the path from the root to the page, so a trail would repeat it. An indexed
 page that sets `breadcrumbs` in its front matter fails the build, naming the
 index file that lists it.
 

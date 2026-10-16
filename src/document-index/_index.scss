@@ -36,11 +36,9 @@ $document-index-fade: 1.5em;
   border-radius: var(--border-radius);
 }
 
-// The index is on the same background as the inline code chip, so a border
-// delineates inline code in a label instead. A code page's label stays plain.
+// A code page's label stays plain
 .document-index a:not(.code-page) :is(tt, code) {
-  background: none;
-  border: 1px solid var(--fg2-color);
+  @include code-outline;
 }
 
 .document-index ol {
@@ -60,7 +58,6 @@ $document-index-fade: 1.5em;
 // the tree
 .document-index li > a[aria-current='page'] {
   scroll-initial-target: nearest;
-  scroll-snap-align: center;
 }
 
 @property --document-index-fade-top {
@@ -262,7 +259,9 @@ $document-index-fade: 1.5em;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gap);
+  padding-top: var(--gap);
   margin-top: 3rem;
+  border-top: 1px solid var(--fg2-color);
 
   a.button {
     display: flex;
@@ -271,14 +270,9 @@ $document-index-fade: 1.5em;
     min-width: 0;
     padding: calc(var(--gap) / 2) var(--gap);
     overflow-wrap: anywhere;
+    border: none;
 
     @include type.inherit(500);
-  }
-
-  // The global press colors turn the label's text the page background color,
-  // which would not stand out on code's usual secondary background fill
-  a.button:not(.disabled):active code {
-    background: var(--fg2-color);
   }
 
   a.previous {
@@ -300,6 +294,11 @@ $document-index-fade: 1.5em;
   // side so the button's padding is measured from the visible glyph
   .mask-icon {
     flex-shrink: 0;
+  }
+
+  // Follows the label into the press colors
+  a.button:not(.disabled):active .mask-icon {
+    color: inherit;
   }
 
   a.previous .mask-icon {

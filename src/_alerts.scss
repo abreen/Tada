@@ -37,8 +37,7 @@
   // Inline code keeps its padding. A border replaces the background chip,
   // which would clash with the alert's own background.
   :is(tt, code):not(pre *) {
-    background: none;
-    border: 1px solid var(--fg-color);
+    @include code-outline;
   }
 
   a:not(.superlink) {

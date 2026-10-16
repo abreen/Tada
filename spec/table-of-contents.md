@@ -72,6 +72,9 @@ entry changes, on both regular and code pages. It is positioned relative to
 the list, so it stays on the link when the list moves or the TOC scrolls. The
 highlight is hidden when no entry is current, such as on a code page without a
 line hash, and on narrower screens, where the client does not measure links.
+Inline code in the highlighted entry, and in every entry of the narrow TOC's
+filled box, has no background and a 1px border in the text color; elsewhere it
+is a chip.
 
 The highlight animates its position and size only when the user has no
 reduced-motion preference; with `prefers-reduced-motion: reduce` it moves

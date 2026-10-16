@@ -53,36 +53,20 @@ def guide_site(site_dir):
     yield site_dir
 
 
-class TestDocumentIndexBreadcrumbs:
-    """Indexed pages get breadcrumbs from their ancestors in the index tree."""
+class TestDocumentIndexPages:
+    """Indexed pages show their ancestors in the index instead of breadcrumbs."""
 
-    @pytest.mark.parametrize('base_path', ['/', '/course'])
-    def test_ancestors_become_breadcrumbs(self, guide_site, base_path):
-        set_site_config(guide_site, {'basePath': base_path, 'vars': {'topicsName': 'Topics'}})
+    def test_indexed_and_unindexed_pages_have_no_breadcrumbs(self, guide_site):
         result = build(guide_site)
         assert result.returncode == 0, result.stdout + result.stderr
-        prefix = base_path.rstrip('/')
-        dist = guide_site / 'dist' / 'guide'
-
-        deep = breadcrumb_nav((dist / 'topics' / 'deep.html').read_text())
-        assert deep is not None
-        assert f'href="{prefix}/guide/index.html">The Guide</a>' in deep
-        assert f'href="{prefix}/guide/topics/index.html">Topics &amp; more</a>' in deep
-        assert deep.index('The Guide') < deep.index('Topics &amp; more')
-        assert 'aria-current' not in deep
-
-        install = breadcrumb_nav((dist / 'install.html').read_text())
-        assert install is not None
-        assert install.count('<a ') == 1
-        assert f'href="{prefix}/guide/index.html">The Guide</a>' in install
-
-    def test_root_and_unindexed_pages_have_no_breadcrumbs(self, guide_site):
-        result = build(guide_site)
-        assert result.returncode == 0, result.stdout + result.stderr
+        dist = guide_site / 'dist'
         for page in [
-            guide_site / 'dist' / 'guide' / 'index.html',
-            guide_site / 'dist' / 'unindexed.html',
-            guide_site / 'dist' / 'index.html',
+            dist / 'guide' / 'index.html',
+            dist / 'guide' / 'install.html',
+            dist / 'guide' / 'topics' / 'index.html',
+            dist / 'guide' / 'topics' / 'deep.html',
+            dist / 'unindexed.html',
+            dist / 'index.html',
         ]:
             assert breadcrumb_nav(page.read_text()) is None, page
 
@@ -116,7 +100,7 @@ class TestDocumentIndexBreadcrumbs:
             'guide/index.yml',
         )
 
-    def test_encodes_filenames_in_breadcrumb_urls(self, site_dir):
+    def test_encodes_filenames_in_ancestor_urls(self, site_dir):
         content = site_dir / 'content'
         (content / 'a%20b.md').write_text('---\ntitle: Percent\n---\n\nPercent.\n')
         (content / 'child.md').write_text('---\ntitle: Child\n---\n\nChild.\n')
@@ -129,11 +113,11 @@ class TestDocumentIndexBreadcrumbs:
         )
         result = build(site_dir)
         assert result.returncode == 0, result.stdout + result.stderr
-        nav = breadcrumb_nav((site_dir / 'dist' / 'child.html').read_text())
-        assert 'href="/a%2520b.html">Percent</a>' in nav
-        assert 'href="/index.html">Home</a>' in nav
+        index = document_nav((site_dir / 'dist' / 'child.html').read_text(), 'document-index')
+        assert 'href="/a%2520b.html">Percent</a>' in index
+        assert 'href="/index.html">Home</a>' in index
 
-    def test_literate_java_page_gets_breadcrumbs(self, site_dir):
+    def test_literate_java_page_has_no_breadcrumbs(self, site_dir):
         content = site_dir / 'content'
         (content / 'Hello.java.md').write_text(
             '---\ntitle: Hello\n---\n\n```java\nclass Hello {}\n```\n'
@@ -143,8 +127,9 @@ class TestDocumentIndexBreadcrumbs:
         )
         result = build(site_dir)
         assert result.returncode == 0, result.stdout + result.stderr
-        nav = breadcrumb_nav((site_dir / 'dist' / 'Hello.java.html').read_text())
-        assert 'href="/index.html">Home</a>' in nav
+        html = (site_dir / 'dist' / 'Hello.java.html').read_text()
+        assert breadcrumb_nav(html) is None
+        assert 'href="/index.html">Home</a>' in document_nav(html, 'document-index')
 
 
 class TestDocumentIndexErrors:
@@ -270,7 +255,7 @@ class TestDocumentIndexNavigation:
         assert 'class="button previous" rel="prev" href="/types.html"' in document_nav(
             code, 'document-pagination'
         )
-        assert breadcrumb_nav(code) is not None
+        assert breadcrumb_nav(code) is None
         assert 'document-index-is-active' in code
 
     def test_code_page_file_name_is_escaped(self, site_dir):

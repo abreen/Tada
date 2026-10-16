@@ -312,8 +312,7 @@ header .header-page-title {
 // Code page titles keep their monospace font, without the inline code chip,
 // like the file title heading
 header .header-page-title :is(tt, code) {
-  padding: 0;
-  background: none;
+  @include code-plain;
 }
 
 :root:not(.js) header .header-page-title {

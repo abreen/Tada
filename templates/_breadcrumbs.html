@@ -4,11 +4,7 @@
     <% page.breadcrumbs.forEach((entry, index) => { %>
     <li>
       <% if (index > 0) { %><span class="mask-icon mask-icon-breadcrumb-separator" aria-hidden="true"></span><% } %>
-      <% if (entry.isCodePage) { %>
-      <a class="code-page" href="<%- encodeAuthoredUrl(entry.url) %>"><code><%- entry.label %></code></a>
-      <% } else { %>
       <a href="<%- encodeAuthoredUrl(entry.url) %>"><%- entry.label %></a>
-      <% } %>
     </li>
     <% }); %>
   </ol>

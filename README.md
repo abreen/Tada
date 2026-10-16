@@ -64,7 +64,7 @@ A static site generator. The successor to Presto.
 
 - Document indexes for ordered sections, like a course's labs
   * An `index.yml` lists pages as a tree
-  * Pages get a sidebar tree, breadcrumbs, and previous and next links
+  * Pages get a sidebar tree and previous and next links
 
 - Extended Markdown syntax
   * `!!! note ... !!!` and `!!! warning ... !!!` render alert boxes
@@ -444,9 +444,10 @@ children:
   - 01/index.md
 ```
 
-Each listed page shows the part of the tree around it, breadcrumbs from its
+Each listed page shows the part of the tree around it, including its
 ancestors, and links to the previous and next pages in order. Listed pages
-must have a `title` and may not set `breadcrumbs`.
+must have a `title` and may not set `breadcrumbs`, since the tree shows their
+ancestors instead.
 
 All files in `public/` are copied directly into `dist/` with zero processing.
 Files in `public/` are **not** included in the search index.

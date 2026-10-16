@@ -148,14 +148,16 @@ code {
   font-size: var(--mono-font-size);
   overflow-wrap: anywhere;
   background: var(--bg2-color);
+
+  // Transparent, so switching to code-outline does not shift the text
+  border: 1px solid transparent;
   border-radius: var(--mono-border-radius);
 }
 
 // A code page's title is its file name in one `<code>`, shown as a plain
 // monospace label wherever the title appears
 .code-page code {
-  padding: 0;
-  background: none;
+  @include code-plain;
 }
 
 pre {
@@ -170,6 +172,7 @@ pre {
   code {
     padding: 0;
     font-size: inherit;
+    border: none;
   }
 }
 

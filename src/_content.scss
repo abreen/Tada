@@ -154,12 +154,23 @@ input[type='submit']:active:not(:disabled) {
   background: var(--link-active-color) !important;
 }
 
+// The selected tab stays on the page background
+button:active:not(:disabled, [data-selected]) :is(tt, code),
+a.button:not(.disabled):active :is(tt, code) {
+  @include code-outline;
+}
+
 @media (hover: hover) {
   button:hover:not(:disabled),
   a.button:not(.disabled):hover,
   input[type='submit']:hover:not(:disabled) {
     cursor: pointer;
     background: var(--bg2-color);
+  }
+
+  button:hover:not(:disabled, [data-selected]) :is(tt, code),
+  a.button:not(.disabled):hover :is(tt, code) {
+    @include code-outline;
   }
 }
 
@@ -173,6 +184,11 @@ select:focus {
   outline-offset: 1px;
   background-color: var(--bg2-color);
   border-color: var(--fg-color);
+}
+
+button:focus:not([data-selected]) :is(tt, code),
+a.button:focus :is(tt, code) {
+  @include code-outline;
 }
 
 a.superlink {

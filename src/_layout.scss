@@ -35,14 +35,8 @@ body > .container {
   width: 100%;
 }
 
-.main-content > .title-and-info,
-.main-content > nav.breadcrumbs {
+.main-content > .title-and-info {
   grid-area: heading;
-}
-
-// Code pages have no heading block, only their breadcrumbs
-.main-content > nav.breadcrumbs {
-  margin-bottom: var(--gap);
 }
 
 // The document index above the TOC
@@ -128,6 +122,10 @@ body.literate main table {
   body.literate.toc-is-active nav.toc {
     padding: var(--gap);
     background: var(--bg2-color);
+
+    :is(tt, code) {
+      @include code-outline;
+    }
   }
 
   body.code.toc-is-active nav.toc {
@@ -151,7 +149,8 @@ body.literate main table {
 // Screen only: in print the TOC and document index are hidden, so the content
 // takes the full width. The sidebar sticks under the header and is never
 // taller than the viewport: the index is on top and the TOC below it. Each
-// scrolls on its own.
+// scrolls on its own. Pages without an index keep the heading above both
+// columns.
 @media screen and (width >= 900px) {
   :not(.toc-is-active, .document-index-is-active) > .container > .main-content {
     max-width: var(--main-width);
@@ -159,8 +158,8 @@ body.literate main table {
   }
 
   :is(.toc-is-active, .document-index-is-active) .main-content {
-    // Where the sidebar sticks
-    --sidebar-top: var(--header-offset);
+    // Where the sidebar sticks, a gap below the header
+    --sidebar-top: calc(var(--header-offset) + var(--gap));
 
     grid-template:
       'heading heading' auto
@@ -168,8 +167,13 @@ body.literate main table {
     gap: 0 var(--gap);
   }
 
-  body.code .main-content {
-    --sidebar-top: calc(var(--header-offset) + var(--gap));
+  // The index's tree already shows the page's ancestors, so the heading moves
+  // into the right column and the sidebar starts at the top of the page. It
+  // sticks where it starts, so it stays put while the page scrolls.
+  .document-index-is-active .main-content {
+    grid-template:
+      'sidebar heading' auto
+      'sidebar body' 1fr / var(--toc-width) minmax(0, 1fr);
   }
 
   .main-content > .sidebar {

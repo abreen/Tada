@@ -21,8 +21,12 @@ remains sticky, with a viewport-based maximum height and internal scrolling.
 On narrow screens the TOC precedes the body on default and literate pages;
 code-page TOCs remain hidden. A page listed in a
 [document index](document-index.md) also uses the two-column layout, with its
-document index at the top of the left column, above any TOC. On desktop the
+document index at the top of the left column, above any TOC. On desktop its
+page heading sits in the right column above the body, so the left column
+starts at the top of the page; other pages keep the heading above both
+columns. On desktop the
 index and TOC share one sticky sidebar with a viewport-based maximum height,
+which sticks `var(--gap)` below the header, as a TOC alone does,
 and each scrolls on its own; on narrow screens the index precedes the TOC. The two-column desktop
 layout and the desktop maximum content width apply only to screens: printed
 output hides the TOC and document index and gives the page heading and body the

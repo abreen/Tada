@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './test-fixtures';
+import { test, expect, type Page, waitForClientMount } from './test-fixtures';
 import {
   LONG_DOCUMENT_TITLE,
   UNBROKEN_DOCUMENT_TITLE,
@@ -119,7 +119,7 @@ for (const javaScriptEnabled of [true, false]) {
   });
 }
 
-test('sits beside the body on wide screens and above it on narrow ones', async ({
+test('sits beside the heading and body on wide screens and below the heading on narrow ones', async ({
   page,
 }) => {
   for (const [width, beside] of [
@@ -129,14 +129,45 @@ test('sits beside the body on wide screens and above it on narrow ones', async (
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/labs/00/index.html');
     const index = await documentIndex(page).boundingBox();
+    const heading = await page.locator('.title-and-info').boundingBox();
     const body = await page.locator('main.body').boundingBox();
     expect(index).not.toBeNull();
+    expect(heading).not.toBeNull();
     expect(body).not.toBeNull();
     if (beside) {
+      expect(index!.x + index!.width).toBeLessThanOrEqual(heading!.x);
       expect(index!.x + index!.width).toBeLessThanOrEqual(body!.x);
+      // Nothing is above the index, so it starts level with the heading
+      expect(Math.abs(index!.y - heading!.y)).toBeLessThanOrEqual(1);
     } else {
+      expect(heading!.y + heading!.height).toBeLessThanOrEqual(index!.y);
       expect(index!.y + index!.height).toBeLessThanOrEqual(body!.y);
     }
+  }
+});
+
+test('the index stays where it starts on wide screens while the page scrolls', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.goto('/document-index-tests/long.html');
+  const before = (await documentIndex(page).boundingBox())!.y;
+  await scrollToBottom(page);
+  const after = (await documentIndex(page).boundingBox())!.y;
+  expect(Math.abs(after - before)).toBeLessThanOrEqual(1);
+});
+
+test('indexed pages have no breadcrumbs', async ({ page }) => {
+  for (const url of [
+    '/labs/00/index.html',
+    '/labs/00/VowelCounter.java.html',
+    '/document-index-tests/Example.java.html',
+  ]) {
+    await page.goto(url);
+    await expect(documentIndex(page)).toBeVisible();
+    await expect(
+      page.getByRole('navigation', { name: 'Breadcrumb', exact: true }),
+    ).toHaveCount(0);
   }
 });
 
@@ -147,9 +178,6 @@ test('narrow code pages keep the index but hide their TOC', async ({
   await page.goto('/document-index-tests/Example.java.html');
   await expect(documentIndex(page)).toBeVisible();
   await expect(page.locator('nav.toc')).toBeHidden();
-  await expect(
-    page.getByRole('navigation', { name: 'Breadcrumb', exact: true }),
-  ).toBeVisible();
 });
 
 async function headerBottom(page: Page) {
@@ -297,6 +325,49 @@ test('a tall index starts with the current page in view', async ({
       exact: true,
     }),
   ).toBeInViewport({ ratio: 1 });
+});
+
+test('the current page stays centered when the viewport gets shorter', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/document-index-tall-tests/page-20.html');
+  await waitForClientMount(page);
+  await page.setViewportSize({ width: 1280, height: 500 });
+
+  const list = documentIndex(page).locator(':scope > ol');
+  const current = documentIndex(page).getByRole('link', {
+    name: 'Tall page 20',
+    exact: true,
+  });
+  // Geometry is the behavior under test: the entry's center is within about
+  // one entry of the list's center
+  await expect
+    .poll(async () => {
+      const listBox = (await list.boundingBox())!;
+      const linkBox = (await current.boundingBox())!;
+      return Math.abs(
+        linkBox.y + linkBox.height / 2 - (listBox.y + listBox.height / 2),
+      );
+    })
+    .toBeLessThanOrEqual(30);
+});
+
+test('a wider viewport keeps where the reader scrolled the index', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/document-index-tall-tests/page-20.html');
+  await waitForClientMount(page);
+  const list = documentIndex(page).locator(':scope > ol');
+  await list.evaluate(element => element.scrollTo({ top: 0 }));
+  await page.setViewportSize({ width: 430, height: 800 });
+  // Let a resize observer run before checking that nothing moved
+  await page.evaluate(
+    () =>
+      new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve))),
+  );
+  expect(await list.evaluate(element => element.scrollTop)).toBe(0);
 });
 
 test('presenting slides hides document navigation', async ({ page }) => {

@@ -15,6 +15,14 @@ Each feature is documented in `spec/`. Use the relevant spec to answer behavior 
 
 After changing code, update the relevant spec if behavior, defaults, options, dependencies, or UI details no longer match. For broader audits, use `git log` to spot stale specs, then verify against the code before editing.
 
+## Inline code styles
+
+Inline `<code>` takes its style from the background directly behind it, in each state (hover, focus, press, selected, current):
+
+- On the page background: the default chip, which has a transparent 1px border so switching styles does not shift text
+- On `--bg2-color` or any other fill: `@include code-outline` (from `src/_mixins.scss`)
+- When a label is wholly one `<code>`, such as a code page's file name: `@include code-plain`, in every state
+
 ## Progressive enhancement
 
 New features must work with client-side JavaScript turned off. Treat JS as progressive enhancement over useful build-time HTML. This is a static site generator; do as much as possible at build time.

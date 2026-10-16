@@ -174,8 +174,7 @@
     :has(> :not(code, .question-multiple-choice-result))
   )
   > code {
-  padding: 0;
-  background: none;
+  @include code-plain;
 }
 
 .question-multiple-choice-option::after {

@@ -18,8 +18,9 @@ which the heading already shows. Tada does not infer ancestors from
 directories or other pages. Missing or empty lists render no breadcrumb
 navigation.
 
-Pages listed in a [document index](document-index.md) get their trail from the
-index instead, and may not set `breadcrumbs`.
+Pages listed in a [document index](document-index.md) have no trail, since
+the index shows their ancestors, and may not set `breadcrumbs`. Code pages have
+no front matter, so they never have a trail.
 
 Each entry requires a nonempty string `label` and `url`. A nonempty list
 requires the page to have a `title`, which only the home page may omit (see

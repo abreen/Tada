@@ -106,6 +106,10 @@ body.code .toc ol a {
     background: var(--bg2-color);
   }
 
+  .js .toc li.current > a :is(tt, code) {
+    @include code-outline;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .js .toc .toc-highlight {
       transition:

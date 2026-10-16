@@ -144,9 +144,10 @@ borderless pills with secondary text in the small font size, like other
 buttons. The active tab is filled with the page background and ringed by a 2px
 border in the secondary foreground color, like the pickers' current option, so
 a strip of the track stays visible around it, even at either end. A focused
-tab's outline is drawn just outside the ring, still inside the track. While
-an unselected tab shows the press colors, code in its label is filled with the
-secondary foreground color instead of the secondary background.
+tab's outline is drawn just outside the ring, still inside the track.
+Code in an unselected tab's label, on the track, has no background and a 1px
+border in the label's text color. The selected tab is on the page background,
+so code in its label is a chip.
 
 The tab list is centered above the panel box. The box has a 3px border in the
 secondary background color (the track's color). Panels are padded by
