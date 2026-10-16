@@ -29,6 +29,7 @@ A static site generator. The successor to Presto.
   * Light & dark mode following system, customizable tint
   * Standard & high contrast picker
   * Sans-serif & serif font picker
+  * Precisely tuned [optical sizing of Inter][inter-optical-sizing], by [Nan Xiao][nanx-inter-optical-sizing]
   * Plus, provide your own web fonts (with many tuning options)
 
 - LaTeX math support
@@ -580,6 +581,8 @@ drawn as a bordered box, and all variants open and close without JavaScript.
 
 
 [inter]: https://fonts.google.com/specimen/Inter
+[inter-optical-sizing]: https://github.com/nanxstats/inter-optical-sizing
+[nanx-inter-optical-sizing]: https://nanx.me/blog/post/inter-optical-sizing/
 [front-matter]: https://www.npmjs.com/package/front-matter
 [pagefind]: https://pagefind.app/
 [jep467]: https://openjdk.org/jeps/467
