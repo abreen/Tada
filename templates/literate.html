@@ -12,9 +12,13 @@
     </div>
     <%= render('_page-bottom.html') %>
   </main>
-  <%= render('_document-index.html') %>
-  <% if (page.toc && page.tocHtml) { %>
-  <nav class="toc"><%= page.tocHtml %></nav>
+  <% if (page.documentNavigation || (page.toc && page.tocHtml)) { %>
+  <div class="sidebar">
+    <%= render('_document-index.html') %>
+    <% if (page.toc && page.tocHtml) { %>
+    <nav class="toc"><%= page.tocHtml %></nav>
+    <% } %>
+  </div>
   <% } %>
 </div>
 

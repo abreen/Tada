@@ -39,4 +39,47 @@ children:
   - Example.java
 `,
   );
+  installTallDocumentIndexFixtures(siteDir);
+}
+
+export const TALL_DOCUMENT_PAGES = 40;
+
+// A long page body, so the page scrolls far enough for the sidebar to stick
+const longBody = (parts: number) =>
+  Array.from(
+    { length: parts },
+    (_, i) => `## Part ${i + 1}\n\n${'Paragraph.\n\n'.repeat(30)}`,
+  ).join('');
+
+// How many sections each page with a TOC has: page 20's TOC is short and page
+// 25's is longer than the sidebar. The other pages, such as page 30, have no
+// TOC.
+const TOC_PARTS = new Map([
+  [20, 6],
+  [25, 40],
+]);
+
+// A flat tree with more entries than fit in the sidebar
+function installTallDocumentIndexFixtures(siteDir: string): void {
+  const dir = path.join(siteDir, 'content', 'document-index-tall-tests');
+  mkdirSync(dir, { recursive: true });
+  const names = Array.from(
+    { length: TALL_DOCUMENT_PAGES },
+    (_, i) => `page-${String(i + 1).padStart(2, '0')}.md`,
+  );
+  writeFileSync(
+    path.join(dir, 'index.md'),
+    '---\ntitle: Tall guide\n---\n\nThe guide.\n',
+  );
+  names.forEach((name, i) => {
+    const parts = TOC_PARTS.get(i + 1);
+    writeFileSync(
+      path.join(dir, name),
+      `---\ntitle: Tall page ${i + 1}\ntoc: ${parts !== undefined}\n---\n\n${longBody(parts ?? 1)}`,
+    );
+  });
+  writeFileSync(
+    path.join(dir, 'index.yml'),
+    `page: index.md\nchildren:\n${names.map(name => `  - ${name}\n`).join('')}`,
+  );
 }
