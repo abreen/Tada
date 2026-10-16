@@ -175,6 +175,11 @@ body.literate main table {
       'heading heading' auto
       'sidebar body' 1fr / var(--toc-width) minmax(0, 1fr);
     gap: 0 var(--gap);
+
+    // Capped by the container's own width rather than a viewport breakpoint,
+    // so the layout never jumps as the window (or its scrollbar) resizes
+    max-width: calc(var(--toc-width) + var(--gap) + 960px);
+    margin: 0 auto;
   }
 
   // The index's tree already shows the page's ancestors, so the heading moves
@@ -214,13 +219,6 @@ body.literate main table {
     min-height: 0;
     overflow-y: auto;
     isolation: isolate;
-  }
-}
-
-@media screen and (width >= 1300px) {
-  :is(.toc-is-active, .document-index-is-active) .main-content {
-    max-width: calc(var(--toc-width) + var(--gap) + 960px);
-    margin: 0 auto;
   }
 }
 
