@@ -326,7 +326,7 @@ function validateFrontMatter(
     );
   }
 
-  // The breadcrumb trail ends with the page title
+  // Breadcrumbs lead to a titled page
   const breadcrumbs = pageVariables.breadcrumbs;
   if (
     !pageVariables.title &&

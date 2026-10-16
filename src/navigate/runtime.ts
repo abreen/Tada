@@ -236,8 +236,7 @@ function dispatchNavigationEvent(
 }
 
 // Heading parts that get their own layer instead of fading with the page. The
-// breadcrumb trail is one group so every item, including the current one,
-// moves together when the page layout changes.
+// breadcrumb trail is one group so every item moves together when the page layout changes.
 const TITLE_TRANSITION_NAMES = [
   ['nav.breadcrumbs', 'page-breadcrumbs'],
   ['h1', 'page-title'],

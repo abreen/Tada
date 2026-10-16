@@ -447,10 +447,6 @@ dfn {
     @include subdued-link;
   }
 
-  [aria-current='page'] {
-    font-weight: 700;
-  }
-
   .mask-icon {
     flex-shrink: 0;
   }
