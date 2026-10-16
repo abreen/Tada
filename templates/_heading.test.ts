@@ -74,7 +74,7 @@ describe('_heading.html template', () => {
 });
 
 describe('breadcrumb trail', () => {
-  test('renders ordered ancestors and an unlinked escaped current title', () => {
+  test('renders ordered ancestors without repeating the page title', () => {
     const html = renderHeading({
       page: {
         breadcrumbs: [
@@ -90,13 +90,10 @@ describe('breadcrumb trail', () => {
     );
     expect(html).toContain('<ol>');
     expect(html.indexOf('>Labs</a>')).toBeLessThan(html.indexOf('>Lab 0</a>'));
-    expect(html.indexOf('>Lab 0</a>')).toBeLessThan(
-      html.indexOf('aria-current="page"'),
-    );
-    expect(html).toContain(
-      '<span aria-current="page">Counting &amp; &lt;vowels&gt;</span>',
-    );
-    expect(html.match(/aria-hidden="true"/g)).toHaveLength(2);
+    expect(html).not.toContain('aria-current');
+    expect(html).not.toContain('Counting &amp; &lt;vowels&gt;');
+    expect(html.match(/<li>/g)).toHaveLength(2);
+    expect(html.match(/aria-hidden="true"/g)).toHaveLength(1);
     expect(html).toContain('>Counting &amp; <em>vowels</em></h1>');
   });
 
@@ -116,9 +113,7 @@ describe('breadcrumb trail', () => {
     expect(html).toContain(
       '<a class="code-page" href="/A.java.html"><code>A&lt;B&gt;.java</code></a>',
     );
-    expect(html).toContain(
-      '<span class="code-page" aria-current="page"><code>Foo.java</code></span>',
-    );
+    expect(html).not.toContain('aria-current');
   });
 
   test.each([{ breadcrumbs: undefined }, { breadcrumbs: [] }])(

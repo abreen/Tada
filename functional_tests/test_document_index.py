@@ -69,7 +69,7 @@ class TestDocumentIndexBreadcrumbs:
         assert f'href="{prefix}/guide/index.html">The Guide</a>' in deep
         assert f'href="{prefix}/guide/topics/index.html">Topics &amp; more</a>' in deep
         assert deep.index('The Guide') < deep.index('Topics &amp; more')
-        assert '<span aria-current="page">Deep</span>' in deep
+        assert 'aria-current' not in deep
 
         install = breadcrumb_nav((dist / 'install.html').read_text())
         assert install is not None

@@ -463,7 +463,7 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `description` | Meta description for the page |
 | `toc` | Set to `true` to show a table of contents |
 | `slides` | Set to `true` on Markdown pages to treat top-level `---` as slide separators and add presentation controls |
-| `breadcrumbs` | Ordered ancestor links with `label` and `url`; the page title completes the trail; not allowed on pages in a [document index](#document-indexes) |
+| `breadcrumbs` | Ordered ancestor links with `label` and `url`; not allowed on pages in a [document index](#document-indexes) |
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
 | `scripts` | Scripts in `src/` to compile and run on this page (see [Scripts](#scripts)) |
 

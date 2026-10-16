@@ -12,11 +12,11 @@ breadcrumbs:
     url: /labs/00/index.html
 ```
 
-This renders **Labs › Lab 0 › Counting vowels**. The list contains ancestors
-only, in the authored order; Tada does not infer ancestors from directories or
-other pages. The current item uses the plain-text `title`, while the existing
-heading retains its inline Markdown formatting. Missing or empty lists render
-no breadcrumb navigation.
+This renders **Labs › Lab 0** above the page heading. The trail contains
+ancestors only, in the authored order, and does not repeat the page title,
+which the heading already shows. Tada does not infer ancestors from
+directories or other pages. Missing or empty lists render no breadcrumb
+navigation.
 
 Pages listed in a [document index](document-index.md) get their trail from the
 index instead, and may not set `breadcrumbs`.
@@ -46,15 +46,14 @@ dependencies. These rules apply to Markdown, HTML, and literate Java pages,
 including when Java execution is skipped because `javac` is unavailable.
 
 The build renders a `<nav aria-label="Breadcrumb">` containing an ordered
-list. Ancestor links hide their underline by default and show it on hover.
-The unlinked final item displays the current page title in bold and has
-`aria-current="page"`. The entire trail is excluded from Pagefind indexing.
+list of ancestor links. Links hide their underline by default and show it on
+hover. The entire trail is excluded from Pagefind indexing.
 Decorative, accessibility-hidden chevron [icons](icons.md) in `var(--fg2-color)` separate items. The trail is left-aligned, wraps on
 narrow screens, and works with JavaScript disabled.
 
 When view transitions are available and reduced motion is not requested, client
-navigation animates the trail as a single `page-breadcrumbs` group. Every item,
-including the current one, moves together when the trail's position changes
+navigation animates the trail as a single `page-breadcrumbs` group. Every item
+moves together when the trail's position changes
 between page layouts (for example, between a full-width TOC page and a regular
 page). The old and new trails crossfade inside the group: unchanged items stay
 opaque, and added or removed items fade. Snapshots keep their natural size, so

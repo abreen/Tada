@@ -38,14 +38,15 @@ class TestBreadcrumbs:
             assert 'aria-label="Breadcrumb"' in nav[0]
             assert 'data-pagefind-ignore' in nav[0]
             assert '<ol>' in nav[1]
-            assert nav[1].count('<li>') == 3
+            assert nav[1].count('<li>') == 2
             assert f'href="{base_path.rstrip("/")}/index.html?view=full#intro"' in nav[1]
             assert 'href="./index.html"' in nav[1]
             assert '>Home &amp; &lt;Notes&gt;</a>' in nav[1]
             assert '>Course lectures</a>' in nav[1]
             assert nav[1].index('>Home &amp;') < nav[1].index('>Course lectures')
-            assert '<span aria-current="page">First Lecture &amp; Notes</span>' in nav[1]
-            assert nav[1].count('aria-hidden="true"') == 2
+            assert 'aria-current' not in nav[1]
+            assert 'First Lecture' not in nav[1]
+            assert nav[1].count('aria-hidden="true"') == 1
             assert '<strong>Lecture</strong>' in html
         pages_without_trails = [
             site_dir / 'dist' / 'index.html',
