@@ -150,7 +150,10 @@ $document-index-fade: 1.5em;
 
 // Tree guide lines: each nested entry has a connector from the trunk to its
 // label. Continuing siblings meet the trunk with a tee and the last sibling
-// ends in a rounded elbow.
+// ends in a rounded elbow. Every line is a border, never a 1px background: a
+// border's width is floored to whole device pixels, but a 1px background is
+// 1.5 device pixels at 150% scaling and draws 1 or 2 depending on where it
+// lands.
 .document-index ol ol > li > a {
   position: relative;
   padding-inline-start: calc(
@@ -183,10 +186,10 @@ $document-index-fade: 1.5em;
   top: var(--document-index-junction);
   bottom: calc(-1 * var(--document-index-stroke));
   z-index: 1;
-  width: var(--document-index-stroke);
+  width: 0;
   pointer-events: none;
   content: '';
-  background: var(--fg2-color);
+  border-inline-start: var(--document-index-stroke) solid var(--fg2-color);
 }
 
 // The first level hangs from the root label with a small gap
@@ -220,10 +223,10 @@ $document-index-fade: 1.5em;
   top: var(--document-index-junction);
   bottom: 0;
   z-index: 1;
-  width: var(--document-index-stroke);
+  width: 0;
   pointer-events: none;
   content: '';
-  background: var(--fg2-color);
+  border-inline-start: var(--document-index-stroke) solid var(--fg2-color);
 }
 
 // Junction dot: filled when the branch's children are not shown, open when
