@@ -115,6 +115,16 @@ export function tocPlugin(md: MarkdownIt): void {
         // Fall through to count the alert as a container
       }
 
+      // A drumroll renders as a <details>, so nothing inside it is listed
+      if (token.type === 'container_drumroll_open') {
+        detailsDepth++;
+        continue;
+      }
+      if (token.type === 'container_drumroll_close') {
+        detailsDepth = Math.max(0, detailsDepth - 1);
+        continue;
+      }
+
       // Track container nesting
       if (token.type.startsWith('container_') && token.type.endsWith('_open')) {
         containerDepth++;

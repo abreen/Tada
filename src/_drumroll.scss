@@ -1,0 +1,184 @@
+// Drumroll blocks are plain <details>; opening one plays a CSS-only fanfare.
+// Each [open] rule starts its animation, so reopening replays it.
+
+$drumroll-duration: 1.2s;
+
+.drumroll {
+  position: relative;
+}
+
+.drumroll > summary::before {
+  content: '🥁 ' / '';
+}
+
+.drumroll-content > *:first-child {
+  margin-top: 0;
+}
+
+.drumroll-content > *:last-child {
+  margin-bottom: 0;
+}
+
+.drumroll-tada {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .drumroll[open] {
+    animation: drumroll-shake $drumroll-duration linear;
+  }
+
+  // Not summary::after, which open details use for the stuck summary's fade.
+  // Above the sticky summary (z-index 2).
+  .drumroll[open]::before {
+    position: absolute;
+    top: var(--details-padding);
+    right: var(--details-padding);
+    z-index: 3;
+    font-style: italic;
+    color: var(--fg2-color);
+    content: 'ba-dum ba-dum ba-dum…' / '';
+    animation: drumroll-roll $drumroll-duration linear forwards;
+  }
+
+  .drumroll[open] > .drumroll-content {
+    animation: drumroll-reveal 0.3s ease-out $drumroll-duration both;
+  }
+
+  .drumroll[open] > .drumroll-tada {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: block;
+    height: fit-content;
+    margin: auto;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--theme-color-text);
+    text-align: center;
+    pointer-events: none;
+    animation: drumroll-ta-da 1.6s ease-out $drumroll-duration both;
+  }
+
+  .drumroll[open] > .drumroll-tada::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    content: '';
+    border-radius: 50%;
+    box-shadow:
+      -140px -50px var(--theme-color),
+      -100px 40px var(--link-color),
+      -70px -70px var(--warning-bg-color),
+      -40px 60px var(--note-bg-color),
+      -20px -40px var(--fg-color),
+      20px 70px var(--theme-color),
+      40px -60px var(--link-color),
+      70px 50px var(--warning-bg-color),
+      100px -30px var(--note-bg-color),
+      140px 30px var(--fg-color),
+      -120px 0 var(--link-active-color),
+      120px -70px var(--link-active-color);
+    animation: drumroll-confetti 1s ease-out $drumroll-duration both;
+  }
+}
+
+// Printing opens every details, which would otherwise start the fanfare and
+// print the content mid-fade
+@media print {
+  .drumroll::details-content {
+    content-visibility: visible;
+  }
+
+  .drumroll,
+  .drumroll > .drumroll-content {
+    animation: none !important;
+  }
+
+  .drumroll::before,
+  .drumroll > .drumroll-tada {
+    display: none !important;
+  }
+}
+
+@keyframes drumroll-shake {
+  0%,
+  100% {
+    translate: 0;
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    translate: -2px 0;
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    translate: 2px 0;
+  }
+}
+
+@keyframes drumroll-roll {
+  0%,
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes drumroll-reveal {
+  from {
+    opacity: 0;
+    translate: 0 0.5em;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0;
+  }
+}
+
+@keyframes drumroll-ta-da {
+  0% {
+    opacity: 0;
+    scale: 0.3;
+  }
+
+  20% {
+    opacity: 1;
+    scale: 1.15;
+  }
+
+  30%,
+  80% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.05;
+  }
+}
+
+@keyframes drumroll-confetti {
+  from {
+    opacity: 1;
+    scale: 0;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1;
+  }
+}
