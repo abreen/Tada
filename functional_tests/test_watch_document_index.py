@@ -28,12 +28,12 @@ class TestWatchDocumentIndex:
         before = install_html.stat().st_mtime
         self.write_index(site_dir)
         watch.wait_for_rebuild(install_html, 'modified', before_mtime=before)
-        assert 'aria-label="Breadcrumb"' in install_html.read_text()
+        assert 'aria-label="Document navigation"' in install_html.read_text()
 
         before = install_html.stat().st_mtime
         (site_dir / 'content' / 'index.yml').unlink()
         watch.wait_for_rebuild(install_html, 'modified', before_mtime=before)
-        assert 'aria-label="Breadcrumb"' not in install_html.read_text()
+        assert 'aria-label="Document navigation"' not in install_html.read_text()
 
     def test_retitling_a_page_updates_only_pages_that_show_it(self, watch, site_dir):
         install_html = site_dir / 'dist' / 'install.html'
@@ -58,4 +58,4 @@ class TestWatchDocumentIndex:
         before = install_html.stat().st_mtime
         self.write_index(site_dir)
         watch.wait_for_rebuild(install_html, 'modified', before_mtime=before)
-        assert 'aria-label="Breadcrumb"' in install_html.read_text()
+        assert 'aria-label="Document navigation"' in install_html.read_text()
