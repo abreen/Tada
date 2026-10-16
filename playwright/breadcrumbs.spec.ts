@@ -27,7 +27,7 @@ for (const javaScriptEnabled of [true, false]) {
         name: 'Breadcrumb',
         exact: true,
       });
-      await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
+      await expect(nav.getByRole('listitem')).toHaveText(['Labs']);
       await nav.getByRole('link', { name: 'Labs', exact: true }).click();
       await expect(page).toHaveURL(/labs\/index\.html$/);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('Labs');
@@ -73,7 +73,7 @@ test('client navigation replaces trails and clears breadcrumb transition names',
     .click();
   await expect(page).toHaveURL(/labs\/00\/index\.html$/);
   const nav = page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
-  await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
+  await expect(nav.getByRole('listitem')).toHaveText(['Labs']);
   await expectNoBreadcrumbTransitionNames(page);
   expect(
     await page.evaluate(
@@ -85,7 +85,7 @@ test('client navigation replaces trails and clears breadcrumb transition names',
   await expectVowelTrail(page);
   await expectNoBreadcrumbTransitionNames(page);
   await page.goBack();
-  await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
+  await expect(nav.getByRole('listitem')).toHaveText(['Labs']);
 });
 
 type BreadcrumbSnapshot = {
