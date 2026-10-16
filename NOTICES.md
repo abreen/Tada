@@ -20,3 +20,12 @@ and bold-italic fonts.
 - Source: [Courier Prime in Google Fonts](https://github.com/google/fonts/tree/main/ofl/courierprime)
 - License: [SIL Open Font License, Version 1.1](https://openfontlicense.org)
 - Copyright: Copyright 2015 The Courier Prime Project Authors
+
+## inter-optical-sizing
+
+Tada's type scale (`src/_type.scss`) includes the optical size and
+letter-spacing presets for Inter from inter-optical-sizing.
+
+- Source: [`nanxstats/inter-optical-sizing`](https://github.com/nanxstats/inter-optical-sizing)
+- License: [MIT License](https://github.com/nanxstats/inter-optical-sizing/blob/main/LICENSE)
+- Copyright: Copyright (c) 2025, Nan Xiao

@@ -81,6 +81,32 @@ class TestDevBuild:
             css,
         )
 
+    def test_tunes_inter_for_type_scale_steps_in_sans_mode_only(self, built_dev_site):
+        dist = built_dev_site / 'dist'
+        css = ''.join(file.read_text() for file in dist.glob('*.css'))
+
+        assert re.search(r':root\s*\{[^}]*--inter-tuning: ;', css)
+        assert re.search(
+            r':root\[data-font-preference="?serif"?\]\s*\{[^}]*--inter-tuning: initial;',
+            css,
+        )
+        assert re.search(
+            r'body\.is-presenting \.slide\s*\{[^}]*--inter-tuning: initial;'
+            r'[^}]*font-variation-settings: normal;',
+            css,
+        )
+        h1 = re.search(r'(?m)^h1\s*\{([^}]*)\}', css)
+        assert h1
+        assert 'font-size: calc(var(--font-size) * 2.5);' in h1[1]
+        assert '--inter-opsz-400: 32;' in h1[1]
+        assert 'font-variation-settings: var(--inter-tuning) "opsz" 32;' in h1[1]
+        assert 'letter-spacing: var(--inter-tuning) -.00075em;' in h1[1]
+
+        th = re.search(r'(?m)^th\s*\{([^}]*)\}', css)
+        assert th
+        assert 'font-weight: 600;' in th[1]
+        assert 'font-variation-settings: var(--inter-tuning) "opsz" var(--inter-opsz-600);' in th[1]
+
     def test_draws_every_icon_with_shared_rounded_stroke_width(self, built_dev_site):
         dist = built_dev_site / 'dist'
         css = ''.join(file.read_text() for file in dist.glob('*.css'))

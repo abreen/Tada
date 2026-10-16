@@ -1,4 +1,5 @@
 @use '../mixins' as *;
+@use '../type';
 
 :root {
   --highlight-hue: 59deg;
@@ -30,7 +31,7 @@ body.code .toc ol a {
 .toc ol::before {
   display: block;
   font-family: var(--mono-font);
-  font-size: var(--font-size-small);
+  font-size: type.size(13);
   font-size-adjust: var(--mono-font-size-adjust);
   font-style: italic;
   font-feature-settings: var(--mono-font-feature-settings);
@@ -116,34 +117,35 @@ body.code .toc ol a {
 }
 
 .toc ol li.level1 {
-  font-size: var(--font-size-smaller);
+  @include type.font(15);
 }
 
 .toc ol li.level2 {
-  font-size: var(--font-size-smaller);
+  @include type.font(15);
 }
 
 .toc ol li.level3 {
+  @include type.font(15);
+
   margin-left: 10px;
-  font-size: var(--font-size-smaller);
 }
 
 .toc ol li.level4 {
+  @include type.font(13, 450);
+
   margin-left: 18px;
-  font-size: var(--font-size-small);
-  font-weight: 450;
 }
 
 .toc ol li.level5 {
+  @include type.font(13, 450);
+
   margin-left: 24px;
-  font-size: var(--font-size-small);
-  font-weight: 450;
 }
 
 .toc ol li.level6 {
+  @include type.font(13, 450);
+
   margin-left: 32px;
-  font-size: var(--font-size-small);
-  font-weight: 450;
 }
 
 .toc ol li.dinkus-item {
@@ -188,7 +190,8 @@ body.code .toc ol a {
 }
 
 .toc ol li.label {
-  font-size: var(--font-size-smaller);
+  @include type.font(15);
+
   color: var(--fg2-color);
 }
 

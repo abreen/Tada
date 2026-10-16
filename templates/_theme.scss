@@ -88,9 +88,10 @@
   --font-size-adjust: none;
   --mono-font-size-adjust: none;
   --font-size: 1rem;
-  --font-size-smaller: 0.9375em;
-  --font-size-small: 0.8125em;
   --font-weight: 400;
+
+  // Empty to turn on Inter's type scale tuning; `initial` turns it off
+  --inter-tuning: ;
   --line-height: 1.7;
   --mono-font-size: 0.94em;
   --mono-line-height: 1.5;
@@ -114,6 +115,7 @@
   --mono-font: var(--serif-mono-font);
   --font-feature-settings: var(--serif-font-feature-settings);
   --mono-font-feature-settings: var(--serif-mono-font-feature-settings);
+  --inter-tuning: initial;
 }
 
 :root[data-contrast-preference='high'] {

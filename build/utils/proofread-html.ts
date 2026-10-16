@@ -115,7 +115,10 @@ const PROOFREAD_CSS =
   '.proofread-grammar{text-decoration-color:var(--proofread-grammar-color)}' +
   '.proofread-tooltip{position:absolute;z-index:1000;max-width:min(24rem,calc(100vw - 16px));padding:0.25em 0.5em;' +
   'border-radius:var(--mono-border-radius);background:var(--fg-color);color:var(--bg-color);box-shadow:var(--box-shadow);' +
-  'font-size:var(--font-size-small);pointer-events:none}' +
+  // The type scale's 13px step and its Inter tuning (see src/_type.scss)
+  'font-size:calc(var(--font-size) * 0.8125);' +
+  'font-variation-settings:var(--inter-tuning) "opsz" 17.5;letter-spacing:var(--inter-tuning) 0;' +
+  'pointer-events:none}' +
   '.proofread-tooltip p{margin:0}' +
   // Harper marks quoted words with code; show them as quotes in the text font
   '.proofread-tooltip p:not(.proofread-rule) code{padding:0;border:0;border-radius:0;background:none;color:inherit;font:inherit}' +

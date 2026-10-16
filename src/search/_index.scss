@@ -1,4 +1,5 @@
 @use '../mixins' as *;
+@use '../type';
 
 header {
   .search-controls {
@@ -82,7 +83,8 @@ header {
       }
 
       .search-hint {
-        font-size: var(--font-size-small);
+        @include type.font(13);
+
         color: var(--fg2-color);
 
         kbd {
@@ -142,7 +144,8 @@ header {
     ol a .title {
       // Values above 500 resolve to the supplied bold face when a custom
       // family provides only fixed 400 and 700 weights.
-      font-weight: 600;
+      @include type.weight(600);
+
       line-height: var(--heading-line-height);
     }
 
@@ -154,12 +157,15 @@ header {
       grid-row-start: 3;
       height: 4.2em;
       overflow: hidden;
-      font-size: var(--font-size-small);
+
+      @include type.font(13);
+
       line-height: 1.4;
       color: var(--fg2-color);
 
       mark {
-        font-weight: 600;
+        @include type.weight(600);
+
         color: var(--theme-color-text);
         background: transparent;
       }
@@ -190,20 +196,23 @@ header {
         }
 
         .title {
-          font-size: var(--font-size-small);
-          font-weight: 500;
+          @include type.font(13, 500);
+
           color: var(--fg-color);
         }
 
         .excerpt {
           height: 2.5ex;
           overflow: hidden;
-          font-size: var(--font-size-small);
+
+          @include type.font(13);
+
           line-height: 2.5ex;
           color: var(--fg2-color);
 
           mark {
-            font-weight: 600;
+            @include type.weight(600);
+
             color: var(--theme-color-text);
             background: transparent;
           }

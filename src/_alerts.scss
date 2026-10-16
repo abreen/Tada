@@ -1,4 +1,5 @@
 @use 'mixins' as *;
+@use 'type';
 
 .alert {
   position: relative;
@@ -99,8 +100,8 @@ i.warning {
 
 .alert .title {
   margin: 0;
-  font-weight: 700;
 
+  @include type.weight(700);
   @include user-select(none);
 }
 

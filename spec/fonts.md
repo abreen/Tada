@@ -6,7 +6,8 @@ Tada ships with bundled font files in two formats:
 - **WOFF2**: copied into the site output for use by browsers
 
 Inter is the default body and heading font. Google Sans Code is the default
-monospaced font. The page-bottom [font picker](font-picker.md) pairs Source
+monospaced font. Text sizes follow the [type scale](type-scale.md), which also
+tunes Inter's optical size and letter-spacing in sans mode. The page-bottom [font picker](font-picker.md) pairs Source
 Serif 4 with Courier Prime in serif mode, which can instead be made the site
 default with `defaultFont: serif`. All four families use bundled WOFF2 files and
 make no font-network requests to third parties.
@@ -66,8 +67,8 @@ multiplies the surrounding prose size before that adjustment.
 Body scaling changes the serif-mode
 base font size, so authored content and inheriting interface text such as
 metadata and navigation scale together.
-Heading sizes are derived from stable sizes for h1 through h6 and remain
-independent of body scaling. Slide headings apply the configured scale in
+Heading sizes are derived from the type scale's stable sizes for h1 through
+h6 and remain independent of body scaling. Slide headings apply the configured scale in
 relative units during presentation so they continue to follow the responsive
 slide size. Compact code-page file titles retain their interface sizing. This
 is useful for a face with a smaller x-height:

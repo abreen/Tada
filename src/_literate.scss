@@ -1,3 +1,5 @@
+@use 'type';
+
 body.literate {
   --code-gutter-width: 4rem;
 }
@@ -49,8 +51,9 @@ body.literate .literate-code-output {
     }
 
     > pre:last-child::before {
+      @include type.font(13, $descendants: false);
+
       display: block;
-      font-size: var(--font-size-small);
       font-style: italic;
       color: var(--fg2-color);
       content: 'Output';

@@ -1,4 +1,5 @@
 @use '../mixins' as *;
+@use '../type';
 
 // The box's corners are concentric with the rounded boxes inside a panel, a
 // stepper's buttons and code blocks, which sit a panel's padding inside the
@@ -17,7 +18,7 @@
   --tabs-gap: 4px;
 
   // A tab's small text and vertical padding
-  --tabs-tab-height: calc(var(--font-size-small) * (var(--line-height) + 0.25));
+  --tabs-tab-height: calc(#{type.size(13)} * (var(--line-height) + 0.25));
 
   margin-bottom: 1rem;
 }
@@ -254,7 +255,9 @@
   padding: 0 var(--gap);
   margin: 0;
   font: inherit;
-  font-size: var(--font-size-small);
+
+  @include type.font(13);
+
   line-height: var(--line-height);
   color: var(--fg2-color);
   white-space: nowrap;
