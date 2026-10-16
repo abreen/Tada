@@ -179,6 +179,12 @@
     overflow-wrap: anywhere;
   }
 
+  // The global press colors turn the label's text the page background color,
+  // which would not stand out on code's usual secondary background fill
+  a.button:not(.disabled):active code {
+    background: var(--fg2-color);
+  }
+
   a.previous {
     justify-self: start;
 

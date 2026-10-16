@@ -89,7 +89,9 @@ title, which keeps its inline formatting: the previous link sits at the start
 with a chevron pointing back, and the next link sits at the end with a chevron
 pointing forward. "Previous" or "Next" is visually hidden text before the title,
 so screen readers announce the direction. A code page's title is plain
-monospace text, as in the sidebar.
+monospace text, as in the sidebar. While a link shows the press colors, code in
+its title is filled with the secondary foreground color instead of the
+secondary background.
 
 Search results for pages below a tree's root name the root, as in
 "Labs › Counting vowels" (see [Search](search.md)).
