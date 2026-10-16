@@ -108,6 +108,24 @@ body.default .title-and-info {
   border-bottom: 1px solid var(--fg2-color);
 }
 
+// On literate pages the file header follows the title, so the border is only
+// needed where the stacked index or TOC sits in between
+// (and the same for the slides header on default pages)
+body.default .main-content:has(.slides-header) > .title-and-info {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+@media not (width >= 900px) {
+  body.literate .main-content:has(> .sidebar) > .title-and-info,
+  body.default
+    .main-content:has(.slides-header):has(> .sidebar)
+    > .title-and-info {
+    padding-bottom: var(--gap);
+    border-bottom: 1px solid var(--fg2-color);
+  }
+}
+
 body.default .page-content > *:first-child {
   margin-top: 0;
 }
