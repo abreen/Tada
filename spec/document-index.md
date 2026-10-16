@@ -126,9 +126,9 @@ indexing, hidden in printed output, and hidden while presenting
 ## Breadcrumbs
 
 An indexed page's [breadcrumbs](breadcrumbs.md) are its ancestors in the tree,
-from the root down to its parent, labeled with their plain-text titles. A
-code page's file name, in an ancestor or as the current item, is shown in the
-monospace font without the code background and padding. The
+from the root down to its parent, labeled with their plain-text titles. The
+page's own title is not repeated. A code page's file name in an ancestor is
+shown in the monospace font without the code background and padding. The
 root of a tree has no breadcrumbs. Indexed code pages show their breadcrumbs
 above the file header, and during client-side navigation their trail moves as
 one group like a page heading's trail (see [Breadcrumbs](breadcrumbs.md)). Because the index provides them, an indexed

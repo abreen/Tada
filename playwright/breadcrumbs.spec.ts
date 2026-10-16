@@ -2,16 +2,8 @@ import { test, expect, type Page, waitForClientMount } from './test-fixtures';
 
 async function expectVowelTrail(page: Page) {
   const nav = page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
-  await expect(nav.getByRole('listitem')).toHaveText([
-    'Labs',
-    'Lab 0',
-    'Counting vowels',
-  ]);
+  await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
   await expect(nav.getByRole('link')).toHaveText(['Labs', 'Lab 0']);
-  await expect(nav.locator('[aria-current="page"]')).toHaveText(
-    'Counting vowels',
-  );
-  await expect(nav.locator('[aria-current="page"] a')).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Counting vowels',
   );
@@ -35,7 +27,7 @@ for (const javaScriptEnabled of [true, false]) {
         name: 'Breadcrumb',
         exact: true,
       });
-      await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
+      await expect(nav.getByRole('listitem')).toHaveText(['Labs']);
       await nav.getByRole('link', { name: 'Labs', exact: true }).click();
       await expect(page).toHaveURL(/labs\/index\.html$/);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('Labs');
@@ -81,7 +73,7 @@ test('client navigation replaces trails and clears breadcrumb transition names',
     .click();
   await expect(page).toHaveURL(/labs\/00\/index\.html$/);
   const nav = page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
-  await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
+  await expect(nav.getByRole('listitem')).toHaveText(['Labs']);
   await expectNoBreadcrumbTransitionNames(page);
   expect(
     await page.evaluate(
@@ -93,7 +85,7 @@ test('client navigation replaces trails and clears breadcrumb transition names',
   await expectVowelTrail(page);
   await expectNoBreadcrumbTransitionNames(page);
   await page.goBack();
-  await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
+  await expect(nav.getByRole('listitem')).toHaveText(['Labs']);
 });
 
 type BreadcrumbSnapshot = {
@@ -216,7 +208,7 @@ test('the whole trail moves as one group when the page layout changes', async ({
   const descending = await lastBreadcrumbTransition(page);
   expectSingleBreadcrumbGroup(descending);
   // The TOC layout positions the trail differently. Geometry is the behavior
-  // under test: every item, including the current one, must travel together.
+  // under test: every item must travel together.
   expect(Math.abs(descending.old.left - descending.next.left)).toBeGreaterThan(
     5,
   );

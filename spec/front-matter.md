@@ -72,7 +72,7 @@ results; choose one per file.
 
 Title and description support inline Markdown formatting. The rendered HTML is
 used for the page heading, and a plain-text version is used for `<title>`,
-`og:title`, the current breadcrumb item, and the meta description. The plain text keeps every character the
+`og:title`, and the meta description. The plain text keeps every character the
 reader sees: tags are removed and character references are decoded exactly
 once, so a description such as ``Uses `a < b` and 6" rulers`` keeps both the
 `<` and the `b`.
@@ -125,7 +125,6 @@ line, the legacy format reads the page's first paragraph as front matter.
 Without a title, the page's `<title>` and `og:title` are the site title alone,
 without `titlePostfix`, and the page heading has no `<h1>`. The whole heading
 block (`.title-and-info`) is omitted unless the page has a `published` date or
-an `author`, which it still shows. `breadcrumbs` require a title, since the
-trail ends with it; a nonempty list without a title fails the build. In search
+an `author`, which it still shows. `breadcrumbs` require a title; a nonempty list without a title fails the build. In search
 results, the page is listed under the site title, which Pagefind takes from the
 `<title>` when a page has no `<h1>`.
