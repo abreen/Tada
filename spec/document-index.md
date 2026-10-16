@@ -86,8 +86,10 @@ gives up its height first, down to its minimum, and only then does the table
 of contents scroll. Without a table of contents, the index can take the whole
 sidebar. On narrower screens, the
 index is stacked above the body, below the heading and above the table of
-contents. Code pages, which hide their table of contents on narrow screens,
-keep their index.
+contents. From 600px to 899px wide, such as tablets in portrait, a page with
+both puts them side by side in two equal columns, index on the left and table
+of contents on the right, top-aligned. Code pages, which hide their table of
+contents on narrow screens, keep their index.
 
 The index is never shorter than about six single-line entries, or than all
 of its entries when it shows fewer than six; the build records how many

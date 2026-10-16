@@ -137,6 +137,16 @@ body.literate main table {
   }
 }
 
+// Tablets in portrait: the index and TOC sit side by side, in two equal
+// columns, instead of stacked
+@media (600px <= width < 900px) {
+  body:not(.code) .sidebar:has(> .document-index):has(> nav.toc) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
 @media (width >= 900px) {
   body.default main table,
   body.literate main table {

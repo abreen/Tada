@@ -180,6 +180,31 @@ test('narrow code pages keep the index but hide their TOC', async ({
   await expect(page.locator('nav.toc')).toBeHidden();
 });
 
+test('the index and TOC sit side by side on tablets in portrait', async ({
+  page,
+}) => {
+  for (const [width, height, sideBySide] of [
+    [744, 1133, true],
+    [820, 1180, true],
+    [1024, 1366, false],
+    [390, 844, false],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/document-index-tests/long.html');
+    const index = (await documentIndex(page).boundingBox())!;
+    const toc = (await page.locator('nav.toc').boundingBox())!;
+    const heading = (await page.locator('.title-and-info').boundingBox())!;
+    if (sideBySide) {
+      expect(index.x + index.width).toBeLessThanOrEqual(toc.x);
+      expect(Math.abs(index.y - toc.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(index.width - toc.width)).toBeLessThanOrEqual(1);
+      expect(heading.y + heading.height).toBeLessThanOrEqual(index.y);
+    } else {
+      expect(index.y + index.height).toBeLessThanOrEqual(toc.y + 1);
+    }
+  }
+});
+
 async function headerBottom(page: Page) {
   const header = await page.locator('body > header').boundingBox();
   return header!.y + header!.height;
