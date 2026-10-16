@@ -4,6 +4,7 @@ example
 .DS_Store
 .claude/*
 !.claude/settings.json
+!.claude/skills/
 
 # Java
 .mtj.tmp/
