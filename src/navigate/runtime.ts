@@ -255,17 +255,25 @@ function setTitleTransitionNames(titleEl: Element, enabled: boolean): void {
   }
 }
 
-// The footer and appearance pickers get their own layer only while they are in
-// the viewport, so the layer stays put when they are on screen on both pages
-// and fades on its own when they are on screen on only one.
-function setPageBottomTransitionName(window: Window): void {
-  const bottom = window.document.querySelector<HTMLElement>('.page-bottom');
-  if (!bottom) {
-    return;
-  }
-  const rect = bottom.getBoundingClientRect();
-  if (rect.bottom > 0 && rect.top < window.innerHeight) {
-    bottom.style.viewTransitionName = 'page-bottom';
+// Page regions that get their own layer only while they are in the viewport,
+// so the layer stays put when they are on screen on both pages and fades on
+// its own when they are on screen on only one. Otherwise they would dip with
+// the page's crossfade even though they barely change.
+const VIEWPORT_TRANSITION_NAMES = [
+  ['.page-bottom', 'page-bottom'],
+  ['.document-index', 'document-index'],
+] as const;
+
+function setViewportTransitionNames(window: Window): void {
+  for (const [selector, name] of VIEWPORT_TRANSITION_NAMES) {
+    const element = window.document.querySelector<HTMLElement>(selector);
+    if (!element) {
+      continue;
+    }
+    const rect = element.getBoundingClientRect();
+    if (rect.bottom > 0 && rect.top < window.innerHeight) {
+      element.style.viewTransitionName = name;
+    }
   }
 }
 
@@ -274,9 +282,11 @@ function cleanupViewTransitionNames(document: Document): void {
   if (titleEl) {
     setTitleTransitionNames(titleEl, false);
   }
-  const bottom = document.querySelector<HTMLElement>('.page-bottom');
-  if (bottom) {
-    bottom.style.viewTransitionName = '';
+  for (const [selector] of VIEWPORT_TRANSITION_NAMES) {
+    const element = document.querySelector<HTMLElement>(selector);
+    if (element) {
+      element.style.viewTransitionName = '';
+    }
   }
 }
 
@@ -546,7 +556,7 @@ export async function navigateToUrl(
     if (titleVisible) {
       setTitleTransitionNames(titleEl, true);
     }
-    setPageBottomTransitionName(window);
+    setViewportTransitionNames(window);
 
     const transition = transitionDoc.startViewTransition(() => {
       if (!doSwap()) {
@@ -562,7 +572,7 @@ export async function navigateToUrl(
       if (newTitleVisible && newTitleEl) {
         setTitleTransitionNames(newTitleEl, true);
       }
-      setPageBottomTransitionName(window);
+      setViewportTransitionNames(window);
     });
 
     await transition.finished;

@@ -64,6 +64,9 @@ destination layout position, so two copies are never visible at once. When it
 is on screen on only one page, such as between a short page and the top of a
 long page, that page's snapshot fades out or in where it is, with the same
 150ms `ease-in` and `ease-out` fades as the page.
+The document index (see [Document Index](document-index.md)) gets its own
+`document-index` layer under the same rules, so it does not dim while the page
+fades between two pages that both show it.
 Appearance pickers mount synchronously during the content swap, before the
 browser captures that snapshot, so enabled states and visitor preferences
 do not flash back to the build-time defaults. Other per-page components mount

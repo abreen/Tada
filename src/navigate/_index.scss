@@ -97,21 +97,27 @@ html.navigation-loading * {
   mix-blend-mode: normal;
 }
 
-// The footer and appearance controls get their own layer while they are in the
-// viewport. view-transition-name is set via inline style by the navigator. On
-// screen on both pages, the layer stays put and shows only the incoming
-// snapshot so disabled defaults and stale hover states cannot blend.
+// The document index, footer, and appearance controls get their own layer
+// while they are in the viewport. view-transition-name is set via inline style
+// by the navigator. On screen on both pages, the layer stays put and shows
+// only the incoming snapshot so disabled defaults and stale hover states
+// cannot blend.
 ::view-transition-group(page-bottom),
 ::view-transition-old(page-bottom),
-::view-transition-new(page-bottom) {
+::view-transition-new(page-bottom),
+::view-transition-group(document-index),
+::view-transition-old(document-index),
+::view-transition-new(document-index) {
   animation: none;
 }
 
-::view-transition-old(page-bottom) {
+::view-transition-old(page-bottom),
+::view-transition-old(document-index) {
   display: none;
 }
 
-::view-transition-new(page-bottom) {
+::view-transition-new(page-bottom),
+::view-transition-new(document-index) {
   mix-blend-mode: normal;
 }
 
@@ -119,12 +125,14 @@ html.navigation-loading * {
 // long page: fade out or in where they are, in step with the page. Fill both
 // ways, like the UA default, so the faded-out snapshot cannot reappear in the
 // transition's last frame.
-::view-transition-old(page-bottom):only-child {
+::view-transition-old(page-bottom):only-child,
+::view-transition-old(document-index):only-child {
   display: block;
   animation: page-fade-out $duration ease-in both;
 }
 
-::view-transition-new(page-bottom):only-child {
+::view-transition-new(page-bottom):only-child,
+::view-transition-new(document-index):only-child {
   animation: page-fade-in $duration ease-out both;
 }
 
