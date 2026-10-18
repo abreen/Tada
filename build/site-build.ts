@@ -18,6 +18,7 @@ import {
   type TadaProjectScan,
 } from './source-model';
 import { bundleAuthorScripts, type AuthorScripts } from './author-scripts';
+import { addRenderers, bundleAuthorRenderers } from './author-renderers';
 import { BundleError } from './bundle';
 import { getProjectDir, getSrcDir } from './utils/paths';
 import {
@@ -291,7 +292,7 @@ export function buildDocumentIndexForScan(
 
 /**
  * Compiles the scripts in `src/` and packages that the site config and pages
- * list, as returned by getScriptEntries
+ * list, as returned by getScriptEntries, and loads their renderer modules
  */
 export async function buildAuthorScripts(
   entries: string[],
@@ -305,16 +306,17 @@ export async function buildAuthorScripts(
     log.info`Compiling ${entries.length} ${entries.length === 1 ? 'script' : 'scripts'}`;
   }
   try {
-    return {
-      ok: true,
-      value: await bundleAuthorScripts(
+    const [authorScripts, renderers] = await Promise.all([
+      bundleAuthorScripts(
         entries,
         getSrcDir(),
         getProjectDir(),
         mode,
         siteVariables.basePath,
       ),
-    };
+      bundleAuthorRenderers(entries, getSrcDir(), getProjectDir()),
+    ]);
+    return { ok: true, value: addRenderers(authorScripts, renderers) };
   } catch (error) {
     return {
       ok: false,

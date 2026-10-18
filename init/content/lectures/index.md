@@ -5,20 +5,9 @@ description: An example page listing lectures.
 scripts: [lectures/timezone.ts]
 ---
 
-<p class="time-zone-chooser" hidden>
-  <label>
-    Show times in
-    <select disabled>
-      <option value="America/New_York">Eastern Time (ET)</option>
-      <option value="America/Chicago">Central Time (CT)</option>
-      <option value="America/Denver">Mountain Time (MT)</option>
-      <option value="America/Los_Angeles">Pacific Time (PT)</option>
-      <option value="Europe/London">London (UK)</option>
-      <option value="Asia/Tokyo">Tokyo (JST)</option>
-      <option value="UTC">UTC</option>
-    </select>
-  </label>
-</p>
+<tz-chooser>
+</tz-chooser>
+
 <noscript><p>Times shown in ET.</p></noscript>
 
 One-hour lectures are held weekly at <time datetime="17:40">5:40 PM</time>.
@@ -26,7 +15,9 @@ Each lecture is recorded and made available by password-protected link.
 Return to this page to access the recordings.
 
 The time zone chooser above is an example of a script for your site: see
-`src/lectures/timezone.ts`, which this page lists in its front matter.
+`src/lectures/timezone.ts`, which this page lists in its front matter, and
+`src/lectures/timezone.render.ts`, which writes the chooser into the page when
+the site is built.
 
 <details>
 <summary>More details</summary>

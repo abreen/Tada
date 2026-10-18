@@ -1,16 +1,20 @@
 import { test, expect } from './test-fixtures';
 
 // The starter content's Lectures page lists src/lectures/timezone.ts in its
-// front matter, an example of a script compiled with the site
+// front matter, an example of a script compiled with the site. Its renderer,
+// src/lectures/timezone.render.ts, writes the chooser at build time.
 test.describe('starter time zone example', () => {
-  test('without JS, the chooser stays hidden and authored times show', async ({
+  test('without JS, the chooser shows the default zone, disabled', async ({
     browser,
   }) => {
     const context = await browser.newContext({ javaScriptEnabled: false });
     const page = await context.newPage();
     await page.goto('/lectures/index.html');
 
-    await expect(page.getByLabel('Show times in')).toBeHidden();
+    const select = page.getByLabel('Show times in');
+    await expect(select).toBeVisible();
+    await expect(select).toBeDisabled();
+    await expect(select).toHaveValue('America/New_York');
     await expect(page.locator('time[datetime="17:40"]')).toHaveText('5:40 PM');
     expect(await page.locator('body').innerText()).toContain(
       'Times shown in ET',

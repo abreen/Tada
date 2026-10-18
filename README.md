@@ -499,6 +499,22 @@ const mount: Mount = ({ window, signal }) => {
 export default mount;
 ```
 
+A script can also have a renderer next to it, such as
+`src/lectures/timezone.render.ts`, which runs at build time and fills custom
+elements on the pages that list the script. The page then includes the
+script's HTML, such as a control, before any JavaScript runs:
+
+```ts
+import type { Renderers } from '@abreen/tada';
+
+const renderers: Renderers = {
+  'tz-chooser': () => '<label>Show times in <select disabled>...</select></label>',
+};
+export default renderers;
+```
+
+Write `<tz-chooser>` and `</tz-chooser>` on lines of their own in the page.
+
 Imported stylesheets are added to the page's `<head>`, so they work without
 JavaScript. Scripts can't import images or other files: put them in
 `content/` or `public/` and refer to them by URL, such as

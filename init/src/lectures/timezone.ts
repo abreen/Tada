@@ -11,11 +11,12 @@
 // It lets visitors choose a time zone, then rewrites each
 // <time datetime="HH:MM"> element on the page to show that time in their zone.
 // Times are written in DEFAULT_TIME_ZONE, so they're still correct when
-// JavaScript is turned off.
+// JavaScript is turned off. The chooser itself is written into the page at
+// build time by timezone.render.ts.
 import './timezone.scss';
 import type { Mount } from '@abreen/tada';
+import { DEFAULT_TIME_ZONE } from './time-zones';
 
-const DEFAULT_TIME_ZONE = 'America/New_York';
 const STORAGE_KEY = 'timeZone';
 
 // Minutes the zone is ahead of UTC today, accounting for daylight saving
@@ -97,9 +98,8 @@ function updateTimes(document: Document, timeZone: string): void {
 
 const mount: Mount = ({ window, signal }) => {
   const { document, localStorage } = window;
-  const chooser = document.querySelector<HTMLElement>('.time-zone-chooser');
-  const select = chooser?.querySelector('select');
-  if (!chooser || !select) {
+  const select = document.querySelector<HTMLSelectElement>('tz-chooser select');
+  if (!select) {
     return;
   }
 
@@ -132,10 +132,9 @@ const mount: Mount = ({ window, signal }) => {
     { signal },
   );
 
-  // The chooser is hidden in the HTML so visitors without JavaScript don't
-  // see a control that does nothing
+  // The chooser is disabled in the HTML so visitors without JavaScript can't
+  // change a control that does nothing
   select.disabled = false;
-  chooser.hidden = false;
   updateTimes(document, select.value);
 };
 

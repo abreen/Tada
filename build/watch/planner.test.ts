@@ -378,6 +378,17 @@ describe('getScriptDependentSources', () => {
     ).toEqual(new Set([source('content/a.md')]));
   });
 
+  test('re-renders the pages that list a script whose renderer changed', () => {
+    expect(
+      getScriptDependentSources(
+        pages,
+        siteVariables,
+        new Map([['a.ts', { ...a, render: 'a.render-1111.js' }]]),
+        new Map([['a.ts', { ...a, render: 'a.render-2222.js' }]]),
+      ),
+    ).toEqual(new Set([source('content/a.md')]));
+  });
+
   test('re-renders a page whose script now exists', () => {
     expect(
       getScriptDependentSources(

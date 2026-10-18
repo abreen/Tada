@@ -190,7 +190,8 @@ export function createTadaWatchPlan({
 
 /**
  * Pages to re-render after `src/` was recompiled: those that list a script
- * whose outputs were added, removed, or renamed. A changed site-wide script
+ * whose outputs were added, removed, or renamed, including its renderer
+ * module, whose name changes with its code. A changed site-wide script
  * affects every page.
  */
 export function getScriptDependentSources(

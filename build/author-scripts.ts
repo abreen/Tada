@@ -23,6 +23,7 @@ import {
   NPM_PREFIX,
   parseNpmSpecifier,
 } from './packages';
+import type { ScriptRenderers } from './custom-elements';
 
 /** The output directory for compiled author scripts and their styles */
 export const AUTHOR_SCRIPTS_DIR = '_scripts';
@@ -42,10 +43,15 @@ const OUTSIDE_SRC_SCRIPT_ERROR =
  */
 const PACKAGE_ENTRY_PREFIX = '_npm~';
 
+/** Ends the names of renderer modules, which Tada runs at build time */
+export const RENDERER_SUFFIXES = ['.render.ts', '.render.js'] as const;
+
 /** Output paths for one script listed in `scripts` */
 export interface AuthorScriptOutputs {
   js: string;
   css: string[];
+  /** The compiled renderer module's name, if the script has one */
+  render?: string;
 }
 
 /** The compiled `src/` scripts of one build */
@@ -61,6 +67,8 @@ export interface AuthorScripts {
   entries: Map<string, AuthorScriptOutputs>;
   /** Why each requested script that was not compiled can't be found */
   missing?: Map<string, string>;
+  /** The render functions of each script that has a renderer module */
+  renderers?: ReadonlyMap<string, ScriptRenderers>;
 }
 
 export function createEmptyAuthorScripts(
@@ -85,6 +93,9 @@ export function getScriptPathError(value: unknown): string | null {
   }
   if (value.startsWith(PACKAGE_ENTRY_PREFIX)) {
     return `must not start with ${PACKAGE_ENTRY_PREFIX}, which Tada uses for packages`;
+  }
+  if (RENDERER_SUFFIXES.some(suffix => value.endsWith(suffix))) {
+    return 'is a renderer, which runs at build time; list the script it belongs to instead';
   }
   return null;
 }
@@ -287,7 +298,7 @@ const SCRIPT_IMPORT_ADVICE =
  * as `url(/images/paper.png)`, are left for the browser. A package's own
  * stylesheets can refer to any of its files, such as a library's images.
  */
-function createImportCheckPlugin(srcDir: string, projectDir: string) {
+export function createImportCheckPlugin(srcDir: string, projectDir: string) {
   return {
     name: 'tada-import-check',
     setup(build: PluginBuilder) {

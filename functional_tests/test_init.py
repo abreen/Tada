@@ -76,6 +76,8 @@ class TestInitDefault:
     def test_copies_src_directory(self, site_dir):
         lectures = site_dir / 'src' / 'lectures'
         assert (lectures / 'timezone.ts').is_file()
+        assert (lectures / 'timezone.render.ts').is_file()
+        assert (lectures / 'time-zones.ts').is_file()
         assert (lectures / 'timezone.scss').is_file()
 
     def test_writes_script_tooling(self, site_dir):
@@ -113,6 +115,11 @@ class TestInitDefault:
         [script] = set(re.findall(r'href="/(_scripts/lectures/timezone-[a-z0-9]+\.js)"', lectures))
         assert (dist / script).is_file()
         assert 'data-tada-style' in lectures
+        # The time zone chooser is rendered at build time, disabled until the
+        # script runs
+        assert '<tz-chooser><p><label>Show times in <select disabled>' in lectures
+        assert '<option value="America/New_York" selected>' in lectures
+        assert not (dist / '_scripts' / 'lectures' / 'timezone.render.js').exists()
 
     def test_stdout_contains_success_message(self, tmp_path):
         result = run_tada('init', 'mysite', '--no-interactive', cwd=str(tmp_path))

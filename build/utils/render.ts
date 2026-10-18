@@ -47,8 +47,10 @@ import { parseFrontMatterAndContent } from './front-matter';
 import {
   getPageAuthorAssets,
   getPageScripts,
+  type AuthorScripts,
   type PageAuthorAssets,
 } from '../author-scripts';
+import { getPageRenderers, renderCustomElements } from '../custom-elements';
 import { createMarkdown } from './markdown';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
 import {
@@ -508,6 +510,7 @@ export function renderPlainTextPageAsset({
     siteVariables,
     validInternalTargets,
     {
+      authorScripts,
       dependencyCollector,
       traceCache,
       contentDir,
@@ -793,6 +796,7 @@ function renderPlainTextContent(
   siteVariables: SiteVariables,
   validInternalTargets: ReadonlySet<string>,
   {
+    authorScripts,
     dependencyCollector,
     traceCache,
     contentDir,
@@ -801,6 +805,7 @@ function renderPlainTextContent(
     pageTitles,
   }: Pick<
     RenderPlainTextOptions,
+    | 'authorScripts'
     | 'dependencyCollector'
     | 'traceCache'
     | 'contentDir'
@@ -857,7 +862,58 @@ function renderPlainTextContent(
     tocItems = (env.tocItems as unknown[] | undefined) || null;
   }
 
+  html = renderPageElements({
+    html,
+    authorScripts,
+    pageVariables,
+    sourceUrlPath,
+    siteVariables,
+    filePath,
+  });
   return { content: addDetailsPreviewSummaries(html), pageVariables, tocItems };
+}
+
+/**
+ * Fills the custom elements that the page's scripts have renderers for. Runs
+ * before the page template, so the output is page content like the rest.
+ */
+function renderPageElements({
+  html,
+  authorScripts,
+  pageVariables,
+  sourceUrlPath,
+  siteVariables,
+  filePath,
+}: {
+  html: string;
+  authorScripts: AuthorScripts;
+  pageVariables: Record<string, unknown>;
+  sourceUrlPath: string;
+  siteVariables: SiteVariables;
+  filePath: string;
+}): string {
+  const renderers = getPageRenderers(
+    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
+    authorScripts.renderers,
+    filePath,
+  );
+  if (renderers.size === 0) {
+    return html;
+  }
+  const frontMatter = Object.freeze(
+    Object.fromEntries(
+      Object.entries(pageVariables).filter(
+        ([key]) => !RESERVED_FRONT_MATTER_KEYS.includes(key),
+      ),
+    ),
+  );
+  return renderCustomElements(
+    html,
+    renderers,
+    Object.freeze({ path: sourceUrlPath, frontMatter }),
+    Object.freeze({ ...getSiteVars(siteVariables) }),
+    filePath,
+  );
 }
 
 export function renderLiterateJavaPageAsset({
@@ -992,7 +1048,14 @@ export function renderLiterateJavaPageAsset({
   };
 
   const contentHtml = addDetailsPreviewSummaries(
-    stripHtmlComments(md.renderer.render(tokens, md.options, env)),
+    renderPageElements({
+      html: stripHtmlComments(md.renderer.render(tokens, md.options, env)),
+      authorScripts,
+      pageVariables,
+      sourceUrlPath,
+      siteVariables,
+      filePath,
+    }),
   );
 
   // Build page variables
