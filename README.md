@@ -515,6 +515,11 @@ export default renderers;
 
 Write `<tz-chooser>` and `</tz-chooser>` on lines of their own in the page.
 
+The script can define the element with `customElements.define` at the top
+level of its module. Tada loads a page's scripts before showing it on a
+client-side navigation, so the element is upgraded before the visitor sees
+it, and state in module variables lasts across pages.
+
 Imported stylesheets are added to the page's `<head>`, so they work without
 JavaScript. Scripts can't import images or other files: put them in
 `content/` or `public/` and refer to them by URL, such as

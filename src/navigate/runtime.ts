@@ -9,6 +9,7 @@ import { prefersReducedMotion } from '../util';
 import { getHashTarget } from '../hash-target';
 import { swapHeaderTitle } from '../header';
 import { setScrollRestored } from './restored-scroll';
+import { AUTHOR_ASSET_TIMEOUT, loadAuthorModules } from './author-scripts';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
@@ -92,9 +93,6 @@ function updateHead(document: Document, newDoc: Document): void {
 
 const DISABLED_MEDIA = 'not all';
 
-// How long navigation waits for the new page's stylesheets from src/ scripts
-const AUTHOR_STYLESHEET_TIMEOUT = 3000;
-
 /**
  * Adds the new page's stylesheets from src/ scripts and waits for them to
  * load, turned off until updateHead turns them on, so the new content never
@@ -147,7 +145,7 @@ async function loadAuthorStylesheets(
   await Promise.race([
     Promise.all(loads),
     new Promise<void>(resolve => {
-      timer = window.setTimeout(resolve, AUTHOR_STYLESHEET_TIMEOUT);
+      timer = window.setTimeout(resolve, AUTHOR_ASSET_TIMEOUT);
     }),
     new Promise<void>(resolve => {
       onAbort = resolve;
@@ -483,8 +481,12 @@ export async function navigateToUrl(
 
   const parsed = new URL(url);
 
-  // The loading indicator stays on while the new page's stylesheets load
-  await loadAuthorStylesheets(window, newDoc, controller.signal);
+  // The loading indicator stays on while the new page's stylesheets and
+  // scripts load
+  await Promise.all([
+    loadAuthorStylesheets(window, newDoc, controller.signal),
+    loadAuthorModules(window, newDoc, url, controller.signal),
+  ]);
   stopLoading();
   if (!isActiveNavigation(controller)) {
     return;

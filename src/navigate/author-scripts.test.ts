@@ -6,19 +6,25 @@ import type { Globals } from '../globals';
 import type { MountOptions } from '../../types/client';
 
 let modules: Record<string, Promise<unknown>> = {};
+let imported: string[] = [];
 let reported: { message: string; error: unknown }[] = [];
 
 mock.module('../globals', () => ({
   globals: createGlobals({
-    importModule: specifier =>
-      modules[specifier] ?? Promise.reject(new Error(`404 ${specifier}`)),
+    importModule: specifier => {
+      imported.push(specifier);
+      return (
+        modules[specifier] ?? Promise.reject(new Error(`404 ${specifier}`))
+      );
+    },
     reportError: (message: string, error: unknown) => {
       reported.push({ message, error });
     },
   } satisfies Partial<Globals>),
 }));
 
-const { mountAuthorScripts } = await import('./author-scripts');
+const { loadAuthorModules, mountAuthorScripts } =
+  await import('./author-scripts');
 
 function createWindow(hrefs: string[]): Window {
   const links = hrefs
@@ -37,6 +43,7 @@ function module(mount: unknown): Promise<unknown> {
 
 beforeEach(() => {
   modules = {};
+  imported = [];
   reported = [];
 });
 
@@ -254,6 +261,133 @@ describe('mountAuthorScripts', () => {
     ]);
     expect(String(reported[0].error)).toContain(
       'default export is a class, not a mount function',
+    );
+  });
+});
+
+describe('loadAuthorModules', () => {
+  // The fetched page, which navigation parses outside the window's document
+  function parse(hrefs: string[]): Document {
+    return createWindow(hrefs).document;
+  }
+
+  // Runs the timer callback only when the test asks, so timeouts are instant
+  function withManualTimer(window: Window): { fire: () => void } {
+    let pending: (() => void) | undefined;
+    window.setTimeout = ((callback: () => void) => {
+      pending = callback;
+      return 1;
+    }) as typeof window.setTimeout;
+    window.clearTimeout = () => {
+      pending = undefined;
+    };
+    return { fire: () => pending?.() };
+  }
+
+  test('imports each script of the new page, resolved against its URL', async () => {
+    modules['http://localhost/_scripts/a.js'] = Promise.resolve({});
+    modules['http://localhost/_scripts/b.js'] = Promise.resolve({});
+    const window = createWindow([]);
+    const newDoc = parse(['/_scripts/a.js', '../_scripts/b.js']);
+
+    await loadAuthorModules(
+      window,
+      newDoc,
+      'http://localhost/lectures/index.html',
+      new AbortController().signal,
+    );
+
+    expect(imported).toEqual([
+      'http://localhost/_scripts/a.js',
+      'http://localhost/_scripts/b.js',
+    ]);
+    expect(reported).toEqual([]);
+  });
+
+  test('waits for modules to load before resolving', async () => {
+    const load = deferred<unknown>();
+    modules['http://localhost/_scripts/a.js'] = load.promise;
+    const window = createWindow([]);
+    let done = false;
+
+    const loading = loadAuthorModules(
+      window,
+      parse(['/_scripts/a.js']),
+      'http://localhost/page.html',
+      new AbortController().signal,
+    ).then(() => {
+      done = true;
+    });
+    await flushMicrotasks();
+    expect(done).toBe(false);
+
+    load.resolve({});
+    await loading;
+    expect(done).toBe(true);
+  });
+
+  test('resolves without reporting when a module fails to load', async () => {
+    const window = createWindow([]);
+
+    await loadAuthorModules(
+      window,
+      parse(['/_scripts/missing.js']),
+      'http://localhost/page.html',
+      new AbortController().signal,
+    );
+
+    // Reported when the page mounts its scripts
+    expect(reported).toEqual([]);
+  });
+
+  test('stops waiting for a module that takes too long', async () => {
+    modules['http://localhost/_scripts/slow.js'] = new Promise(() => {});
+    const window = createWindow([]);
+    const timer = withManualTimer(window);
+    let done = false;
+
+    const loading = loadAuthorModules(
+      window,
+      parse(['/_scripts/slow.js']),
+      'http://localhost/page.html',
+      new AbortController().signal,
+    ).then(() => {
+      done = true;
+    });
+    await flushMicrotasks();
+    expect(done).toBe(false);
+
+    timer.fire();
+    await loading;
+    expect(done).toBe(true);
+  });
+
+  test('stops waiting when the navigation is abandoned', async () => {
+    modules['http://localhost/_scripts/slow.js'] = new Promise(() => {});
+    const window = createWindow([]);
+    withManualTimer(window);
+    const controller = new AbortController();
+
+    const loading = loadAuthorModules(
+      window,
+      parse(['/_scripts/slow.js']),
+      'http://localhost/page.html',
+      controller.signal,
+    );
+    controller.abort();
+
+    await loading;
+  });
+
+  test('resolves right away when the new page lists no scripts', async () => {
+    const window = createWindow([]);
+    withManualTimer(window);
+
+    await loadAuthorModules(
+      window,
+      parse([]),
+      'http://localhost/page.html',
+      new AbortController().signal,
     );
   });
 });

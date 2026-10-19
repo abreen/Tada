@@ -55,7 +55,13 @@ to them by URL.
 A script's default export is a mount function. Tada calls it each time the page
 is shown: on a full page load and after each client-side navigation to the page.
 Code at the top level of the module runs once per visit, because the browser
-evaluates an ES module only once.
+evaluates an ES module only once. On a full page load it runs after the page's
+content is parsed. On a client-side navigation, Tada loads the new page's
+scripts before swapping in its content, so top-level code runs while the
+previous page is still shown, and it can run for a navigation the visitor
+abandons. Work with the page's elements in the mount function, or in the
+callbacks of a custom element the module defines (see
+[Custom Elements](custom-elements.md#in-the-browser)).
 
 ```ts
 import type { Mount } from '@abreen/tada';
@@ -94,7 +100,9 @@ to load. When the visitor leaves the page, cleanup runs in reverse order: the
 last script mounted is cleaned up first, and every script is cleaned up before
 Tada's own components. Site-wide scripts are mounted and cleaned up with each
 page, like the page's own scripts; only top-level module code runs once per
-visit. Navigation does not wait for scripts either: it
+visit. Before swapping in a page, navigation waits for its scripts to load, at most 3
+seconds, along with its stylesheets (see [Styles](#styles)); a script that
+fails to load does not stop it. Navigation does not wait for mounts: it
 finishes, and dispatches `tada:navigation`, once Tada's own components are
 mounted, even if a script is still loading or an async mount has not finished.
 Scripts that finish loading after the visitor has left their page are not
@@ -164,7 +172,10 @@ marker icons, need those URLs set by the package script.
 A script can have a renderer next to it, such as
 `src/lectures/timezone.render.ts`, which Tada runs at build time to fill custom
 elements like `<tz-chooser></tz-chooser>` on the pages that list the script.
-See [Custom Elements](custom-elements.md).
+A script can also define those elements in the browser with
+`customElements.define`, so they keep the visitor's state across client-side
+navigations without showing the build-time default first. See
+[Custom Elements](custom-elements.md).
 
 ## Styles
 

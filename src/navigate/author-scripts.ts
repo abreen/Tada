@@ -1,6 +1,57 @@
 import { globals } from '../globals';
 import type { Mount, Unmount } from '../../types/client';
 
+// How long navigation waits for the new page's scripts and stylesheets
+export const AUTHOR_ASSET_TIMEOUT = 3000;
+
+/**
+ * Loads the scripts of a page that a client-side navigation is about to show,
+ * before its content is swapped in. Top-level code, such as a
+ * `customElements.define` call, then runs before the visitor sees the page,
+ * so custom elements are upgraded as the content is inserted. A module that
+ * fails or takes too long to load does not hold up navigation; failures are
+ * reported when the page mounts its scripts.
+ */
+export async function loadAuthorModules(
+  window: Window,
+  newDoc: Document,
+  pageUrl: string,
+  signal: AbortSignal,
+): Promise<void> {
+  const loads = [
+    ...newDoc.querySelectorAll('.container link[data-tada-script]'),
+  ].flatMap(link => {
+    const href = link.getAttribute('href');
+    if (!href) {
+      return [];
+    }
+    return [
+      Promise.resolve(globals.importModule(new URL(href, pageUrl).href)).then(
+        () => {},
+        () => {},
+      ),
+    ];
+  });
+  if (loads.length === 0) {
+    return;
+  }
+
+  let timer: number | undefined;
+  let onAbort: (() => void) | undefined;
+  await Promise.race([
+    Promise.all(loads),
+    new Promise<void>(resolve => {
+      timer = window.setTimeout(resolve, AUTHOR_ASSET_TIMEOUT);
+    }),
+    new Promise<void>(resolve => {
+      onAbort = resolve;
+      signal.addEventListener('abort', onAbort, { once: true });
+    }),
+  ]);
+  window.clearTimeout(timer);
+  signal.removeEventListener('abort', onAbort!);
+}
+
 /**
  * Mounts the scripts compiled from the site's src/ directory. They are listed
  * as module preload links at the end of the page content. Modules load in

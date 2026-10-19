@@ -24,7 +24,9 @@ data from the package. The starter content includes an example of an
 author script: the Lectures page lists `src/lectures/timezone.ts` in its
 `scripts` front matter (see [Author Scripts](author-scripts.md)). It lets
 visitors convert the page's `<time>` elements to another time zone and
-remembers the choice in local storage, and it imports
+remembers the choice in memory and in local storage. It defines the
+`<tz-chooser>` custom element, so the chooser shows the visitor's choice as
+soon as a client-side navigation shows the page, and it imports
 `src/lectures/timezone.scss` for its styles. Its renderer,
 `src/lectures/timezone.render.ts`, writes the chooser into the page's
 `<tz-chooser>` element at build time (see [Custom Elements](custom-elements.md)),
