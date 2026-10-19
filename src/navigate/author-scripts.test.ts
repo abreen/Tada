@@ -245,6 +245,24 @@ describe('mountAuthorScripts', () => {
     expect(mounted).toHaveBeenCalledTimes(1);
   });
 
+  test('reports a script whose URL cannot be parsed, without importing it', async () => {
+    const mounted = mock(() => {});
+    modules['http://localhost/_scripts/a.js'] = module(mounted);
+
+    mountAuthorScripts(
+      createWindow(['http://[', '/_scripts/a.js']),
+      () => true,
+      () => {},
+    );
+    await flushMicrotasks(10);
+
+    expect(imported).toEqual(['http://localhost/_scripts/a.js']);
+    expect(reported.map(report => report.message)).toEqual([
+      'Failed to mount script http://[:',
+    ]);
+    expect(mounted).toHaveBeenCalledTimes(1);
+  });
+
   test('reports a class default export, such as a library listed directly', async () => {
     class Chart {}
     modules['http://localhost/_scripts/chart.js'] = module(Chart);
@@ -390,6 +408,27 @@ describe('loadAuthorModules', () => {
     controller.abort();
 
     await loading;
+  });
+
+  test('resolves right away when the navigation was already abandoned', async () => {
+    modules['http://localhost/_scripts/slow.js'] = new Promise(() => {});
+    const window = createWindow([]);
+    withManualTimer(window);
+    const controller = new AbortController();
+    controller.abort();
+    let done = false;
+
+    void loadAuthorModules(
+      window,
+      parse(['/_scripts/slow.js']),
+      'http://localhost/page.html',
+      controller.signal,
+    ).then(() => {
+      done = true;
+    });
+    await flushMicrotasks();
+
+    expect(done).toBe(true);
   });
 
   test('resolves right away when the new page lists no scripts', async () => {
