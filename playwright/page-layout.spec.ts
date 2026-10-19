@@ -126,14 +126,20 @@ for (const template of ['.html', '-toc.html']) {
       const geometry = await page.evaluate(() => {
         const sidebar = document.querySelector('.sidebar');
         const body = document.querySelector('main.body')!;
+        // The container spans the window beside any scrollbar gutter, which
+        // documentElement.clientWidth does not always leave out
+        const container = document.querySelector('body > .container')!;
         return {
-          window: document.documentElement.clientWidth,
+          container: container.getBoundingClientRect().toJSON(),
           body: body.getBoundingClientRect().toJSON(),
           sidebar: sidebar?.getBoundingClientRect().toJSON(),
         };
       });
       const left = geometry.sidebar?.left ?? geometry.body.left;
-      expect(left).toBeCloseTo(geometry.window - geometry.body.right, 0);
+      expect(left - geometry.container.left).toBeCloseTo(
+        geometry.container.right - geometry.body.right,
+        0,
+      );
       if (geometry.sidebar) {
         expect(geometry.body.left).toBeGreaterThan(geometry.sidebar.right);
       }
