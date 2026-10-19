@@ -66,7 +66,10 @@ long page, that page's snapshot fades out or in where it is, with the same
 150ms `ease-in` and `ease-out` fades as the page.
 The document index (see [Document Index](document-index.md)) gets its own
 `document-index` layer under the same rules, so it does not dim while the page
-fades between two pages that both show it.
+fades between two pages that both show it. Because it sits below the page
+heading, which can differ in height, and may be stuck under the header on the
+old page, its layer moves to its new position in step with the heading parts
+instead of staying put.
 Appearance pickers mount synchronously during the content swap, before the
 browser captures that snapshot, so enabled states and visitor preferences
 do not flash back to the build-time defaults. Custom elements that author

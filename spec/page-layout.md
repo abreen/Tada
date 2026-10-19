@@ -19,11 +19,11 @@ header (see [Navigation](navigation.md#without-a-nav-file)) is part of the page
 flow and reserves no extra space. On screens at least 900px wide, a page with a
 TOC or document index puts it in a sticky sidebar beside the body, with a
 viewport-based maximum height and internal scrolling; the index is above the
-TOC and each scrolls on its own. The sidebar sticks `var(--gap)` below the
-header and starts at the top of the page, with the page heading above the body
-rather than above both columns. Unless reduced motion is preferred, the sidebar fades in
-over 200ms whenever it takes its place beside the body: when the window widens
-past the breakpoint, and on each wide page load and client-side navigation.
+TOC and each scrolls on its own. The page heading spans the sidebar and body,
+so the sidebar starts below it, scrolls with the page, and sticks `var(--gap)`
+below the header once it reaches it. Once stuck, the sidebar is never taller
+than the viewport; before the page scrolls, its end can sit below the viewport
+by up to the heading's height.
 
 The sidebar and body sit between two equal outer grid columns, so together
 they are centered; a page without a sidebar centers the body alone. As the

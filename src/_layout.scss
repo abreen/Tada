@@ -112,21 +112,19 @@ body.default .title-and-info {
 }
 
 // On literate pages the file header follows the title, so the border is only
-// needed where the stacked index or TOC sits in between
+// needed where the index or TOC sits below the title
 // (and the same for the slides header on default pages)
 body.default .main-content:has(.slides-header) > .title-and-info {
   padding-bottom: 0;
   border-bottom: 0;
 }
 
-@media not (width >= #{$breakpoint}) {
-  body.literate .main-content:has(> .sidebar) > .title-and-info,
-  body.default
-    .main-content:has(.slides-header):has(> .sidebar)
-    > .title-and-info {
-    padding-bottom: var(--gap);
-    border-bottom: 1px solid var(--fg2-color);
-  }
+body.literate .main-content:has(> .sidebar) > .title-and-info,
+body.default
+  .main-content:has(.slides-header):has(> .sidebar)
+  > .title-and-info {
+  padding-bottom: var(--gap);
+  border-bottom: 1px solid var(--fg2-color);
 }
 
 body.default .page-content > *:first-child {
@@ -160,16 +158,23 @@ body.literate main table {
 
 // Screen only: in print the TOC and document index are hidden, so the content
 // takes the full width. The body is at most `--main-width` wide and the sidebar
-// takes the `auto` column, which is empty without one; the two equal outer
+// takes `--sidebar-column`, which is zero without one; the two equal outer
 // columns center them together and shrink away first as the window narrows.
-// The sidebar sticks under the header and is never taller than the viewport:
-// the index is on top and the TOC below it, and each scrolls on its own.
+// The heading spans the sidebar and body. The sidebar starts below it, sticks
+// once it reaches the header, and once stuck is never taller than the
+// viewport: the index is on top and the TOC below it, and each scrolls on its
+// own.
 @media screen and (width >= #{$breakpoint}) {
   .main-content {
     grid-template:
-      '. sidebar heading .' auto
+      '. heading heading .' auto
       '. sidebar body .' 1fr /
-      minmax(0, 1fr) auto minmax(0, var(--main-width)) minmax(0, 1fr);
+      minmax(0, 1fr) var(--sidebar-column, 0) minmax(0, var(--main-width))
+      minmax(0, 1fr);
+  }
+
+  .main-content:has(> .sidebar) {
+    --sidebar-column: calc(var(--toc-width) + var(--gap));
   }
 
   .main-content > .sidebar {

@@ -73,13 +73,13 @@ padding and gets a 1px border in the label's text color, in every state,
 instead of a background.
 
 On screens at least 900px wide, the index sits in the left column beside the
-page heading and body, above the [table of contents](table-of-contents.md) when
-the page has one. The heading (title and page info) moves into the right
-column, so nothing is above the sidebar and it starts level with the heading.
-The index and table of contents share a sidebar that sticks `var(--gap)` below
-the header, where it starts, so the index's box does not touch the header and
-stays put while the page scrolls. The sidebar is never taller than the
-viewport, so both stay in view. The
+body, below the page heading (title and page info), which spans both columns,
+and above the [table of contents](table-of-contents.md) when the page has one.
+The index and table of contents share a sidebar that scrolls with the page
+until it reaches the header, then sticks `var(--gap)` below it, so the index's
+box does not touch the header. Once stuck, the sidebar is never taller than
+the viewport, so both stay in view; before the page scrolls, its end can sit
+below the viewport by up to the heading's height. The
 table of contents takes priority: it is shown whole when it fits, and the index
 takes the rest of the sidebar. When the sidebar runs out of room, the index
 gives up its height first, down to its minimum, and only then does the table

@@ -119,7 +119,7 @@ for (const javaScriptEnabled of [true, false]) {
   });
 }
 
-test('sits beside the heading and body on wide screens and below the heading on narrow ones', async ({
+test('sits below the heading on all screens, beside the body on wide ones', async ({
   page,
 }) => {
   for (const [width, beside] of [
@@ -134,27 +134,30 @@ test('sits beside the heading and body on wide screens and below the heading on 
     expect(index).not.toBeNull();
     expect(heading).not.toBeNull();
     expect(body).not.toBeNull();
+    expect(heading!.y + heading!.height).toBeLessThanOrEqual(index!.y);
     if (beside) {
-      expect(index!.x + index!.width).toBeLessThanOrEqual(heading!.x);
+      // The heading spans the index and body
+      expect(heading!.x).toBeLessThanOrEqual(index!.x);
       expect(index!.x + index!.width).toBeLessThanOrEqual(body!.x);
-      // Nothing is above the index, so it starts level with the heading
-      expect(Math.abs(index!.y - heading!.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(index!.y - body!.y)).toBeLessThanOrEqual(1);
     } else {
-      expect(heading!.y + heading!.height).toBeLessThanOrEqual(index!.y);
       expect(index!.y + index!.height).toBeLessThanOrEqual(body!.y);
     }
   }
 });
 
-test('the index stays where it starts on wide screens while the page scrolls', async ({
+test('the index scrolls up under the heading and then sticks on wide screens', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 600 });
   await page.goto('/document-index-tests/long.html');
+  const top = await headerBottom(page);
   const before = (await documentIndex(page).boundingBox())!.y;
+  expect(before).toBeGreaterThan(top + 20);
   await scrollToBottom(page);
   const after = (await documentIndex(page).boundingBox())!.y;
-  expect(Math.abs(after - before)).toBeLessThanOrEqual(1);
+  expect(after).toBeLessThan(before);
+  expect(after).toBeGreaterThanOrEqual(top - 1);
 });
 
 test('indexed pages have no breadcrumbs', async ({ page }) => {

@@ -99,16 +99,21 @@ html.navigation-loading * {
 
 // The document index, footer, and appearance controls get their own layer
 // while they are in the viewport. view-transition-name is set via inline style
-// by the navigator. On screen on both pages, the layer stays put and shows
-// only the incoming snapshot so disabled defaults and stale hover states
-// cannot blend.
+// by the navigator. On screen on both pages, the layer shows only the incoming
+// snapshot so disabled defaults and stale hover states cannot blend. The
+// footer's layer stays put; the index sits below the page heading, so its
+// layer moves to its new position in step with the heading parts.
 ::view-transition-group(page-bottom),
 ::view-transition-old(page-bottom),
 ::view-transition-new(page-bottom),
-::view-transition-group(document-index),
 ::view-transition-old(document-index),
 ::view-transition-new(document-index) {
   animation: none;
+}
+
+::view-transition-group(document-index) {
+  animation-duration: $duration;
+  animation-timing-function: $movement-easing;
 }
 
 ::view-transition-old(page-bottom),
