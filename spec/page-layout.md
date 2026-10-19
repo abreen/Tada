@@ -16,21 +16,36 @@ This layout accounts for the header, optional site banner, page heading,
 and responsive table of contents. Page content, the sticky TOC, and fragment
 scroll positions leave room for the header only while it is fixed; a static
 header (see [Navigation](navigation.md#without-a-nav-file)) is part of the page
-flow and reserves no extra space. On desktop the TOC sits beside the body and
-remains sticky, with a viewport-based maximum height and internal scrolling.
-On narrow screens the TOC precedes the body on default and literate pages;
-code-page TOCs remain hidden. A page listed in a
-[document index](document-index.md) also uses the two-column layout, with its
-document index at the top of the left column, above any TOC. On desktop its
-page heading sits in the right column above the body, so the left column
-starts at the top of the page; other pages keep the heading above both
-columns. On desktop the
-index and TOC share one sticky sidebar with a viewport-based maximum height,
-which sticks `var(--gap)` below the header, as a TOC alone does,
-and each scrolls on its own; on narrow screens the index precedes the TOC. The two-column desktop
-layout and the desktop maximum content width apply only to screens: printed
-output hides the TOC and document index and gives the page heading and body the
-full printable width, with no empty TOC column or centering margins.
+flow and reserves no extra space. On screens at least 900px wide, a page with a
+TOC or document index puts it in a sticky sidebar beside the body, with a
+viewport-based maximum height and internal scrolling; the index is above the
+TOC and each scrolls on its own. The sidebar sticks `var(--gap)` below the
+header and starts at the top of the page, with the page heading above the body
+rather than above both columns. Unless reduced motion is preferred, the sidebar fades in
+over 200ms whenever it takes its place beside the body: when the window widens
+past the breakpoint, and on each wide page load and client-side navigation.
+
+The sidebar and body sit between two equal outer grid columns, so together
+they are centered; a page without a sidebar centers the body alone. As the
+window narrows, the outer columns shrink away first, then the body, so a page
+without a sidebar resizes smoothly at every width. Centering uses the
+container's own width rather than a viewport breakpoint, so it does not jump as
+a scrollbar appears.
+
+There is one breakpoint, 900px (`$breakpoint` in `src/_mixins.scss`). Below it
+everything stacks in one column: the heading, the document index, the TOC (a
+boxed block on default and literate pages; hidden on code pages), the body,
+[two-column layouts](markdown.md#two-column-layout), and literate code and its
+output. At 900px and wider the sidebar sits beside the body and those pairs sit
+side by side; two-column layouts also stay side by side in print. The body is
+at most `--main-width` wide: 876px, the breakpoint less the container's padding,
+set on the container beside that padding. So a window narrower than the
+breakpoint fills the body edge to edge with no extra margin.
+
+Everything in the body uses the body's width; long code lines scroll. The
+sidebar layout and the width cap apply only to screens: printed output hides
+the TOC and document index and gives the page heading and body the full
+printable width, with no empty TOC column or centering margins.
 
 During client-side navigation, the group uses its own View Transition layer.
 Its appearance controls are synchronized before the incoming snapshot is

@@ -107,7 +107,9 @@ indented code blocks, or raw HTML blocks that keep their lines verbatim
 (`<pre>`, `<script>`, `<style>`, `<textarea>`, and comments) remain literal,
 including `+++`. An unclosed code
 fence consumes the remaining content rather than supplying column boundaries.
-The output is a CSS Grid container with two equal-width columns.
+The output is a CSS Grid container with two equal-width columns in print and on
+screens at least 900px wide; on narrower screens the columns stack, with a small
+`--bg2-color` disc centered in the gap between them.
 
 ## Tabs
 

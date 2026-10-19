@@ -1,3 +1,4 @@
+@use 'mixins' as *;
 @use 'type';
 
 body.literate {
@@ -45,7 +46,7 @@ body.literate .literate-code-output {
     white-space: pre-wrap;
   }
 
-  @media (width < 924px) {
+  @media not (width >= #{$breakpoint}) {
     > pre:first-child {
       margin-bottom: 0;
     }
@@ -60,7 +61,7 @@ body.literate .literate-code-output {
     }
   }
 
-  @media (width >= 924px) {
+  @media (width >= #{$breakpoint}) {
     grid-template-columns: 1fr 1fr;
     align-items: start;
 

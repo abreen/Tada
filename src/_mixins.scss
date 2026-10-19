@@ -1,3 +1,5 @@
+$breakpoint: 900px;
+
 @mixin user-select($val) {
   -webkit-user-select: $val;
   user-select: $val;

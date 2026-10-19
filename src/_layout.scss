@@ -18,6 +18,10 @@ body {
 }
 
 body > .container {
+  // The body's widest: its width inside the padding below at the breakpoint, so
+  // the stacked layout below the breakpoint fills the window with no extra margin
+  --main-width: calc(#{$breakpoint} - 2 * var(--gap));
+
   position: relative;
   box-sizing: border-box;
   display: flex;
@@ -32,7 +36,6 @@ body > .container {
   flex: 1;
   grid-template-areas: 'heading' 'sidebar' 'body';
   grid-template-rows: auto auto 1fr;
-  width: 100%;
 }
 
 .main-content > .title-and-info {
@@ -116,7 +119,7 @@ body.default .main-content:has(.slides-header) > .title-and-info {
   border-bottom: 0;
 }
 
-@media not (width >= 900px) {
+@media not (width >= #{$breakpoint}) {
   body.literate .main-content:has(> .sidebar) > .title-and-info,
   body.default
     .main-content:has(.slides-header):has(> .sidebar)
@@ -135,7 +138,7 @@ body.literate main table {
   width: 100%;
 }
 
-@media (width < 900px) {
+@media not (width >= #{$breakpoint}) {
   body.default.toc-is-active nav.toc,
   body.literate.toc-is-active nav.toc {
     padding: var(--gap);
@@ -155,61 +158,23 @@ body.literate main table {
   }
 }
 
-// Tablets in portrait: the index and TOC sit side by side, in two equal
-// columns, instead of stacked
-@media (600px <= width < 900px) {
-  body:not(.code) .sidebar:has(> .document-index):has(> nav.toc) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
-}
-
-@media (width >= 900px) {
-  body.default main table,
-  body.literate main table {
-    width: auto;
-    min-width: 400px;
-    margin: 1rem auto;
-  }
-}
-
 // Screen only: in print the TOC and document index are hidden, so the content
-// takes the full width. The sidebar sticks under the header and is never
-// taller than the viewport: the index is on top and the TOC below it. Each
-// scrolls on its own. Pages without an index keep the heading above both
-// columns.
-@media screen and (width >= 900px) {
-  :not(.toc-is-active, .document-index-is-active) > .container > .main-content {
-    max-width: var(--main-width);
-    margin: 0 auto;
-  }
-
-  :is(.toc-is-active, .document-index-is-active) .main-content {
-    // Where the sidebar sticks, a gap below the header
-    --sidebar-top: calc(var(--header-offset) + var(--gap));
-
+// takes the full width. The body is at most `--main-width` wide and the sidebar
+// takes the `auto` column, which is empty without one; the two equal outer
+// columns center them together and shrink away first as the window narrows.
+// The sidebar sticks under the header and is never taller than the viewport:
+// the index is on top and the TOC below it, and each scrolls on its own.
+@media screen and (width >= #{$breakpoint}) {
+  .main-content {
     grid-template:
-      'heading heading' auto
-      'sidebar body' 1fr / var(--toc-width) minmax(0, 1fr);
-    gap: 0 var(--gap);
-
-    // Capped by the container's own width rather than a viewport breakpoint,
-    // so the layout never jumps as the window (or its scrollbar) resizes
-    max-width: calc(var(--toc-width) + var(--gap) + 960px);
-    margin: 0 auto;
-  }
-
-  // The index's tree already shows the page's ancestors, so the heading moves
-  // into the right column and the sidebar starts at the top of the page. It
-  // sticks where it starts, so it stays put while the page scrolls.
-  .document-index-is-active .main-content {
-    grid-template:
-      'sidebar heading' auto
-      'sidebar body' 1fr / var(--toc-width) minmax(0, 1fr);
+      '. sidebar heading .' auto
+      '. sidebar body .' 1fr /
+      minmax(0, 1fr) auto minmax(0, var(--main-width)) minmax(0, 1fr);
   }
 
   .main-content > .sidebar {
+    // Where the sidebar sticks, a gap below the header
+    --sidebar-top: calc(var(--header-offset) + var(--gap));
     --sidebar-height: calc(100vh - var(--sidebar-top));
 
     position: sticky;
@@ -218,7 +183,7 @@ body.literate main table {
     align-self: start;
     width: var(--toc-width);
     max-height: var(--sidebar-height);
-    margin-bottom: 0;
+    margin: 0 var(--gap) 0 0;
   }
 
   // The TOC takes priority: when the sidebar runs out of room, the index gives
@@ -303,8 +268,32 @@ body.literate main table {
 
 .columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: var(--gap);
+
+  // Stacked, a disc in the gap marks where the second column begins
+  > * + * {
+    position: relative;
+  }
+
+  > * + *::before {
+    position: absolute;
+    top: calc(var(--gap) / -2);
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    content: '';
+    background: var(--bg2-color);
+    border-radius: 50%;
+    translate: -50% -50%;
+  }
+
+  @media print, (width >= #{$breakpoint}) {
+    grid-template-columns: 1fr 1fr;
+
+    > * + *::before {
+      display: none;
+    }
+  }
 }
 
 footer {
