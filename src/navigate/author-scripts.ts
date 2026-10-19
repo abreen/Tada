@@ -2,7 +2,33 @@ import { globals } from '../globals';
 import type { Mount, Unmount } from '../../types/client';
 
 // How long navigation waits for the new page's scripts and stylesheets
-export const AUTHOR_ASSET_TIMEOUT = 3000;
+const AUTHOR_ASSET_TIMEOUT = 3000;
+
+/**
+ * Waits for a page's scripts or stylesheets to load before a client-side
+ * navigation swaps it in, at most AUTHOR_ASSET_TIMEOUT, or until the
+ * navigation is abandoned
+ */
+export async function waitForAuthorAssets(
+  window: Window,
+  loads: Promise<unknown>[],
+  signal: AbortSignal,
+): Promise<void> {
+  let timer: number | undefined;
+  let onAbort: (() => void) | undefined;
+  await Promise.race([
+    Promise.all(loads),
+    new Promise<void>(resolve => {
+      timer = window.setTimeout(resolve, AUTHOR_ASSET_TIMEOUT);
+    }),
+    new Promise<void>(resolve => {
+      onAbort = resolve;
+      signal.addEventListener('abort', onAbort, { once: true });
+    }),
+  ]);
+  window.clearTimeout(timer);
+  signal.removeEventListener('abort', onAbort!);
+}
 
 /**
  * Loads the scripts of a page that a client-side navigation is about to show,
@@ -25,8 +51,15 @@ export async function loadAuthorModules(
     if (!href) {
       return [];
     }
+    let url: string;
+    try {
+      url = new URL(href, pageUrl).href;
+    } catch {
+      // Reported when the page mounts its scripts
+      return [];
+    }
     return [
-      Promise.resolve(globals.importModule(new URL(href, pageUrl).href)).then(
+      Promise.resolve(globals.importModule(url)).then(
         () => {},
         () => {},
       ),
@@ -36,20 +69,7 @@ export async function loadAuthorModules(
     return;
   }
 
-  let timer: number | undefined;
-  let onAbort: (() => void) | undefined;
-  await Promise.race([
-    Promise.all(loads),
-    new Promise<void>(resolve => {
-      timer = window.setTimeout(resolve, AUTHOR_ASSET_TIMEOUT);
-    }),
-    new Promise<void>(resolve => {
-      onAbort = resolve;
-      signal.addEventListener('abort', onAbort, { once: true });
-    }),
-  ]);
-  window.clearTimeout(timer);
-  signal.removeEventListener('abort', onAbort!);
+  await waitForAuthorAssets(window, loads, signal);
 }
 
 /**

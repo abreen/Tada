@@ -340,6 +340,19 @@ describe('loadAuthorModules', () => {
     expect(reported).toEqual([]);
   });
 
+  test('skips a script whose URL cannot be parsed', async () => {
+    modules['http://localhost/_scripts/a.js'] = Promise.resolve({});
+
+    await loadAuthorModules(
+      createWindow([]),
+      parse(['http://[', '/_scripts/a.js']),
+      'http://localhost/page.html',
+      new AbortController().signal,
+    );
+
+    expect(imported).toEqual(['http://localhost/_scripts/a.js']);
+  });
+
   test('stops waiting for a module that takes too long', async () => {
     modules['http://localhost/_scripts/slow.js'] = new Promise(() => {});
     const window = createWindow([]);

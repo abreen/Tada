@@ -9,7 +9,7 @@ import { prefersReducedMotion } from '../util';
 import { getHashTarget } from '../hash-target';
 import { swapHeaderTitle } from '../header';
 import { setScrollRestored } from './restored-scroll';
-import { AUTHOR_ASSET_TIMEOUT, loadAuthorModules } from './author-scripts';
+import { loadAuthorModules, waitForAuthorAssets } from './author-scripts';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
@@ -140,20 +140,7 @@ async function loadAuthorStylesheets(
     return;
   }
 
-  let timer: number | undefined;
-  let onAbort: (() => void) | undefined;
-  await Promise.race([
-    Promise.all(loads),
-    new Promise<void>(resolve => {
-      timer = window.setTimeout(resolve, AUTHOR_ASSET_TIMEOUT);
-    }),
-    new Promise<void>(resolve => {
-      onAbort = resolve;
-      signal.addEventListener('abort', onAbort, { once: true });
-    }),
-  ]);
-  window.clearTimeout(timer);
-  signal.removeEventListener('abort', onAbort!);
+  await waitForAuthorAssets(window, loads, signal);
 
   if (signal.aborted) {
     for (const link of pending) {
