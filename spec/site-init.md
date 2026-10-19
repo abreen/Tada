@@ -25,8 +25,12 @@ author script: the Lectures page lists `src/lectures/timezone.ts` in its
 `scripts` front matter (see [Author Scripts](author-scripts.md)). It lets
 visitors convert the page's `<time>` elements to another time zone and
 remembers the choice in local storage, and it imports
-`src/lectures/timezone.scss` for its styles. Without JavaScript, the chooser
-stays hidden and the authored times show with a `<noscript>` note. The Labs and
+`src/lectures/timezone.scss` for its styles. Its renderer,
+`src/lectures/timezone.render.ts`, writes the chooser into the page's
+`<tz-chooser>` element at build time (see [Custom Elements](custom-elements.md)),
+sharing the list of time zones in `src/lectures/time-zones.ts` with the script.
+Without JavaScript, the chooser shows the default zone, disabled, and the
+authored times show with a `<noscript>` note. The Labs and
 Lectures sections each have an `index.yml` that orders their pages as a
 [document index](document-index.md). Bare-mode config files also start with
 `extensionToShikiLanguage: {}` and `shikiLanguages: []`, so source-code pages

@@ -199,13 +199,43 @@ export function getScriptDependentSources(
   previous: ReadonlyMap<string, AuthorScriptOutputs>,
   next: ReadonlyMap<string, AuthorScriptOutputs>,
 ): Set<string> {
-  const changed = new Set(
-    [...previous.keys(), ...next.keys()].filter(
-      script =>
-        JSON.stringify(previous.get(script)) !==
-        JSON.stringify(next.get(script)),
+  return getSourcesLoading(
+    scan,
+    siteVariables,
+    new Set(
+      [...previous.keys(), ...next.keys()].filter(
+        script =>
+          JSON.stringify(previous.get(script)) !==
+          JSON.stringify(next.get(script)),
+      ),
     ),
   );
+}
+
+/**
+ * Pages to re-render after renderers were loaded again: those that load a
+ * script that had or now has a renderer. Renderers can read files and run
+ * code at load time, so their output can change even when their code does not.
+ */
+export function getRendererDependentSources(
+  scan: TadaProjectScan,
+  siteVariables: SiteVariables,
+  previous: ReadonlyMap<string, unknown> | undefined,
+  next: ReadonlyMap<string, unknown> | undefined,
+): Set<string> {
+  return getSourcesLoading(
+    scan,
+    siteVariables,
+    new Set([...(previous?.keys() ?? []), ...(next?.keys() ?? [])]),
+  );
+}
+
+// The pages that load any of the scripts, as their own or as site-wide ones
+function getSourcesLoading(
+  scan: TadaProjectScan,
+  siteVariables: SiteVariables,
+  changed: ReadonlySet<string>,
+): Set<string> {
   const everyPage = (siteVariables.scripts ?? []).some(script =>
     changed.has(script),
   );

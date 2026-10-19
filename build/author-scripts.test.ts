@@ -33,6 +33,14 @@ describe('getScriptPathError', () => {
     });
   }
 
+  test('rejects renderer modules, which run at build time', () => {
+    for (const value of ['timezone.render.ts', 'lectures/timezone.render.js']) {
+      expect(getScriptPathError(value)).toBe(
+        'is a renderer, which runs at build time; list the script it belongs to instead',
+      );
+    }
+  });
+
   test('rejects values that are not strings', () => {
     expect(getScriptPathError(3)).toBe('must be a string');
   });

@@ -108,8 +108,9 @@ re-renders only the pages whose document navigation changed.
 
 Any change in `src/` recompiles every listed script, because imports such as
 Sass partials are not tracked one by one. A page or site config change that
-starts or stops listing a script also recompiles them. Pages are re-rendered
-only when the output files of a script they load change; see
+starts or stops listing a script also recompiles them, along with their
+renderers. Pages are re-rendered only when the output files of a script they
+load change, or on every recompile when one of those scripts has a renderer; see
 [Author Scripts](author-scripts.md#watch-mode).
 
 ### Adding a file

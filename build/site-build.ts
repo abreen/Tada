@@ -18,6 +18,7 @@ import {
   type TadaProjectScan,
 } from './source-model';
 import { bundleAuthorScripts, type AuthorScripts } from './author-scripts';
+import { loadAuthorRenderers, withRenderers } from './author-renderers';
 import { BundleError } from './bundle';
 import { getProjectDir, getSrcDir } from './utils/paths';
 import {
@@ -291,7 +292,7 @@ export function buildDocumentIndexForScan(
 
 /**
  * Compiles the scripts in `src/` and packages that the site config and pages
- * list, as returned by getScriptEntries
+ * list, as returned by getScriptEntries, and loads their renderer modules
  */
 export async function buildAuthorScripts(
   entries: string[],
@@ -304,26 +305,39 @@ export async function buildAuthorScripts(
   if (entries.length > 0) {
     log.info`Compiling ${entries.length} ${entries.length === 1 ? 'script' : 'scripts'}`;
   }
-  try {
+  // Both settle before returning, so every error is reported and no build
+  // is left running into the next one
+  const [authorScripts, renderers] = await Promise.allSettled([
+    bundleAuthorScripts(
+      entries,
+      getSrcDir(),
+      getProjectDir(),
+      mode,
+      siteVariables.basePath,
+    ),
+    loadAuthorRenderers(entries, getSrcDir(), getProjectDir()),
+  ]);
+  if (
+    authorScripts.status === 'fulfilled' &&
+    renderers.status === 'fulfilled'
+  ) {
     return {
       ok: true,
-      value: await bundleAuthorScripts(
-        entries,
-        getSrcDir(),
-        getProjectDir(),
-        mode,
-        siteVariables.basePath,
-      ),
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      diagnostics:
-        error instanceof BundleError
-          ? error.messages.map(message => ({ message }))
-          : [diagnosticFromError(error)],
+      value: withRenderers(authorScripts.value, renderers.value),
     };
   }
+  return {
+    ok: false,
+    diagnostics: [authorScripts, renderers].flatMap(result =>
+      result.status === 'rejected' ? diagnosticsFromError(result.reason) : [],
+    ),
+  };
+}
+
+function diagnosticsFromError(error: unknown): BuildDiagnostic[] {
+  return error instanceof BundleError
+    ? error.messages.map(message => ({ message }))
+    : [diagnosticFromError(error)];
 }
 
 /** Builds every source and generated file in memory. Nothing is written. */

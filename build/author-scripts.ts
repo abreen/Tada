@@ -23,6 +23,7 @@ import {
   NPM_PREFIX,
   parseNpmSpecifier,
 } from './packages';
+import type { ScriptRenderers } from './custom-elements';
 
 /** The output directory for compiled author scripts and their styles */
 export const AUTHOR_SCRIPTS_DIR = '_scripts';
@@ -41,6 +42,9 @@ const OUTSIDE_SRC_SCRIPT_ERROR =
  * memory at the top of `src/`
  */
 const PACKAGE_ENTRY_PREFIX = '_npm~';
+
+/** Ends the names of renderer modules, which Tada runs at build time */
+export const RENDERER_SUFFIXES = ['.render.ts', '.render.js'] as const;
 
 /** Output paths for one script listed in `scripts` */
 export interface AuthorScriptOutputs {
@@ -61,6 +65,8 @@ export interface AuthorScripts {
   entries: Map<string, AuthorScriptOutputs>;
   /** Why each requested script that was not compiled can't be found */
   missing?: Map<string, string>;
+  /** The render functions of each script that has a renderer module */
+  renderers?: ReadonlyMap<string, ScriptRenderers>;
 }
 
 export function createEmptyAuthorScripts(
@@ -85,6 +91,9 @@ export function getScriptPathError(value: unknown): string | null {
   }
   if (value.startsWith(PACKAGE_ENTRY_PREFIX)) {
     return `must not start with ${PACKAGE_ENTRY_PREFIX}, which Tada uses for packages`;
+  }
+  if (RENDERER_SUFFIXES.some(suffix => value.endsWith(suffix))) {
+    return 'is a renderer, which runs at build time; list the script it belongs to instead';
   }
   return null;
 }

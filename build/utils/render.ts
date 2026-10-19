@@ -47,8 +47,10 @@ import { parseFrontMatterAndContent } from './front-matter';
 import {
   getPageAuthorAssets,
   getPageScripts,
+  type AuthorScripts,
   type PageAuthorAssets,
 } from '../author-scripts';
+import { getPageRenderers, renderCustomElements } from '../custom-elements';
 import { createMarkdown } from './markdown';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
 import {
@@ -502,12 +504,13 @@ export function renderPlainTextPageAsset({
   const sourceUrlPath = normalizeOutputPath(`/${subPath}.html`);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
-  const { content, pageVariables, tocItems } = renderPlainTextContent(
+  const { content, pageVariables, tocItems, scripts } = renderPlainTextContent(
     filePath,
     sourceUrlPath,
     siteVariables,
     validInternalTargets,
     {
+      authorScripts,
       dependencyCollector,
       traceCache,
       contentDir,
@@ -525,11 +528,7 @@ export function renderPlainTextPageAsset({
     );
   }
 
-  const authorAssets = getPageAuthorAssets(
-    authorScripts,
-    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
-    filePath,
-  );
+  const authorAssets = getPageAuthorAssets(authorScripts, scripts, filePath);
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,
@@ -793,6 +792,7 @@ function renderPlainTextContent(
   siteVariables: SiteVariables,
   validInternalTargets: ReadonlySet<string>,
   {
+    authorScripts,
     dependencyCollector,
     traceCache,
     contentDir,
@@ -801,6 +801,7 @@ function renderPlainTextContent(
     pageTitles,
   }: Pick<
     RenderPlainTextOptions,
+    | 'authorScripts'
     | 'dependencyCollector'
     | 'traceCache'
     | 'contentDir'
@@ -812,6 +813,8 @@ function renderPlainTextContent(
   content: string | null;
   pageVariables: Record<string, unknown>;
   tocItems: unknown[] | null;
+  /** The page's scripts, as getPageScripts lists them */
+  scripts: string[];
 } {
   const applyBasePath = createApplyBasePath(siteVariables);
 
@@ -857,7 +860,70 @@ function renderPlainTextContent(
     tocItems = (env.tocItems as unknown[] | undefined) || null;
   }
 
-  return { content: addDetailsPreviewSummaries(html), pageVariables, tocItems };
+  const scripts = getPageScripts(
+    siteVariables.scripts,
+    pageVariables.scripts,
+    filePath,
+  );
+  html = renderPageElements({
+    html,
+    authorScripts,
+    scripts,
+    pageVariables,
+    sourceUrlPath,
+    siteVariables,
+    filePath,
+  });
+  return {
+    content: addDetailsPreviewSummaries(html),
+    pageVariables,
+    tocItems,
+    scripts,
+  };
+}
+
+/**
+ * Fills the custom elements that the page's scripts have renderers for. Runs
+ * before the page template, so the output is page content like the rest.
+ */
+function renderPageElements({
+  html,
+  authorScripts,
+  scripts,
+  pageVariables,
+  sourceUrlPath,
+  siteVariables,
+  filePath,
+}: {
+  html: string;
+  authorScripts: AuthorScripts;
+  /** The page's scripts, as getPageScripts lists them */
+  scripts: readonly string[];
+  pageVariables: Record<string, unknown>;
+  sourceUrlPath: string;
+  siteVariables: SiteVariables;
+  filePath: string;
+}): string {
+  const renderers = getPageRenderers(
+    scripts,
+    authorScripts.renderers,
+    filePath,
+  );
+  if (renderers.size === 0) {
+    return html;
+  }
+  const frontMatter = Object.fromEntries(
+    Object.entries(pageVariables).filter(
+      ([key]) => !RESERVED_FRONT_MATTER_KEYS.includes(key),
+    ),
+  );
+  return renderCustomElements(
+    html,
+    renderers,
+    { path: sourceUrlPath, frontMatter },
+    getSiteVars(siteVariables),
+    filePath,
+  );
 }
 
 export function renderLiterateJavaPageAsset({
@@ -991,8 +1057,21 @@ export function renderLiterateJavaPageAsset({
     return codeHtml;
   };
 
+  const scripts = getPageScripts(
+    siteVariables.scripts,
+    pageVariables.scripts,
+    filePath,
+  );
   const contentHtml = addDetailsPreviewSummaries(
-    stripHtmlComments(md.renderer.render(tokens, md.options, env)),
+    renderPageElements({
+      html: stripHtmlComments(md.renderer.render(tokens, md.options, env)),
+      authorScripts,
+      scripts,
+      pageVariables,
+      sourceUrlPath,
+      siteVariables,
+      filePath,
+    }),
   );
 
   // Build page variables
@@ -1011,11 +1090,7 @@ export function renderLiterateJavaPageAsset({
     );
   }
 
-  const authorAssets = getPageAuthorAssets(
-    authorScripts,
-    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
-    filePath,
-  );
+  const authorAssets = getPageAuthorAssets(authorScripts, scripts, filePath);
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,

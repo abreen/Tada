@@ -9,10 +9,11 @@ written until all of them succeed.
    package version, compile the KaTeX stylesheet, generate favicons and the web
    manifest (if enabled), and reference the bundled fonts; then compile the
    scripts in `src/` that the site config and pages list (see
-   [Author Scripts](author-scripts.md))
+   [Author Scripts](author-scripts.md)), and load their renderers (see
+   [Custom Elements](custom-elements.md))
 3. **Render**: turn every source into outputs: Markdown, HTML, and code pages
-   become HTML, and other files in `content/` and `public/` are referenced for
-   copying
+   become HTML, with custom elements filled by renderers, and other files in
+   `content/` and `public/` are referenced for copying
 4. **Write**: update the output directory in place (see
    [Writing output](#writing-output))
 5. **Post-build**: run search indexing (if enabled); write the build manifest

@@ -149,13 +149,22 @@ A site-wide package script runs on every page, so it should find the elements
 it enhances first and load a large library only when the page has any, with a
 dynamic `import()`; Tada compiles the library into a separate chunk that only
 those pages download. As with any script, the page's content should be useful
-without JavaScript; a package script cannot add build-time fallback content,
-so the page provides it, such as a static image or a link in place of a map.
+without JavaScript. A package can add build-time fallback content, such as a
+static image or a link in place of a map, with a renderer that its
+`package.json` names (see [Custom Elements](custom-elements.md#packages)), or
+the page can provide it.
 
 A package's stylesheets can refer to its images with relative `url()` paths,
 which are published in `_scripts/assets/` with content hashes in their names.
 Libraries that find their images by URL at run time, such as Leaflet's default
 marker icons, need those URLs set by the package script.
+
+## Renderers
+
+A script can have a renderer next to it, such as
+`src/lectures/timezone.render.ts`, which Tada runs at build time to fill custom
+elements like `<tz-chooser></tz-chooser>` on the pages that list the script.
+See [Custom Elements](custom-elements.md).
 
 ## Styles
 
@@ -220,8 +229,11 @@ other generated links, their URLs include the site base path.
 Scripts are progressive enhancement. Pages render their content at build time,
 and a page that needs a control only JavaScript can drive should render it
 `hidden` or `disabled` and enable it from the mount function, with a
-`<noscript>` fallback where useful. The starter content's Lectures page and
-`src/lectures/timezone.ts` are an example.
+`<noscript>` fallback where useful. A script's renderer can write that control
+into the page at build time, so it takes up its space before the script runs
+(see [Custom Elements](custom-elements.md)). The starter content's Lectures
+page, `src/lectures/timezone.ts`, and `src/lectures/timezone.render.ts` are an
+example.
 
 ## Watch mode
 
@@ -232,7 +244,8 @@ does not exist yet; edits elsewhere reuse the compiled scripts. After a failed
 build, changes from it are retried with the next one, so a script error keeps
 being reported until it is fixed. Pages are re-rendered
 when the output files of a script they load change, such as a script that
-starts importing a stylesheet.
+starts importing a stylesheet, or on every recompile when it has a renderer (see
+[Custom Elements](custom-elements.md#watch-mode)).
 
 ## Inline and external `<script>` elements
 

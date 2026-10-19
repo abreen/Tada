@@ -2,7 +2,11 @@
 // and adds it to the pages that list the script. Use Tada's CSS custom
 // properties, such as --fg-color and --theme-color, to match the site theme.
 
-.time-zone-chooser select {
+tz-chooser {
+  display: block;
+}
+
+tz-chooser select {
   font: inherit;
   color: var(--fg-color);
   accent-color: var(--theme-color);
@@ -13,7 +17,7 @@ time[title] {
 }
 
 @media print {
-  .time-zone-chooser {
+  tz-chooser {
     display: none;
   }
 }

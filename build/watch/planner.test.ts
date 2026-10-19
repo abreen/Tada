@@ -5,6 +5,7 @@ import {
   createTadaWatchPlan,
   diffAuthorKeys,
   documentIndexMayChange,
+  getRendererDependentSources,
   getScriptDependentSources,
   shouldRecompileScripts,
 } from './planner';
@@ -404,6 +405,30 @@ describe('getScriptDependentSources', () => {
         source('content/Demo.ts'),
       ]),
     );
+  });
+
+  test('re-renders the pages of scripts with renderers, even if unchanged', () => {
+    const renderers = new Map([['a.ts', {}]]);
+    expect(
+      getRendererDependentSources(pages, siteVariables, renderers, renderers),
+    ).toEqual(new Set([source('content/a.md')]));
+  });
+
+  test('re-renders the pages of a script whose renderer was removed', () => {
+    expect(
+      getRendererDependentSources(
+        pages,
+        siteVariables,
+        new Map([['b.ts', {}]]),
+        undefined,
+      ),
+    ).toEqual(new Set([source('content/b.md')]));
+  });
+
+  test('re-renders nothing when no script has a renderer', () => {
+    expect(
+      getRendererDependentSources(pages, siteVariables, undefined, undefined),
+    ).toEqual(new Set());
   });
 });
 

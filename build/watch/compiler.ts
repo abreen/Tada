@@ -36,6 +36,7 @@ import {
   createTadaWatchPlan,
   diffAuthorKeys,
   documentIndexMayChange,
+  getRendererDependentSources,
   getScriptDependentSources,
   shouldRecompileScripts,
 } from './planner';
@@ -186,12 +187,20 @@ export class TadaWatchCompiler {
         return compiled;
       }
       authorScripts = compiled.value;
-      for (const source of getScriptDependentSources(
-        scan,
-        snapshot.siteVariables,
-        snapshot.authorScripts.entries,
-        authorScripts.entries,
-      )) {
+      for (const source of [
+        ...getScriptDependentSources(
+          scan,
+          snapshot.siteVariables,
+          snapshot.authorScripts.entries,
+          authorScripts.entries,
+        ),
+        ...getRendererDependentSources(
+          scan,
+          snapshot.siteVariables,
+          snapshot.authorScripts.renderers,
+          authorScripts.renderers,
+        ),
+      ]) {
         plan.renderSources.add(source);
       }
     }
