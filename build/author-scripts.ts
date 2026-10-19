@@ -24,7 +24,6 @@ import {
   parseNpmSpecifier,
 } from './packages';
 import type { ScriptRenderers } from './custom-elements';
-import type { RendererHost } from './author-renderers';
 
 /** The output directory for compiled author scripts and their styles */
 export const AUTHOR_SCRIPTS_DIR = '_scripts';
@@ -68,8 +67,6 @@ export interface AuthorScripts {
   missing?: Map<string, string>;
   /** The render functions of each script that has a renderer module */
   renderers?: ReadonlyMap<string, ScriptRenderers>;
-  /** The worker that runs the render functions */
-  rendererHost?: RendererHost;
 }
 
 export function createEmptyAuthorScripts(
@@ -298,14 +295,8 @@ const SCRIPT_IMPORT_ADVICE =
  * public/, which publish them at stable URLs. Absolute stylesheet URLs, such
  * as `url(/images/paper.png)`, are left for the browser. A package's own
  * stylesheets can refer to any of its files, such as a library's images.
- * `checkFileTypes: false` allows importing any file, for code that never runs
- * in a browser.
  */
-export function createImportCheckPlugin(
-  srcDir: string,
-  projectDir: string,
-  { checkFileTypes = true }: { checkFileTypes?: boolean } = {},
-) {
+function createImportCheckPlugin(srcDir: string, projectDir: string) {
   return {
     name: 'tada-import-check',
     setup(build: PluginBuilder) {
@@ -323,9 +314,6 @@ export function createImportCheckPlugin(
             )
           ) {
             throw outsideSrcError(args.path, SCRIPT_IMPORT_ADVICE);
-          }
-          if (!checkFileTypes) {
-            return undefined;
           }
           // The resolved file decides, since a name like `./site.config` or
           // `lodash.debounce` is not a file extension

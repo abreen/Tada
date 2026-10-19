@@ -306,26 +306,17 @@ export async function buildAuthorScripts(
     log.info`Compiling ${entries.length} ${entries.length === 1 ? 'script' : 'scripts'}`;
   }
   try {
-    const renderers = loadAuthorRenderers(
-      entries,
-      getSrcDir(),
-      getProjectDir(),
-    );
-    const [authorScripts, loaded] = await Promise.all([
+    const [authorScripts, renderers] = await Promise.all([
       bundleAuthorScripts(
         entries,
         getSrcDir(),
         getProjectDir(),
         mode,
         siteVariables.basePath,
-      ).catch(async (error: unknown) => {
-        // The renderers would never be used
-        (await renderers.catch(() => null))?.host.close();
-        throw error;
-      }),
-      renderers,
+      ),
+      loadAuthorRenderers(entries, getSrcDir(), getProjectDir()),
     ]);
-    return { ok: true, value: withRenderers(authorScripts, loaded) };
+    return { ok: true, value: withRenderers(authorScripts, renderers) };
   } catch (error) {
     return {
       ok: false,

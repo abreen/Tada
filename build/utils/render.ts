@@ -900,8 +900,6 @@ function renderPageElements({
   if (renderers.size === 0) {
     return html;
   }
-  // Render functions run in the renderer worker, so each call gets its own
-  // copy of these
   const frontMatter = Object.fromEntries(
     Object.entries(pageVariables).filter(
       ([key]) => !RESERVED_FRONT_MATTER_KEYS.includes(key),

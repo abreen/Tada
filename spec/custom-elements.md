@@ -116,35 +116,24 @@ renderer that does not exist fails the build, for example
 as does one whose real path is outside the package or a malformed `tada.render`
 field. A package without the field has no renderers.
 
-## Compiling and loading
+## Loading
 
-Tada first compiles the renderers in `src/`, without packages or package
-renderers, to report syntax errors with their positions and to apply the
-import rule that scripts follow: relative imports in a file in `src/` must
-stay in `src/`, since watch mode notices changes only there. Packages are imported by name. Unlike scripts, renderers
-can import any type of file, since they never run in a browser. Nothing from
-this step is written anywhere.
-
-Bun then imports each renderer from its own file, in a worker that Tada starts
-for each build. Code that finds files relative to its module, such as with
+Tada imports each renderer into the build's own process, while the scripts
+compile. Code that finds files relative to its module, such as with
 `import.meta.dir`, `import.meta.url`, or `__dirname`, finds them next to the
 source file, and packages load from `node_modules` as usual. Stylesheets that
-shared modules import are ignored, so a renderer and its script can share code.
-A renderer can use top-level `await`, such as to load data once per build.
-Renderers are never published.
+shared modules import are ignored, so a renderer and its script can share
+code. A renderer can use top-level `await`, such as to load data once per
+build. Renderers are never published.
 
-Each render function call gets its own copy of its `RenderInfo`, so changing
-`vars` or `page.frontMatter` has no effect on other elements or pages. Page
-rendering waits for each call; a call that does not return within 30 seconds
-fails the build.
+Each render function call gets its own copy of `page` and `vars`, so changing
+them has no effect on other elements or pages.
 
 ## Errors
 
 Each of these fails the build:
 
-- A renderer that fails to compile names its file, line, and column, like a
-  script.
-- A renderer that throws while loading:
+- A renderer that fails to load, including a syntax error:
   `src/lectures/timezone.render.ts: failed to load: <message>`.
 - A default export that is not an object of render functions, or a name that
   is not a valid custom element name, names the renderer.
@@ -156,26 +145,19 @@ Each of these fails the build:
   start, such as
   `content/x.md: <tz-chooser> render failed (src/lectures/timezone.render.ts): must return a string, got number`.
   A Promise has its own message, since render functions can't be async.
-- A renderer that throws outside a render call, such as from a timer, fails
-  the next render call with `a renderer threw after loading: <message>`, and
-  one that ends the worker, such as with `process.exit()`, with
-  `the renderer worker exited`.
-- A render call that does not return within 30 seconds; its worker is
-  stopped.
 
 ## Watch mode
 
-Renderers are loaded again, in a new worker, whenever scripts are compiled
-(see [Author Scripts](author-scripts.md#watch-mode)): after any change in
-`src/`, or when pages or the site config list different scripts. A renderer can
-read files when it loads, so every page that loads a script with a renderer,
-or one whose renderer was removed, is re-rendered each time, even if the
-renderer's code did not change. The previous build's worker is stopped once a
-build replaces it. After a renderer throws outside a render call, ends its
-worker, or does not return in time, the next build loads renderers again in a
-new worker, even if nothing in `src/` changed. Files outside `src/` that a renderer reads are not watched,
-and neither is `node_modules`; restart `tada dev` after changing a package's
-renderer.
+Renderers are imported again whenever scripts are compiled (see
+[Author Scripts](author-scripts.md#watch-mode)): after any change in `src/`,
+or when pages or the site config list different scripts. Before importing,
+Tada forgets every module in `src/` that Bun has loaded, so renderers and
+everything they import from `src/` run their latest code. A renderer can read
+files when it loads, so every page that loads a script with a renderer, or one
+whose renderer was removed, is re-rendered each time, even if the renderer's
+code did not change. Files outside `src/` that a renderer reads are not
+watched, and neither is `node_modules`; restart `tada dev` after changing a
+package's renderer.
 
 ## Without JavaScript
 

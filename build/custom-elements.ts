@@ -165,7 +165,7 @@ function describeValue(value: unknown): string {
 }
 
 /** Why a render function's return value can't be used, or null if it can */
-export function getRenderOutputError(output: unknown): string | null {
+function getRenderOutputError(output: unknown): string | null {
   if (output instanceof Promise) {
     // The rejection would otherwise go unhandled
     output.catch(() => {});
@@ -243,8 +243,10 @@ export function renderCustomElements(
         ),
       ),
       html: html.slice(start, end),
-      page,
-      vars,
+      // Copies, so a render function can't change what other elements and
+      // pages are passed
+      page: structuredClone(page),
+      vars: structuredClone(vars),
     };
     const output = callRender(
       element,

@@ -1,8 +1,5 @@
 import path from 'path';
-import {
-  createEmptyAuthorScripts,
-  type AuthorScripts,
-} from '../author-scripts';
+import { createEmptyAuthorScripts } from '../author-scripts';
 import { describe, expect, test } from 'bun:test';
 import {
   createTadaWatchPlan,
@@ -452,24 +449,6 @@ describe('shouldRecompileScripts', () => {
         scripts: ['missing.ts', 'a.ts'],
         compiled,
       }),
-    ).toBe(false);
-  });
-
-  test('recompiles when the renderer worker failed, such as by timing out', () => {
-    const withHost = (failed: boolean) => ({
-      ...compiled,
-      rendererHost: { failed } as AuthorScripts['rendererHost'],
-    });
-    const options = {
-      paths: new Set([source('content/page.md')]),
-      srcDir,
-      scripts: ['missing.ts', 'a.ts'],
-    };
-    expect(
-      shouldRecompileScripts({ ...options, compiled: withHost(true) }),
-    ).toBe(true);
-    expect(
-      shouldRecompileScripts({ ...options, compiled: withHost(false) }),
     ).toBe(false);
   });
 

@@ -213,32 +213,6 @@ def test_render_result_that_is_not_a_string_fails(site):
     ) in result.stdout
 
 
-def test_errors_a_renderer_throws_after_loading_fail_the_build(site):
-    write(site, 'content/about.md', page('About', ['clock.ts'], CHOOSER))
-    write(
-        site,
-        'src/clock.render.ts',
-        "export default { 'tz-chooser': () => {\n"
-        "  setTimeout(() => { throw new Error('late failure'); });\n"
-        "  return 'x';\n"
-        '} };\n',
-    )
-    result = build(site)
-    assert result.returncode == 1
-    assert 'a renderer threw after loading: late failure' in result.stdout
-    assert 'did not return' not in result.stdout
-
-
-def test_renderer_that_exits_fails_the_build(site):
-    write(site, 'src/clock.render.ts', "export default { 'tz-chooser': () => process.exit(1) };\n")
-    result = build(site)
-    assert result.returncode == 1
-    assert (
-        'content/index.md: <tz-chooser> render failed (src/clock.render.ts): '
-        'the renderer worker exited'
-    ) in result.stdout
-
-
 def test_missing_script_with_a_renderer_is_reported(site):
     (site / 'src' / 'clock.ts').unlink()
     result = build(site)
@@ -293,18 +267,6 @@ def test_two_renderers_for_one_script_fail(site):
     result = build(site)
     assert result.returncode == 1
     assert 'src/clock.ts: has two renderers' in result.stdout
-
-
-def test_renderer_imports_outside_src_fail(site):
-    write(site, 'outside.ts', 'export const x = 1;\n')
-    write(
-        site,
-        'src/clock.render.ts',
-        "import { x } from '../outside';\nexport default { 'tz-chooser': () => String(x) };\n",
-    )
-    result = build(site)
-    assert result.returncode == 1
-    assert '"../outside" is outside src/' in result.stdout
 
 
 def test_package_renderers(tmp_path):

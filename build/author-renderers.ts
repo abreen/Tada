@@ -1,21 +1,15 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { pathToFileURL } from 'url';
 import {
-  MessageChannel,
-  receiveMessageOnPort,
-  Worker,
-  type MessagePort,
-} from 'node:worker_threads';
-import type { PluginBuilder } from 'bun';
-import {
-  createImportCheckPlugin,
   RENDERER_SUFFIXES,
   scriptExists,
   type AuthorScripts,
 } from './author-scripts';
-import { runBuild } from './bundle';
-import type { ScriptRenderers } from './custom-elements';
+import {
+  validateRendererModule,
+  type ScriptRenderers,
+} from './custom-elements';
 import { findPackageDir, parseNpmSpecifier } from './packages';
 import {
   isInside,
@@ -23,22 +17,6 @@ import {
   realPath,
   toPosix,
 } from './utils/paths';
-import {
-  SIGNAL_EXITED,
-  type RenderReply,
-  type RenderRequest,
-  type RendererModule,
-  type RenderWorkerData,
-  type RenderWorkerReady,
-} from './render-protocol';
-import type { Render } from '../types/client';
-
-/** How long a render function can run before the build fails */
-const RENDER_TIMEOUT_MS = 30_000;
-
-const WORKER_PATH = fileURLToPath(
-  new URL('./render-worker.ts', import.meta.url),
-);
 
 /**
  * The file a package's `tada.render` field names for one of its modules,
@@ -165,231 +143,73 @@ function findRenderers(
   return renderers;
 }
 
-// Renderers run in Bun, which has no use for styles that shared modules import
-function createStylesheetStubPlugin() {
-  return {
-    name: 'tada-stylesheet-stub',
-    setup(build: PluginBuilder) {
-      build.onLoad({ filter: /\.s?css$/ }, () => ({
-        contents: 'export {};',
-        loader: 'js' as const,
-      }));
-    },
-  };
-}
+let stylesheetStubRegistered = false;
 
-// The deepest directory that contains every file
-function commonDir(files: readonly string[]): string {
-  let dir = path.dirname(files[0]!);
-  while (!files.every(file => isInside(dir, file))) {
-    const parent = path.dirname(dir);
-    if (parent === dir) {
-      break;
-    }
-    dir = parent;
-  }
-  return dir;
-}
-
-/**
- * Compiles the renderer modules in `src/` to report syntax errors with their
- * positions and to keep their relative imports in `src/`, as for scripts. Its
- * output is not used: the renderer worker imports the modules themselves.
- * Packages, including their renderers, are left out, since Bun loads them from
- * `node_modules`, and any file type can be imported, since renderers never run
- * in a browser.
- */
-async function checkRenderers(
-  files: readonly string[],
-  srcDir: string,
-  projectDir: string,
-): Promise<void> {
-  const srcFiles = files.filter(file => isInside(srcDir, file));
-  if (srcFiles.length === 0) {
+// Renderers run in Bun, which has no use for styles that shared modules
+// import. Tada itself imports no stylesheets at run time.
+function registerStylesheetStub(): void {
+  if (stylesheetStubRegistered) {
     return;
   }
-  await runBuild({
-    entrypoints: srcFiles,
-    root: commonDir(srcFiles),
-    format: 'esm',
-    target: 'bun',
-    packages: 'external',
-    naming: '[dir]/[name].[ext]',
-    plugins: [
-      createStylesheetStubPlugin(),
-      createImportCheckPlugin(realPath(srcDir), projectDir, {
-        checkFileTypes: false,
-      }),
-    ],
+  stylesheetStubRegistered = true;
+  Bun.plugin({
+    name: 'tada-stylesheet-stub',
+    setup(build) {
+      build.onLoad({ filter: /\.s?css$/ }, () => ({
+        contents: '',
+        loader: 'js',
+      }));
+    },
   });
 }
 
-const openHosts = new Set<RendererHost>();
-
-/**
- * The worker that runs one build's renderer modules. Its render functions
- * block until the worker replies, since pages render synchronously.
- */
-export class RendererHost {
-  /** Why the worker can't render anymore, such as a call that timed out */
-  private failure: string | null = null;
-
-  constructor(
-    private readonly worker: Worker,
-    private readonly port: MessagePort,
-    private readonly signal: Int32Array,
-  ) {
-    openHosts.add(this);
-  }
-
-  /** Whether the worker can't render anymore, so a new one must be started */
-  get failed(): boolean {
-    return this.failure !== null;
-  }
-
-  render(request: RenderRequest): string {
-    if (this.failure) {
-      throw new Error(this.failure);
+// Bun keeps every module it imports. Forgetting the ones in src/ makes the
+// next import read them again, so watch mode runs the latest code;
+// packages in node_modules stay loaded, since watch mode doesn't watch them.
+function forgetSrcModules(srcDir: string): void {
+  const realSrcDir = realPath(srcDir);
+  for (const key of Object.keys(require.cache)) {
+    if (isInside(realSrcDir, key) || isInside(srcDir, key)) {
+      delete require.cache[key];
     }
-    Atomics.store(this.signal, 0, 0);
-    this.port.postMessage(request);
-    const waited = Atomics.wait(this.signal, 0, 0, RENDER_TIMEOUT_MS);
-    if (waited === 'timed-out') {
-      // Stops the call, which may be stuck in a loop
-      return this.fail(
-        `a render function did not return within ${RENDER_TIMEOUT_MS / 1000} seconds`,
-      );
-    }
-    if (Atomics.load(this.signal, 0) === SIGNAL_EXITED) {
-      return this.fail('the renderer worker exited');
-    }
-    const reply = receiveMessageOnPort(this.port)!.message as RenderReply;
-    if (!reply.ok) {
-      if (reply.fatal) {
-        return this.fail(reply.message);
-      }
-      throw new Error(reply.message);
-    }
-    return reply.html;
-  }
-
-  private fail(failure: string): never {
-    this.failure = failure;
-    this.close();
-    throw new Error(failure);
-  }
-
-  close(): void {
-    if (!openHosts.delete(this)) {
-      return;
-    }
-    this.port.close();
-    void this.worker.terminate();
   }
 }
 
 /**
- * Stops the renderer workers of earlier builds, which watch mode no longer
- * uses, except `keep`, the one of the build it keeps
- */
-export function closeRenderersExcept(keep: RendererHost | undefined): void {
-  for (const host of openHosts) {
-    if (host !== keep) {
-      host.close();
-    }
-  }
-}
-
-// Starts a worker that imports the modules and resolves with each script's
-// element names once they load
-async function startRendererHost(
-  modules: RendererModule[],
-): Promise<{ host: RendererHost; elements: Record<string, string[]> }> {
-  const { port1, port2 } = new MessageChannel();
-  const signal = new Int32Array(new SharedArrayBuffer(4));
-  const worker = new Worker(WORKER_PATH, {
-    workerData: { modules, port: port2, signal } satisfies RenderWorkerData,
-    transferList: [port2],
-  });
-  // Neither may keep a one-off build's process running
-  worker.unref();
-  port1.unref();
-  const ready = await new Promise<RenderWorkerReady>(resolve => {
-    worker.once('message', resolve);
-    worker.once('error', (error: Error) =>
-      resolve({ ok: false, message: error.message }),
-    );
-    worker.once('exit', code =>
-      resolve({
-        ok: false,
-        message: `the renderer worker exited with code ${code}`,
-      }),
-    );
-  });
-  // A renderer's later errors, such as from a timer, would otherwise be
-  // thrown in the main thread; a render call that never replies times out
-  worker.on('error', () => {});
-  const host = new RendererHost(worker, port1, signal);
-  if (!ready.ok) {
-    host.close();
-    throw new Error(ready.message);
-  }
-  return { host, elements: ready.elements };
-}
-
-/** The loaded renderer modules of one build */
-interface LoadedRenderers {
-  renderers: ReadonlyMap<string, ScriptRenderers>;
-  host: RendererHost;
-}
-
-/** Adds loaded renderers, if any, to a build's compiled scripts */
-export function withRenderers(
-  authorScripts: AuthorScripts,
-  loaded: LoadedRenderers | null,
-): AuthorScripts {
-  return loaded
-    ? {
-        ...authorScripts,
-        renderers: loaded.renderers,
-        rendererHost: loaded.host,
-      }
-    : authorScripts;
-}
-
-/**
- * Finds, checks, and loads the renderer modules of the listed scripts, or
- * returns null if none has one. Each call starts a new worker, so every
- * module is read again. It needs only the script list, so it can run while
- * the scripts compile.
+ * Imports the renderer modules of the listed scripts and returns their render
+ * functions, keyed by script. It needs only the script list, so it can run
+ * while the scripts compile.
  */
 export async function loadAuthorRenderers(
   scripts: readonly string[],
   srcDir: string,
   projectDir: string,
-): Promise<LoadedRenderers | null> {
+): Promise<Map<string, ScriptRenderers>> {
+  const loaded = new Map<string, ScriptRenderers>();
   const files = findRenderers(scripts, srcDir, projectDir);
   if (files.size === 0) {
-    return null;
+    return loaded;
   }
-  await checkRenderers([...files.values()], srcDir, projectDir);
-  const modules = [...files].map(([script, filePath]) => ({
-    script,
-    filePath,
-    file: toPosix(path.relative(projectDir, filePath)),
-  }));
-  const { host, elements } = await startRendererHost(modules);
-  const renderers = new Map<string, ScriptRenderers>();
-  for (const { script, file } of modules) {
-    renderers.set(script, {
-      file,
-      elements: new Map(
-        elements[script]!.map(name => [
-          name,
-          (info => host.render({ script, name, info })) satisfies Render,
-        ]),
-      ),
-    });
+  registerStylesheetStub();
+  forgetSrcModules(srcDir);
+  for (const [script, filePath] of files) {
+    const file = toPosix(path.relative(projectDir, filePath));
+    let module: Record<string, unknown>;
+    try {
+      module = await import(pathToFileURL(filePath).href);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`${file}: failed to load: ${message}`, { cause: error });
+    }
+    loaded.set(script, validateRendererModule(module, file));
   }
-  return { renderers, host };
+  return loaded;
+}
+
+/** Adds loaded renderers, if any, to a build's compiled scripts */
+export function withRenderers(
+  authorScripts: AuthorScripts,
+  renderers: ReadonlyMap<string, ScriptRenderers>,
+): AuthorScripts {
+  return renderers.size > 0 ? { ...authorScripts, renderers } : authorScripts;
 }

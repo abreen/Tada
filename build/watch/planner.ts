@@ -257,9 +257,8 @@ function getSourcesLoading(
 
 /**
  * Whether watch mode must recompile the scripts in `src/`: after any change
- * there, since imports such as Sass partials are not tracked one by one,
- * when the site config and pages list different scripts than last time, or
- * when the last build's renderer worker failed, so its renderers load again.
+ * there, since imports such as Sass partials are not tracked one by one, or
+ * when the site config and pages list different scripts than last time.
  */
 export function shouldRecompileScripts({
   paths,
@@ -278,8 +277,6 @@ export function shouldRecompileScripts({
   const requested = new Set(compiled.requested);
   return (
     srcChanged ||
-    // A worker that timed out, exited, or threw can't render again
-    compiled.rendererHost?.failed === true ||
     scripts.length !== requested.size ||
     scripts.some(script => !requested.has(script))
   );
