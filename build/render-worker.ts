@@ -2,44 +2,21 @@
 // renderers are imported from their source files with nothing cached from an
 // earlier build, and each render call gets its own copy of what it is passed.
 import { pathToFileURL } from 'url';
-import { parentPort, workerData, type MessagePort } from 'node:worker_threads';
+import { parentPort, workerData } from 'node:worker_threads';
 import {
   getRenderOutputError,
   validateRendererModule,
 } from './custom-elements';
-import type { Render, RenderInfo } from '../types/client';
-
-/** A renderer module for the worker to import */
-export interface RendererModule {
-  script: string;
-  /** The module's path */
-  filePath: string;
-  /** The module's path for error messages, such as `src/a.render.ts` */
-  file: string;
-}
-
-export interface RenderWorkerData {
-  modules: RendererModule[];
-  /** Carries render requests and replies */
-  port: MessagePort;
-  /** Set to 1 once a reply is posted, so the main thread can wait for it */
-  signal: Int32Array;
-}
-
-/** The worker's first message: each script's element names, or an error */
-export type RenderWorkerReady =
-  | { ok: true; elements: Record<string, string[]> }
-  | { ok: false; message: string };
-
-export interface RenderRequest {
-  script: string;
-  name: string;
-  info: RenderInfo;
-}
-
-export type RenderReply =
-  | { ok: true; html: string }
-  | { ok: false; message: string };
+import {
+  SIGNAL_EXITED,
+  SIGNAL_REPLIED,
+  type RendererModule,
+  type RenderReply,
+  type RenderRequest,
+  type RenderWorkerData,
+  type RenderWorkerReady,
+} from './render-protocol';
+import type { Render } from '../types/client';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -90,11 +67,30 @@ function render(
 }
 
 const { modules, port, signal } = workerData as RenderWorkerData;
+
+// An error that no render call catches, such as one thrown from a renderer's
+// timer, would otherwise end the worker; every later call reports it instead
+let failure: string | null = null;
+const recordFailure = (error: unknown) => {
+  failure ??= `a renderer threw after loading: ${errorMessage(error)}`;
+};
+process.on('uncaughtException', recordFailure);
+process.on('unhandledRejection', recordFailure);
+// Wakes a main thread that is waiting for a reply, such as when a renderer
+// calls process.exit()
+process.on('exit', () => {
+  Atomics.store(signal, 0, SIGNAL_EXITED);
+  Atomics.notify(signal, 0);
+});
+
 try {
   const loaded = await load(modules);
   port.on('message', (request: RenderRequest) => {
-    port.postMessage(render(loaded, request));
-    Atomics.store(signal, 0, 1);
+    const reply = render(loaded, request);
+    port.postMessage(
+      failure ? { ok: false, message: failure, fatal: true } : reply,
+    );
+    Atomics.store(signal, 0, SIGNAL_REPLIED);
     Atomics.notify(signal, 0);
   });
   parentPort!.postMessage({

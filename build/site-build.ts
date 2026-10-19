@@ -18,7 +18,7 @@ import {
   type TadaProjectScan,
 } from './source-model';
 import { bundleAuthorScripts, type AuthorScripts } from './author-scripts';
-import { loadAuthorRenderers } from './author-renderers';
+import { loadAuthorRenderers, withRenderers } from './author-renderers';
 import { BundleError } from './bundle';
 import { getProjectDir, getSrcDir } from './utils/paths';
 import {
@@ -306,21 +306,26 @@ export async function buildAuthorScripts(
     log.info`Compiling ${entries.length} ${entries.length === 1 ? 'script' : 'scripts'}`;
   }
   try {
-    const authorScripts = await bundleAuthorScripts(
+    const renderers = loadAuthorRenderers(
       entries,
       getSrcDir(),
       getProjectDir(),
-      mode,
-      siteVariables.basePath,
     );
-    return {
-      ok: true,
-      value: await loadAuthorRenderers(
-        authorScripts,
+    const [authorScripts, loaded] = await Promise.all([
+      bundleAuthorScripts(
+        entries,
         getSrcDir(),
         getProjectDir(),
-      ),
-    };
+        mode,
+        siteVariables.basePath,
+      ).catch(async (error: unknown) => {
+        // The renderers would never be used
+        (await renderers.catch(() => null))?.host.close();
+        throw error;
+      }),
+      renderers,
+    ]);
+    return { ok: true, value: withRenderers(authorScripts, loaded) };
   } catch (error) {
     return {
       ok: false,

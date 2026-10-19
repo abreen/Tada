@@ -118,10 +118,10 @@ field. A package without the field has no renderers.
 
 ## Compiling and loading
 
-Tada first compiles every renderer, without packages, to report syntax errors
-with their positions and to apply the import rule that scripts follow: relative
-imports in a file in `src/` must stay in `src/`, since watch mode notices
-changes only there. Packages are imported by name. Unlike scripts, renderers
+Tada first compiles the renderers in `src/`, without packages or package
+renderers, to report syntax errors with their positions and to apply the
+import rule that scripts follow: relative imports in a file in `src/` must
+stay in `src/`, since watch mode notices changes only there. Packages are imported by name. Unlike scripts, renderers
 can import any type of file, since they never run in a browser. Nothing from
 this step is written anywhere.
 
@@ -156,6 +156,12 @@ Each of these fails the build:
   start, such as
   `content/x.md: <tz-chooser> render failed (src/lectures/timezone.render.ts): must return a string, got number`.
   A Promise has its own message, since render functions can't be async.
+- A renderer that throws outside a render call, such as from a timer, fails
+  the next render call with `a renderer threw after loading: <message>`, and
+  one that ends the worker, such as with `process.exit()`, with
+  `the renderer worker exited`.
+- A render call that does not return within 30 seconds; its worker is
+  stopped.
 
 ## Watch mode
 
@@ -165,7 +171,9 @@ Renderers are loaded again, in a new worker, whenever scripts are compiled
 read files when it loads, so every page that loads a script with a renderer,
 or one whose renderer was removed, is re-rendered each time, even if the
 renderer's code did not change. The previous build's worker is stopped once a
-build replaces it. Files outside `src/` that a renderer reads are not watched,
+build replaces it. After a renderer throws outside a render call, ends its
+worker, or does not return in time, the next build loads renderers again in a
+new worker, even if nothing in `src/` changed. Files outside `src/` that a renderer reads are not watched,
 and neither is `node_modules`; restart `tada dev` after changing a package's
 renderer.
 

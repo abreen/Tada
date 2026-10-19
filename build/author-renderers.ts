@@ -23,13 +23,14 @@ import {
   realPath,
   toPosix,
 } from './utils/paths';
-import type {
-  RenderReply,
-  RenderRequest,
-  RendererModule,
-  RenderWorkerData,
-  RenderWorkerReady,
-} from './render-worker';
+import {
+  SIGNAL_EXITED,
+  type RenderReply,
+  type RenderRequest,
+  type RendererModule,
+  type RenderWorkerData,
+  type RenderWorkerReady,
+} from './render-protocol';
 import type { Render } from '../types/client';
 
 /** How long a render function can run before the build fails */
@@ -139,8 +140,9 @@ function findPackageRenderer(
 }
 
 /**
- * The renderer module of each script that has one, keyed by script. `scripts`
- * are the scripts that compiled, so each one exists.
+ * The renderer module of each script that has one, keyed by script. A script
+ * that doesn't exist is reported by the pages that list it; a renderer next to
+ * where it would be is loaded but never used.
  */
 function findRenderers(
   scripts: Iterable<string>,
@@ -149,7 +151,11 @@ function findRenderers(
 ): Map<string, string> {
   const renderers = new Map<string, string>();
   for (const script of scripts) {
-    const file = parseNpmSpecifier(script)
+    const specifier = parseNpmSpecifier(script);
+    if (specifier && !findPackageDir(specifier.name, projectDir)) {
+      continue;
+    }
+    const file = specifier
       ? findPackageRenderer(script, projectDir)
       : findSrcRenderer(script, srcDir);
     if (file) {
@@ -186,20 +192,25 @@ function commonDir(files: readonly string[]): string {
 }
 
 /**
- * Compiles every renderer module to report syntax errors with their positions
- * and to keep imports in a file in `src/` to `src/`, as for scripts. Its
+ * Compiles the renderer modules in `src/` to report syntax errors with their
+ * positions and to keep their relative imports in `src/`, as for scripts. Its
  * output is not used: the renderer worker imports the modules themselves.
- * Packages are left out, since Bun loads them from `node_modules`, and any
- * file type can be imported, since renderers never run in a browser.
+ * Packages, including their renderers, are left out, since Bun loads them from
+ * `node_modules`, and any file type can be imported, since renderers never run
+ * in a browser.
  */
 async function checkRenderers(
   files: readonly string[],
   srcDir: string,
   projectDir: string,
 ): Promise<void> {
+  const srcFiles = files.filter(file => isInside(srcDir, file));
+  if (srcFiles.length === 0) {
+    return;
+  }
   await runBuild({
-    entrypoints: [...files],
-    root: commonDir(files),
+    entrypoints: srcFiles,
+    root: commonDir(srcFiles),
     format: 'esm',
     target: 'bun',
     packages: 'external',
@@ -220,7 +231,8 @@ const openHosts = new Set<RendererHost>();
  * block until the worker replies, since pages render synchronously.
  */
 export class RendererHost {
-  private stalled = false;
+  /** Why the worker can't render anymore, such as a call that timed out */
+  private failure: string | null = null;
 
   constructor(
     private readonly worker: Worker,
@@ -230,27 +242,47 @@ export class RendererHost {
     openHosts.add(this);
   }
 
+  /** Whether the worker can't render anymore, so a new one must be started */
+  get failed(): boolean {
+    return this.failure !== null;
+  }
+
   render(request: RenderRequest): string {
-    if (this.stalled) {
-      throw new Error('an earlier render function did not return');
+    if (this.failure) {
+      throw new Error(this.failure);
     }
     Atomics.store(this.signal, 0, 0);
     this.port.postMessage(request);
-    if (Atomics.wait(this.signal, 0, 0, RENDER_TIMEOUT_MS) === 'timed-out') {
-      this.stalled = true;
-      throw new Error(
-        `did not return within ${RENDER_TIMEOUT_MS / 1000} seconds`,
+    const waited = Atomics.wait(this.signal, 0, 0, RENDER_TIMEOUT_MS);
+    if (waited === 'timed-out') {
+      // Stops the call, which may be stuck in a loop
+      return this.fail(
+        `a render function did not return within ${RENDER_TIMEOUT_MS / 1000} seconds`,
       );
+    }
+    if (Atomics.load(this.signal, 0) === SIGNAL_EXITED) {
+      return this.fail('the renderer worker exited');
     }
     const reply = receiveMessageOnPort(this.port)!.message as RenderReply;
     if (!reply.ok) {
+      if (reply.fatal) {
+        return this.fail(reply.message);
+      }
       throw new Error(reply.message);
     }
     return reply.html;
   }
 
+  private fail(failure: string): never {
+    this.failure = failure;
+    this.close();
+    throw new Error(failure);
+  }
+
   close(): void {
-    openHosts.delete(this);
+    if (!openHosts.delete(this)) {
+      return;
+    }
     this.port.close();
     void this.worker.terminate();
   }
@@ -305,19 +337,40 @@ async function startRendererHost(
   return { host, elements: ready.elements };
 }
 
+/** The loaded renderer modules of one build */
+interface LoadedRenderers {
+  renderers: ReadonlyMap<string, ScriptRenderers>;
+  host: RendererHost;
+}
+
+/** Adds loaded renderers, if any, to a build's compiled scripts */
+export function withRenderers(
+  authorScripts: AuthorScripts,
+  loaded: LoadedRenderers | null,
+): AuthorScripts {
+  return loaded
+    ? {
+        ...authorScripts,
+        renderers: loaded.renderers,
+        rendererHost: loaded.host,
+      }
+    : authorScripts;
+}
+
 /**
- * Finds, checks, and loads the renderer modules of the scripts that compiled,
- * and adds their render functions to `authorScripts`. Each call starts a new
- * worker, so every module is read again.
+ * Finds, checks, and loads the renderer modules of the listed scripts, or
+ * returns null if none has one. Each call starts a new worker, so every
+ * module is read again. It needs only the script list, so it can run while
+ * the scripts compile.
  */
 export async function loadAuthorRenderers(
-  authorScripts: AuthorScripts,
+  scripts: readonly string[],
   srcDir: string,
   projectDir: string,
-): Promise<AuthorScripts> {
-  const files = findRenderers(authorScripts.entries.keys(), srcDir, projectDir);
+): Promise<LoadedRenderers | null> {
+  const files = findRenderers(scripts, srcDir, projectDir);
   if (files.size === 0) {
-    return authorScripts;
+    return null;
   }
   await checkRenderers([...files.values()], srcDir, projectDir);
   const modules = [...files].map(([script, filePath]) => ({
@@ -338,5 +391,5 @@ export async function loadAuthorRenderers(
       ),
     });
   }
-  return { ...authorScripts, renderers, rendererHost: host };
+  return { renderers, host };
 }
