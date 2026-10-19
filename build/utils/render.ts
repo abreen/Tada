@@ -900,18 +900,18 @@ function renderPageElements({
   if (renderers.size === 0) {
     return html;
   }
-  const frontMatter = Object.freeze(
-    Object.fromEntries(
-      Object.entries(pageVariables).filter(
-        ([key]) => !RESERVED_FRONT_MATTER_KEYS.includes(key),
-      ),
+  // Render functions run in the renderer worker, so each call gets its own
+  // copy of these
+  const frontMatter = Object.fromEntries(
+    Object.entries(pageVariables).filter(
+      ([key]) => !RESERVED_FRONT_MATTER_KEYS.includes(key),
     ),
   );
   return renderCustomElements(
     html,
     renderers,
-    Object.freeze({ path: sourceUrlPath, frontMatter }),
-    Object.freeze({ ...getSiteVars(siteVariables) }),
+    { path: sourceUrlPath, frontMatter },
+    getSiteVars(siteVariables),
     filePath,
   );
 }

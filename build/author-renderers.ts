@@ -1,20 +1,21 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
-import { pathToFileURL } from 'url';
+import { fileURLToPath } from 'url';
+import {
+  MessageChannel,
+  receiveMessageOnPort,
+  Worker,
+  type MessagePort,
+} from 'node:worker_threads';
 import type { PluginBuilder } from 'bun';
 import {
   createImportCheckPlugin,
-  findScriptProblem,
   RENDERER_SUFFIXES,
   scriptExists,
   type AuthorScripts,
 } from './author-scripts';
-import { normalizeBundlePath, runBuild } from './bundle';
-import {
-  validateRendererModule,
-  type ScriptRenderers,
-} from './custom-elements';
+import { runBuild } from './bundle';
+import type { ScriptRenderers } from './custom-elements';
 import { findPackageDir, parseNpmSpecifier } from './packages';
 import {
   isInside,
@@ -22,12 +23,21 @@ import {
   realPath,
   toPosix,
 } from './utils/paths';
+import type {
+  RenderReply,
+  RenderRequest,
+  RendererModule,
+  RenderWorkerData,
+  RenderWorkerReady,
+} from './render-worker';
+import type { Render } from '../types/client';
 
-/** A script's compiled renderer module */
-export interface CompiledRenderers extends ScriptRenderers {
-  /** The compiled file's name, which changes when its code does */
-  output: string;
-}
+/** How long a render function can run before the build fails */
+const RENDER_TIMEOUT_MS = 30_000;
+
+const WORKER_PATH = fileURLToPath(
+  new URL('./render-worker.ts', import.meta.url),
+);
 
 /**
  * The file a package's `tada.render` field names for one of its modules,
@@ -129,19 +139,16 @@ function findPackageRenderer(
 }
 
 /**
- * The renderer module of each script that has one, keyed by script. Scripts
- * that can't be found are skipped; their pages report them.
+ * The renderer module of each script that has one, keyed by script. `scripts`
+ * are the scripts that compiled, so each one exists.
  */
 function findRenderers(
-  scripts: readonly string[],
+  scripts: Iterable<string>,
   srcDir: string,
   projectDir: string,
 ): Map<string, string> {
   const renderers = new Map<string, string>();
   for (const script of scripts) {
-    if (findScriptProblem(script, srcDir, projectDir)) {
-      continue;
-    }
     const file = parseNpmSpecifier(script)
       ? findPackageRenderer(script, projectDir)
       : findSrcRenderer(script, srcDir);
@@ -165,100 +172,171 @@ function createStylesheetStubPlugin() {
   };
 }
 
-// Compiles one renderer module into `outDir` and returns the entry's name
-async function compileRenderer(
-  file: string,
-  outDir: string,
-  srcDir: string,
-  projectDir: string,
-): Promise<string> {
-  const result = await runBuild({
-    entrypoints: [file],
-    format: 'esm',
-    target: 'bun',
-    sourcemap: 'inline',
-    naming: '[name]-[hash].[ext]',
-    plugins: [
-      createStylesheetStubPlugin(),
-      createImportCheckPlugin(realPath(srcDir), projectDir),
-    ],
-  });
-  let entry: string | undefined;
-  for (const output of result.outputs) {
-    const outputPath = normalizeBundlePath(output.path);
-    const target = path.join(outDir, ...outputPath.split('/'));
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, new Uint8Array(await output.arrayBuffer()));
-    if (output.kind === 'entry-point') {
-      entry = outputPath;
+// The deepest directory that contains every file
+function commonDir(files: readonly string[]): string {
+  let dir = path.dirname(files[0]!);
+  while (!files.every(file => isInside(dir, file))) {
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      break;
     }
+    dir = parent;
   }
-  return entry!;
+  return dir;
 }
 
 /**
- * Compiles and loads the renderer module of each listed script that has one,
- * keyed by script. Bun can only import modules from files, so each compiled
- * module is written to a new temporary directory and imported from there, and
- * the directory is removed afterwards. New paths make Bun read every module
- * again, so a rebuild in watch mode never reuses a module from an earlier one.
+ * Compiles every renderer module to report syntax errors with their positions
+ * and to keep imports in a file in `src/` to `src/`, as for scripts. Its
+ * output is not used: the renderer worker imports the modules themselves.
+ * Packages are left out, since Bun loads them from `node_modules`, and any
+ * file type can be imported, since renderers never run in a browser.
  */
-export async function bundleAuthorRenderers(
-  scripts: readonly string[],
+async function checkRenderers(
+  files: readonly string[],
   srcDir: string,
   projectDir: string,
-): Promise<Map<string, CompiledRenderers>> {
-  const files = findRenderers(scripts, srcDir, projectDir);
-  const compiled = new Map<string, CompiledRenderers>();
-  if (files.size === 0) {
-    return compiled;
-  }
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tada-render-'));
-  try {
-    const entries = await Promise.all(
-      [...files.values()].map((file, index) =>
-        compileRenderer(
-          file,
-          path.join(tempDir, String(index)),
-          srcDir,
-          projectDir,
-        ),
-      ),
-    );
-    for (const [index, [script, file]] of [...files].entries()) {
-      const entryPath = path.join(tempDir, String(index), entries[index]!);
-      const displayPath = toPosix(path.relative(projectDir, file));
-      let module: Record<string, unknown>;
-      try {
-        module = await import(pathToFileURL(entryPath).href);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`${displayPath}: failed to load: ${message}`, {
-          cause: error,
-        });
-      }
-      compiled.set(script, {
-        ...validateRendererModule(module, displayPath),
-        output: entries[index]!,
-      });
-    }
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-  return compiled;
+): Promise<void> {
+  await runBuild({
+    entrypoints: [...files],
+    root: commonDir(files),
+    format: 'esm',
+    target: 'bun',
+    packages: 'external',
+    naming: '[dir]/[name].[ext]',
+    plugins: [
+      createStylesheetStubPlugin(),
+      createImportCheckPlugin(realPath(srcDir), projectDir, {
+        checkFileTypes: false,
+      }),
+    ],
+  });
 }
 
-/** Adds compiled renderers to a build's compiled scripts */
-export function addRenderers(
-  authorScripts: AuthorScripts,
-  renderers: ReadonlyMap<string, CompiledRenderers>,
-): AuthorScripts {
-  const entries = new Map(authorScripts.entries);
-  for (const [script, { output }] of renderers) {
-    const outputs = entries.get(script);
-    if (outputs) {
-      entries.set(script, { ...outputs, render: output });
+const openHosts = new Set<RendererHost>();
+
+/**
+ * The worker that runs one build's renderer modules. Its render functions
+ * block until the worker replies, since pages render synchronously.
+ */
+export class RendererHost {
+  private stalled = false;
+
+  constructor(
+    private readonly worker: Worker,
+    private readonly port: MessagePort,
+    private readonly signal: Int32Array,
+  ) {
+    openHosts.add(this);
+  }
+
+  render(request: RenderRequest): string {
+    if (this.stalled) {
+      throw new Error('an earlier render function did not return');
+    }
+    Atomics.store(this.signal, 0, 0);
+    this.port.postMessage(request);
+    if (Atomics.wait(this.signal, 0, 0, RENDER_TIMEOUT_MS) === 'timed-out') {
+      this.stalled = true;
+      throw new Error(
+        `did not return within ${RENDER_TIMEOUT_MS / 1000} seconds`,
+      );
+    }
+    const reply = receiveMessageOnPort(this.port)!.message as RenderReply;
+    if (!reply.ok) {
+      throw new Error(reply.message);
+    }
+    return reply.html;
+  }
+
+  close(): void {
+    openHosts.delete(this);
+    this.port.close();
+    void this.worker.terminate();
+  }
+}
+
+/**
+ * Stops the renderer workers of earlier builds, which watch mode no longer
+ * uses, except `keep`, the one of the build it keeps
+ */
+export function closeRenderersExcept(keep: RendererHost | undefined): void {
+  for (const host of openHosts) {
+    if (host !== keep) {
+      host.close();
     }
   }
-  return { ...authorScripts, entries, renderers };
+}
+
+// Starts a worker that imports the modules and resolves with each script's
+// element names once they load
+async function startRendererHost(
+  modules: RendererModule[],
+): Promise<{ host: RendererHost; elements: Record<string, string[]> }> {
+  const { port1, port2 } = new MessageChannel();
+  const signal = new Int32Array(new SharedArrayBuffer(4));
+  const worker = new Worker(WORKER_PATH, {
+    workerData: { modules, port: port2, signal } satisfies RenderWorkerData,
+    transferList: [port2],
+  });
+  // Neither may keep a one-off build's process running
+  worker.unref();
+  port1.unref();
+  const ready = await new Promise<RenderWorkerReady>(resolve => {
+    worker.once('message', resolve);
+    worker.once('error', (error: Error) =>
+      resolve({ ok: false, message: error.message }),
+    );
+    worker.once('exit', code =>
+      resolve({
+        ok: false,
+        message: `the renderer worker exited with code ${code}`,
+      }),
+    );
+  });
+  // A renderer's later errors, such as from a timer, would otherwise be
+  // thrown in the main thread; a render call that never replies times out
+  worker.on('error', () => {});
+  const host = new RendererHost(worker, port1, signal);
+  if (!ready.ok) {
+    host.close();
+    throw new Error(ready.message);
+  }
+  return { host, elements: ready.elements };
+}
+
+/**
+ * Finds, checks, and loads the renderer modules of the scripts that compiled,
+ * and adds their render functions to `authorScripts`. Each call starts a new
+ * worker, so every module is read again.
+ */
+export async function loadAuthorRenderers(
+  authorScripts: AuthorScripts,
+  srcDir: string,
+  projectDir: string,
+): Promise<AuthorScripts> {
+  const files = findRenderers(authorScripts.entries.keys(), srcDir, projectDir);
+  if (files.size === 0) {
+    return authorScripts;
+  }
+  await checkRenderers([...files.values()], srcDir, projectDir);
+  const modules = [...files].map(([script, filePath]) => ({
+    script,
+    filePath,
+    file: toPosix(path.relative(projectDir, filePath)),
+  }));
+  const { host, elements } = await startRendererHost(modules);
+  const renderers = new Map<string, ScriptRenderers>();
+  for (const { script, file } of modules) {
+    renderers.set(script, {
+      file,
+      elements: new Map(
+        elements[script]!.map(name => [
+          name,
+          (info => host.render({ script, name, info })) satisfies Render,
+        ]),
+      ),
+    });
+  }
+  return { ...authorScripts, renderers, rendererHost: host };
 }

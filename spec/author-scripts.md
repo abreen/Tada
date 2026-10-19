@@ -244,7 +244,7 @@ does not exist yet; edits elsewhere reuse the compiled scripts. After a failed
 build, changes from it are retried with the next one, so a script error keeps
 being reported until it is fixed. Pages are re-rendered
 when the output files of a script they load change, such as a script that
-starts importing a stylesheet, or when its renderer's code changes (see
+starts importing a stylesheet, or on every recompile when it has a renderer (see
 [Custom Elements](custom-elements.md#watch-mode)).
 
 ## Inline and external `<script>` elements

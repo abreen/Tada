@@ -152,6 +152,67 @@ def test_renderers_can_import_shared_modules_with_styles_and_await(site):
     assert '<tz-chooser data-zone="ET">shared label awaited</tz-chooser>' in html
 
 
+def test_renderers_can_read_files_next_to_them(site):
+    write(site, 'src/data.json', '{"word": "from data.json"}\n')
+    write(
+        site,
+        'src/clock.render.ts',
+        "import fs from 'fs';\n"
+        "import path from 'path';\n"
+        "const top = await Bun.file(path.join(import.meta.dir, 'data.json')).json();\n"
+        'const read = () =>\n'
+        "  JSON.parse(fs.readFileSync(path.join(__dirname, 'data.json'), 'utf-8'));\n"
+        "export default { 'tz-chooser': () => top.word + ' / ' + read().word };\n",
+    )
+    result = build(site)
+    assert result.returncode == 0, result.stdout + result.stderr
+    html = (site / 'dist' / 'index.html').read_text(encoding='utf-8')
+    assert '<tz-chooser data-zone="ET">from data.json / from data.json</tz-chooser>' in html
+
+
+def test_render_functions_get_their_own_copy_of_vars_and_front_matter(site):
+    set_site_config(site, {'vars': {'course': {'term': 'Fall'}}})
+    write(site, 'content/about.md', page('About', ['clock.ts'], CHOOSER))
+    write(
+        site,
+        'src/clock.render.ts',
+        "export default { 'tz-chooser': ({ vars, page }) => {\n"
+        '  const seen = `${vars.course.term} ${page.frontMatter.scripts.length}`;\n'
+        "  vars.course.term = 'Spring';\n"
+        "  page.frontMatter.scripts.push('changed.ts');\n"
+        '  return seen;\n'
+        '} };\n',
+    )
+    result = build(site)
+    assert result.returncode == 0, result.stdout + result.stderr
+    for name in ['index.html', 'about.html']:
+        html = (site / 'dist' / name).read_text(encoding='utf-8')
+        assert '<tz-chooser data-zone="ET">Fall 1</tz-chooser>' in html
+
+
+def test_end_tags_the_parser_ignores_are_found(site):
+    write(
+        site,
+        'content/index.md',
+        page('Home', ['clock.ts'], 'Pick: <tz-chooser><div>x</div></tz-chooser> now'),
+    )
+    result = build(site)
+    assert result.returncode == 0, result.stdout + result.stderr
+    html = (site / 'dist' / 'index.html').read_text(encoding='utf-8')
+    assert '<tz-chooser><select disabled><option>undefined (rendered)' in html
+    assert '<div>x</div>' not in html
+
+
+def test_render_result_that_is_not_a_string_fails(site):
+    write(site, 'src/clock.render.ts', "export default { 'tz-chooser': () => 3 };\n")
+    result = build(site)
+    assert result.returncode == 1
+    assert (
+        'content/index.md: <tz-chooser> render failed (src/clock.render.ts): '
+        'must return a string, got number'
+    ) in result.stdout
+
+
 def test_render_error_names_the_page_element_and_renderer(site):
     write(
         site,
@@ -234,6 +295,29 @@ def test_package_renderers(tmp_path):
     assert '<tada-map><img alt="Map" src="/map.png"></tada-map>' in html
 
 
+def test_package_renderers_can_read_their_own_files(tmp_path):
+    site = init_site(tmp_path)
+    write_package(
+        site,
+        'tada-map',
+        {
+            'index.js': 'export default () => {};\n',
+            'label.txt': 'package file text',
+            'render.js': (
+                "import fs from 'fs';\n"
+                "const label = fs.readFileSync(new URL('./label.txt', import.meta.url), 'utf-8');\n"
+                "export default { 'tada-map': () => label };\n"
+            ),
+        },
+        {'type': 'module', 'exports': './index.js', 'tada': {'render': {'.': './render.js'}}},
+    )
+    write(site, 'content/index.md', page('Home', ['npm:tada-map'], '<tada-map>\n</tada-map>'))
+    result = build(site)
+    assert result.returncode == 0, result.stdout + result.stderr
+    html = (site / 'dist' / 'index.html').read_text(encoding='utf-8')
+    assert '<tada-map>package file text</tada-map>' in html
+
+
 def test_package_renderer_that_does_not_exist_fails(tmp_path):
     site = init_site(tmp_path)
     write_package(
@@ -283,5 +367,30 @@ def test_watch_rerenders_pages_when_a_renderer_imports_change(site):
         write(site, 'src/words.ts', "export const word = 'after edit';\n")
         wp.wait_for_rebuild(output, 'modified', before_mtime=mtime)
         assert 'after edit' in output.read_text(encoding='utf-8')
+    finally:
+        wp.stop()
+
+
+def test_watch_rerenders_pages_when_data_a_renderer_reads_changes(site):
+    write(site, 'src/schedule.json', '{"word": "before edit"}\n')
+    write(
+        site,
+        'src/clock.render.ts',
+        "import fs from 'fs';\n"
+        "const file = new URL('./schedule.json', import.meta.url);\n"
+        "const data = JSON.parse(fs.readFileSync(file, 'utf-8'));\n"
+        "export default { 'tz-chooser': () => data.word };\n",
+    )
+    wp = WatchProcess(site)
+    try:
+        wp.wait_for_initial_build()
+        output = site / 'dist' / 'index.html'
+        assert 'before edit' in output.read_text(encoding='utf-8')
+        mtime = output.stat().st_mtime
+        write(site, 'src/schedule.json', '{"word": "after edit"}\n')
+        wp.wait_for_rebuild(output, 'modified', before_mtime=mtime)
+        assert '<tz-chooser data-zone="ET">after edit</tz-chooser>' in output.read_text(
+            encoding='utf-8'
+        )
     finally:
         wp.stop()

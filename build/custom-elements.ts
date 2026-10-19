@@ -112,8 +112,9 @@ function isElement(node: Node): node is Element {
   return 'tagName' in node;
 }
 
-// The outermost elements that have renderers, in document order. Elements in
-// <template> contents are inert, and parse5 reads <noscript> as text.
+// The elements that have renderers, in document order, without looking inside
+// them. parse5 keeps <template> contents out of `childNodes` and reads
+// <noscript> as text, so neither is searched.
 function findRenderedElements(
   nodes: Node[],
   renderers: ReadonlyMap<string, PageRenderer>,
@@ -125,11 +126,35 @@ function findRenderedElements(
     }
     if (node.namespaceURI === spec.NS.HTML && renderers.has(node.tagName)) {
       found.push(node);
-    } else if (node.tagName !== 'template') {
+    } else {
       findRenderedElements(node.childNodes, renderers, found);
     }
   }
   return found;
+}
+
+/**
+ * Where an element's end tag starts in `html`, or -1 if it has none. The HTML
+ * parser closes an element itself when content such as a `<div>` closes the
+ * paragraph around it, and then ignores the end tag the author wrote, so that
+ * end tag is found by matching start and end tags with the same name.
+ */
+function findEndTag(html: string, element: Element): number {
+  const location = element.sourceCodeLocation!;
+  if (location.endTag) {
+    return location.endTag.startOffset;
+  }
+  const name = element.tagName.replaceAll('.', '\\.');
+  const tags = new RegExp(`<(/?)${name}(?=[\\s/>])`, 'gi');
+  tags.lastIndex = location.startTag!.endOffset;
+  let depth = 1;
+  for (let match = tags.exec(html); match; match = tags.exec(html)) {
+    depth += match[1] ? -1 : 1;
+    if (depth === 0) {
+      return match.index;
+    }
+  }
+  return -1;
 }
 
 function describeValue(value: unknown): string {
@@ -139,36 +164,38 @@ function describeValue(value: unknown): string {
   return Array.isArray(value) ? 'an array' : typeof value;
 }
 
+/** Why a render function's return value can't be used, or null if it can */
+export function getRenderOutputError(output: unknown): string | null {
+  if (output instanceof Promise) {
+    // The rejection would otherwise go unhandled
+    output.catch(() => {});
+    return 'must return a string, not a Promise; load data with top-level await in the renderer module instead';
+  }
+  return typeof output === 'string'
+    ? null
+    : `must return a string, got ${describeValue(output)}`;
+}
+
 function callRender(
   element: Element,
   renderer: PageRenderer,
   info: RenderInfo,
   label: string,
 ): string {
-  const tag = `<${element.tagName}>`;
-  let output: unknown;
   try {
-    output = renderer.render(info);
+    const output: unknown = renderer.render(info);
+    const problem = getRenderOutputError(output);
+    if (problem) {
+      throw new Error(problem);
+    }
+    return output as string;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `${label}: ${tag} render failed (${renderer.file}): ${message}`,
+      `${label}: <${element.tagName}> render failed (${renderer.file}): ${message}`,
       { cause: error },
     );
   }
-  if (output instanceof Promise) {
-    // The rejection would otherwise go unhandled
-    output.catch(() => {});
-    throw new Error(
-      `${label}: ${tag} render function in ${renderer.file} must return a string, not a Promise; load data with top-level await in the renderer module instead`,
-    );
-  }
-  if (typeof output !== 'string') {
-    throw new Error(
-      `${label}: ${tag} render function in ${renderer.file} must return a string, got ${describeValue(output)}`,
-    );
-  }
-  return output;
 }
 
 /**
@@ -190,18 +217,25 @@ export function renderCustomElements(
     return html;
   }
   const fragment = parseFragment(html, { sourceCodeLocationInfo: true });
-  const elements = findRenderedElements(fragment.childNodes, renderers);
-  let result = html;
-  // From last to first, so earlier offsets stay valid
-  for (const element of elements.reverse()) {
-    const location = element.sourceCodeLocation!;
-    if (!location.endTag) {
+  const ranges: { element: Element; start: number; end: number }[] = [];
+  for (const element of findRenderedElements(fragment.childNodes, renderers)) {
+    const start = element.sourceCodeLocation!.startTag!.endOffset;
+    // An element the parser moved out of an earlier one is passed to that
+    // one's render function as written
+    if (ranges.length > 0 && start < ranges[ranges.length - 1]!.end) {
+      continue;
+    }
+    const end = findEndTag(html, element);
+    if (end === -1) {
       throw new Error(
         `${label}: <${element.tagName}> needs a closing tag </${element.tagName}>`,
       );
     }
-    const start = location.startTag!.endOffset;
-    const end = location.endTag.startOffset;
+    ranges.push({ element, start, end });
+  }
+  let result = html;
+  // From last to first, so earlier offsets stay valid
+  for (const { element, start, end } of ranges.reverse()) {
     const info: RenderInfo = {
       attributes: Object.freeze(
         Object.fromEntries(

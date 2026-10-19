@@ -5,6 +5,7 @@ import {
   createTadaWatchPlan,
   diffAuthorKeys,
   documentIndexMayChange,
+  getRendererDependentSources,
   getScriptDependentSources,
   shouldRecompileScripts,
 } from './planner';
@@ -378,17 +379,6 @@ describe('getScriptDependentSources', () => {
     ).toEqual(new Set([source('content/a.md')]));
   });
 
-  test('re-renders the pages that list a script whose renderer changed', () => {
-    expect(
-      getScriptDependentSources(
-        pages,
-        siteVariables,
-        new Map([['a.ts', { ...a, render: 'a.render-1111.js' }]]),
-        new Map([['a.ts', { ...a, render: 'a.render-2222.js' }]]),
-      ),
-    ).toEqual(new Set([source('content/a.md')]));
-  });
-
   test('re-renders a page whose script now exists', () => {
     expect(
       getScriptDependentSources(
@@ -415,6 +405,30 @@ describe('getScriptDependentSources', () => {
         source('content/Demo.ts'),
       ]),
     );
+  });
+
+  test('re-renders the pages of scripts with renderers, even if unchanged', () => {
+    const renderers = new Map([['a.ts', {}]]);
+    expect(
+      getRendererDependentSources(pages, siteVariables, renderers, renderers),
+    ).toEqual(new Set([source('content/a.md')]));
+  });
+
+  test('re-renders the pages of a script whose renderer was removed', () => {
+    expect(
+      getRendererDependentSources(
+        pages,
+        siteVariables,
+        new Map([['b.ts', {}]]),
+        undefined,
+      ),
+    ).toEqual(new Set([source('content/b.md')]));
+  });
+
+  test('re-renders nothing when no script has a renderer', () => {
+    expect(
+      getRendererDependentSources(pages, siteVariables, undefined, undefined),
+    ).toEqual(new Set());
   });
 });
 

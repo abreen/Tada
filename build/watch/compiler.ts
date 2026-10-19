@@ -30,12 +30,14 @@ import {
   type TadaSnapshot,
 } from '../site-build';
 import { buildIncremental } from './build-incremental';
+import { closeRenderersExcept } from '../author-renderers';
 import type { TadaSourceRecord } from '../source-records';
 import { checkTraceToolAvailability } from '../utils/trace';
 import {
   createTadaWatchPlan,
   diffAuthorKeys,
   documentIndexMayChange,
+  getRendererDependentSources,
   getScriptDependentSources,
   shouldRecompileScripts,
 } from './planner';
@@ -186,12 +188,20 @@ export class TadaWatchCompiler {
         return compiled;
       }
       authorScripts = compiled.value;
-      for (const source of getScriptDependentSources(
-        scan,
-        snapshot.siteVariables,
-        snapshot.authorScripts.entries,
-        authorScripts.entries,
-      )) {
+      for (const source of [
+        ...getScriptDependentSources(
+          scan,
+          snapshot.siteVariables,
+          snapshot.authorScripts.entries,
+          authorScripts.entries,
+        ),
+        ...getRendererDependentSources(
+          scan,
+          snapshot.siteVariables,
+          snapshot.authorScripts.renderers,
+          authorScripts.renderers,
+        ),
+      ]) {
         plan.renderSources.add(source);
       }
     }
@@ -236,7 +246,7 @@ export function createBuildSession(
   write: typeof writeBuild = writeBuild,
 ): (paths?: ReadonlySet<string>) => Promise<WatchBuildResult<TadaBuildMeta>> {
   let snapshot: TadaSnapshot | undefined;
-  return async (
+  const build = async (
     paths?: ReadonlySet<string>,
   ): Promise<WatchBuildResult<TadaBuildMeta>> => {
     const outcome = await compile(snapshot, paths);
@@ -256,5 +266,13 @@ export function createBuildSession(
     }
     snapshot = outcome.snapshot;
     return { ok: true, meta: createBuildMeta(outcome.snapshot) };
+  };
+  return async paths => {
+    try {
+      return await build(paths);
+    } finally {
+      // Only the kept build's renderers can run again
+      closeRenderersExcept(snapshot?.authorScripts?.rendererHost);
+    }
   };
 }

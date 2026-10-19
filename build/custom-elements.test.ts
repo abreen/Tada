@@ -204,6 +204,18 @@ describe('renderCustomElements', () => {
     expect(renderAll(html, { 'x-y': () => 'out' })).toBe(html);
   });
 
+  test('finds an end tag that the parser ignores after closing the element itself', () => {
+    // A <div> closes the <p>, and the <x-y> in it, before </x-y>
+    expect(
+      renderAll('<p>Pick: <x-y><div>x</div></x-y></p>', { 'x-y': () => 'out' }),
+    ).toBe('<p>Pick: <x-y>out</x-y></p>');
+    expect(
+      renderAll('<p><x-y><table><x-y></x-y></table></x-y></p>', {
+        'x-y': info => `[${info.html}]`,
+      }),
+    ).toBe('<p><x-y>[<table><x-y></x-y></table>]</x-y></p>');
+  });
+
   test('rejects an element without an end tag', () => {
     expect(() => renderAll('<div><x-y></div>', { 'x-y': () => '' })).toThrow(
       'content/a.md: <x-y> needs a closing tag </x-y>',
@@ -224,7 +236,7 @@ describe('renderCustomElements', () => {
     expect(() =>
       renderAll('<x-y></x-y>', { 'x-y': () => 3 as unknown as string }),
     ).toThrow(
-      'content/a.md: <x-y> render function in src/a.render.ts must return a string, got number',
+      'content/a.md: <x-y> render failed (src/a.render.ts): must return a string, got number',
     );
   });
 
@@ -234,7 +246,7 @@ describe('renderCustomElements', () => {
         'x-y': (async () => '') as unknown as Render,
       }),
     ).toThrow(
-      'content/a.md: <x-y> render function in src/a.render.ts must return a string, not a Promise',
+      'content/a.md: <x-y> render failed (src/a.render.ts): must return a string, not a Promise',
     );
   });
 });

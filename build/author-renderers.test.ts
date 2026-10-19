@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { addRenderers, getPackageRendererPath } from './author-renderers';
-import { createEmptyAuthorScripts } from './author-scripts';
+import { getPackageRendererPath } from './author-renderers';
 
 describe('getPackageRendererPath', () => {
   const manifest = {
@@ -49,39 +48,5 @@ describe('getPackageRendererPath', () => {
         'package "tada-map": "tada.render" "." in package.json must be a relative path ending in .ts or .js',
       );
     }
-  });
-});
-
-describe('addRenderers', () => {
-  test('records each renderer in its script outputs', () => {
-    const authorScripts = {
-      ...createEmptyAuthorScripts(['a.ts', 'b.ts']),
-      entries: new Map([
-        ['a.ts', { js: '_scripts/a.js', css: [] }],
-        ['b.ts', { js: '_scripts/b.js', css: [] }],
-      ]),
-    };
-    const renderers = new Map([
-      [
-        'a.ts',
-        {
-          file: 'src/a.render.ts',
-          elements: new Map(),
-          output: 'a.render-1234.js',
-        },
-      ],
-    ]);
-    const result = addRenderers(authorScripts, renderers);
-    expect(result.entries.get('a.ts')).toEqual({
-      js: '_scripts/a.js',
-      css: [],
-      render: 'a.render-1234.js',
-    });
-    expect(result.entries.get('b.ts')).toEqual({
-      js: '_scripts/b.js',
-      css: [],
-    });
-    expect(result.renderers).toBe(renderers);
-    expect(authorScripts.entries.get('a.ts')).not.toHaveProperty('render');
   });
 });
