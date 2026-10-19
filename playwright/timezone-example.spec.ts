@@ -64,6 +64,19 @@ test.describe('starter time zone example', () => {
     await expect(time).not.toHaveAttribute('title');
   });
 
+  test('does not show the no-JS note after client-side navigation', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    await waitForClientMount(page);
+    await followNavLink(page, '/lectures/index.html');
+    await expect(page.getByLabel('Show times in')).toBeEnabled();
+
+    expect(await page.locator('body').innerText()).not.toContain(
+      'Times shown in ET',
+    );
+  });
+
   test('the chooser still works after navigating away and back', async ({
     page,
   }) => {

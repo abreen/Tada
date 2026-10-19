@@ -108,8 +108,16 @@ function runAuthorScripts(document: Document, container: Element): void {
   }
 }
 
-function swapContent(document: Document, newDoc: Document): void {
-  const newContainer = newDoc.querySelector('.container');
+function swapContent(document: Document, newDoc: Document, html: string): void {
+  // DOMParser has scripting disabled, so it parses <noscript> contents as
+  // elements, and can even split them out of their parent (a <p> inside a
+  // <noscript> inside a <p> closes both). An element in the live document
+  // parses with scripting enabled, as on a cold load, keeping <noscript>
+  // contents as hidden text. (A <template> does not.)
+  const scratch = document.createElement('div');
+  scratch.innerHTML = html;
+  const newContainer =
+    scratch.querySelector('.container') ?? newDoc.querySelector('.container');
   const oldContainer = document.querySelector('.container');
   if (newContainer && oldContainer) {
     const imported = document.importNode(newContainer, true);
@@ -424,7 +432,7 @@ export async function navigateToUrl(
     }
 
     teardownPerPageComponents();
-    swapContent(document, newDoc);
+    swapContent(document, newDoc, html);
     if (!pushHistory) {
       // Restore the entry's :target before updateHead adds stylesheets. WebKit
       // defers fragment scrolling until they load, which would move the page
