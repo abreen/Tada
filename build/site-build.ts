@@ -305,27 +305,39 @@ export async function buildAuthorScripts(
   if (entries.length > 0) {
     log.info`Compiling ${entries.length} ${entries.length === 1 ? 'script' : 'scripts'}`;
   }
-  try {
-    const [authorScripts, renderers] = await Promise.all([
-      bundleAuthorScripts(
-        entries,
-        getSrcDir(),
-        getProjectDir(),
-        mode,
-        siteVariables.basePath,
-      ),
-      loadAuthorRenderers(entries, getSrcDir(), getProjectDir()),
-    ]);
-    return { ok: true, value: withRenderers(authorScripts, renderers) };
-  } catch (error) {
+  // Both settle before returning, so every error is reported and no build
+  // is left running into the next one
+  const [authorScripts, renderers] = await Promise.allSettled([
+    bundleAuthorScripts(
+      entries,
+      getSrcDir(),
+      getProjectDir(),
+      mode,
+      siteVariables.basePath,
+    ),
+    loadAuthorRenderers(entries, getSrcDir(), getProjectDir()),
+  ]);
+  if (
+    authorScripts.status === 'fulfilled' &&
+    renderers.status === 'fulfilled'
+  ) {
     return {
-      ok: false,
-      diagnostics:
-        error instanceof BundleError
-          ? error.messages.map(message => ({ message }))
-          : [diagnosticFromError(error)],
+      ok: true,
+      value: withRenderers(authorScripts.value, renderers.value),
     };
   }
+  return {
+    ok: false,
+    diagnostics: [authorScripts, renderers].flatMap(result =>
+      result.status === 'rejected' ? diagnosticsFromError(result.reason) : [],
+    ),
+  };
+}
+
+function diagnosticsFromError(error: unknown): BuildDiagnostic[] {
+  return error instanceof BundleError
+    ? error.messages.map(message => ({ message }))
+    : [diagnosticFromError(error)];
 }
 
 /** Builds every source and generated file in memory. Nothing is written. */

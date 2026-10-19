@@ -126,8 +126,8 @@ shared modules import are ignored, so a renderer and its script can share
 code. A renderer can use top-level `await`, such as to load data once per
 build. Renderers are never published.
 
-Each render function call gets its own copy of `page` and `vars`, so changing
-them has no effect on other elements or pages.
+The render functions on each page get their own copy of `page` and `vars`, so
+changing them has no effect on other pages.
 
 ## Errors
 

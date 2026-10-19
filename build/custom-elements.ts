@@ -233,6 +233,9 @@ export function renderCustomElements(
     }
     ranges.push({ element, start, end });
   }
+  // Copies, so a render function can't change what other pages are passed
+  const pageCopy = structuredClone(page);
+  const varsCopy = structuredClone(vars);
   let result = html;
   // From last to first, so earlier offsets stay valid
   for (const { element, start, end } of ranges.reverse()) {
@@ -243,10 +246,8 @@ export function renderCustomElements(
         ),
       ),
       html: html.slice(start, end),
-      // Copies, so a render function can't change what other elements and
-      // pages are passed
-      page: structuredClone(page),
-      vars: structuredClone(vars),
+      page: pageCopy,
+      vars: varsCopy,
     };
     const output = callRender(
       element,

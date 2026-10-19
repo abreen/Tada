@@ -504,7 +504,7 @@ export function renderPlainTextPageAsset({
   const sourceUrlPath = normalizeOutputPath(`/${subPath}.html`);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
-  const { content, pageVariables, tocItems } = renderPlainTextContent(
+  const { content, pageVariables, tocItems, scripts } = renderPlainTextContent(
     filePath,
     sourceUrlPath,
     siteVariables,
@@ -528,11 +528,7 @@ export function renderPlainTextPageAsset({
     );
   }
 
-  const authorAssets = getPageAuthorAssets(
-    authorScripts,
-    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
-    filePath,
-  );
+  const authorAssets = getPageAuthorAssets(authorScripts, scripts, filePath);
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,
@@ -817,6 +813,8 @@ function renderPlainTextContent(
   content: string | null;
   pageVariables: Record<string, unknown>;
   tocItems: unknown[] | null;
+  /** The page's scripts, as getPageScripts lists them */
+  scripts: string[];
 } {
   const applyBasePath = createApplyBasePath(siteVariables);
 
@@ -862,15 +860,26 @@ function renderPlainTextContent(
     tocItems = (env.tocItems as unknown[] | undefined) || null;
   }
 
+  const scripts = getPageScripts(
+    siteVariables.scripts,
+    pageVariables.scripts,
+    filePath,
+  );
   html = renderPageElements({
     html,
     authorScripts,
+    scripts,
     pageVariables,
     sourceUrlPath,
     siteVariables,
     filePath,
   });
-  return { content: addDetailsPreviewSummaries(html), pageVariables, tocItems };
+  return {
+    content: addDetailsPreviewSummaries(html),
+    pageVariables,
+    tocItems,
+    scripts,
+  };
 }
 
 /**
@@ -880,6 +889,7 @@ function renderPlainTextContent(
 function renderPageElements({
   html,
   authorScripts,
+  scripts,
   pageVariables,
   sourceUrlPath,
   siteVariables,
@@ -887,13 +897,15 @@ function renderPageElements({
 }: {
   html: string;
   authorScripts: AuthorScripts;
+  /** The page's scripts, as getPageScripts lists them */
+  scripts: readonly string[];
   pageVariables: Record<string, unknown>;
   sourceUrlPath: string;
   siteVariables: SiteVariables;
   filePath: string;
 }): string {
   const renderers = getPageRenderers(
-    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
+    scripts,
     authorScripts.renderers,
     filePath,
   );
@@ -1045,10 +1057,16 @@ export function renderLiterateJavaPageAsset({
     return codeHtml;
   };
 
+  const scripts = getPageScripts(
+    siteVariables.scripts,
+    pageVariables.scripts,
+    filePath,
+  );
   const contentHtml = addDetailsPreviewSummaries(
     renderPageElements({
       html: stripHtmlComments(md.renderer.render(tokens, md.options, env)),
       authorScripts,
+      scripts,
       pageVariables,
       sourceUrlPath,
       siteVariables,
@@ -1072,11 +1090,7 @@ export function renderLiterateJavaPageAsset({
     );
   }
 
-  const authorAssets = getPageAuthorAssets(
-    authorScripts,
-    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
-    filePath,
-  );
+  const authorAssets = getPageAuthorAssets(authorScripts, scripts, filePath);
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,

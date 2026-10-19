@@ -143,22 +143,28 @@ function findRenderers(
   return renderers;
 }
 
-let stylesheetStubRegistered = false;
+const stubbedSrcDirs = new Set<string>();
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // Renderers run in Bun, which has no use for styles that shared modules
-// import. Tada itself imports no stylesheets at run time.
-function registerStylesheetStub(): void {
-  if (stylesheetStubRegistered) {
+// import. Only stylesheets in `srcDir` and in packages are stubbed, the ones
+// a renderer can reach, so other stylesheets still load as usual.
+function registerStylesheetStub(srcDir: string): void {
+  if (stubbedSrcDirs.has(srcDir)) {
     return;
   }
-  stylesheetStubRegistered = true;
+  stubbedSrcDirs.add(srcDir);
+  const dirs = [...new Set([srcDir, realPath(srcDir)])].map(escapeRegExp);
+  const filter = new RegExp(
+    `^(?:${dirs.join('|')})[\\\\/].*\\.s?css$|[\\\\/]node_modules[\\\\/].*\\.s?css$`,
+  );
   Bun.plugin({
     name: 'tada-stylesheet-stub',
     setup(build) {
-      build.onLoad({ filter: /\.s?css$/ }, () => ({
-        contents: '',
-        loader: 'js',
-      }));
+      build.onLoad({ filter }, () => ({ contents: '', loader: 'js' }));
     },
   });
 }
@@ -190,7 +196,7 @@ export async function loadAuthorRenderers(
   if (files.size === 0) {
     return loaded;
   }
-  registerStylesheetStub();
+  registerStylesheetStub(srcDir);
   forgetSrcModules(srcDir);
   for (const [script, filePath] of files) {
     const file = toPosix(path.relative(projectDir, filePath));
