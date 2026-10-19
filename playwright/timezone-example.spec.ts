@@ -1,4 +1,18 @@
-import { test, expect } from './test-fixtures';
+import { test, expect, waitForClientMount } from './test-fixtures';
+import type { Page } from './test-fixtures';
+
+interface ChooserAtSwap {
+  value: string;
+  disabled: boolean;
+  time: string;
+}
+
+type SwapTestWindow = Window & { choosersAtSwap: ChooserAtSwap[] };
+
+async function followNavLink(page: Page, href: string) {
+  await page.locator('header details > summary').click();
+  await page.locator(`header details nav a[href="${href}"]`).click();
+}
 
 // The starter content's Lectures page lists src/lectures/timezone.ts in its
 // front matter, an example of a script compiled with the site. Its renderer,
@@ -69,5 +83,53 @@ test.describe('starter time zone example', () => {
     await expect(select).toBeEnabled();
     await select.selectOption('UTC');
     await expect(time).toContainText('UTC');
+  });
+
+  test('shows the stored choice as soon as the page is swapped in', async ({
+    page,
+  }) => {
+    await page.goto('/index.html');
+    await waitForClientMount(page);
+    await page.evaluate(() => {
+      localStorage.setItem('timeZone', 'UTC');
+      const state = window as SwapTestWindow;
+      state.choosersAtSwap = [];
+      // Runs right after the content is swapped in, before the view
+      // transition's new snapshot and before any mount function
+      new MutationObserver(records => {
+        const select =
+          document.querySelector<HTMLSelectElement>('tz-chooser select');
+        const swapped = records.some(
+          record => record.addedNodes.length && record.removedNodes.length,
+        );
+        if (select && swapped) {
+          state.choosersAtSwap.push({
+            value: select.value,
+            disabled: select.disabled,
+            time:
+              document.querySelector('time[datetime="17:40"]')?.textContent ??
+              '',
+          });
+        }
+      }).observe(document.querySelector('.container')!, { childList: true });
+    });
+
+    // The first arrival loads the script; the second reuses it
+    await followNavLink(page, '/lectures/index.html');
+    await expect(page.getByLabel('Show times in')).toBeEnabled();
+    await followNavLink(page, '/index.html');
+    await expect(page).toHaveURL(/\/index\.html$/);
+    await followNavLink(page, '/lectures/index.html');
+    await expect(page.getByLabel('Show times in')).toHaveValue('UTC');
+
+    const choosers = await page.evaluate(
+      () => (window as SwapTestWindow).choosersAtSwap,
+    );
+    expect(choosers).toHaveLength(2);
+    for (const chooser of choosers) {
+      expect(chooser.value).toBe('UTC');
+      expect(chooser.disabled).toBe(false);
+      expect(chooser.time).toContain('UTC');
+    }
   });
 });

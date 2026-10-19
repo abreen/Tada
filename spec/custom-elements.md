@@ -4,8 +4,10 @@ A script can come with a renderer: a module that Tada runs at build time to
 fill custom elements on the pages that list the script. Pages then include the
 script's HTML before any JavaScript runs, so a control takes up its space on
 the first paint and still shows with JavaScript turned off. The script enhances
-the rendered HTML in the browser with its mount function, as usual (see
-[Author Scripts](author-scripts.md)).
+the rendered HTML in the browser, either with its mount function, as usual (see
+[Author Scripts](author-scripts.md)), or by defining the element with
+`customElements.define` (see
+[In the browser](#in-the-browser)).
 
 ## Writing a renderer
 
@@ -159,10 +161,28 @@ code did not change. Files outside `src/` that a renderer reads are not
 watched, and neither is `node_modules`; restart `tada dev` after changing a
 package's renderer.
 
+## In the browser
+
+A script can define the element it renders with `customElements.define`, at
+the top level of its module. The browser then upgrades each element in the
+rendered HTML, and its `connectedCallback` and `disconnectedCallback` run each
+time the element is added to or removed from the page. State kept in module
+variables lasts for the whole visit, across client-side navigations.
+
+On a client-side navigation, Tada loads the new page's scripts before swapping
+in its content (see
+[Client-Side Navigation](client-side-navigation.md#author-scripts)), so a
+script's elements are upgraded as the content is inserted, before the view
+transition captures the new page. A control defined this way shows the
+visitor's state from the start, rather than the build-time default it would
+show until a mount function runs. On a full page load, elements are upgraded
+when the script loads, after the page is shown.
+
 ## Without JavaScript
 
 Render output is ordinary HTML in the published page. A control that only
 JavaScript can drive should still render `disabled`, and the script enables it
-when it mounts. The starter content's Lectures page and
-`src/lectures/timezone.render.ts` are an example (see
+when it mounts or when the element connects. The starter content's Lectures
+page, `src/lectures/timezone.render.ts`, and `src/lectures/timezone.ts`, which
+defines `<tz-chooser>`, are an example (see
 [Site Initialization](site-init.md)).

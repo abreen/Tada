@@ -9,6 +9,7 @@ import { prefersReducedMotion } from '../util';
 import { getHashTarget } from '../hash-target';
 import { swapHeaderTitle } from '../header';
 import { setScrollRestored } from './restored-scroll';
+import { DISABLED_MEDIA, loadAuthorAssets } from './author-scripts';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
@@ -72,7 +73,7 @@ function updateHead(document: Document, newDoc: Document): void {
 
   // Stylesheets from the site's src/ scripts belong to the pages that load
   // them, so they don't style the next page. The new page's were loaded
-  // turned off before the swap (see loadAuthorStylesheets).
+  // turned off before the swap (see loadAuthorAssets).
   for (const link of document.querySelectorAll<HTMLLinkElement>(
     `link[data-tada-style][media="${DISABLED_MEDIA}"]`,
   )) {
@@ -85,80 +86,6 @@ function updateHead(document: Document, newDoc: Document): void {
   );
   for (const link of document.querySelectorAll('link[data-tada-style]')) {
     if (!newAuthorHrefs.has(link.getAttribute('href'))) {
-      link.remove();
-    }
-  }
-}
-
-const DISABLED_MEDIA = 'not all';
-
-// How long navigation waits for the new page's stylesheets from src/ scripts
-const AUTHOR_STYLESHEET_TIMEOUT = 3000;
-
-/**
- * Adds the new page's stylesheets from src/ scripts and waits for them to
- * load, turned off until updateHead turns them on, so the new content never
- * shows unstyled. A stylesheet that fails or takes too long to load does not
- * hold up navigation. If the navigation is abandoned, its stylesheets are
- * removed.
- */
-async function loadAuthorStylesheets(
-  window: Window,
-  newDoc: Document,
-  signal: AbortSignal,
-): Promise<void> {
-  const { document } = window;
-  // Stylesheets still turned off belong to an abandoned navigation, such as
-  // one superseded before its view transition swapped the content. Left in
-  // place, the next swap would turn them on as duplicates.
-  for (const link of document.querySelectorAll(
-    `link[data-tada-style][media="${DISABLED_MEDIA}"]`,
-  )) {
-    link.remove();
-  }
-  const existing = new Set(
-    Array.from(document.querySelectorAll('link[data-tada-style]')).map(link =>
-      link.getAttribute('href'),
-    ),
-  );
-  const pending: HTMLLinkElement[] = [];
-  const loads: Promise<void>[] = [];
-  for (const link of newDoc.querySelectorAll('link[data-tada-style]')) {
-    if (existing.has(link.getAttribute('href'))) {
-      continue;
-    }
-    const added = link.cloneNode(true) as HTMLLinkElement;
-    added.media = DISABLED_MEDIA;
-    loads.push(
-      new Promise(resolve => {
-        added.addEventListener('load', () => resolve(), { once: true });
-        added.addEventListener('error', () => resolve(), { once: true });
-      }),
-    );
-    pending.push(added);
-    document.head.appendChild(added);
-  }
-  if (pending.length === 0) {
-    return;
-  }
-
-  let timer: number | undefined;
-  let onAbort: (() => void) | undefined;
-  await Promise.race([
-    Promise.all(loads),
-    new Promise<void>(resolve => {
-      timer = window.setTimeout(resolve, AUTHOR_STYLESHEET_TIMEOUT);
-    }),
-    new Promise<void>(resolve => {
-      onAbort = resolve;
-      signal.addEventListener('abort', onAbort, { once: true });
-    }),
-  ]);
-  window.clearTimeout(timer);
-  signal.removeEventListener('abort', onAbort!);
-
-  if (signal.aborted) {
-    for (const link of pending) {
       link.remove();
     }
   }
@@ -483,8 +410,9 @@ export async function navigateToUrl(
 
   const parsed = new URL(url);
 
-  // The loading indicator stays on while the new page's stylesheets load
-  await loadAuthorStylesheets(window, newDoc, controller.signal);
+  // The loading indicator stays on while the new page's stylesheets and
+  // scripts load
+  await loadAuthorAssets(window, newDoc, url, controller.signal);
   stopLoading();
   if (!isActiveNavigation(controller)) {
     return;

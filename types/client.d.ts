@@ -15,7 +15,8 @@ export type Unmount = () => void;
 /**
  * The default export of a script listed in `scripts`. It runs each time the
  * page is shown: on a full page load and after each client-side navigation to
- * the page. Code at the top level of the module runs once per visit.
+ * the page. Code at the top level of the module runs once per visit; on a
+ * client-side navigation it runs before the page's content is swapped in.
  */
 export type Mount = (
   options: MountOptions,

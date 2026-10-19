@@ -69,8 +69,10 @@ The document index (see [Document Index](document-index.md)) gets its own
 fades between two pages that both show it.
 Appearance pickers mount synchronously during the content swap, before the
 browser captures that snapshot, so enabled states and visitor preferences
-do not flash back to the build-time defaults. Other per-page components mount
-after the transition finishes.
+do not flash back to the build-time defaults. Custom elements that author
+scripts define are upgraded during the swap too, because the new page's
+scripts load before it (see [Author scripts](#author-scripts)). Other per-page
+components mount after the transition finishes.
 
 Persistent components (header, search, back-to-top, navigate) mount
 once at startup. The page update toast also stays mounted and resets its
@@ -84,8 +86,12 @@ re-mounted on every navigation.
 Scripts compiled from the site's `src/` directory and from packages mount and
 unmount with each page through their default export, unmounting in reverse
 order before Tada's own components; see [Author Scripts](author-scripts.md).
-Stylesheets those scripts import are added to `<head>` for the pages that load
-them and removed when navigating to a page that doesn't.
+Before the swap, the navigator imports the new page's scripts, waiting at most
+3 seconds, together with its stylesheets, while the loading indicator stays on.
+Their top-level code, such as `customElements.define` calls, then runs before
+the new content is inserted. Stylesheets those scripts import are added to
+`<head>` for the pages that load them and removed when navigating to a page
+that doesn't.
 
 `<script>` elements in page content run each time the page is shown, both on a
 cold load and after a client-side navigation. After the swap, once the URL,
