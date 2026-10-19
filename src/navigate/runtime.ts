@@ -113,6 +113,11 @@ function swapContent(document: Document, newDoc: Document): void {
   const oldContainer = document.querySelector('.container');
   if (newContainer && oldContainer) {
     const imported = document.importNode(newContainer, true);
+    // DOMParser has scripting disabled, so it parses <noscript> contents as
+    // elements, which would show; a cold load never renders them
+    for (const noscript of imported.querySelectorAll('noscript')) {
+      noscript.remove();
+    }
     oldContainer.replaceChildren(...imported.childNodes);
   }
 
