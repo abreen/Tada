@@ -1,6 +1,8 @@
 import type { BundledLanguage } from 'shiki';
 import type { TraceCache } from './build-types';
 import type { AuthorScripts } from './author-scripts';
+import type { DocumentNavigation } from './document-index';
+import type { PageTitleIndex } from './source-model';
 
 /** An explicitly authored ancestor in a page's breadcrumb trail. */
 export interface BreadcrumbEntry {
@@ -67,6 +69,24 @@ export interface SiteVariables {
   /** Scripts in `src/` that every page loads */
   scripts?: string[];
   vars?: Record<string, unknown>;
+  /** Options for watch mode's spelling and grammar checks; only allowed in `site.dev.*` */
+  proofread?: ProofreadConfig | boolean;
+}
+
+export type ProofreadDialect =
+  | 'american'
+  | 'british'
+  | 'australian'
+  | 'canadian'
+  | 'indian';
+
+export interface ProofreadConfig {
+  /** Words the spelling check accepts */
+  words?: string[];
+  /** The English dialect to check against; American by default */
+  dialect?: ProofreadDialect;
+  /** Harper rules to turn on (`true`) or off (`false`), by name */
+  rules?: Record<string, boolean>;
 }
 
 export type FeatureConfig = {
@@ -121,8 +141,12 @@ export interface RenderPlainTextOptions {
   isWatchMode: boolean;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
+  /** The page's place in a document index, if one lists it */
+  documentNavigation?: DocumentNavigation;
   traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
+  /** Page titles that `[[Title]]` links resolve against */
+  pageTitles?: PageTitleIndex;
 }
 
 export interface TraceToolAvailability {
@@ -146,6 +170,8 @@ export interface RenderCodePageOptions {
   codePageSourceTargets?: ReadonlySet<string>;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
+  /** The page's place in a document index, if one lists it */
+  documentNavigation?: DocumentNavigation;
 }
 
 /** Options for literate Java asset rendering */
@@ -163,6 +189,10 @@ export interface RenderLiterateJavaOptions {
   codePageSourceTargets?: ReadonlySet<string>;
   literateJavaOutputPaths?: ReadonlySet<string>;
   dependencyCollector?: RenderDependencyCollector;
+  /** The page's place in a document index, if one lists it */
+  documentNavigation?: DocumentNavigation;
+  /** Page titles that `[[Title]]` links resolve against */
+  pageTitles?: PageTitleIndex;
 }
 
 /** Options for copied content asset rendering */
@@ -178,6 +208,8 @@ export interface RenderDependencyCollector {
   partials?: Set<string>;
   traceFiles?: Set<string>;
   internalTargets?: Set<string>;
+  /** Titles the page's `[[Title]]` links look up, resolved or not */
+  wikiTitles?: Set<string>;
   /** Files a page generates besides its own assets, by output path */
   traceOutputs?: Map<string, string>;
   setAuthorKey?: (authorKey: string) => void;

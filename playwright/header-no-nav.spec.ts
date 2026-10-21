@@ -1,7 +1,8 @@
 import { test, expect, type Page } from './test-fixtures';
+import { noNavSiteOrigin } from './ports';
 
-const SEARCH_SITE = 'http://localhost:8083';
-const STATIC_SITE = 'http://localhost:8084';
+const SEARCH_SITE = noNavSiteOrigin(true);
+const STATIC_SITE = noNavSiteOrigin(false);
 
 async function scrollToBottom(page: Page) {
   await page.evaluate(() =>

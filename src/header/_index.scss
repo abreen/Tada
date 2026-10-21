@@ -1,4 +1,5 @@
 @use '../mixins' as *;
+@use '../type';
 
 :root {
   --header-collapsed-height: 45px;
@@ -225,8 +226,9 @@ header .logo {
   flex: 0 0 auto;
   padding: 1px 6px;
   margin: 0 8px 0 0;
-  font-size: var(--font-size-smaller);
-  font-weight: 600;
+
+  @include type.font(15, 600);
+
   color: var(--text-on-theme);
   pointer-events: none;
   background: var(--theme-color);
@@ -238,7 +240,9 @@ header .logo-emoji {
   font-family:
     'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
   font-size: 22px;
-  font-weight: normal;
+
+  @include type.weight(normal);
+
   line-height: 24px;
   background: none;
 }
@@ -265,7 +269,8 @@ header .header-title {
 
   // Values above 500 resolve to the supplied bold face when a custom family
   // provides only fixed 400 and 700 weights.
-  font-weight: 600;
+  @include type.weight(600);
+
   pointer-events: none;
 }
 
@@ -307,8 +312,7 @@ header .header-page-title {
 // Code page titles keep their monospace font, without the inline code chip,
 // like the file title heading
 header .header-page-title :is(tt, code) {
-  padding: 0;
-  background: none;
+  @include code-plain;
 }
 
 :root:not(.js) header .header-page-title {

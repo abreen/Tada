@@ -4,6 +4,11 @@ import { makeLogger } from './log';
 import { getRuntimeBundledShikiLanguages } from './site-variables';
 import { initHighlighter } from './utils/shiki-highlighter';
 import { generateSiteAssets } from './site-assets';
+import {
+  proofreadRecord,
+  startProofreader,
+  type Proofreader,
+} from './proofread';
 import { getPdfSources } from './pagefind';
 import { checkTraceToolAvailability } from './utils/trace';
 import {
@@ -13,6 +18,7 @@ import {
   type TadaProjectScan,
 } from './source-model';
 import { bundleAuthorScripts, type AuthorScripts } from './author-scripts';
+import { loadAuthorRenderers, withRenderers } from './author-renderers';
 import { BundleError } from './bundle';
 import { getProjectDir, getSrcDir } from './utils/paths';
 import {
@@ -26,6 +32,8 @@ import {
   validateConfig,
   validateProjectConfigLinks,
 } from './build-validation';
+import { loadDocumentIndex, type DocumentIndex } from './document-index';
+import { readPageTitle, retainPageTitles } from './utils/render';
 import type { OutputFile } from './output-publication';
 import type {
   OutputContent,
@@ -47,10 +55,13 @@ export interface TadaSnapshot {
   generatedOutputs: ReadonlyMap<string, OutputContent>;
   authorScripts: AuthorScripts;
   authorsData: unknown;
+  documentIndex: DocumentIndex;
   records: ReadonlyMap<string, TadaSourceRecord>;
   outputs: ReadonlyMap<string, OutputFile>;
   fileDependents: ReadonlyMap<string, ReadonlySet<string>>;
   targetDependents: ReadonlyMap<string, ReadonlySet<string>>;
+  /** Pages by the titles their wikilinks look up */
+  titleDependents: ReadonlyMap<string, ReadonlySet<string>>;
   authorDependents: ReadonlyMap<string, ReadonlySet<string>>;
   scan: TadaProjectScan;
 }
@@ -63,7 +74,10 @@ type SnapshotInputs = Pick<
   | 'authorsData'
   | 'records'
   | 'scan'
-> & { generatedOutputs?: ReadonlyMap<string, OutputContent> };
+> & {
+  generatedOutputs?: ReadonlyMap<string, OutputContent>;
+  documentIndex: DocumentIndex;
+};
 
 export type SiteBuildResult =
   | { ok: true; snapshot: TadaSnapshot }
@@ -77,6 +91,9 @@ export interface RenderContext {
   isWatchMode: boolean;
   traceCache: TraceCache;
   traceToolAvailability: TraceToolAvailability;
+  documentIndex: DocumentIndex;
+  /** Watch mode's proofreader, which checks each page as soon as it renders */
+  proofreader?: Proofreader | null;
 }
 
 export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
@@ -90,6 +107,7 @@ export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
   }
   const fileDependents = new Map<string, Set<string>>();
   const targetDependents = new Map<string, Set<string>>();
+  const titleDependents = new Map<string, Set<string>>();
   const authorDependents = new Map<string, Set<string>>();
   for (const record of inputs.records.values()) {
     for (const [outputPath, content] of record.outputs) {
@@ -98,6 +116,7 @@ export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
     for (const [index, keys] of [
       [fileDependents, [...record.partialDeps, ...record.traceDeps]],
       [targetDependents, record.internalTargets],
+      [titleDependents, record.wikiTitles],
       [authorDependents, record.authorKey ? [record.authorKey] : []],
     ] as const) {
       for (const key of keys) {
@@ -114,6 +133,7 @@ export function createSnapshot(inputs: SnapshotInputs): TadaSnapshot {
     outputs,
     fileDependents,
     targetDependents,
+    titleDependents,
     authorDependents,
   };
 }
@@ -156,9 +176,15 @@ export async function ensureHighlighter(
 export function renderSources(
   filePaths: Iterable<string>,
   context: RenderContext,
-): { records: Map<string, TadaSourceRecord>; diagnostics: BuildDiagnostic[] } {
+): {
+  records: Map<string, TadaSourceRecord>;
+  diagnostics: BuildDiagnostic[];
+  /** Settles once every rendered page is proofread */
+  proofreading: Promise<unknown>;
+} {
   const records = new Map<string, TadaSourceRecord>();
   const diagnostics: BuildDiagnostic[] = [];
+  const proofreading: Promise<void>[] = [];
   for (const filePath of filePaths) {
     try {
       const record =
@@ -174,9 +200,15 @@ export function renderSources(
               traceCache: context.traceCache,
               traceToolAvailability: context.traceToolAvailability,
               skipLiterateJavaExecution: !context.traceToolAvailability.java,
+              documentIndex: context.documentIndex,
             });
       if (record.outputs.size > 0) {
         records.set(filePath, record);
+        if (context.proofreader) {
+          proofreading.push(
+            ...proofreadRecord(record, context.proofreader.check),
+          );
+        }
       }
     } catch (error) {
       const { message } = diagnosticFromError(error);
@@ -190,7 +222,10 @@ export function renderSources(
       });
     }
   }
-  return { records, diagnostics };
+  if (proofreading.length > 0) {
+    log.info`Proofreading ${proofreading.length} ${proofreading.length === 1 ? 'page' : 'pages'}`;
+  }
+  return { records, diagnostics, proofreading: Promise.all(proofreading) };
 }
 
 /** Validates rendered records and assembles the snapshot of a build. */
@@ -200,6 +235,7 @@ export function finishBuild({
   assetFiles,
   generatedOutputs,
   authorScripts,
+  documentIndex,
   records,
   diagnostics,
 }: {
@@ -208,6 +244,7 @@ export function finishBuild({
   assetFiles: string[];
   generatedOutputs: ReadonlyMap<string, OutputContent>;
   authorScripts: AuthorScripts;
+  documentIndex: DocumentIndex;
   records: ReadonlyMap<string, TadaSourceRecord>;
   diagnostics: BuildDiagnostic[];
 }): SiteBuildResult {
@@ -232,15 +269,30 @@ export function finishBuild({
       generatedOutputs,
       authorScripts,
       authorsData: config('authors'),
+      documentIndex,
       scan,
       records,
     }),
   };
 }
 
+/** Reads the scan's document index files and the titles of the pages they list */
+export function buildDocumentIndexForScan(
+  scan: TadaProjectScan,
+  siteVariables: SiteVariables,
+): ReturnType<typeof loadDocumentIndex> {
+  const result = loadDocumentIndex(scan, siteVariables, sourcePath =>
+    readPageTitle(sourcePath, scan.sources.get(sourcePath)!, siteVariables),
+  );
+  if (result.ok) {
+    retainPageTitles(siteVariables, new Set(result.value.keys()));
+  }
+  return result;
+}
+
 /**
  * Compiles the scripts in `src/` and packages that the site config and pages
- * list, as returned by getScriptEntries
+ * list, as returned by getScriptEntries, and loads their renderer modules
  */
 export async function buildAuthorScripts(
   entries: string[],
@@ -253,26 +305,39 @@ export async function buildAuthorScripts(
   if (entries.length > 0) {
     log.info`Compiling ${entries.length} ${entries.length === 1 ? 'script' : 'scripts'}`;
   }
-  try {
+  // Both settle before returning, so every error is reported and no build
+  // is left running into the next one
+  const [authorScripts, renderers] = await Promise.allSettled([
+    bundleAuthorScripts(
+      entries,
+      getSrcDir(),
+      getProjectDir(),
+      mode,
+      siteVariables.basePath,
+    ),
+    loadAuthorRenderers(entries, getSrcDir(), getProjectDir()),
+  ]);
+  if (
+    authorScripts.status === 'fulfilled' &&
+    renderers.status === 'fulfilled'
+  ) {
     return {
       ok: true,
-      value: await bundleAuthorScripts(
-        entries,
-        getSrcDir(),
-        getProjectDir(),
-        mode,
-        siteVariables.basePath,
-      ),
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      diagnostics:
-        error instanceof BundleError
-          ? error.messages.map(message => ({ message }))
-          : [diagnosticFromError(error)],
+      value: withRenderers(authorScripts.value, renderers.value),
     };
   }
+  return {
+    ok: false,
+    diagnostics: [authorScripts, renderers].flatMap(result =>
+      result.status === 'rejected' ? diagnosticsFromError(result.reason) : [],
+    ),
+  };
+}
+
+function diagnosticsFromError(error: unknown): BuildDiagnostic[] {
+  return error instanceof BundleError
+    ? error.messages.map(message => ({ message }))
+    : [diagnosticFromError(error)];
 }
 
 /** Builds every source and generated file in memory. Nothing is written. */
@@ -298,8 +363,14 @@ export async function buildSite({
     return { ok: false, diagnostics: configDiagnostics };
   }
 
+  // Harper loads in a worker while scripts compile and pages render
+  const proofreader = isWatchMode ? startProofreader(siteVariables) : null;
   compileTemplates(siteVariables);
   await ensureHighlighter(siteVariables);
+  const documentIndex = buildDocumentIndexForScan(scan, siteVariables);
+  if (!documentIndex.ok) {
+    return documentIndex;
+  }
   // Independent bundles, so they build at the same time
   const [assets, authorScripts] = await Promise.all([
     generateSiteAssets(siteVariables, { mode, isWatchMode }),
@@ -323,21 +394,28 @@ export async function buildSite({
       log.warn`javac was not found; literate Java pages will not include execution output`;
     }
   }
-  const { records, diagnostics } = renderSources(scan.sources.keys(), {
-    siteVariables,
-    scan,
-    assetFiles: assets.assetFiles,
-    authorScripts: authorScripts.value,
-    isWatchMode,
-    traceCache,
-    traceToolAvailability,
-  });
+  const { records, diagnostics, proofreading } = renderSources(
+    scan.sources.keys(),
+    {
+      siteVariables,
+      scan,
+      assetFiles: assets.assetFiles,
+      authorScripts: authorScripts.value,
+      isWatchMode,
+      traceCache,
+      traceToolAvailability,
+      documentIndex: documentIndex.value,
+      proofreader,
+    },
+  );
+  await proofreading;
   return finishBuild({
     siteVariables,
     scan,
     assetFiles: assets.assetFiles,
     generatedOutputs: assets.outputs,
     authorScripts: authorScripts.value,
+    documentIndex: documentIndex.value,
     records,
     diagnostics,
   });

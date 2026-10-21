@@ -607,14 +607,16 @@ test.describe('dragging the selection indicator by touch', () => {
     // finger after it goes down
     await page.locator('.tabs-scroll-end').click();
     const finger = await touch(page, point);
-    await page.waitForTimeout(800);
-    const underFinger = await page
-      .getByRole('tab', { selected: true })
-      .evaluate((tab, x) => {
-        const box = tab.getBoundingClientRect();
-        return box.left <= x && x <= box.right;
-      }, point.x);
-    expect(underFinger).toBe(true);
+    // The selection follows the finger a frame after each scroll event, so
+    // wait for the scroll to settle instead of sampling at a fixed time
+    await expect
+      .poll(() =>
+        page.getByRole('tab', { selected: true }).evaluate((tab, x) => {
+          const box = tab.getBoundingClientRect();
+          return box.left <= x && x <= box.right;
+        }, point.x),
+      )
+      .toBe(true);
     await finger.lift();
   });
 

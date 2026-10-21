@@ -9,6 +9,7 @@ import { prefersReducedMotion } from '../util';
 import { getHashTarget } from '../hash-target';
 import { swapHeaderTitle } from '../header';
 import { setScrollRestored } from './restored-scroll';
+import { DISABLED_MEDIA, loadAuthorAssets } from './author-scripts';
 
 export const NAVIGATION_EVENT = 'tada:navigation';
 
@@ -72,7 +73,7 @@ function updateHead(document: Document, newDoc: Document): void {
 
   // Stylesheets from the site's src/ scripts belong to the pages that load
   // them, so they don't style the next page. The new page's were loaded
-  // turned off before the swap (see loadAuthorStylesheets).
+  // turned off before the swap (see loadAuthorAssets).
   for (const link of document.querySelectorAll<HTMLLinkElement>(
     `link[data-tada-style][media="${DISABLED_MEDIA}"]`,
   )) {
@@ -85,80 +86,6 @@ function updateHead(document: Document, newDoc: Document): void {
   );
   for (const link of document.querySelectorAll('link[data-tada-style]')) {
     if (!newAuthorHrefs.has(link.getAttribute('href'))) {
-      link.remove();
-    }
-  }
-}
-
-const DISABLED_MEDIA = 'not all';
-
-// How long navigation waits for the new page's stylesheets from src/ scripts
-const AUTHOR_STYLESHEET_TIMEOUT = 3000;
-
-/**
- * Adds the new page's stylesheets from src/ scripts and waits for them to
- * load, turned off until updateHead turns them on, so the new content never
- * shows unstyled. A stylesheet that fails or takes too long to load does not
- * hold up navigation. If the navigation is abandoned, its stylesheets are
- * removed.
- */
-async function loadAuthorStylesheets(
-  window: Window,
-  newDoc: Document,
-  signal: AbortSignal,
-): Promise<void> {
-  const { document } = window;
-  // Stylesheets still turned off belong to an abandoned navigation, such as
-  // one superseded before its view transition swapped the content. Left in
-  // place, the next swap would turn them on as duplicates.
-  for (const link of document.querySelectorAll(
-    `link[data-tada-style][media="${DISABLED_MEDIA}"]`,
-  )) {
-    link.remove();
-  }
-  const existing = new Set(
-    Array.from(document.querySelectorAll('link[data-tada-style]')).map(link =>
-      link.getAttribute('href'),
-    ),
-  );
-  const pending: HTMLLinkElement[] = [];
-  const loads: Promise<void>[] = [];
-  for (const link of newDoc.querySelectorAll('link[data-tada-style]')) {
-    if (existing.has(link.getAttribute('href'))) {
-      continue;
-    }
-    const added = link.cloneNode(true) as HTMLLinkElement;
-    added.media = DISABLED_MEDIA;
-    loads.push(
-      new Promise(resolve => {
-        added.addEventListener('load', () => resolve(), { once: true });
-        added.addEventListener('error', () => resolve(), { once: true });
-      }),
-    );
-    pending.push(added);
-    document.head.appendChild(added);
-  }
-  if (pending.length === 0) {
-    return;
-  }
-
-  let timer: number | undefined;
-  let onAbort: (() => void) | undefined;
-  await Promise.race([
-    Promise.all(loads),
-    new Promise<void>(resolve => {
-      timer = window.setTimeout(resolve, AUTHOR_STYLESHEET_TIMEOUT);
-    }),
-    new Promise<void>(resolve => {
-      onAbort = resolve;
-      signal.addEventListener('abort', onAbort, { once: true });
-    }),
-  ]);
-  window.clearTimeout(timer);
-  signal.removeEventListener('abort', onAbort!);
-
-  if (signal.aborted) {
-    for (const link of pending) {
       link.remove();
     }
   }
@@ -181,8 +108,16 @@ function runAuthorScripts(document: Document, container: Element): void {
   }
 }
 
-function swapContent(document: Document, newDoc: Document): void {
-  const newContainer = newDoc.querySelector('.container');
+function swapContent(document: Document, newDoc: Document, html: string): void {
+  // DOMParser has scripting disabled, so it parses <noscript> contents as
+  // elements, and can even split them out of their parent (a <p> inside a
+  // <noscript> inside a <p> closes both). An element in the live document
+  // parses with scripting enabled, as on a cold load, keeping <noscript>
+  // contents as hidden text. (A <template> does not.)
+  const scratch = document.createElement('div');
+  scratch.innerHTML = html;
+  const newContainer =
+    scratch.querySelector('.container') ?? newDoc.querySelector('.container');
   const oldContainer = document.querySelector('.container');
   if (newContainer && oldContainer) {
     const imported = document.importNode(newContainer, true);
@@ -236,13 +171,15 @@ function dispatchNavigationEvent(
 }
 
 // Heading parts that get their own layer instead of fading with the page. The
-// breadcrumb trail is one group so every item, including the current one,
-// moves together when the page layout changes.
+// breadcrumb trail is one group so every item moves together when the page layout changes.
 const TITLE_TRANSITION_NAMES = [
   ['nav.breadcrumbs', 'page-breadcrumbs'],
   ['h1', 'page-title'],
   ['.info', 'page-info'],
 ] as const;
+
+// The page heading block. Code pages have none.
+const TITLE_BLOCK_SELECTOR = '.title-and-info';
 
 function setTitleTransitionNames(titleEl: Element, enabled: boolean): void {
   for (const [selector, name] of TITLE_TRANSITION_NAMES) {
@@ -253,28 +190,38 @@ function setTitleTransitionNames(titleEl: Element, enabled: boolean): void {
   }
 }
 
-// The footer and appearance pickers get their own layer only while they are in
-// the viewport, so the layer stays put when they are on screen on both pages
-// and fades on its own when they are on screen on only one.
-function setPageBottomTransitionName(window: Window): void {
-  const bottom = window.document.querySelector<HTMLElement>('.page-bottom');
-  if (!bottom) {
-    return;
-  }
-  const rect = bottom.getBoundingClientRect();
-  if (rect.bottom > 0 && rect.top < window.innerHeight) {
-    bottom.style.viewTransitionName = 'page-bottom';
+// Page regions that get their own layer only while they are in the viewport,
+// so the layer stays put when they are on screen on both pages and fades on
+// its own when they are on screen on only one. Otherwise they would dip with
+// the page's crossfade even though they barely change.
+const VIEWPORT_TRANSITION_NAMES = [
+  ['.page-bottom', 'page-bottom'],
+  ['.document-index', 'document-index'],
+] as const;
+
+function setViewportTransitionNames(window: Window): void {
+  for (const [selector, name] of VIEWPORT_TRANSITION_NAMES) {
+    const element = window.document.querySelector<HTMLElement>(selector);
+    if (!element) {
+      continue;
+    }
+    const rect = element.getBoundingClientRect();
+    if (rect.bottom > 0 && rect.top < window.innerHeight) {
+      element.style.viewTransitionName = name;
+    }
   }
 }
 
 function cleanupViewTransitionNames(document: Document): void {
-  const titleEl = document.querySelector('.title-and-info');
+  const titleEl = document.querySelector(TITLE_BLOCK_SELECTOR);
   if (titleEl) {
     setTitleTransitionNames(titleEl, false);
   }
-  const bottom = document.querySelector<HTMLElement>('.page-bottom');
-  if (bottom) {
-    bottom.style.viewTransitionName = '';
+  for (const [selector] of VIEWPORT_TRANSITION_NAMES) {
+    const element = document.querySelector<HTMLElement>(selector);
+    if (element) {
+      element.style.viewTransitionName = '';
+    }
   }
 }
 
@@ -471,8 +418,9 @@ export async function navigateToUrl(
 
   const parsed = new URL(url);
 
-  // The loading indicator stays on while the new page's stylesheets load
-  await loadAuthorStylesheets(window, newDoc, controller.signal);
+  // The loading indicator stays on while the new page's stylesheets and
+  // scripts load
+  await loadAuthorAssets(window, newDoc, url, controller.signal);
   stopLoading();
   if (!isActiveNavigation(controller)) {
     return;
@@ -484,7 +432,7 @@ export async function navigateToUrl(
     }
 
     teardownPerPageComponents();
-    swapContent(document, newDoc);
+    swapContent(document, newDoc, html);
     if (!pushHistory) {
       // Restore the entry's :target before updateHead adds stylesheets. WebKit
       // defers fragment scrolling until they load, which would move the page
@@ -536,7 +484,7 @@ export async function navigateToUrl(
     !prefersReducedMotion(window) &&
     typeof transitionDoc.startViewTransition === 'function'
   ) {
-    const titleEl = document.querySelector('.title-and-info');
+    const titleEl = document.querySelector(TITLE_BLOCK_SELECTOR);
     const headerHeight = getHeaderCoverage(document);
     const titleVisible =
       titleEl != null && titleEl.getBoundingClientRect().top >= headerHeight;
@@ -544,14 +492,14 @@ export async function navigateToUrl(
     if (titleVisible) {
       setTitleTransitionNames(titleEl, true);
     }
-    setPageBottomTransitionName(window);
+    setViewportTransitionNames(window);
 
     const transition = transitionDoc.startViewTransition(() => {
       if (!doSwap()) {
         return;
       }
 
-      const newTitleEl = document.querySelector('.title-and-info');
+      const newTitleEl = document.querySelector(TITLE_BLOCK_SELECTOR);
       const newHeaderHeight = getHeaderCoverage(document);
       const newTitleVisible =
         newTitleEl != null &&
@@ -560,7 +508,7 @@ export async function navigateToUrl(
       if (newTitleVisible && newTitleEl) {
         setTitleTransitionNames(newTitleEl, true);
       }
-      setPageBottomTransitionName(window);
+      setViewportTransitionNames(window);
     });
 
     await transition.finished;

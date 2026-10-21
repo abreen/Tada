@@ -4,18 +4,24 @@
 //
 //   scripts: [lectures/timezone.ts]
 //
-// Tada compiles it with the rest of the site and calls its default export
-// each time the page is shown, including after a visitor follows a link from
-// another page. Code at the top level of this module runs only once per visit.
+// Tada compiles it with the rest of the site. Code at the top level of this
+// module runs once per visit, so it can keep state in memory and define
+// custom elements that last while the visitor moves between pages.
 //
 // It lets visitors choose a time zone, then rewrites each
 // <time datetime="HH:MM"> element on the page to show that time in their zone.
 // Times are written in DEFAULT_TIME_ZONE, so they're still correct when
-// JavaScript is turned off.
+// JavaScript is turned off. The chooser itself is written into the page at
+// build time by timezone.render.ts.
+//
+// Instead of a mount function, this script defines the <tz-chooser> element.
+// When a visitor follows a link to the page, Tada loads the page's scripts
+// before showing it, and the browser upgrades each <tz-chooser> as the page's
+// content is inserted. The chooser and times then show the visitor's choice
+// from the start, rather than the build-time default.
 import './timezone.scss';
-import type { Mount } from '@abreen/tada';
+import { DEFAULT_TIME_ZONE } from './time-zones';
 
-const DEFAULT_TIME_ZONE = 'America/New_York';
 const STORAGE_KEY = 'timeZone';
 
 // Minutes the zone is ahead of UTC today, accounting for daylight saving
@@ -95,48 +101,61 @@ function updateTimes(document: Document, timeZone: string): void {
   }
 }
 
-const mount: Mount = ({ window, signal }) => {
-  const { document, localStorage } = window;
-  const chooser = document.querySelector<HTMLElement>('.time-zone-chooser');
-  const select = chooser?.querySelector('select');
-  if (!chooser || !select) {
-    return;
-  }
+// Restore the visitor's choice. Storage can be unavailable, such as in some
+// private browsing modes, so fall back to the default.
+let chosen: string | null = null;
+try {
+  chosen = localStorage.getItem(STORAGE_KEY);
+} catch {
+  // Use the default
+}
 
-  // Restore the visitor's choice. Storage can be unavailable, such as in
-  // some private browsing modes, so fall back to the default.
-  let saved: string | null = null;
-  try {
-    saved = localStorage.getItem(STORAGE_KEY);
-  } catch {
-    // Use the default
-  }
-  const isOption = [...select.options].some(option => option.value === saved);
-  select.value = isOption && saved ? saved : DEFAULT_TIME_ZONE;
+class TimeZoneChooser extends HTMLElement {
+  #controller: AbortController | undefined;
 
-  // Passing the signal removes the listener when the visitor leaves the page
-  select.addEventListener(
-    'change',
-    () => {
-      try {
-        if (select.value === DEFAULT_TIME_ZONE) {
-          localStorage.removeItem(STORAGE_KEY);
-        } else {
-          localStorage.setItem(STORAGE_KEY, select.value);
+  // Runs each time the element is added to the page, such as after
+  // navigating back to it
+  connectedCallback(): void {
+    const select = this.querySelector('select');
+    if (!select) {
+      return;
+    }
+    const isOption = [...select.options].some(
+      option => option.value === chosen,
+    );
+    select.value = isOption && chosen ? chosen : DEFAULT_TIME_ZONE;
+
+    this.#controller = new AbortController();
+    select.addEventListener(
+      'change',
+      () => {
+        chosen = select.value;
+        try {
+          if (chosen === DEFAULT_TIME_ZONE) {
+            localStorage.removeItem(STORAGE_KEY);
+          } else {
+            localStorage.setItem(STORAGE_KEY, chosen);
+          }
+        } catch {
+          // The choice still applies until the visitor leaves the site
         }
-      } catch {
-        // The choice still applies until the visitor leaves the page
-      }
-      updateTimes(document, select.value);
-    },
-    { signal },
-  );
+        updateTimes(this.ownerDocument, select.value);
+      },
+      { signal: this.#controller.signal },
+    );
 
-  // The chooser is hidden in the HTML so visitors without JavaScript don't
-  // see a control that does nothing
-  select.disabled = false;
-  chooser.hidden = false;
-  updateTimes(document, select.value);
-};
+    // The chooser is disabled in the HTML so visitors without JavaScript can't
+    // change a control that does nothing
+    select.disabled = false;
+    updateTimes(this.ownerDocument, select.value);
+  }
 
-export default mount;
+  // Runs when the visitor leaves the page
+  disconnectedCallback(): void {
+    this.#controller?.abort();
+  }
+}
+
+if (!customElements.get('tz-chooser')) {
+  customElements.define('tz-chooser', TimeZoneChooser);
+}

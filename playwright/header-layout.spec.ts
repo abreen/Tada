@@ -67,7 +67,9 @@ test.describe('header title space', () => {
   test('adapts to the rendered width of the back-to-top label', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 600, height: 800 });
+    // Short enough that the page is well over the three viewports back-to-top
+    // needs at this width
+    await page.setViewportSize({ width: 600, height: 700 });
     await page.goto('/lectures/01/Rectangle.java.html');
     await scrollUntilBackToTopShows(page);
     await page

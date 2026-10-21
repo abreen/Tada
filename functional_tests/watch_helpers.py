@@ -1,5 +1,6 @@
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 from stat import S_ISREG
@@ -7,8 +8,10 @@ from stat import S_ISREG
 import pytest
 from conftest import (
     _bun_command,
+    load_structured_file,
     process_group_popen_kwargs,
     terminate_process_group,
+    write_structured_file,
 )
 
 REBUILD_TIMEOUT_SEC = 30
@@ -17,7 +20,31 @@ WEBSOCKET_TIMEOUT_SEC = 15
 POLL_SEC = 0.05
 ANSI_RE = re.compile(r'\x1b\[[0-9;]*m')
 SUCCESS_RE = re.compile(r'^.+! 🎉$', re.MULTILINE)
+# The logger writes the level label, the message and the newline separately, so
+# an error only counts once its whole line has reached the log
+ERROR_LINE_RE = re.compile(r' error .*\n')
 TRACE_MANIFEST_RE = re.compile(r'data-trace-manifest="([^"]+)"')
+# Windows refuses to open a file while another process is copying over it (a
+# sharing violation, which Python reports as PermissionError), so a read that
+# races a rebuild's write is retried before the error is treated as real
+SHARING_VIOLATION_RETRIES = 20 if sys.platform == 'win32' else 0
+
+
+def read_output_bytes(path: Path) -> bytes:
+    """Read an output file, waiting out a rebuild that is writing it."""
+    for attempt in range(SHARING_VIOLATION_RETRIES + 1):
+        try:
+            return path.read_bytes()
+        except PermissionError:
+            if attempt == SHARING_VIOLATION_RETRIES or not path.is_file():
+                raise
+            time.sleep(POLL_SEC)
+    raise AssertionError('unreachable')
+
+
+def read_output_text(path: Path) -> str:
+    """Read an output file as text, waiting out a rebuild that is writing it."""
+    return read_output_bytes(path).decode()
 
 
 def assert_trace_artifacts_exist(dist_dir: Path, html: str, base_path: str = '') -> list[Path]:
@@ -34,10 +61,23 @@ def assert_trace_artifacts_exist(dist_dir: Path, html: str, base_path: str = '')
     return manifests
 
 
+def disable_proofreading(site_dir: Path):
+    """Turn off proofreading, whose underlines would split the page text tests look for."""
+    for name in ('site.dev.yaml', 'site.dev.yml', 'site.dev.json'):
+        config_path = site_dir / name
+        if config_path.is_file():
+            config = load_structured_file(config_path)
+            if isinstance(config, dict) and 'proofread' not in config:
+                config['proofread'] = False
+                write_structured_file(config_path, config)
+
+
 class WatchProcess:
     """Manages a tada watch subprocess for testing."""
 
-    def __init__(self, site_dir: Path):
+    def __init__(self, site_dir: Path, *, proofread: bool = False):
+        if not proofread:
+            disable_proofreading(site_dir)
         self.site_dir = site_dir
         self.dist_dir = site_dir / 'dist'
         self.stdout_log_path = site_dir / 'watch_stdout.log'
@@ -78,7 +118,7 @@ class WatchProcess:
             if not S_ISREG(stat.st_mode):
                 return None
             try:
-                content = path.read_bytes()
+                content = read_output_bytes(path)
             except PermissionError:
                 # Windows reports EACCES when a file becomes a directory
                 # between stat() and read_bytes(). Preserve real access errors.
@@ -123,7 +163,7 @@ class WatchProcess:
         return TimeoutError('\n'.join(details))
 
     def _has_error_since(self, start: int) -> bool:
-        return ' error ' in self._clean(self._stdout_since(start)).lower()
+        return ERROR_LINE_RE.search(self._clean(self._stdout_since(start)).lower()) is not None
 
     def _has_success_since(self, start: int) -> bool:
         return SUCCESS_RE.search(self._clean(self._stdout_since(start))) is not None

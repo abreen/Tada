@@ -5,18 +5,17 @@ import {
   type TadaProjectScan,
 } from '../source-model';
 import type { TadaSnapshot } from '../site-build';
+import { getChangedDocumentPages, type DocumentIndex } from '../document-index';
 import type { AuthorScriptOutputs, AuthorScripts } from '../author-scripts';
 import type { SiteVariables } from '../types';
 import { isInside } from '../utils/paths';
 
 export interface TadaIncrementalWatchPlan {
-  kind: 'incremental';
   scan: TadaProjectScan;
+  documentIndex: DocumentIndex;
   renderSources: Set<string>;
   removeSources: Set<string>;
 }
-
-type TadaWatchPlan = { kind: 'full' } | TadaIncrementalWatchPlan;
 
 function sameItems(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   return a.size === b.size && [...a].every(item => b.has(item));
@@ -47,22 +46,49 @@ export function diffAuthorKeys(previous: unknown, next: unknown): Set<string> {
   );
 }
 
+/**
+ * Whether changed paths can change a document index: an index file in either
+ * scan, so one that was added or deleted, a page an index lists, or a
+ * directory that holds either. Site variables do not change
+ * between incremental builds, and the paths include every change since the
+ * snapshot's build.
+ */
+export function documentIndexMayChange(
+  paths: ReadonlySet<string>,
+  snapshot: Pick<TadaSnapshot, 'documentIndex' | 'scan'>,
+  scan: TadaProjectScan,
+): boolean {
+  const dependencies = new Set(snapshot.documentIndex.keys());
+  for (const sources of [snapshot.scan.sources, scan.sources]) {
+    for (const [source, entry] of sources) {
+      if (entry.renderKind === 'document-index') {
+        dependencies.add(source);
+      }
+    }
+  }
+  const dirPrefixes = [...paths].map(changed => changed + path.sep);
+  return (
+    [...paths].some(changed => dependencies.has(changed)) ||
+    [...dependencies].some(source =>
+      dirPrefixes.some(prefix => source.startsWith(prefix)),
+    )
+  );
+}
+
 export function createTadaWatchPlan({
   snapshot,
   paths,
   scan,
-  full = false,
   changedAuthors = new Set<string>(),
+  documentIndex,
 }: {
   snapshot: TadaSnapshot;
   paths: ReadonlySet<string>;
   scan: TadaProjectScan;
-  full?: boolean;
   changedAuthors?: ReadonlySet<string>;
-}): TadaWatchPlan {
-  if (full) {
-    return { kind: 'full' };
-  }
+  /** Built from `scan`; pages whose navigation changed are rendered */
+  documentIndex: DocumentIndex;
+}): TadaIncrementalWatchPlan {
   const renderSources = new Set<string>();
   const removeSources = new Set(
     [...snapshot.records.keys()].filter(source => !scan.sources.has(source)),
@@ -103,6 +129,12 @@ export function createTadaWatchPlan({
   for (const key of changedAuthors) {
     include(snapshot.authorDependents, key);
   }
+  for (const source of getChangedDocumentPages(
+    snapshot.documentIndex,
+    documentIndex,
+  )) {
+    renderSources.add(source);
+  }
   for (const target of new Set([
     ...snapshot.scan.validTargets,
     ...scan.validTargets,
@@ -118,6 +150,29 @@ export function createTadaWatchPlan({
       include(snapshot.targetDependents, target);
     }
   }
+  // Wikilinks to a title that gained, lost, or moved a page. Only a changed
+  // source can move a title, so only their titles are compared.
+  const changedTitles = new Set<string>();
+  for (const source of changedSources) {
+    for (const entry of [
+      snapshot.scan.sources.get(source),
+      scan.sources.get(source),
+    ]) {
+      if (entry?.title !== undefined) {
+        changedTitles.add(entry.title);
+      }
+    }
+  }
+  for (const title of changedTitles) {
+    const before = snapshot.scan.pageTitles.byTitle.get(title) ?? [];
+    const after = scan.pageTitles.byTitle.get(title) ?? [];
+    if (
+      before.length !== after.length ||
+      before.some((url, i) => url !== after[i])
+    ) {
+      include(snapshot.titleDependents, title);
+    }
+  }
   for (const [output, producers] of scan.outputProducers) {
     for (const source of producers) {
       if (snapshot.outputs.get(output)?.sourcePath !== source) {
@@ -130,7 +185,7 @@ export function createTadaWatchPlan({
       renderSources.delete(source);
     }
   }
-  return { kind: 'incremental', scan, renderSources, removeSources };
+  return { scan, documentIndex, renderSources, removeSources };
 }
 
 /**
@@ -144,13 +199,43 @@ export function getScriptDependentSources(
   previous: ReadonlyMap<string, AuthorScriptOutputs>,
   next: ReadonlyMap<string, AuthorScriptOutputs>,
 ): Set<string> {
-  const changed = new Set(
-    [...previous.keys(), ...next.keys()].filter(
-      script =>
-        JSON.stringify(previous.get(script)) !==
-        JSON.stringify(next.get(script)),
+  return getSourcesLoading(
+    scan,
+    siteVariables,
+    new Set(
+      [...previous.keys(), ...next.keys()].filter(
+        script =>
+          JSON.stringify(previous.get(script)) !==
+          JSON.stringify(next.get(script)),
+      ),
     ),
   );
+}
+
+/**
+ * Pages to re-render after renderers were loaded again: those that load a
+ * script that had or now has a renderer. Renderers can read files and run
+ * code at load time, so their output can change even when their code does not.
+ */
+export function getRendererDependentSources(
+  scan: TadaProjectScan,
+  siteVariables: SiteVariables,
+  previous: ReadonlyMap<string, unknown> | undefined,
+  next: ReadonlyMap<string, unknown> | undefined,
+): Set<string> {
+  return getSourcesLoading(
+    scan,
+    siteVariables,
+    new Set([...(previous?.keys() ?? []), ...(next?.keys() ?? [])]),
+  );
+}
+
+// The pages that load any of the scripts, as their own or as site-wide ones
+function getSourcesLoading(
+  scan: TadaProjectScan,
+  siteVariables: SiteVariables,
+  changed: ReadonlySet<string>,
+): Set<string> {
   const everyPage = (siteVariables.scripts ?? []).some(script =>
     changed.has(script),
   );

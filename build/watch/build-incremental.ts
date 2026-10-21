@@ -6,6 +6,7 @@ import {
   renderSources,
   type TadaSnapshot,
 } from '../site-build';
+import { startProofreader } from '../proofread';
 import type { TraceCache } from '../build-types';
 import type { TraceToolAvailability } from '../types';
 import type { AuthorScripts } from '../author-scripts';
@@ -39,6 +40,7 @@ export async function buildIncremental({
   for (const source of [...plan.removeSources, ...plan.renderSources]) {
     records.delete(source);
   }
+  const proofreader = startProofreader(siteVariables);
   const rendered = renderSources(plan.renderSources, {
     siteVariables,
     scan: plan.scan,
@@ -47,7 +49,10 @@ export async function buildIncremental({
     isWatchMode: true,
     traceCache,
     traceToolAvailability,
+    documentIndex: plan.documentIndex,
+    proofreader,
   });
+  await rendered.proofreading;
   for (const [source, record] of rendered.records) {
     records.set(source, record);
   }
@@ -58,6 +63,7 @@ export async function buildIncremental({
     assetFiles: snapshot.assetFiles,
     generatedOutputs: snapshot.generatedOutputs,
     authorScripts,
+    documentIndex: plan.documentIndex,
     records,
     diagnostics: rendered.diagnostics,
   });

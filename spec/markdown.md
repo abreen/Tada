@@ -42,7 +42,7 @@ This is a warning with a custom title.
 
 Inline code inside an alert keeps its default padding but has no background
 chip, which would clash with the alert's colored background. A 1px border in
-the primary foreground color marks it instead. In print the border is the
+the text color marks it instead. In print the border is the
 same light gray as other inline code. Code inside a fenced block in an alert is
 unaffected and uses the normal code block styles. The chip is removed only where
 a `<code>` element is the whole element, such as a code page's file title, the
@@ -136,7 +136,9 @@ indented code blocks, or raw HTML blocks that keep their lines verbatim
 (`<pre>`, `<script>`, `<style>`, `<textarea>`, and comments) remain literal,
 including `+++`. An unclosed code
 fence consumes the remaining content rather than supplying column boundaries.
-The output is a CSS Grid container with two equal-width columns.
+The output is a CSS Grid container with two equal-width columns in print and on
+screens at least 900px wide; on narrower screens the columns stack, with a small
+`--bg2-color` disc centered in the gap between them.
 
 ## Tabs
 
@@ -215,6 +217,12 @@ Because a superlink is a block element, it should not be used inline, in the
 middle of a paragraph, or in a heading: it breaks the surrounding text onto
 separate lines, and in a heading it would nest a block-level link in the table
 of contents entry. Superlinks belong on their own lines.
+
+## Wikilinks
+
+`[[Title]]` links to the page with that front matter title. See
+[Wikilinks](wikilinks.md).
+
 
 ## Slides
 

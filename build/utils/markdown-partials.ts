@@ -4,6 +4,7 @@ import { substituteContent } from '../variables';
 import type MarkdownIt from 'markdown-it';
 import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
 import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
+import type Token from 'markdown-it/lib/token.mjs';
 import { extensionIsMarkdown, isPartial } from './file-types';
 import type { RenderDependencyCollector } from '../types';
 
@@ -12,6 +13,17 @@ const PARTIAL_DIRECTIVE_PATTERN = /^\{\{\{([\s\S]*?)\}\}\}$/;
 const ESCAPED_PARTIAL_DIRECTIVE_PATTERN = /^\\\{\{\{[\s\S]*\}\}\}$/;
 const PARTIAL_CONTEXT_STACK_KEY = '__tadaMarkdownPartialContextStack';
 const LOOSE_PARTIAL_LIST_META_KEY = '__tadaLoosePartialList';
+const SOURCE_FILE_META_KEY = '__tadaSourceFile';
+
+/**
+ * The partial an inline token's text came from, for errors raised after
+ * partials are expanded; undefined for the page's own text
+ */
+export function getTokenSourceFile(token: Token): string | undefined {
+  const meta = token.meta as Record<string, unknown> | null;
+  const sourceFile = meta?.[SOURCE_FILE_META_KEY];
+  return typeof sourceFile === 'string' ? sourceFile : undefined;
+}
 
 interface MarkdownPartialContext {
   filePath: string;
@@ -111,6 +123,15 @@ function tokenizePartialContent(
     childState.listIndent = state.listIndent;
 
     state.md.block.tokenize(childState, childState.line, childState.lineMax);
+    // A nested partial already tagged its own text
+    for (const token of state.tokens.slice(tokenStart)) {
+      if (token.type === 'inline' && !getTokenSourceFile(token)) {
+        token.meta = {
+          ...token.meta,
+          [SOURCE_FILE_META_KEY]: context.filePath,
+        };
+      }
+    }
     if (!childState.tight) {
       markCurrentListLoose(state, tokenStart);
     }

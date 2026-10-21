@@ -24,7 +24,8 @@ letters, digits, and hyphens; non-root base paths must not end with a slash.
 Absolute internal `href` and `src` attributes (starting with `/`) in generated
 pages are prefixed with the base path. This includes:
 
-- links and images rendered from Markdown, including superlinks
+- links and images rendered from Markdown, including superlinks and
+  wikilinks (`[[Title]]`, see [Wikilinks](wikilinks.md))
 - raw HTML written inside Markdown files
 - `.html` content pages
 - markup contributed by Markdown partials

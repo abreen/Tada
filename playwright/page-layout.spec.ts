@@ -1,11 +1,12 @@
 import { test, expect, type Page } from './test-fixtures';
+import { appearanceSiteUrl } from './ports';
 
 const templates = ['.html', '-toc.html', '.py.html', '.java.html'];
 const sites = [
   { name: 'pickers only', base: '', footer: false },
   {
     name: 'footer, pickers, and banner',
-    base: 'http://localhost:8082/custom',
+    base: appearanceSiteUrl(),
     footer: true,
   },
 ];
@@ -114,6 +115,57 @@ for (const site of sites) {
     });
   }
 }
+
+for (const template of ['.html', '-toc.html']) {
+  test(`centers a ${template} page on a wide window and keeps the body beside the sidebar`, async ({
+    page,
+  }) => {
+    for (const width of [1800, 1300, 900]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/layout-long${template}`);
+      const geometry = await page.evaluate(() => {
+        const sidebar = document.querySelector('.sidebar');
+        const body = document.querySelector('main.body')!;
+        // The container spans the window beside any scrollbar gutter, which
+        // documentElement.clientWidth does not always leave out
+        const container = document.querySelector('body > .container')!;
+        return {
+          container: container.getBoundingClientRect().toJSON(),
+          body: body.getBoundingClientRect().toJSON(),
+          sidebar: sidebar?.getBoundingClientRect().toJSON(),
+        };
+      });
+      const left = geometry.sidebar?.left ?? geometry.body.left;
+      expect(left - geometry.container.left).toBeCloseTo(
+        geometry.container.right - geometry.body.right,
+        0,
+      );
+      if (geometry.sidebar) {
+        expect(geometry.body.left).toBeGreaterThan(geometry.sidebar.right);
+      }
+    }
+  });
+}
+
+test('stacked pages fill the window below the breakpoint', async ({ page }) => {
+  await page.setViewportSize({ width: 899, height: 900 });
+  await page.goto('/layout-long-toc.html');
+  const container = await page
+    .locator('body > .container')
+    .evaluate(element => {
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      return {
+        left: box.left + parseFloat(style.paddingLeft),
+        right: box.right - parseFloat(style.paddingRight),
+      };
+    });
+  for (const selector of ['main.body', 'nav.toc']) {
+    const box = (await page.locator(selector).boundingBox())!;
+    expect(box.x).toBeCloseTo(container.left, 0);
+    expect(box.x + box.width).toBeCloseTo(container.right, 0);
+  }
+});
 
 test('TOC highlighting still accounts for alerts and dividers inside content', async ({
   page,

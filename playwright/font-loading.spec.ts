@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './test-fixtures';
+import { appearanceSiteUrl } from './ports';
 
 const SERIF_COMMON_FACES = [
   '/custom-fonts/body-regular.woff2',
@@ -136,7 +137,7 @@ test('switches from custom serif to bundled sans atomically', async ({
   page,
 }) => {
   const heldFonts = await holdFontRequests(page, SANS_COMMON_FACES);
-  await page.goto('http://localhost:8082/custom/index.html');
+  await page.goto(appearanceSiteUrl('/index.html'));
   const initialGeometry = await getBodyGeometry(page);
   const fontSwitch = page.getByRole('switch', { name: 'Use serif fonts' });
   await recordChecksAtPreferenceMutation(page, [
@@ -202,7 +203,7 @@ test('keeps a stored bundled-sans override pending on a serif-default load', asy
     localStorage.setItem('fontPreference', 'sans');
   });
 
-  await page.goto('http://localhost:8082/custom/index.html', {
+  await page.goto(appearanceSiteUrl('/index.html'), {
     waitUntil: 'domcontentloaded',
   });
   await expectRequestedFaces(heldFonts.requestedFaces, SANS_COMMON_FACES);

@@ -1,7 +1,4 @@
 ---
-breadcrumbs:
-  - label: Labs
-    url: /labs/index.html
 title: Lab 1
 author: alex
 description: A lab page demonstrating the trace feature.

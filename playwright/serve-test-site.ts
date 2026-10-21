@@ -3,7 +3,9 @@ import path from 'path';
 import { installCustomFontFixtures } from './custom-font-fixtures';
 import { installPageLayoutFixtures } from './page-layout-fixtures';
 import { installBreadcrumbFixtures } from './breadcrumb-fixtures';
+import { installDocumentIndexFixtures } from './document-index-fixtures';
 import { installAuthorModuleFixtures } from './author-module-fixtures';
+import { portArgument } from './ports';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
@@ -23,6 +25,7 @@ const externalLinkWrappingPath = path.join(
 const traceDir = path.join(siteDir, 'public', 'trace');
 const resetTraceDir = path.join(siteDir, 'public', 'trace-reset');
 const coverageEnabled = process.argv.slice(2).includes('--coverage');
+const port = portArgument(process.argv.slice(2));
 
 async function run(args: string[], cwd = repoDir): Promise<void> {
   const proc = Bun.spawn(args, {
@@ -472,6 +475,7 @@ writeFileSync(
 
 installPageLayoutFixtures(siteDir);
 installBreadcrumbFixtures(siteDir);
+installDocumentIndexFixtures(siteDir);
 
 await runTada(['dev'], siteDir);
-await runTada(['serve', '--port', '8081'], siteDir);
+await runTada(['serve', '--port', port], siteDir);

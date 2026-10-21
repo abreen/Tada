@@ -11,6 +11,7 @@ import path from 'path';
 import { createEmptyAuthorScripts } from '../author-scripts';
 import { createFsModuleMock } from '../test-helpers';
 import { DEFAULT_FONT_PRELOAD_FILES } from '../generate-fonts';
+import type { PageTitleIndex } from '../source-model';
 import type { SiteVariables } from '../types';
 import { initHighlighter } from './shiki-highlighter';
 
@@ -131,6 +132,7 @@ let renderCodePageAsset: typeof import('./render').renderCodePageAsset;
 let renderPlainTextPageAsset: typeof import('./render').renderPlainTextPageAsset;
 let renderLiterateJavaPageAsset: typeof import('./render').renderLiterateJavaPageAsset;
 let renderCopiedContentAsset: typeof import('./render').renderCopiedContentAsset;
+let readPageTitle: typeof import('./render').readPageTitle;
 let readSourceFile: typeof import('../variables').readSourceFile;
 
 beforeAll(async () => {
@@ -141,6 +143,7 @@ beforeAll(async () => {
     renderPlainTextPageAsset,
     renderLiterateJavaPageAsset,
     renderCopiedContentAsset,
+    readPageTitle,
   } = await import('./render'));
   ({ readSourceFile } = await import('../variables'));
 });
@@ -176,8 +179,10 @@ function renderMarkdownPage({
   validInternalTargets = new Set<string>(),
   withTraces = false,
   siteVariables: pageSiteVariables = siteVariables,
+  pageTitles,
 }: {
   siteVariables?: SiteVariables;
+  pageTitles?: PageTitleIndex;
   contentDir: string;
   relativePath?: string;
   source: string;
@@ -202,6 +207,7 @@ function renderMarkdownPage({
     literateJavaOutputPaths: new Set(),
     dependencyCollector,
     traceCache: withTraces ? new Map() : undefined,
+    pageTitles,
   });
 
   return pageAsset.content.toString();
@@ -624,6 +630,43 @@ describe('renderPlainTextPageAsset', () => {
         source: '---\ntitle: Partial Context\n---\n\n{{{ _partial.md }}}\n',
       }),
     ).toThrow('content/_partial.md: unknown variable "{{ page.title }}"');
+  });
+
+  test('reports a broken wikilink in a partial with the partial path', () => {
+    const contentDir = '/virtual/content';
+    writeFile(path.join(contentDir, '_inner.md'), 'See [[Missing]].');
+    writeFile(
+      path.join(contentDir, '_outer.md'),
+      'Outer.\n\n{{{ _inner.md }}}',
+    );
+    const pageTitles = { byTitle: new Map(), unlinkableTitles: [] };
+
+    expect(() =>
+      renderMarkdownPage({
+        contentDir,
+        source: '---\ntitle: Page\n---\n\n{{{ _outer.md }}}\n',
+        pageTitles,
+      }),
+    ).toThrow('content/_inner.md: broken wikilink "[[Missing]]"');
+    expect(() =>
+      renderMarkdownPage({
+        contentDir,
+        source: '---\ntitle: Page\n---\n\nSee [[Missing]].\n',
+        pageTitles,
+      }),
+    ).toThrow('content/page.md: broken wikilink "[[Missing]]"');
+  });
+
+  test('reports a broken wikilink in a partial footnote with the partial path', () => {
+    const contentDir = '/virtual/content';
+    writeFile(path.join(contentDir, '_note.md'), 'Text^[See [[Missing]].]');
+    expect(() =>
+      renderMarkdownPage({
+        contentDir,
+        source: '---\ntitle: Page\n---\n\n{{{ _note.md }}}\n',
+        pageTitles: { byTitle: new Map(), unlinkableTitles: [] },
+      }),
+    ).toThrow('content/_note.md: broken wikilink "[[Missing]]"');
   });
 
   test('supports nested partials relative to the partial file', () => {
@@ -1588,5 +1631,62 @@ describe('home page title', () => {
         validInternalTargets: new Set(['/docs/index.html']),
       }),
     ).toThrow('index.md: front matter "breadcrumbs" requires a "title"');
+  });
+});
+
+describe('readPageTitle', () => {
+  const pagePath = path.join(path.sep, 'virtual', 'content', 'page.md');
+  const titleSiteVariables = {
+    ...siteVariables,
+    vars: { course: 'CS 101' },
+  } as SiteVariables;
+
+  test('renders the title the scan read without reading the page', () => {
+    // The page is not in the mocked file system, so reading it would throw
+    expect(
+      readPageTitle(
+        pagePath,
+        {
+          renderKind: 'plain-text-page',
+          titleFields: { title: '{{ course }} *notes*' },
+        },
+        titleSiteVariables,
+      ),
+    ).toEqual({ title: 'CS 101 notes', titleHtml: 'CS 101 <em>notes</em>' });
+  });
+
+  test('reads the page to report front matter the scan could not parse', () => {
+    writeFile(pagePath, '---\ntitle: {{ course }} notes\n---\n\nBody\n');
+    expect(() =>
+      readPageTitle(
+        pagePath,
+        { renderKind: 'plain-text-page' },
+        titleSiteVariables,
+      ),
+    ).toThrow('"title"');
+  });
+
+  test('reads the page to report front matter rendering rejects', () => {
+    writeFile(pagePath, '---\ntitle: {{ course }}\n---\n\nBody\n');
+    expect(() =>
+      readPageTitle(
+        pagePath,
+        {
+          renderKind: 'plain-text-page',
+          titleFields: { title: { course: null }, invalid: true },
+        },
+        titleSiteVariables,
+      ),
+    ).toThrow('unquoted');
+  });
+
+  test('requires a title written as text', () => {
+    expect(() =>
+      readPageTitle(
+        pagePath,
+        { renderKind: 'plain-text-page', titleFields: { title: 1.1 } },
+        titleSiteVariables,
+      ),
+    ).toThrow('"title" must be text');
   });
 });

@@ -1,4 +1,5 @@
 @use 'mixins' as *;
+@use 'type';
 
 ::selection {
   color: var(--bg-color);
@@ -55,7 +56,8 @@ a.external:not(:has(.external-link-tail))::after {
 .footnotes {
   padding-top: 32px;
   margin-top: calc(var(--thematic-break-margin) / 2);
-  font-size: 0.9em;
+
+  @include type.font(14);
 }
 
 .footnotes .title {
@@ -81,6 +83,10 @@ a.external:not(:has(.external-link-tail))::after {
 a.footnote-ref {
   position: relative;
   top: -0.5em;
+
+  // Relative to the text it marks, which may be a heading or a table
+  @include type.untuned;
+
   font-size: 0.8em;
   line-height: 1;
   vertical-align: baseline;
@@ -124,10 +130,10 @@ hr::after {
 button,
 a.button,
 input[type='submit'] {
+  @include type.font(13, 500);
+
   padding: 0.25em 0.66em;
   font-family: var(--font);
-  font-size: var(--font-size-small);
-  font-weight: 500;
   color: var(--fg-color);
   text-decoration: none;
   background: var(--bg-color);
@@ -148,12 +154,23 @@ input[type='submit']:active:not(:disabled) {
   background: var(--link-active-color) !important;
 }
 
+// The selected tab stays on the page background
+button:active:not(:disabled, [data-selected]) :is(tt, code),
+a.button:not(.disabled):active :is(tt, code) {
+  @include code-outline;
+}
+
 @media (hover: hover) {
   button:hover:not(:disabled),
   a.button:not(.disabled):hover,
   input[type='submit']:hover:not(:disabled) {
     cursor: pointer;
     background: var(--bg2-color);
+  }
+
+  button:hover:not(:disabled, [data-selected]) :is(tt, code),
+  a.button:not(.disabled):hover :is(tt, code) {
+    @include code-outline;
   }
 }
 
@@ -169,14 +186,20 @@ select:focus {
   border-color: var(--fg-color);
 }
 
+button:focus:not([data-selected]) :is(tt, code),
+a.button:focus :is(tt, code) {
+  @include code-outline;
+}
+
 a.superlink {
   position: relative;
   display: block;
   padding-block: calc(var(--gap) / 2);
   padding-inline: var(--gap)
     calc(var(--gap) * 2 + var(--icon-breadcrumb-separator-size));
-  font-size: inherit;
   text-align: left;
+
+  @include type.inherit(500);
 
   + a.superlink {
     margin-top: var(--gap);
@@ -184,12 +207,14 @@ a.superlink {
 
   .superlink-title {
     display: block;
-    font-weight: 600;
+
+    @include type.weight(600);
   }
 
   .superlink-description {
+    @include type.weight(normal);
+
     display: block;
-    font-weight: normal;
     color: var(--fg2-color);
   }
 
@@ -230,8 +255,10 @@ button.icon-button {
   width: 30px;
   height: 30px;
   padding: 0;
+
+  @include type.weight(400);
+
   font-style: normal;
-  font-weight: 400;
   vertical-align: top;
   border: none;
   border-radius: 999px;
@@ -243,24 +270,20 @@ button.icon-button:focus {
 
 ol.styled-list,
 ul.styled-list {
-  font-weight: 600;
+  @include type.weight(600);
+
   color: var(--theme-color-text);
 }
 
 ul.styled-list {
   // Make bullet points slightly bigger
-  font-size: 1.2em;
+  @include type.font(19, 600);
 }
 
-ol li .styled-list-item {
-  font-size: 1em;
-  font-weight: var(--font-weight);
-  color: var(--fg-color);
-}
-
+ol li .styled-list-item,
 ul li .styled-list-item {
-  font-size: 0.8333em;
-  font-weight: var(--font-weight);
+  @include type.font(16, var(--font-weight));
+
   color: var(--fg-color);
 }
 
@@ -307,8 +330,9 @@ ol ol ol ol ol {
 table {
   margin: 1rem 0;
   overflow: scroll;
-  font-size: var(--font-size-smaller);
   border-collapse: collapse;
+
+  @include type.font(15);
 }
 
 thead {
@@ -321,7 +345,8 @@ td {
 }
 
 th {
-  font-weight: 600;
+  @include type.weight(600);
+
   color: var(--theme-color-text);
 }
 
@@ -357,8 +382,9 @@ section h3:first-child,
 section h4:first-child,
 section h5:first-child,
 section h6:first-child {
+  @include type.weight(600);
+
   font-style: italic;
-  font-weight: 600;
 }
 
 section > p:last-child,
@@ -371,7 +397,8 @@ section > h2 + p {
 }
 
 blockquote {
-  font-size: 1.2em;
+  @include type.font(19);
+
   font-style: italic;
   color: var(--fg-color);
 }
@@ -386,8 +413,9 @@ h3 .heading-subtitle,
 h4 .heading-subtitle,
 h5 .heading-subtitle,
 h6 .heading-subtitle {
+  @include type.weight(400);
+
   margin-left: 1rem;
-  font-weight: 400;
 }
 
 h3.has-subtitle,
@@ -410,7 +438,8 @@ h6.has-subtitle {
 
 dl {
   dt {
-    font-weight: 600;
+    @include type.weight(600);
+
     color: var(--theme-color-text);
   }
 
@@ -420,8 +449,9 @@ dl {
 }
 
 dfn {
+  @include type.weight(500);
+
   font-style: italic;
-  font-weight: 500;
   color: var(--theme-color-text);
 }
 
@@ -445,10 +475,6 @@ dfn {
 
   a {
     @include subdued-link;
-  }
-
-  [aria-current='page'] {
-    font-weight: 700;
   }
 
   .mask-icon {
@@ -490,21 +516,22 @@ figure.bio {
 }
 
 kbd {
+  @include type.font(13, 500, $descendants: false);
+
   display: inline-block;
   padding: 1px 5px;
   font-family: var(--font);
-  font-size: var(--font-size-small);
-  font-weight: 500;
   border: 1px solid var(--fg-color);
   border-radius: 4px;
   box-shadow: 0 2px 0 var(--fg-color);
 }
 
 select {
+  @include type.inherit;
+
   position: relative;
   padding: 4px;
   font-family: var(--font);
-  font-size: inherit;
   color: var(--fg-color);
   background: var(--bg-color);
   border: var(--control-border-width) solid var(--fg2-color);

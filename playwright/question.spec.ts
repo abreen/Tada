@@ -109,7 +109,7 @@ for (const mode of ['no JavaScript', 'print', 'reduced motion'] as const) {
       reducedMotion: 'reduce',
     });
     const page = await context.newPage();
-    await page.goto('http://localhost:8081/questions.html');
+    await page.goto('/questions.html');
     const answer = page.locator('.question-a-body');
     if (mode === 'print') {
       await page.emulateMedia({ media: 'print' });

@@ -108,10 +108,24 @@ export function getRuntimeBundledShikiLanguages(
   return [...new Set(configured)];
 }
 
+/** Throws if a production site config sets an option only development builds use */
+export function rejectDevOnlyConfig(
+  fromFile: Record<string, unknown>,
+  env: SiteEnv,
+  fileName: string,
+): void {
+  if (env === 'prod' && fromFile.proofread !== undefined) {
+    throw new Error(
+      `${fileName}: proofread is only supported in the development site config`,
+    );
+  }
+}
+
 function getSiteVariables(env: SiteEnv): SiteVariables {
   const loaded = loadSiteConfig(configDir, env);
   const fileName = loaded.fileName;
   const fromFile = getValidatedSiteConfigRoot(loaded.value, fileName);
+  rejectDevOnlyConfig(fromFile, env, fileName);
   const extensionToShikiLanguage = validateExtensionToShikiLanguage(
     fromFile.extensionToShikiLanguage,
     fileName,

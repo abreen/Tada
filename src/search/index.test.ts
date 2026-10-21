@@ -91,6 +91,7 @@ describe('groupPdfResults', () => {
       subResults: [],
       pageNumber: null,
       titleHtml: null,
+      documentRoot: null,
       template: null,
       ...overrides,
     };

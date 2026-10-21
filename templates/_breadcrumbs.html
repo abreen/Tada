@@ -1,0 +1,12 @@
+<% if (page.breadcrumbs && page.breadcrumbs.length) { %>
+<nav class="breadcrumbs" aria-label="Breadcrumb" data-pagefind-ignore>
+  <ol>
+    <% page.breadcrumbs.forEach((entry, index) => { %>
+    <li>
+      <% if (index > 0) { %><span class="mask-icon mask-icon-breadcrumb-separator" aria-hidden="true"></span><% } %>
+      <a href="<%- encodeAuthoredUrl(entry.url) %>"><%- entry.label %></a>
+    </li>
+    <% }); %>
+  </ol>
+</nav>
+<% } %>

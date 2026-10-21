@@ -8,6 +8,8 @@ import type { SiteVariables } from './types';
 const projectRoot = path.resolve(path.sep, 'virtual', 'site');
 const files = new Map<string, string>();
 const directories = new Set<string>();
+// Modification times that stay the same when a file's content changes
+const frozenMtimes = new Map<string, number>();
 
 const siteVariables = {
   base: 'http://localhost',
@@ -91,7 +93,7 @@ const fsMock = {
       };
     });
   },
-  statSync(filePath: string) {
+  statSync(filePath: string, options?: { throwIfNoEntry?: boolean }) {
     const resolved = resolvePath(filePath);
     if (directories.has(resolved)) {
       return { isDirectory: () => true, isFile: () => false };
@@ -102,12 +104,18 @@ const fsMock = {
         isDirectory: () => false,
         isFile: () => true,
         size: content.length,
-        // Changes whenever the content changes, like a real modification time
-        mtimeMs: [...content].reduce(
-          (hash, char) => (hash * 31 + char.charCodeAt(0)) | 0,
-          0,
-        ),
+        // Changes whenever the content changes, like a real modification time,
+        // unless a test simulates a coarse clock
+        mtimeMs: frozenMtimes.has(resolved)
+          ? frozenMtimes.get(resolved)
+          : [...content].reduce(
+              (hash, char) => (hash * 31 + char.charCodeAt(0)) | 0,
+              0,
+            ),
       };
+    }
+    if (options?.throwIfNoEntry === false) {
+      return undefined;
     }
     throw new Error(`ENOENT: no such file or directory, stat '${resolved}'`);
   },
@@ -129,6 +137,7 @@ let getSourceOutputPaths: typeof import('./source-model').getSourceOutputPaths;
 let getSourceTargetPaths: typeof import('./source-model').getSourceTargetPaths;
 let assertNoOutputPathConflicts: typeof import('./source-model').assertNoOutputPathConflicts;
 let scanProject: typeof import('./source-model').scanProject;
+let forgetFrontMatter: typeof import('./source-model').forgetFrontMatter;
 
 beforeAll(async () => {
   ({
@@ -138,6 +147,7 @@ beforeAll(async () => {
     getSourceOutputPaths,
     getSourceTargetPaths,
     scanProject,
+    forgetFrontMatter,
   } = await import('./source-model'));
 });
 
@@ -173,6 +183,7 @@ function seedProject(): void {
 beforeEach(() => {
   files.clear();
   directories.clear();
+  frozenMtimes.clear();
   seedProject();
 });
 
@@ -459,4 +470,127 @@ test('detects raw copied source conflicts without configured code processing', (
       scanProject({ ...siteVariables, extensionToShikiLanguage: {} }),
     ),
   ).toEqual(['Demo.java']);
+});
+
+describe('page titles', () => {
+  test('indexes page titles after variable substitution', () => {
+    const page = (name: string, frontMatter: string) =>
+      writeFile(
+        path.join(projectRoot, 'content', ...name.split('/')),
+        `---\n${frontMatter}\n---\n\nBody\n`,
+      );
+    page('a.md', 'title: Shared');
+    page('notes/b.html', 'title: Shared');
+    page('course.md', 'title: "{{ course }} home"');
+    page('Demo.java.md', 'title: Demo');
+    page('hidden.md', 'title: Hidden\nskip: true');
+    page('_partial.md', 'title: Partial');
+    page('untitled.md', 'author: alex');
+    writeFile(path.join(projectRoot, 'content', 'Code.java'), 'class Code {}');
+
+    const scan = scanProject({ ...siteVariables, vars: { course: 'CS 101' } });
+
+    expect(scan.pageTitles.byTitle.get('Shared')).toEqual([
+      '/a.html',
+      '/notes/b.html',
+    ]);
+    expect(scan.pageTitles.byTitle.get('CS 101 home')).toEqual([
+      '/course.html',
+    ]);
+    expect(scan.pageTitles.byTitle.get('Demo')).toEqual(['/Demo.java.html']);
+    for (const title of ['Hidden', 'Partial', '{{ course }} home']) {
+      expect(scan.pageTitles.byTitle.has(title)).toBe(false);
+    }
+    expect(
+      scan.sources.get(path.join(projectRoot, 'content', 'course.md'))?.title,
+    ).toBe('CS 101 home');
+  });
+});
+
+describe('front matter cache', () => {
+  const pagePath = path.join(projectRoot, 'content', 'cached.md');
+
+  test('rereads a changed path even when its size and time look unchanged', () => {
+    writeFile(pagePath, '---\ntitle: Old\n---\n');
+    frozenMtimes.set(pagePath, 1);
+    expect(scanProject(siteVariables).sources.get(pagePath)?.title).toBe('Old');
+
+    writeFile(pagePath, '---\ntitle: New\n---\n');
+    expect(scanProject(siteVariables).sources.get(pagePath)?.title).toBe('Old');
+    forgetFrontMatter(new Set([path.dirname(pagePath)]));
+    expect(scanProject(siteVariables).sources.get(pagePath)?.title).toBe('New');
+
+    writeFile(pagePath, '---\ntitle: Neu\n---\n');
+    forgetFrontMatter(new Set([pagePath]));
+    expect(scanProject(siteVariables).sources.get(pagePath)?.title).toBe('Neu');
+  });
+
+  test('ignores changed paths that cannot be read', () => {
+    writeFile(pagePath, '---\ntitle: Old\n---\n');
+    scanProject(siteVariables);
+    expect(() =>
+      forgetFrontMatter(new Set([path.join(projectRoot, 'gone', 'nested')])),
+    ).not.toThrow();
+  });
+
+  test('forgets deleted files', () => {
+    writeFile(pagePath, '---\ntitle: Old\n---\n');
+    frozenMtimes.set(pagePath, 1);
+    scanProject(siteVariables);
+    files.delete(pagePath);
+    scanProject(siteVariables);
+
+    writeFile(pagePath, '---\ntitle: New\n---\n');
+    expect(scanProject(siteVariables).sources.get(pagePath)?.title).toBe('New');
+  });
+
+  test('has no title fields for front matter that rendering would reject', () => {
+    writeFile(pagePath, '---\ntitle: {{ course }} notes\n---\n');
+    const entry = scanProject({
+      ...siteVariables,
+      vars: { course: 'CS' },
+    }).sources.get(pagePath);
+    expect(entry?.titleFields).toBeUndefined();
+    expect(entry?.title).toBeUndefined();
+  });
+});
+
+describe('page title index', () => {
+  test('lists pages whose titles cannot be linked, with the reason', () => {
+    const write = (name: string, frontMatter: string) =>
+      writeFile(
+        path.join(projectRoot, 'content', name),
+        `---\n${frontMatter}\n---\n`,
+      );
+    write('version.md', 'title: 1.10');
+    write('flag.md', 'title: true');
+    write('typo.md', 'title: "{{ cours }} home"');
+    write('unquoted.md', 'title: {{ course }}');
+    write('quoted.md', 'title: "1.10"');
+    const { pageTitles } = scanProject(siteVariables);
+    const notText = 'its title is not text; quote it, as in title: "1.10"';
+    expect(pageTitles.unlinkableTitles).toEqual([
+      `content/flag.md (${notText})`,
+      `content/typo.md (its title has a variable that cannot be substituted)`,
+      `content/unquoted.md (its front matter has an error)`,
+      `content/version.md (${notText})`,
+    ]);
+    expect(pageTitles.byTitle.get('1.10')).toEqual(['/quoted.html']);
+  });
+
+  test('indexes a title next to another field rendering would reject', () => {
+    const page = path.join(projectRoot, 'content', 'recursion.md');
+    writeFile(page, '---\ntitle: Recursion\ndescription: {{ course }}\n---\n');
+    expect(
+      scanProject(siteVariables).pageTitles.byTitle.get('Recursion'),
+    ).toEqual(['/recursion.html']);
+  });
+
+  test('still skips a page whose front matter rendering would reject', () => {
+    const draft = path.join(projectRoot, 'content', 'draft.md');
+    writeFile(draft, '---\ntitle: {{ course }}\nskip: true\n---\n');
+    expect(scanProject(siteVariables).sources.get(draft)?.renderKind).toBe(
+      'skip',
+    );
+  });
 });

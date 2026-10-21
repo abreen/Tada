@@ -1,4 +1,5 @@
 @use 'mixins' as *;
+@use 'type';
 
 // How far the body of a details element fades out under its stuck summary
 $details-fade: 1.5em;
@@ -28,7 +29,6 @@ $details-preview-gradient: linear-gradient(
   --details-bg-color: var(--bg-color);
   --details-border-width: 2px;
   --section-padding: 64px;
-  --main-width: 900px;
 }
 
 h1,
@@ -44,15 +44,34 @@ h6 {
 }
 
 h1 {
-  font-size: 250%;
-  font-weight: 700;
+  @include type.font(40, 700);
+}
+
+h2 {
+  @include type.font(24, 700);
+}
+
+h3 {
+  @include type.font(19, 700);
+}
+
+h4 {
+  @include type.font(16, 700);
+}
+
+h5 {
+  @include type.font(13, 700);
+}
+
+h6 {
+  @include type.font(12, 700);
 }
 
 body {
+  @include type.font(16, var(--font-weight));
+
   font-family: var(--font);
-  font-size: var(--font-size);
   font-size-adjust: var(--font-size-adjust);
-  font-weight: var(--font-weight);
   font-feature-settings: var(--font-feature-settings);
   line-height: var(--line-height);
   color: var(--fg-color);
@@ -64,7 +83,13 @@ body {
   }
 }
 
+b,
+strong {
+  @include type.weight-tuning(700);
+}
+
 html {
+  scrollbar-gutter: stable;
   overscroll-behavior: none;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -123,7 +148,16 @@ code {
   font-size: var(--mono-font-size);
   overflow-wrap: anywhere;
   background: var(--bg2-color);
+
+  // Transparent, so switching to code-outline does not shift the text
+  border: 1px solid transparent;
   border-radius: var(--mono-border-radius);
+}
+
+// A code page's title is its file name in one `<code>`, shown as a plain
+// monospace label wherever the title appears
+.code-page code {
+  @include code-plain;
 }
 
 pre {
@@ -138,6 +172,7 @@ pre {
   code {
     padding: 0;
     font-size: inherit;
+    border: none;
   }
 }
 
@@ -152,7 +187,8 @@ main details summary:focus {
   outline: none;
 }
 
-main details:focus-within {
+// Only keyboard focus outlines the box, and a preview outlines its label instead
+main details:not(.details-preview):has(:focus-visible) {
   outline: 2px solid var(--theme-color);
   outline-offset: 1px;
 }
@@ -186,42 +222,6 @@ main details[open] {
  */
 main details > summary {
   margin: 0 calc(-1 * var(--details-padding));
-}
-
-/*
- * Info and warning details elements show their icon at the right end of the
- * summary, centered on its first line. The summary keeps room for the icon so
- * long text wraps before it.
- */
-main details.info {
-  --details-icon: var(--icon-info-compact);
-  --details-icon-size: var(--icon-info-compact-size);
-}
-
-main details.warning {
-  --details-icon: var(--icon-warning-compact);
-  --details-icon-size: var(--icon-warning-compact-size);
-}
-
-main details:is(.info, .warning) > summary {
-  // Sticky summaries stay sticky; their selector is more specific
-  position: relative;
-  padding-right: calc(2 * var(--details-padding) + var(--details-icon-size));
-
-  // ::after is taken by the stuck summary's fade
-  &::before {
-    position: absolute;
-    top: calc(var(--details-padding) + (1lh - var(--details-icon-size)) / 2);
-    right: var(--details-padding);
-    width: var(--details-icon-size);
-    height: var(--details-icon-size);
-    content: '';
-
-    @include contained-mask(var(--details-icon));
-
-    // Not currentcolor, so hover and active colors leave the icon alone
-    background-color: var(--fg-color);
-  }
 }
 
 main details > summary + * {
@@ -445,9 +445,9 @@ main details.details-preview[open] > summary > .open-label {
     align-items: center;
 
     // Room inside the rounded focus outline (about 8px at the small size)
+    @include type.font(13, 500);
+
     padding-left: 0.625em;
-    font-size: var(--font-size-small);
-    font-weight: 500;
     line-height: var(--line-height);
     color: var(--link-color);
 
@@ -495,7 +495,7 @@ main details.details-preview[open] > summary > .open-label {
     main details.details-preview:not(details details)[open] {
       // The label's height, the gaps around it, and the bottom border
       --details-summary-height: calc(
-        var(--line-height) * var(--font-size-small) + 2 * var(--gap) +
+        var(--line-height) * #{type.size(13)} + 2 * var(--gap) +
           var(--details-border-width)
       );
     }
@@ -567,9 +567,13 @@ main details.details-preview[open] > summary > .open-label {
 
 input[type='text'],
 input[type='search'] {
+  @include type.font(16, $descendants: false);
+
   padding: 4px;
   font-family: var(--font);
-  font-size: 12pt;
+
+  // At least 16px, so iOS Safari doesn't zoom in on focus
+  font-size: max(12pt, #{type.size(16)});
   color: var(--fg-color);
   background: var(--bg-color);
   border: var(--control-border-width) solid var(--fg2-color);
@@ -592,9 +596,8 @@ label:has(> input[type='checkbox']) {
   display: inline-flex;
   gap: 0.45em;
   align-items: center;
-  font-size: var(--font-size-small);
-  font-weight: 500;
 
+  @include type.font(13, 500);
   @include user-select(none);
 }
 
@@ -659,8 +662,9 @@ figure {
   margin: 1rem 0;
 
   figcaption {
+    @include type.font(15);
+
     margin: 0 3rem;
-    font-size: var(--font-size-smaller);
     color: var(--fg2-color);
   }
 }

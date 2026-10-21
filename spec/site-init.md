@@ -24,9 +24,17 @@ data from the package. The starter content includes an example of an
 author script: the Lectures page lists `src/lectures/timezone.ts` in its
 `scripts` front matter (see [Author Scripts](author-scripts.md)). It lets
 visitors convert the page's `<time>` elements to another time zone and
-remembers the choice in local storage, and it imports
-`src/lectures/timezone.scss` for its styles. Without JavaScript, the chooser
-stays hidden and the authored times show with a `<noscript>` note. Bare-mode config files also start with
+remembers the choice in memory and in local storage. It defines the
+`<tz-chooser>` custom element, so the chooser shows the visitor's choice as
+soon as a client-side navigation shows the page, and it imports
+`src/lectures/timezone.scss` for its styles. Its renderer,
+`src/lectures/timezone.render.ts`, writes the chooser into the page's
+`<tz-chooser>` element at build time (see [Custom Elements](custom-elements.md)),
+sharing the list of time zones in `src/lectures/time-zones.ts` with the script.
+Without JavaScript, the chooser shows the default zone, disabled, and the
+authored times show with a `<noscript>` note. The Labs and
+Lectures sections each have an `index.yml` that orders their pages as a
+[document index](document-index.md). Bare-mode config files also start with
 `extensionToShikiLanguage: {}` and `shikiLanguages: []`, so source-code pages
 and Markdown fence highlighting remain opt-in.
 
@@ -35,7 +43,10 @@ The generated config files include `site.dev.yaml` (pointing at localhost) and
 automatically extracted from the production base URL. Both site configs
 explicitly include `defaultFont: sans` and `defaultContrast: standard` so their
 initial appearance is easy to discover and change. The normal mode also generates
-starter nav and author data files as YAML by default.
+starter nav and author data files as YAML by default. In normal mode, `site.dev.yaml`
+also lists names from the starter content, such as `Tada` and `superlink`, in
+`proofread.words`, so [proofreading](proofread.md) does not underline them;
+bare mode and `site.prod.yaml` have no `proofread` key.
 
 The normal mode also writes a `package.json` that is private and lists the current
 Tada version of `@abreen/tada` in `devDependencies`, and a `tsconfig.json` that

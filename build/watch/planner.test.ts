@@ -4,6 +4,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   createTadaWatchPlan,
   diffAuthorKeys,
+  documentIndexMayChange,
+  getRendererDependentSources,
   getScriptDependentSources,
   shouldRecompileScripts,
 } from './planner';
@@ -33,8 +35,15 @@ function record(
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
+    wikiTitles: new Set(),
     ...deps,
   };
+}
+// Front matter titles of record fixtures, as the scan reads them
+const titles = new WeakMap<TadaSourceRecord, string>();
+function titled(record: TadaSourceRecord, title: string): TadaSourceRecord {
+  titles.set(record, title);
+  return record;
 }
 function scan(records: TadaSourceRecord[]) {
   return indexSources(
@@ -55,6 +64,7 @@ function scan(records: TadaSourceRecord[]) {
           targets: new Set(
             [...record.outputs.keys()].map(output => '/' + output),
           ),
+          ...(titles.has(record) ? { title: titles.get(record) } : {}),
         } satisfies SourceEntry,
       ]),
     ),
@@ -65,6 +75,7 @@ function snapshot(records: TadaSourceRecord[]) {
     siteVariables,
     assetFiles: [],
     authorScripts: createEmptyAuthorScripts(),
+    documentIndex: new Map(),
     authorsData: {},
     scan: scan(records),
     records: new Map(
@@ -98,11 +109,9 @@ function plan(
     snapshot: previous,
     scan: { ...nextScan, sources },
     paths: new Set(changes.map(source)),
+    documentIndex: previous.documentIndex,
     ...extra,
   });
-  if (result.kind !== 'incremental') {
-    throw new Error('expected incremental');
-  }
   return result;
 }
 
@@ -128,6 +137,50 @@ test('partial edits rebuild dependents', () => {
   expect(result.renderSources).toEqual(
     new Set([partial.sourcePath, page.sourcePath]),
   );
+});
+
+describe('wikilinks', () => {
+  const linker = record('content/linker.md', ['linker.html'], {
+    wikiTitles: new Set(['Foo']),
+  });
+
+  test('retitling a page re-renders pages that link to the old title', () => {
+    const before = titled(record('content/foo.md', ['foo.html']), 'Foo');
+    const after = titled(record('content/foo.md', ['foo.html']), 'Bar');
+    const result = plan([before, linker], [after, linker], ['content/foo.md']);
+    expect(result.renderSources).toEqual(
+      new Set([after.sourcePath, linker.sourcePath]),
+    );
+  });
+
+  test('a new page with a linked title re-renders the linking page', () => {
+    const added = titled(record('content/foo.md', ['foo.html']), 'Foo');
+    const result = plan([linker], [added, linker], ['content/foo.md']);
+    expect(result.renderSources.has(linker.sourcePath)).toBe(true);
+  });
+
+  test('moving a titled page re-renders the linking page', () => {
+    const before = titled(record('content/foo.md', ['foo.html']), 'Foo');
+    const after = titled(record('content/moved.md', ['moved.html']), 'Foo');
+    const result = plan(
+      [before, linker],
+      [after, linker],
+      ['content/foo.md', 'content/moved.md'],
+    );
+    expect(result.renderSources.has(linker.sourcePath)).toBe(true);
+  });
+
+  test('retitling an unlinked page leaves the linking page alone', () => {
+    const foo = titled(record('content/foo.md', ['foo.html']), 'Foo');
+    const before = titled(record('content/bar.md', ['bar.html']), 'Bar');
+    const after = titled(record('content/bar.md', ['bar.html']), 'Baz');
+    const result = plan(
+      [foo, before, linker],
+      [foo, after, linker],
+      ['content/bar.md'],
+    );
+    expect(result.renderSources).toEqual(new Set([after.sourcePath]));
+  });
 });
 
 test('deleting an unreferenced page leaves the root untouched', () => {
@@ -204,18 +257,6 @@ test('skipping a page schedules its record replacement and invalidates inbound l
       ['content/page.md'],
     ).renderSources,
   ).toEqual(new Set([page.sourcePath, inbound.sourcePath]));
-});
-
-test('explicit full rebuild decision does not consult the filesystem', () => {
-  const before = snapshot([]);
-  expect(
-    createTadaWatchPlan({
-      snapshot: before,
-      scan: before.scan,
-      paths: new Set(),
-      full: true,
-    }),
-  ).toEqual({ kind: 'full' });
 });
 
 test('directory reconciliation invalidates partial dependents without individual file events', () => {
@@ -365,6 +406,30 @@ describe('getScriptDependentSources', () => {
       ]),
     );
   });
+
+  test('re-renders the pages of scripts with renderers, even if unchanged', () => {
+    const renderers = new Map([['a.ts', {}]]);
+    expect(
+      getRendererDependentSources(pages, siteVariables, renderers, renderers),
+    ).toEqual(new Set([source('content/a.md')]));
+  });
+
+  test('re-renders the pages of a script whose renderer was removed', () => {
+    expect(
+      getRendererDependentSources(
+        pages,
+        siteVariables,
+        new Map([['b.ts', {}]]),
+        undefined,
+      ),
+    ).toEqual(new Set([source('content/b.md')]));
+  });
+
+  test('re-renders nothing when no script has a renderer', () => {
+    expect(
+      getRendererDependentSources(pages, siteVariables, undefined, undefined),
+    ).toEqual(new Set());
+  });
 });
 
 describe('shouldRecompileScripts', () => {
@@ -429,5 +494,93 @@ describe('shouldRecompileScripts', () => {
         compiled,
       }),
     ).toBe(false);
+  });
+});
+
+test('pages whose document navigation changed are rendered', () => {
+  const guide = record('content/guide.md', ['guide.html']);
+  const install = record('content/install.md', ['install.html']);
+  const other = record('content/other.md', ['other.html']);
+  const link = (title: string, href: string) => ({
+    title,
+    titleHtml: title,
+    href,
+    isCodePage: false,
+  });
+  const navigation = (title: string) => ({
+    indexFile: 'content/index.yml',
+    ancestors: [],
+    tree: {
+      ...link('Guide', '/guide.html'),
+      current: false,
+      isBranch: true,
+      children: [],
+    },
+    next: link(title, '/install.html'),
+  });
+  const previous = snapshot([guide, install, other]);
+  const result = createTadaWatchPlan({
+    snapshot: {
+      ...previous,
+      documentIndex: new Map([[guide.sourcePath, navigation('Install')]]),
+    },
+    scan: previous.scan,
+    paths: new Set([install.sourcePath]),
+    documentIndex: new Map([[guide.sourcePath, navigation('Installing')]]),
+  });
+  expect(result.renderSources).toEqual(
+    new Set([guide.sourcePath, install.sourcePath]),
+  );
+});
+
+describe('documentIndexMayChange', () => {
+  const indexFile = source('content/guide/index.yml');
+  const listed = record('content/guide/page.md', ['guide/page.html']);
+  const other = record('content/other.md', ['other.html']);
+  const before = snapshot([listed, other]);
+  const withIndexFile = {
+    ...before.scan,
+    sources: new Map([
+      ...before.scan.sources,
+      [
+        indexFile,
+        {
+          kind: 'content',
+          renderKind: 'document-index',
+          outputs: new Set(),
+          targets: new Set(),
+        } satisfies SourceEntry,
+      ],
+    ]),
+  };
+  const indexed = {
+    scan: withIndexFile,
+    documentIndex: new Map([[listed.sourcePath, {} as never]]),
+  };
+  const mayChange = (changes: string[]) =>
+    documentIndexMayChange(
+      new Set(changes.map(source)),
+      indexed,
+      withIndexFile,
+    );
+
+  test('index files, listed pages, and directories holding them', () => {
+    expect(mayChange(['content/guide/index.yml'])).toBe(true);
+    expect(mayChange(['content/guide/page.md'])).toBe(true);
+    expect(mayChange(['content/guide'])).toBe(true);
+    expect(mayChange(['content'])).toBe(true);
+  });
+
+  test('an index file added since the snapshot', () => {
+    expect(
+      documentIndexMayChange(new Set([indexFile]), before, withIndexFile),
+    ).toBe(true);
+  });
+
+  test('not other pages, scripts, or similarly named paths', () => {
+    expect(mayChange(['content/other.md'])).toBe(false);
+    expect(mayChange(['src/styles.scss'])).toBe(false);
+    expect(mayChange(['content/gui'])).toBe(false);
+    expect(mayChange(['public/index.yml'])).toBe(false);
   });
 });

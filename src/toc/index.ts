@@ -1,4 +1,4 @@
-import { debounce } from '../util';
+import { centerInScrollContainer, debounce } from '../util';
 import { globals } from '../globals';
 import { getHashTarget } from '../hash-target';
 import {
@@ -9,25 +9,6 @@ import {
 } from './model';
 
 const LATENCY_MS = 50;
-
-function scrollIfNeeded(element: HTMLElement, container: HTMLElement) {
-  const containerHasScrollbar = container.scrollHeight > container.clientHeight;
-  if (!containerHasScrollbar) {
-    return;
-  }
-
-  // Calculate element center relative to container's scroll space
-  const elementRect = element.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-  const elementCenter =
-    elementRect.top -
-    containerRect.top +
-    container.scrollTop +
-    elementRect.height / 2;
-  const desiredScrollTop = elementCenter - container.clientHeight / 2;
-
-  container.scrollTo({ top: desiredScrollTop });
-}
 
 // Input that can scroll the page or change the current item
 const USER_INPUT_EVENTS = ['keydown', 'pointerdown', 'touchstart', 'wheel'];
@@ -225,7 +206,7 @@ export default (window: Window) => {
     switchCurrent(current?.parentElement ?? null, next?.parentElement ?? null);
     current = next;
     if (next?.parentElement != null) {
-      scrollIfNeeded(next.parentElement, toc);
+      centerInScrollContainer(next.parentElement, toc);
     }
     highlight.moveTo(next);
   };

@@ -24,10 +24,12 @@ body.is-presenting {
       12 12,
     cell;
   --slides-eraser-cursor: var(--slides-eraser-cursor-light);
-  --slides-scale: max(
-    100%,
+
+  // A slide's body size, which its whole type scale follows
+  --slides-font-size: max(
+    var(--font-size),
     min(
-      clamp(150%, 2.8vmin, 200%),
+      clamp(calc(1.5 * var(--font-size)), 2.8vmin, calc(2 * var(--font-size))),
       calc((100vw - var(--gap) - var(--gap)) / 35),
       calc(100vh / 26.25)
     )
@@ -92,7 +94,8 @@ body.is-presenting [data-slides-annotation-layer] {
 
 body.is-presenting header,
 body.is-presenting .title-and-info,
-body.is-presenting nav.toc,
+body.is-presenting .sidebar,
+body.is-presenting .document-pagination,
 body.is-presenting .page-bottom,
 body.is-presenting footer,
 body.is-presenting .appearance-pickers,
@@ -128,6 +131,11 @@ body.is-presenting .slide-deck {
 }
 
 body.is-presenting .slide {
+  // Inter's tuning is for the page's sizes, so slides size optically by
+  // themselves instead
+  --font-size: var(--slides-font-size);
+  --inter-tuning: initial;
+
   @include user-select(none);
 
   position: fixed;
@@ -140,7 +148,8 @@ body.is-presenting .slide {
   height: 100vh;
   padding: calc(3 * var(--gap));
   overflow: auto;
-  font-size: var(--slides-scale);
+  font-size: var(--font-size);
+  font-variation-settings: normal;
   letter-spacing: 0.2px;
   outline: none;
   background: var(--bg-color);
@@ -169,9 +178,11 @@ body.is-presenting .slide.is-active:has(> .trace-widget) {
 }
 
 body.is-presenting .slide:has(> .trace-widget) > .trace-widget {
+  --font-size: calc(var(--slides-font-size) * 0.666);
+
   flex: 1 1 auto;
   min-height: 0;
-  font-size: 66.6%;
+  font-size: var(--font-size);
 }
 
 body.is-presenting .slide:has(> .trace-widget) > .trace-widget > .trace-body {

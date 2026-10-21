@@ -195,6 +195,19 @@ describe('custom font configuration', () => {
     expect(scss).toContain(
       '.main-content h2:not(.file-title) { font-size: 1.5rem; }',
     );
+    // The h3, h5, and h6 steps of the type scale in src/_base.scss
+    expect(scss).toContain(
+      '.main-content h3:not(.file-title) { font-size: 1.1875rem; }',
+    );
+    expect(scss).toContain(
+      '.main-content h4:not(.file-title) { font-size: 1rem; }',
+    );
+    expect(scss).toContain(
+      '.main-content h5:not(.file-title) { font-size: 0.8125rem; }',
+    );
+    expect(scss).toContain(
+      '.main-content h6:not(.file-title) { font-size: 0.75rem; }',
+    );
   });
 
   test('omits font size adjustment variables when they are not configured', () => {

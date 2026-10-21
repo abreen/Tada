@@ -2,6 +2,7 @@
 // which leaves the header static instead of fixed.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import path from 'path';
+import { portArgument } from './ports';
 
 const repoDir = path.resolve(import.meta.dir, '..');
 const tada = path.join(repoDir, 'bin', 'tada.ts');
@@ -13,7 +14,7 @@ const coveragePreload = path.join(
 const args = process.argv.slice(2);
 const coverageEnabled = args.includes('--coverage');
 const search = !args.includes('--no-search');
-const port = search ? '8083' : '8084';
+const port = portArgument(args);
 const siteDir = path.join(
   repoDir,
   'playwright',

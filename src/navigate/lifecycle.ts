@@ -1,4 +1,5 @@
 import mountTableOfContents from '../toc';
+import mountDocumentIndex from '../document-index';
 import mountAnchor from '../anchor';
 import mountQuestion from '../question';
 import mountCode from '../code';
@@ -17,6 +18,7 @@ const PER_PAGE_COMPONENTS: Record<
   (w: Window) => void | (() => void) | Promise<void | (() => void)>
 > = {
   toc: mountTableOfContents,
+  documentIndex: mountDocumentIndex,
   anchor: mountAnchor,
   question: mountQuestion,
   code: mountCode,

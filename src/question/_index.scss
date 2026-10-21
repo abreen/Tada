@@ -1,4 +1,5 @@
 @use '../mixins' as *;
+@use '../type';
 
 .question {
   --question-label-width: 1.2em;
@@ -21,14 +22,17 @@
 .question-a-label {
   flex: 0 0 var(--question-label-width);
   margin: 0;
-  font-weight: 600;
+
+  @include type.weight(600);
+
   color: var(--theme-color-text);
 
   @include user-select(none);
 }
 
 .question-q > span:last-child {
-  font-weight: var(--font-weight);
+  @include type.weight(var(--font-weight));
+
   color: var(--fg-color);
 }
 
@@ -94,8 +98,9 @@
 }
 
 .js .question-a-body::after {
+  @include type.font(13, $descendants: false);
+
   display: block;
-  font-size: var(--font-size-small);
   font-style: italic;
   color: var(--fg2-color);
   text-align: center;
@@ -169,8 +174,7 @@
     :has(> :not(code, .question-multiple-choice-result))
   )
   > code {
-  padding: 0;
-  background: none;
+  @include code-plain;
 }
 
 .question-multiple-choice-option::after {

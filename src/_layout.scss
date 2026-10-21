@@ -1,4 +1,5 @@
 @use 'mixins' as *;
+@use 'type';
 
 :root {
   --toc-width: 260px;
@@ -17,6 +18,10 @@ body {
 }
 
 body > .container {
+  // The body's widest: its width inside the padding below at the breakpoint, so
+  // the stacked layout below the breakpoint fills the window with no extra margin
+  --main-width: calc(#{$breakpoint} - 2 * var(--gap));
+
   position: relative;
   box-sizing: border-box;
   display: flex;
@@ -29,17 +34,41 @@ body > .container {
 .main-content {
   display: grid;
   flex: 1;
-  grid-template-areas: 'heading' 'toc' 'body';
+  grid-template-areas: 'heading' 'sidebar' 'body';
   grid-template-rows: auto auto 1fr;
-  width: 100%;
 }
 
 .main-content > .title-and-info {
   grid-area: heading;
 }
 
-.main-content > nav.toc {
-  grid-area: toc;
+// The document index above the TOC
+.main-content > .sidebar {
+  display: flex;
+  flex-direction: column;
+  grid-area: sidebar;
+  gap: var(--gap);
+  min-width: 0;
+  margin-bottom: var(--gap);
+}
+
+// The index never gets shorter than about six single-line entries, so the
+// current page's entry can still show, or than all of its entries when it has
+// fewer (the build counts them). Narrow screens stack it above the body, so a
+// tall one is capped at half the viewport.
+.sidebar > .document-index {
+  --document-index-min-height: calc(
+    min(var(--document-index-entries, 6), 6) *
+      var(--document-index-entry-height) + 2 * var(--document-index-padding)
+  );
+
+  max-height: max(var(--document-index-min-height), 50vh);
+}
+
+@media print {
+  .main-content > .sidebar {
+    display: none;
+  }
 }
 
 .body {
@@ -66,9 +95,7 @@ body > .container {
 }
 
 body.default .title-and-info,
-body.default nav.toc,
-body.literate .title-and-info,
-body.literate nav.toc {
+body.literate .title-and-info {
   margin-bottom: var(--gap);
 }
 
@@ -84,6 +111,22 @@ body.default .title-and-info {
   border-bottom: 1px solid var(--fg2-color);
 }
 
+// On literate pages the file header follows the title, so the border is only
+// needed where the index or TOC sits below the title
+// (and the same for the slides header on default pages)
+body.default .main-content:has(.slides-header) > .title-and-info {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+body.literate .main-content:has(> .sidebar) > .title-and-info,
+body.default
+  .main-content:has(.slides-header):has(> .sidebar)
+  > .title-and-info {
+  padding-bottom: var(--gap);
+  border-bottom: 1px solid var(--fg2-color);
+}
+
 body.default .page-content > *:first-child {
   margin-top: 0;
 }
@@ -93,67 +136,81 @@ body.literate main table {
   width: 100%;
 }
 
-@media (width < 900px) {
+@media not (width >= #{$breakpoint}) {
   body.default.toc-is-active nav.toc,
   body.literate.toc-is-active nav.toc {
     padding: var(--gap);
     background: var(--bg2-color);
+
+    :is(tt, code) {
+      @include code-outline;
+    }
   }
 
   body.code.toc-is-active nav.toc {
     display: none;
   }
-}
 
-@media (width >= 900px) {
-  body.default main table,
-  body.literate main table {
-    width: auto;
-    min-width: 400px;
-    margin: 1rem auto;
+  body.code .sidebar:not(:has(> .document-index)) {
+    display: none;
   }
 }
 
-// Screen only: in print the TOC is hidden, so the content takes the full width
-@media screen and (width >= 900px) {
-  :not(.toc-is-active) > .container > .main-content {
-    max-width: var(--main-width);
-    margin: 0 auto;
-  }
-
-  .toc-is-active .main-content {
+// Screen only: in print the TOC and document index are hidden, so the content
+// takes the full width. The body is at most `--main-width` wide and the sidebar
+// takes `--sidebar-column`, which is zero without one; the two equal outer
+// columns center them together and shrink away first as the window narrows.
+// The heading spans the sidebar and body. The sidebar starts below it, sticks
+// once it reaches the header, and once stuck is never taller than the
+// viewport: the index is on top and the TOC below it, and each scrolls on its
+// own.
+@media screen and (width >= #{$breakpoint}) {
+  .main-content {
     grid-template:
-      'heading heading' auto
-      'toc body' 1fr / var(--toc-width) minmax(0, 1fr);
-    gap: 0 var(--gap);
+      '. heading heading .' auto
+      '. sidebar body .' 1fr /
+      minmax(0, 1fr) var(--sidebar-column, 0) minmax(0, var(--main-width))
+      minmax(0, 1fr);
   }
 
-  body.toc-is-active nav.toc {
+  .main-content:has(> .sidebar) {
+    --sidebar-column: calc(var(--toc-width) + var(--gap));
+  }
+
+  .main-content > .sidebar {
+    // Where the sidebar sticks, a gap below the header
+    --sidebar-top: calc(var(--header-offset) + var(--gap));
+    --sidebar-height: calc(100vh - var(--sidebar-top));
+
     position: sticky;
-    top: var(--header-offset);
+    top: var(--sidebar-top);
     box-sizing: border-box;
     align-self: start;
     width: var(--toc-width);
-    max-height: calc(100vh - var(--header-offset));
-    margin-bottom: 0;
+    max-height: var(--sidebar-height);
+    margin: 0 var(--gap) 0 0;
+  }
+
+  // The TOC takes priority: when the sidebar runs out of room, the index gives
+  // up its height first, down to its minimum, before the TOC scrolls
+  .sidebar > .document-index {
+    flex: 0 1000 auto;
+    min-height: var(--document-index-min-height);
+    max-height: none;
+  }
+
+  // Positioned and isolated so the TOC highlight scrolls with the list and
+  // stays behind its links
+  .sidebar > nav.toc {
+    position: relative;
+    flex: 0 1 auto;
+    min-height: 0;
     overflow-y: auto;
-  }
-
-  body.code.toc-is-active nav.toc {
-    top: calc(var(--header-offset) + var(--gap));
-    max-height: calc(100vh - var(--header-offset) - var(--gap));
+    isolation: isolate;
   }
 }
 
-@media screen and (width >= 1300px) {
-  .toc-is-active .main-content {
-    max-width: calc(var(--toc-width) + var(--gap) + 960px);
-    margin: 0 auto;
-  }
-}
-
-// Scoped to the heading so authors can use .info elsewhere (such as on details)
-.title-and-info > .info {
+.info {
   @include user-select(none);
 
   // Flex instead of a `1fr auto` grid: WebKit keeps the auto column's width
@@ -161,7 +218,9 @@ body.literate main table {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-size: var(--font-size-smaller);
+
+  @include type.font(15);
+
   color: var(--fg2-color);
 
   @media (width < 450px) {
@@ -214,14 +273,38 @@ body.literate main table {
 
 .columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: var(--gap);
+
+  // Stacked, a disc in the gap marks where the second column begins
+  > * + * {
+    position: relative;
+  }
+
+  > * + *::before {
+    position: absolute;
+    top: calc(var(--gap) / -2);
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    content: '';
+    background: var(--bg2-color);
+    border-radius: 50%;
+    translate: -50% -50%;
+  }
+
+  @media print, (width >= #{$breakpoint}) {
+    grid-template-columns: 1fr 1fr;
+
+    > * + *::before {
+      display: none;
+    }
+  }
 }
 
 footer {
   @include user-select(none);
+  @include type.font(15);
 
-  font-size: var(--font-size-smaller);
   color: var(--fg2-color);
   text-align: center;
 

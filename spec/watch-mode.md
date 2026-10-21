@@ -78,6 +78,13 @@ sources that depend on it.
 Editing, adding, or deleting a partial source rebuilds only page sources that
 include that partial source, including transitive includes.
 
+### Page title change
+
+Adding, changing, or removing a page's `title`, or adding, deleting, or moving a
+titled page, re-renders the pages whose [wikilinks](wikilinks.md) name
+a title that now belongs to different pages. A wikilink that no longer
+resolves fails the build until a page has the title again.
+
 ### Skipped content source edit
 
 Editing, adding, or deleting a source that is skipped does not update `dist/`.
@@ -94,12 +101,16 @@ Editing an `authors.*` config source rebuilds only page sources whose `author`
 front matter depends on author entries whose data changed. But adding or
 deleting an `authors.*` config source triggers a full rebuild.
 
+Changing a [document index](document-index.md) file, or a title it shows,
+re-renders only the pages whose document navigation changed.
+
 ### Script source change
 
 Any change in `src/` recompiles every listed script, because imports such as
 Sass partials are not tracked one by one. A page or site config change that
-starts or stops listing a script also recompiles them. Pages are re-rendered
-only when the output files of a script they load change; see
+starts or stops listing a script also recompiles them, along with their
+renderers. Pages are re-rendered only when the output files of a script they
+load change, or on every recompile when one of those scripts has a renderer; see
 [Author Scripts](author-scripts.md#watch-mode).
 
 ### Adding a file
@@ -145,6 +156,11 @@ that is now a file, so later edits to that file are detected.
 A known limitation: if a directory is replaced by a file and then by a directory
 again in quick succession, edits inside the recreated directory may not be
 detected. Restart watch mode if that happens.
+
+## Proofreading
+
+Watch mode underlines spelling and grammar problems in the pages it renders;
+see [Proofreading](proofread.md).
 
 ## Output Path Conflicts
 
@@ -196,6 +212,6 @@ rebuilt `dist/` bytes are unchanged.
 The watcher collects changed paths and runs one build at a time. Each build
 rescans `content/` and `public/` to get the current list of sources, then
 re-renders changed sources and the pages that depend on them through partials,
-traces, authors, or internal link targets. Configuration and file contents are
+traces, authors, internal link targets, or wikilink titles. Configuration and file contents are
 read by the build, not by the watcher. Closing watch mode waits for the current
 build to finish and does not send a reload.

@@ -10,6 +10,7 @@ import {
 import path from 'path';
 import HEADING from './_heading.html' with { type: 'text' };
 import AUTHOR from './_author.html' with { type: 'text' };
+import BREADCRUMBS from './_breadcrumbs.html' with { type: 'text' };
 import * as configLoader from '../build/config-loader';
 import createTemplateGlobals from '../build/template-globals';
 import type { SiteVariables } from '../build/types';
@@ -18,6 +19,7 @@ const site = {} as SiteVariables;
 const templateSources: Record<string, string> = {
   '_heading.html': HEADING,
   '_author.html': AUTHOR,
+  '_breadcrumbs.html': BREADCRUMBS,
 };
 mock.module('fs', () => ({
   default: {

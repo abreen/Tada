@@ -1,4 +1,5 @@
 import { test, expect } from './test-fixtures';
+import { appearanceSiteUrl } from './ports';
 
 test('logo loads and navigation opens without JavaScript', async ({
   browser,
@@ -6,7 +7,7 @@ test('logo loads and navigation opens without JavaScript', async ({
   const context = await browser.newContext({ javaScriptEnabled: false });
   try {
     const page = await context.newPage();
-    await page.goto('http://localhost:8082/custom/index.html');
+    await page.goto(appearanceSiteUrl('/index.html'));
     const logo = page.locator('header img.logo-image');
     await expect(logo).toHaveAttribute('src', '/custom/logo.svg');
     await expect

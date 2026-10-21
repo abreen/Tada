@@ -23,11 +23,17 @@
         <% }); %>
       </div>
       <% } %>
+      <%= render('_document-pagination.html') %>
     </div>
     <%= render('_page-bottom.html') %>
   </main>
-  <% if (page.tocHtml) { %>
-  <nav class="toc"><%= page.tocHtml %></nav>
+  <% if (page.documentNavigation || (page.tocHtml)) { %>
+  <div class="sidebar">
+    <%= render('_document-index.html') %>
+    <% if (page.tocHtml) { %>
+    <nav class="toc"><%= page.tocHtml %></nav>
+    <% } %>
+  </div>
   <% } %>
 </div>
 

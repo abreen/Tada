@@ -55,7 +55,13 @@ to them by URL.
 A script's default export is a mount function. Tada calls it each time the page
 is shown: on a full page load and after each client-side navigation to the page.
 Code at the top level of the module runs once per visit, because the browser
-evaluates an ES module only once.
+evaluates an ES module only once. On a full page load it runs after the page's
+content is parsed. On a client-side navigation, Tada loads the new page's
+scripts before swapping in its content, so top-level code runs while the
+previous page is still shown, and it can run for a navigation the visitor
+abandons. Work with the page's elements in the mount function, or in the
+callbacks of a custom element the module defines (see
+[Custom Elements](custom-elements.md#in-the-browser)).
 
 ```ts
 import type { Mount } from '@abreen/tada';
@@ -94,7 +100,9 @@ to load. When the visitor leaves the page, cleanup runs in reverse order: the
 last script mounted is cleaned up first, and every script is cleaned up before
 Tada's own components. Site-wide scripts are mounted and cleaned up with each
 page, like the page's own scripts; only top-level module code runs once per
-visit. Navigation does not wait for scripts either: it
+visit. Before swapping in a page, navigation waits for its scripts to load, at most 3
+seconds, along with its stylesheets (see [Styles](#styles)); a script that
+fails to load does not stop it. Navigation does not wait for mounts: it
 finishes, and dispatches `tada:navigation`, once Tada's own components are
 mounted, even if a script is still loading or an async mount has not finished.
 Scripts that finish loading after the visitor has left their page are not
@@ -149,13 +157,25 @@ A site-wide package script runs on every page, so it should find the elements
 it enhances first and load a large library only when the page has any, with a
 dynamic `import()`; Tada compiles the library into a separate chunk that only
 those pages download. As with any script, the page's content should be useful
-without JavaScript; a package script cannot add build-time fallback content,
-so the page provides it, such as a static image or a link in place of a map.
+without JavaScript. A package can add build-time fallback content, such as a
+static image or a link in place of a map, with a renderer that its
+`package.json` names (see [Custom Elements](custom-elements.md#packages)), or
+the page can provide it.
 
 A package's stylesheets can refer to its images with relative `url()` paths,
 which are published in `_scripts/assets/` with content hashes in their names.
 Libraries that find their images by URL at run time, such as Leaflet's default
 marker icons, need those URLs set by the package script.
+
+## Renderers
+
+A script can have a renderer next to it, such as
+`src/lectures/timezone.render.ts`, which Tada runs at build time to fill custom
+elements like `<tz-chooser></tz-chooser>` on the pages that list the script.
+A script can also define those elements in the browser with
+`customElements.define`, so they keep the visitor's state across client-side
+navigations without showing the build-time default first. See
+[Custom Elements](custom-elements.md).
 
 ## Styles
 
@@ -220,8 +240,11 @@ other generated links, their URLs include the site base path.
 Scripts are progressive enhancement. Pages render their content at build time,
 and a page that needs a control only JavaScript can drive should render it
 `hidden` or `disabled` and enable it from the mount function, with a
-`<noscript>` fallback where useful. The starter content's Lectures page and
-`src/lectures/timezone.ts` are an example.
+`<noscript>` fallback where useful. A script's renderer can write that control
+into the page at build time, so it takes up its space before the script runs
+(see [Custom Elements](custom-elements.md)). The starter content's Lectures
+page, `src/lectures/timezone.ts`, and `src/lectures/timezone.render.ts` are an
+example.
 
 ## Watch mode
 
@@ -232,7 +255,8 @@ does not exist yet; edits elsewhere reuse the compiled scripts. After a failed
 build, changes from it are retried with the next one, so a script error keeps
 being reported until it is fixed. Pages are re-rendered
 when the output files of a script they load change, such as a script that
-starts importing a stylesheet.
+starts importing a stylesheet, or on every recompile when it has a renderer (see
+[Custom Elements](custom-elements.md#watch-mode)).
 
 ## Inline and external `<script>` elements
 

@@ -16,7 +16,7 @@ Edit the files in `content/` to add your own pages. To configure the nav,
 update `nav.yaml`. Update `authors.yaml` with your information, or delete it
 if you won't use the `author` front matter field.
 
-See the [Markdown examples page](/markdown.html) for syntax examples.
+See the [[Markdown Examples|Markdown examples page]] for syntax examples.
 
 !!! note
 For more documentation, see the [GitHub page](https://github.com/abreen/Tada).

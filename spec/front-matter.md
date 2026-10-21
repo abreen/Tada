@@ -47,7 +47,9 @@ results; choose one per file.
 ## Fields
 
 - **title** (required, except on the home page): page title for `<title>` and
-  the page heading (see [Home page without a title](#home-page-without-a-title))
+  the page heading (see [Home page without a title](#home-page-without-a-title));
+  [wikilinks](wikilinks.md) such as `[[My Page]]` link to a page by
+  its exact title
 - **author**: author handle, resolved against the authors config file
 - **description**: meta description
 - **published**: publication date, displayed below the title
@@ -57,8 +59,9 @@ results; choose one per file.
   [Slides Mode](slides.md)); HTML content pages and literate Java pages with
   `slides: true` fail the build
 - **breadcrumbs**: ordered list of ancestor links, each with a nonempty string
-  `label` and internal `url` (see [Breadcrumbs](breadcrumbs.md)); the current
-  page title is appended automatically
+  `label` and internal `url` (see [Breadcrumbs](breadcrumbs.md)); not allowed on
+  pages listed in a [document index](document-index.md), whose tree shows
+  their ancestors instead
 - **skip**: set to `true` to exclude the page from the build
 - **stdin**: input string sent to a literate Java program's stdin at build time (see [Literate Java](literate-java.md))
 - **scripts**: list of scripts to compile and run on the page, as paths
@@ -69,7 +72,7 @@ results; choose one per file.
 
 Title and description support inline Markdown formatting. The rendered HTML is
 used for the page heading, and a plain-text version is used for `<title>`,
-`og:title`, the current breadcrumb item, and the meta description. The plain text keeps every character the
+`og:title`, and the meta description. The plain text keeps every character the
 reader sees: tags are removed and character references are decoded exactly
 once, so a description such as ``Uses `a < b` and 6" rulers`` keeps both the
 `<` and the `b`.
@@ -122,7 +125,6 @@ line, the legacy format reads the page's first paragraph as front matter.
 Without a title, the page's `<title>` and `og:title` are the site title alone,
 without `titlePostfix`, and the page heading has no `<h1>`. The whole heading
 block (`.title-and-info`) is omitted unless the page has a `published` date or
-an `author`, which it still shows. `breadcrumbs` require a title, since the
-trail ends with it; a nonempty list without a title fails the build. In search
+an `author`, which it still shows. `breadcrumbs` require a title; a nonempty list without a title fails the build. In search
 results, the page is listed under the site title, which Pagefind takes from the
 `<title>` when a page has no `<h1>`.

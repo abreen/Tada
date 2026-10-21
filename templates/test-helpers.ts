@@ -21,3 +21,16 @@ export function renderTopTemplate(
       : '';
   return compileTemplate(TOP_TEMPLATE)(full);
 }
+
+// Render a template whose render() calls resolve to the given partials, sharing
+// the page's params like the build does; other partials render nothing
+export function renderWithPartials(
+  source: string,
+  params: Record<string, unknown>,
+  partials: Record<string, string>,
+): string {
+  const full: Record<string, unknown> = { ...params };
+  full.render = (name: string) =>
+    name in partials ? compileTemplate(partials[name])(full) : '';
+  return compileTemplate(source)(full);
+}

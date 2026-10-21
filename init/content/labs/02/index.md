@@ -1,7 +1,4 @@
 ---
-breadcrumbs:
-  - label: Labs
-    url: ../index.html
 title: Lab 2
 author: alex
 description: A page demonstrating slides mode.

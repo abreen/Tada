@@ -29,6 +29,7 @@ A static site generator. The successor to Presto.
   * Light & dark mode following system, customizable tint
   * Standard & high contrast picker
   * Sans-serif & serif font picker
+  * Precisely tuned [optical sizing of Inter][inter-optical-sizing], by [Nan Xiao][nanx-inter-optical-sizing]
   * Plus, provide your own web fonts (with many tuning options)
 
 - LaTeX math support
@@ -61,6 +62,10 @@ A static site generator. The successor to Presto.
   * Renders headings, alert boxes, and `<hr>` elements
   * Highlights the heading currently being viewed
 
+- Document indexes for ordered sections, like a course's labs
+  * An `index.yml` lists pages as a tree
+  * Pages get a sidebar tree and previous and next links
+
 - Extended Markdown syntax
   * `!!! note ... !!!` and `!!! warning ... !!!` render alert boxes
   * `??? question ... ???` renders a Q&A section; answer is hidden until click
@@ -69,10 +74,12 @@ A static site generator. The successor to Presto.
     "Ta-da!" reveal
   * `+++ ... +++ ... +++` renders a two-column layout
   * `[Title][Description](url)` renders a two-line superlink
+  * `[[Page Title]]` or `[[Page Title|link text]]` wikilinks link to a page by its title
   * Special heading subtitles with `## Heading # A subtitle here`
   * `{{{ _partial.md }}}` syntax for including partials
-  * Styled `<details>` elements, including info/warning variants and
-    "Show more" previews (see [Details elements](#details-elements))
+  * Styled `<details>` elements, including "Show more" previews (see [Details elements](#details-elements))
+  * `[Label| ... ]` renders tabs; consecutive tabs form one group
+    - Number the labels `1.`, `2.`, ... to render a stepper with Back and Next buttons
 
 - Extremely efficient client-side navigation
   * A miniature SPA that uses internal links tagged at build time
@@ -341,6 +348,7 @@ vars:
 | `faviconColor` | *Optional*, background color for generated favicons (defaults to `themeColor`) |
 | `faviconFontWeight` | *Optional*, font weight used for generated favicon text (default `700`) |
 | `vars` | Arbitrary key/value variables inserted into content with `{{ name }}` (e.g., `{{ staffEmail }}`) |
+| `proofread` | *Optional*, `site.dev.*` only; `words` lists extra words the `tada watch` spelling check accepts, `dialect` picks the English dialect, `rules` turns Harper rules on or off, and `false` turns the check off (see [Proofreading](spec/proofread.md)) |
 
 ### Custom logo and favicon
 
@@ -421,7 +429,27 @@ ajones:
 Site content lives in the `content/` directory. Markdown is converted to HTML.
 HTML files should contain front matter and are also built.
 
-Any other kinds of files are copied into `dist/` in the same locations.
+Any other kinds of files are copied into `dist/` in the same locations, except
+document indexes.
+
+### Document indexes
+
+An `index.yml` (or `index.yaml`) file anywhere in `content/` orders pages into
+a tree. Paths are relative to the file's directory:
+
+```yaml
+page: index.md
+children:
+  - page: 00/index.md
+    children:
+      - 00/VowelCounter.java.md
+  - 01/index.md
+```
+
+Each listed page shows the part of the tree around it, including its
+ancestors, and links to the previous and next pages in order. Listed pages
+must have a `title` and may not set `breadcrumbs`, since the tree shows their
+ancestors instead.
 
 All files in `public/` are copied directly into `dist/` with zero processing.
 Files in `public/` are **not** included in the search index.
@@ -439,7 +467,7 @@ list of variables parsed using the [`front-matter`][front-matter] library).
 | `description` | Meta description for the page |
 | `toc` | Set to `true` to show a table of contents |
 | `slides` | Set to `true` on Markdown pages to treat top-level `---` as slide separators and add presentation controls |
-| `breadcrumbs` | Ordered ancestor links with `label` and `url`; the page title completes the trail |
+| `breadcrumbs` | Ordered ancestor links with `label` and `url`; not allowed on pages in a [document index](#document-indexes) |
 | `published` | Year, month, and day of publishing (e.g, `2025-09-09`) |
 | `scripts` | Scripts in `src/` to compile and run on this page (see [Scripts](#scripts)) |
 
@@ -472,6 +500,27 @@ const mount: Mount = ({ window, signal }) => {
 };
 export default mount;
 ```
+
+A script can also have a renderer next to it, such as
+`src/lectures/timezone.render.ts`, which runs at build time and fills custom
+elements on the pages that list the script. The page then includes the
+script's HTML, such as a control, before any JavaScript runs:
+
+```ts
+import type { Renderers } from '@abreen/tada';
+
+const renderers: Renderers = {
+  'tz-chooser': () => '<label>Show times in <select disabled>...</select></label>',
+};
+export default renderers;
+```
+
+Write `<tz-chooser>` and `</tz-chooser>` on lines of their own in the page.
+
+The script can define the element with `customElements.define` at the top
+level of its module. Tada loads a page's scripts before showing it on a
+client-side navigation, so the element is upgraded before the visitor sees
+it, and state in module variables lasts across pages.
 
 Imported stylesheets are added to the page's `<head>`, so they work without
 JavaScript. Scripts can't import images or other files: put them in
@@ -552,12 +601,12 @@ drawn as a bordered box, and all variants open and close without JavaScript.
 | Variant | Markup | Result |
 |---------|--------|--------|
 | Standard | `<details>` with a `<summary>` | Collapsed to its summary. When open and taller than the screen, the summary sticks to the top of the viewport so the reader can close it from anywhere |
-| Info | `<details class="info">` with a `<summary>` | Same, with an info icon at the right end of the summary |
-| Warning | `<details class="warning">` with a `<summary>` | Same, with a warning icon at the right end of the summary |
 | Preview | `<details>` with no `<summary>` | Shows the first 10em of the body, fading out behind a "Show more" link; when open, its "Show less" link sticks to the bottom of the viewport |
 
 
 [inter]: https://fonts.google.com/specimen/Inter
+[inter-optical-sizing]: https://github.com/nanxstats/inter-optical-sizing
+[nanx-inter-optical-sizing]: https://nanx.me/blog/post/inter-optical-sizing/
 [front-matter]: https://www.npmjs.com/package/front-matter
 [pagefind]: https://pagefind.app/
 [jep467]: https://openjdk.org/jeps/467

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { compile, doValidation } from './json-schema';
 import {
+  rejectDevOnlyConfig,
   resolveFaviconSymbol,
   validateExtensionToShikiLanguage,
   validateShikiLanguages,
@@ -164,6 +165,111 @@ describe('site config schema', () => {
         'site.dev.json',
       ),
     ).toThrow('/banner: must be string');
+  });
+
+  test('accepts proofread words', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: { words: ['Tada', 'KaTeX'] },
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
+  test('accepts proofread: false', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: false,
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
+  test('accepts proofread dialect and rules', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: {
+            dialect: 'british',
+            rules: { LongSentences: false, SpellCheck: true },
+          },
+        },
+        'site.dev.json',
+      ),
+    ).not.toThrow();
+  });
+
+  test('rejects unknown proofread dialects', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: { dialect: 'klingon' },
+        },
+        'site.dev.json',
+      ),
+    ).toThrow('/proofread/dialect: must be equal to one of the allowed values');
+  });
+
+  test('rejects proofread rules that are not true or false', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: { rules: { LongSentences: 'off' } },
+        },
+        'site.dev.json',
+      ),
+    ).toThrow('/proofread/rules/LongSentences: must be boolean');
+  });
+
+  test('rejects unknown proofread options', () => {
+    const validator = compile(siteSchema);
+
+    expect(() =>
+      doValidation(
+        validator,
+        {
+          base: 'https://example.edu',
+          title: 'Test',
+          themeColor: 'tomato',
+          proofread: { language: 'en' },
+        },
+        'site.dev.json',
+      ),
+    ).toThrow('/proofread: unknown property "language"');
   });
 
   test('accepts configurable appearance defaults', () => {
@@ -426,5 +532,27 @@ describe('site config schema', () => {
         'site.dev.json',
       ),
     ).toThrow('unknown property "code"');
+  });
+});
+
+describe('rejectDevOnlyConfig', () => {
+  test('allows proofread in the development site config', () => {
+    expect(() =>
+      rejectDevOnlyConfig({ proofread: {} }, 'dev', 'site.dev.yaml'),
+    ).not.toThrow();
+  });
+
+  test('rejects proofread in the production site config', () => {
+    expect(() =>
+      rejectDevOnlyConfig({ proofread: {} }, 'prod', 'site.prod.yaml'),
+    ).toThrow(
+      'site.prod.yaml: proofread is only supported in the development site config',
+    );
+  });
+
+  test('allows a production site config without proofread', () => {
+    expect(() =>
+      rejectDevOnlyConfig({ title: 'Site' }, 'prod', 'site.prod.yaml'),
+    ).not.toThrow();
   });
 });

@@ -35,6 +35,12 @@ class TestInitDefault:
         assert config['defaultContrast'] == 'standard'
         assert 'title' in config
 
+    def test_dev_config_accepts_words_in_default_content(self, site_dir):
+        dev = load_structured_file(site_dir / SITE_DEV_CONFIG_FILE)
+        prod = load_structured_file(site_dir / SITE_PROD_CONFIG_FILE)
+        assert {'Tada', 'superlink'} <= set(dev['proofread']['words'])
+        assert 'proofread' not in prod
+
     def test_creates_prod_config(self, site_dir):
         config_path = site_dir / SITE_PROD_CONFIG_FILE
         assert config_path.exists()
@@ -70,6 +76,8 @@ class TestInitDefault:
     def test_copies_src_directory(self, site_dir):
         lectures = site_dir / 'src' / 'lectures'
         assert (lectures / 'timezone.ts').is_file()
+        assert (lectures / 'timezone.render.ts').is_file()
+        assert (lectures / 'time-zones.ts').is_file()
         assert (lectures / 'timezone.scss').is_file()
 
     def test_writes_script_tooling(self, site_dir):
@@ -107,6 +115,11 @@ class TestInitDefault:
         [script] = set(re.findall(r'href="/(_scripts/lectures/timezone-[a-z0-9]+\.js)"', lectures))
         assert (dist / script).is_file()
         assert 'data-tada-style' in lectures
+        # The time zone chooser is rendered at build time, disabled until the
+        # script runs
+        assert '<tz-chooser><p><label>Show times in <select disabled>' in lectures
+        assert '<option value="America/New_York" selected>' in lectures
+        assert not (dist / '_scripts' / 'lectures' / 'timezone.render.js').exists()
 
     def test_stdout_contains_success_message(self, tmp_path):
         result = run_tada('init', 'mysite', '--no-interactive', cwd=str(tmp_path))
@@ -130,6 +143,10 @@ class TestInitBare:
         assert dev['shikiLanguages'] == []
         assert prod['extensionToShikiLanguage'] == {}
         assert prod['shikiLanguages'] == []
+
+    def test_bare_configs_have_no_proofread_words(self, site_dir):
+        for config_file in (SITE_DEV_CONFIG_FILE, SITE_PROD_CONFIG_FILE):
+            assert 'proofread' not in load_structured_file(site_dir / config_file)
 
     def test_creates_minimal_content(self, site_dir):
         content_dir = site_dir / 'content'

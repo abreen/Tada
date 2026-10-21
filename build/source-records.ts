@@ -17,6 +17,7 @@ import type {
 } from './types';
 import type { TadaProjectScan } from './source-model';
 import type { AuthorScripts } from './author-scripts';
+import type { DocumentIndex } from './document-index';
 
 import type { TraceCache } from './build-types';
 
@@ -28,6 +29,8 @@ export interface TadaSourceRecord {
   partialDeps: Set<string>;
   traceDeps: Set<string>;
   internalTargets: Set<string>;
+  /** Titles the page's wikilinks look up */
+  wikiTitles: Set<string>;
   authorKey?: string;
 }
 
@@ -36,12 +39,14 @@ function createDependencyCollector(): {
   partials: Set<string>;
   traceFiles: Set<string>;
   internalTargets: Set<string>;
+  wikiTitles: Set<string>;
   traceOutputs: Map<string, string>;
   authorKey: string | undefined;
 } {
   const partials = new Set<string>();
   const traceFiles = new Set<string>();
   const internalTargets = new Set<string>();
+  const wikiTitles = new Set<string>();
   const traceOutputs = new Map<string, string>();
   let authorKey: string | undefined;
 
@@ -50,6 +55,7 @@ function createDependencyCollector(): {
       partials,
       traceFiles,
       internalTargets,
+      wikiTitles,
       traceOutputs,
       setAuthorKey(value: string) {
         authorKey = value;
@@ -58,6 +64,7 @@ function createDependencyCollector(): {
     partials,
     traceFiles,
     internalTargets,
+    wikiTitles,
     traceOutputs,
     get authorKey() {
       return authorKey;
@@ -74,6 +81,7 @@ function createEmptyContentRecord(filePath: string): TadaSourceRecord {
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
+    wikiTitles: new Set(),
   };
 }
 
@@ -96,6 +104,7 @@ export function createContentRecord({
   traceCache,
   traceToolAvailability,
   skipLiterateJavaExecution,
+  documentIndex,
 }: {
   filePath: string;
   siteVariables: SiteVariables;
@@ -106,11 +115,17 @@ export function createContentRecord({
   traceCache?: TraceCache;
   traceToolAvailability?: TraceToolAvailability;
   skipLiterateJavaExecution?: boolean;
+  documentIndex?: DocumentIndex;
 }): TadaSourceRecord {
   const renderKind = scan.sources.get(filePath)?.renderKind ?? 'skip';
-  if (renderKind === 'skip' || renderKind === 'public-copy') {
+  if (
+    renderKind === 'skip' ||
+    renderKind === 'public-copy' ||
+    renderKind === 'document-index'
+  ) {
     return createEmptyContentRecord(filePath);
   }
+  const documentNavigation = documentIndex?.get(filePath);
 
   const deps = createDependencyCollector();
   const assets: Asset[] = [];
@@ -131,6 +146,8 @@ export function createContentRecord({
           codePageSourceTargets: scan.codePageSourceTargets,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
+          documentNavigation,
+          pageTitles: scan.pageTitles,
         }),
       );
       break;
@@ -148,8 +165,10 @@ export function createContentRecord({
           isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
+          documentNavigation,
           traceCache,
           traceToolAvailability,
+          pageTitles: scan.pageTitles,
         }),
       );
       break;
@@ -170,6 +189,7 @@ export function createContentRecord({
           isWatchMode,
           literateJavaOutputPaths: scan.literateJavaOutputPaths,
           dependencyCollector: deps.collector,
+          documentNavigation,
         }),
       );
       assets.push(
@@ -195,6 +215,7 @@ export function createContentRecord({
     partialDeps: deps.partials,
     traceDeps: deps.traceFiles,
     internalTargets: deps.internalTargets,
+    wikiTitles: deps.wikiTitles,
     authorKey: deps.authorKey,
   };
 }
@@ -212,6 +233,7 @@ export function createPublicRecord(
     partialDeps: new Set(),
     traceDeps: new Set(),
     internalTargets: new Set(),
+    wikiTitles: new Set(),
   };
 }
 

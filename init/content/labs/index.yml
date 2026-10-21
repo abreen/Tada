@@ -1,0 +1,11 @@
+# The order of the labs, for the sidebar, breadcrumbs, and previous and next
+# links. Paths are relative to this directory. See the document index docs.
+page: index.md
+children:
+  - page: 00/index.md
+    children:
+      - 00/VowelCounter.java.md
+  - page: 01/index.md
+    children:
+      - 01/TraceDemo.java
+  - 02/index.md

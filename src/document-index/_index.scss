@@ -1,0 +1,321 @@
+@use '../mixins' as *;
+@use '../type';
+
+// How far entries fade out at an edge of the index that has more above or
+// below it
+$document-index-fade: 1.5em;
+
+.document-index {
+  --document-index-indent: 16px;
+  --document-index-label-gap: 8px;
+  --document-index-stroke: 1px;
+  --document-index-corner-radius: 4px;
+  --document-index-bullet-size: 7px;
+  --document-index-bullet-offset: 3px;
+  --document-index-bullet-optical-offset: 1px;
+  --document-index-root-gap: 4px;
+  --document-index-junction: calc(0.7em + 4px);
+  --document-index-padding: 4px;
+
+  // A single-line entry: one line plus its link's block padding
+  --document-index-entry-height: calc(1lh + 8px);
+
+  @include user-select(none);
+
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--document-index-padding);
+  overflow: hidden;
+
+  @include type.font(15);
+
+  line-height: 1.4;
+  background: var(--bg2-color);
+  border-radius: var(--border-radius);
+}
+
+// A code page's label stays plain
+.document-index a:not(.code-page) :is(tt, code) {
+  @include code-outline;
+}
+
+.document-index ol {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+// The tree scrolls inside the box when the box is capped, so the box keeps
+// its rounded background while entries scroll under its edges
+.document-index > ol {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+// Start with the current page in view (where supported) instead of the top of
+// the tree
+.document-index li > a[aria-current='page'] {
+  scroll-initial-target: nearest;
+}
+
+@property --document-index-fade-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --document-index-fade-bottom {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes document-index-fade-top {
+  to {
+    --document-index-fade-top: #{$document-index-fade};
+  }
+}
+
+@keyframes document-index-fade-bottom {
+  from {
+    --document-index-fade-bottom: #{$document-index-fade};
+  }
+}
+
+// Entries fade out at an edge only while there is more of the tree past it.
+// A tree that fits has no scroll timeline, so it has no fades.
+@supports (animation-timeline: scroll()) {
+  .document-index > ol {
+    mask-image: linear-gradient(
+      transparent,
+      #000 var(--document-index-fade-top),
+      #000 calc(100% - var(--document-index-fade-bottom)),
+      transparent
+    );
+    animation:
+      document-index-fade-top linear both,
+      document-index-fade-bottom linear both;
+    animation-timeline: scroll(self), scroll(self);
+    animation-range:
+      0 #{$document-index-fade},
+      calc(100% - #{$document-index-fade}) 100%;
+  }
+}
+
+.document-index ol ol {
+  position: relative;
+  margin-inline-start: var(--document-index-indent);
+}
+
+.document-index li {
+  position: relative;
+  margin: 0;
+}
+
+.document-index li > a {
+  @include subdued-link;
+
+  display: block;
+  min-width: 0;
+  padding: 4px 6px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+.document-index li > a[aria-current='page'] {
+  @include type.weight(600);
+}
+
+// Only the current page is in the foreground color. The other entries are
+// subdued, and brighten on hover instead.
+.document-index li > a:not([aria-current='page']) {
+  color: var(--fg2-color);
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--fg-color);
+    }
+  }
+
+  &:active {
+    color: var(--link-active-color);
+  }
+}
+
+// Tree guide lines: each nested entry has a connector from the trunk to its
+// label. Continuing siblings meet the trunk with a tee and the last sibling
+// ends in a rounded elbow. Every line is a border, never a 1px background: a
+// border's width is floored to whole device pixels, but a 1px background is
+// 1.5 device pixels at 150% scaling and draws 1 or 2 depending on where it
+// lands.
+.document-index ol ol > li > a {
+  position: relative;
+  padding-inline-start: calc(
+    var(--document-index-indent) + var(--document-index-label-gap)
+  );
+}
+
+.document-index ol ol > li::before {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  width: var(--document-index-indent);
+  height: calc(var(--document-index-junction) + var(--document-index-stroke));
+  pointer-events: none;
+  content: '';
+  border-block-end: var(--document-index-stroke) solid var(--fg2-color);
+  border-inline-start: var(--document-index-stroke) solid var(--fg2-color);
+}
+
+.document-index ol ol > li:last-child::before {
+  border-end-start-radius: var(--document-index-corner-radius);
+}
+
+// The trunk continues past a sibling's connector to the next sibling
+.document-index ol ol > li:not(:last-child)::after {
+  position: absolute;
+  inset-inline-start: 0;
+  top: var(--document-index-junction);
+  bottom: calc(-1 * var(--document-index-stroke));
+  z-index: 1;
+  width: 0;
+  pointer-events: none;
+  content: '';
+  border-inline-start: var(--document-index-stroke) solid var(--fg2-color);
+}
+
+// The first level hangs from the root label with a small gap
+.document-index > ol > li > ol > li:first-child::before {
+  top: var(--document-index-root-gap);
+  height: calc(
+    var(--document-index-junction) - var(--document-index-root-gap) +
+      var(--document-index-stroke)
+  );
+}
+
+// A branch's children hang from the center of its junction dot
+.document-index li.document-index-branch > ol > li::before {
+  inset-inline-start: calc(-1 * var(--document-index-bullet-optical-offset));
+  width: calc(
+    var(--document-index-indent) + var(--document-index-bullet-optical-offset)
+  );
+}
+
+.document-index li.document-index-branch > ol > li:not(:last-child)::after {
+  inset-inline-start: calc(-1 * var(--document-index-bullet-optical-offset));
+}
+
+// Join the junction dot on a label's first line to its children, across every
+// line of a wrapped label
+.document-index ol ol > li.document-index-branch-open > a::before {
+  position: absolute;
+  inset-inline-start: calc(
+    var(--document-index-indent) - var(--document-index-bullet-optical-offset)
+  );
+  top: var(--document-index-junction);
+  bottom: 0;
+  z-index: 1;
+  width: 0;
+  pointer-events: none;
+  content: '';
+  border-inline-start: var(--document-index-stroke) solid var(--fg2-color);
+}
+
+// Junction dot: filled when the branch's children are not shown, open when
+// they are
+.document-index ol ol > li.document-index-branch > a::after {
+  position: absolute;
+  inset-inline-start: calc(
+    var(--document-index-indent) - var(--document-index-bullet-offset) - var(
+        --document-index-bullet-optical-offset
+      )
+  );
+  top: calc(
+    var(--document-index-junction) - var(--document-index-bullet-offset)
+  );
+  z-index: 3;
+  width: var(--document-index-bullet-size);
+  height: var(--document-index-bullet-size);
+  pointer-events: none;
+  content: '';
+  background: var(--fg2-color);
+  border-radius: 50%;
+}
+
+.document-index ol ol > li.document-index-branch-open > a::after {
+  box-sizing: border-box;
+  background: var(--bg2-color);
+  border: var(--document-index-stroke) solid var(--fg2-color);
+}
+
+.document-pagination {
+  @include user-select(none);
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  padding-top: var(--gap);
+  margin-top: 3rem;
+  border-top: 1px solid var(--fg2-color);
+
+  a.button {
+    display: flex;
+    gap: calc(var(--gap) / 2);
+    align-items: center;
+    min-width: 0;
+    padding: calc(var(--gap) / 2) var(--gap);
+    overflow-wrap: anywhere;
+    border: none;
+
+    @include type.inherit(500);
+  }
+
+  a.previous {
+    justify-self: start;
+
+    // The chevron points back
+    .mask-icon {
+      transform: scaleX(-1);
+    }
+  }
+
+  a.next {
+    grid-column: 2;
+    justify-self: end;
+    text-align: end;
+  }
+
+  // The chevron is centered in a wider box; trim the empty space on its outer
+  // side so the button's padding is measured from the visible glyph
+  .mask-icon {
+    flex-shrink: 0;
+  }
+
+  // Follows the label into the press colors
+  a.button:not(.disabled):active .mask-icon {
+    color: inherit;
+  }
+
+  a.previous .mask-icon {
+    margin-inline: -8px -3px;
+  }
+
+  a.next .mask-icon {
+    margin-inline: -3px -8px;
+  }
+}
+
+@media print {
+  .document-index,
+  .document-pagination {
+    display: none;
+  }
+}

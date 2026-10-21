@@ -16,8 +16,9 @@ Content shown when the details element is open.
 
 A details element in the page content is drawn as a square-cornered box with a
 border in the foreground color. The summary spans the full width of the box, so its
-whole row is clickable. While anything inside the box has focus, the box gets
-an outline in the theme color.
+whole row is clickable. While anything inside the box has keyboard focus, the
+box gets an outline in the theme color. Focus from a pointer, such as clicking
+the summary, draws no outline.
 
 Content inside a details element is not listed in the
 [table of contents](table-of-contents.md). Search highlights in a closed details
@@ -25,28 +26,6 @@ element are skipped, unless it is a preview (see below and
 [Search Highlighting](search-highlighting.md)). Before
 printing, every details element is opened, and then closed again afterwards if
 it was closed.
-
-## Info and warning icons
-
-Add the `info` or `warning` class to show the matching icon in the summary:
-
-```html
-<details class="warning">
-<summary>Known issues</summary>
-
-Content shown when the details element is open.
-
-</details>
-```
-
-The icon is the 20px `info-compact` or `warning-compact` icon (see
-[Icons](icons.md)), drawn in the foreground color at the right end of the
-summary. It sits one details padding in from the box's right border and is
-centered on the summary's first line. The summary keeps room for the icon, so
-long summary text wraps before it. Hovering or activating the summary changes
-the text color but not the icon. The icon stays on the summary while it is
-stuck (see below). These classes only add the icon; the box keeps its usual
-border and background.
 
 ## Tall details elements
 
@@ -119,7 +98,8 @@ In browsers that support `::details-content`:
 - The label is styled like a link ("Show more" or "Show less" in the link
   color, underlined on hover) and ends with the `chevron-down` icon, which
   points down while the preview is closed and up while it is open. Keyboard
-  focus outlines the label.
+  focus outlines the label instead of the box, and clicking it draws no
+  outline.
 - An open preview shows its whole body. On screen, a preview that is not
   nested in another details element keeps its Show less label in view, mirroring
   a tall details element: while the bottom of the box is below the viewport,
@@ -128,8 +108,6 @@ In browsers that support `::details-content`:
   fade appears once the summary has left the top of the box and disappears
   before the summary comes to rest on the box's bottom border. Browsers without
   scroll-driven animations show the stuck summary without a fade.
-- Info and warning icons are not shown, since a preview has no author summary
-  to put them in.
 - In print, the summary is hidden and the whole body is shown.
 
 With JavaScript, closing a preview whose top is in view (below the header and

@@ -25,6 +25,13 @@ async function isFullyOnScreen(page: Page, locator: Locator) {
   }, page.viewportSize()!.height);
 }
 
+// Whether the element draws a focus outline
+function hasOutline(locator: Locator) {
+  return locator.evaluate(
+    element => getComputedStyle(element).outlineStyle !== 'none',
+  );
+}
+
 test.describe('Details preview', () => {
   test.beforeEach(async ({ page }) => {
     // Development builds log this once every component has mounted
@@ -145,9 +152,17 @@ test.describe('Details preview', () => {
     page,
   }) => {
     const details = preview(page);
-    await details.evaluate(element =>
-      element.scrollIntoView({ block: 'center' }),
-    );
+    // Center the box at a whole pixel: scrollIntoView can pick a half-pixel
+    // position, which Firefox later settles a pixel away
+    await details.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      window.scrollTo({
+        top: Math.round(
+          window.scrollY + box.top - (window.innerHeight - box.height) / 2,
+        ),
+        behavior: 'instant',
+      });
+    });
     const before = (await details.boundingBox())!;
 
     for (let i = 0; i < 3; i++) {
@@ -193,6 +208,28 @@ test.describe('Details preview', () => {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 
     await expect(details).not.toHaveAttribute('open');
+  });
+
+  test('clicking the Show more button draws no focus outline', async ({
+    page,
+  }) => {
+    const details = preview(page);
+    await button(details).click();
+    await expect(details).toHaveAttribute('open', '');
+
+    expect(await hasOutline(details)).toBe(false);
+    expect(await hasOutline(button(details))).toBe(false);
+  });
+
+  test('keyboard focus outlines the label but not the box', async ({
+    page,
+  }) => {
+    const details = preview(page);
+    // Focus with no pointer interaction first matches :focus-visible
+    await details.locator('summary').focus();
+
+    expect(await hasOutline(button(details))).toBe(true);
+    expect(await hasOutline(details)).toBe(false);
   });
 
   test('a closed preview with a short body keeps its label inside the box', async ({

@@ -52,8 +52,6 @@ breadcrumbs:
 ---
 
 [Sibling detail](./${sibling}.html)
-
-[Different trail](/labs/00/index.html)
 `,
     );
   }

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { escapeUTF8 } from 'entities';
 import type MarkdownIt from 'markdown-it';
 import { makeLogger } from '../log';
 import { B } from '../colors';
@@ -38,17 +39,18 @@ import {
 } from './paths';
 import {
   getSiteVars,
-  parseYamlWithVariables,
   substituteContent,
-  substituteVariables,
+  substituteFrontMatterValue,
 } from '../variables';
 import pkg from '../../package.json' with { type: 'json' };
-import { parseFrontMatter, parseFrontMatterYaml } from './front-matter';
+import { parseFrontMatterAndContent } from './front-matter';
 import {
   getPageAuthorAssets,
   getPageScripts,
+  type AuthorScripts,
   type PageAuthorAssets,
 } from '../author-scripts';
+import { getPageRenderers, renderCustomElements } from '../custom-elements';
 import { createMarkdown } from './markdown';
 import { generateTocHtml, generateCodeTocHtml } from '../toc-plugin';
 import {
@@ -58,6 +60,8 @@ import {
   compileJavaSource,
   executeLiterateJava,
 } from './literate-java';
+import type { DocumentNavigation, DocumentPageTitle } from '../document-index';
+import type { SourceEntry } from '../source-model';
 import type {
   Asset,
   SiteVariables,
@@ -87,6 +91,7 @@ const RESERVED_FRONT_MATTER_KEYS: readonly string[] = [
   'codeFilePath',
   'downloadName',
   'filePath',
+  'documentNavigation',
   'parent',
   'parentLabel',
 ];
@@ -110,16 +115,11 @@ function readPage(
   filePath: string,
   ext: string,
 ): { pageVariables: Record<string, unknown>; content: string } {
-  const { frontMatter, content } = parseFrontMatter(
+  return parseFrontMatterAndContent(
     fs.readFileSync(filePath, 'utf-8'),
     ext,
-  );
-  const pageVariables = parseYamlWithVariables(
-    frontMatter ?? '',
     toDisplayPath(filePath),
-    parseFrontMatterYaml,
   );
-  return { pageVariables: pageVariables as Record<string, unknown>, content };
 }
 
 /** Returns only the front matter fields Tada reads, warning about others */
@@ -150,6 +150,110 @@ function renderInlineField(
   const html = md.renderInline(raw);
   vars[`${field}Html`] = html;
   vars[field] = htmlToPlainText(html);
+}
+
+/** A code page is titled by its file name */
+function getCodePageTitle(filePath: string): DocumentPageTitle {
+  const fileName = path.basename(filePath);
+  return { title: fileName, titleHtml: `<code>${escapeUTF8(fileName)}</code>` };
+}
+
+/**
+ * YAML reads an unquoted title like `1.10` as a number, losing the text the
+ * author wrote, so an indexed page's title, which other pages show, must be a
+ * string.
+ */
+function requireTextTitle(title: unknown, filePath: string): void {
+  if (title !== undefined && title !== null && typeof title !== 'string') {
+    throw new Error(
+      `${filePath}: "title" must be text; quote it, as in title: "1.10"`,
+    );
+  }
+}
+
+/** Renders the title and description as inline Markdown */
+function renderFrontMatterText(
+  pageVariables: Record<string, unknown>,
+  siteVariables: SiteVariables,
+  filePath: string,
+): void {
+  const md = createMarkdown(siteVariables, {
+    filePath,
+    slides: pageVariables.slides === true,
+  });
+  renderInlineField(md, pageVariables, 'title');
+  renderInlineField(md, pageVariables, 'description');
+}
+
+// Rendered titles for document indexes, by page, reused while a page's title
+// is unchanged so watch rebuilds render only edited titles
+const pageTitleCache = new WeakMap<
+  SiteVariables,
+  Map<string, { key: string; title: DocumentPageTitle | undefined }>
+>();
+
+/** Forgets cached titles of pages other than those given */
+export function retainPageTitles(
+  siteVariables: SiteVariables,
+  sourcePaths: ReadonlySet<string>,
+): void {
+  for (const filePath of pageTitleCache.get(siteVariables)?.keys() ?? []) {
+    if (!sourcePaths.has(filePath)) {
+      pageTitleCache.get(siteVariables)!.delete(filePath);
+    }
+  }
+}
+
+/**
+ * A page's title as its own render produces it, without rendering the page;
+ * undefined for a page whose title is missing or has no text. The title comes
+ * from the front matter the project scan already read, so the page is read
+ * again only when its front matter is invalid, to report the error.
+ */
+export function readPageTitle(
+  filePath: string,
+  entry: Pick<SourceEntry, 'renderKind' | 'title' | 'titleFields'>,
+  siteVariables: SiteVariables,
+): DocumentPageTitle | undefined {
+  if (entry.renderKind === 'code-page') {
+    return getCodePageTitle(filePath);
+  }
+  // Front matter that rendering rejects is read again to report its error
+  const raw =
+    entry.titleFields && !entry.titleFields.invalid
+      ? entry.titleFields
+      : readPage(filePath, path.extname(filePath).toLowerCase()).pageVariables;
+  requireTextTitle(raw.title, filePath);
+  const pageVariables: Record<string, unknown> = {
+    // The scan substituted the title, unless substitution fails: then this
+    // reports the error
+    title:
+      entry.title ??
+      substituteFrontMatterValue(raw.title, siteVariables, filePath),
+    slides: raw.slides,
+  };
+
+  let cache = pageTitleCache.get(siteVariables);
+  if (!cache) {
+    cache = new Map();
+    pageTitleCache.set(siteVariables, cache);
+  }
+  const key = JSON.stringify([pageVariables.title, pageVariables.slides]);
+  const cached = cache.get(filePath);
+  if (cached?.key === key) {
+    return cached.title;
+  }
+
+  renderFrontMatterText(pageVariables, siteVariables, filePath);
+  const title =
+    typeof pageVariables.titleHtml === 'string' && pageVariables.title
+      ? {
+          title: pageVariables.title as string,
+          titleHtml: pageVariables.titleHtml,
+        }
+      : undefined;
+  cache.set(filePath, { key, title });
+  return title;
 }
 
 interface TemplateParametersInput {
@@ -223,7 +327,7 @@ function validateFrontMatter(
     );
   }
 
-  // The breadcrumb trail ends with the page title
+  // Breadcrumbs lead to a titled page
   const breadcrumbs = pageVariables.breadcrumbs;
   if (
     !pageVariables.title &&
@@ -392,18 +496,28 @@ export function renderPlainTextPageAsset({
   dependencyCollector,
   traceCache,
   traceToolAvailability,
+  documentNavigation,
+  pageTitles,
 }: RenderPlainTextOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
   const sourceUrlPath = normalizeOutputPath(`/${subPath}.html`);
 
   log.info`Rendering page ${B`${subPath + ext}`}`;
-  const { content, pageVariables, tocItems } = renderPlainTextContent(
+  const { content, pageVariables, tocItems, scripts } = renderPlainTextContent(
     filePath,
     sourceUrlPath,
     siteVariables,
     validInternalTargets,
-    { dependencyCollector, traceCache, contentDir, traceToolAvailability },
+    {
+      authorScripts,
+      dependencyCollector,
+      traceCache,
+      contentDir,
+      traceToolAvailability,
+      documentNavigation,
+      pageTitles,
+    },
   );
 
   pageVariables.template = 'default';
@@ -414,11 +528,7 @@ export function renderPlainTextPageAsset({
     );
   }
 
-  const authorAssets = getPageAuthorAssets(
-    authorScripts,
-    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
-    filePath,
-  );
+  const authorAssets = getPageAuthorAssets(authorScripts, scripts, filePath);
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,
@@ -472,6 +582,7 @@ export function renderCodePageAsset({
   generatedPageTargets,
   codePageSourceTargets,
   dependencyCollector,
+  documentNavigation,
 }: RenderCodePageOptions): Asset[] {
   const { dir, name, ext } = path.parse(filePath);
   const subPath = toPosix(path.relative(contentDir, path.join(dir, name)));
@@ -492,18 +603,17 @@ export function renderCodePageAsset({
   const codeFilePath = normalizeOutputPath(
     `/${toUrlPath(path.relative(contentDir, filePath))}`,
   );
-  const titleHtml = `<code>${name + ext}</code>`;
   const tocItems = lang === 'java' ? extractJavaMethodToc(source) : [];
   const tocHtml = generateCodeTocHtml(tocItems);
   const pageVariables: Record<string, unknown> = {
     template: 'code',
     filePath,
-    title: `${name}${ext}`,
-    titleHtml,
+    ...getCodePageTitle(filePath),
     codeFilePath,
     downloadName: `${name}${ext}`,
     tocItems,
     tocHtml,
+    ...(documentNavigation ? { documentNavigation } : {}),
   };
 
   // Code pages have no front matter, so they load only site-wide scripts
@@ -587,6 +697,7 @@ interface PreparePageVariablesInput {
   /** Whether this renderer supports `slides: true` (Markdown pages only) */
   allowSlides: boolean;
   dependencyCollector?: RenderDependencyCollector;
+  documentNavigation?: DocumentNavigation;
 }
 
 /**
@@ -594,6 +705,7 @@ interface PreparePageVariablesInput {
  * whose source has front matter, so each one applies the same rules:
  * site variable substitution in string values, inline Markdown for the title
  * and description, required fields, author lookup, and breadcrumb validation.
+ * An indexed page has no breadcrumbs: its document index shows its ancestors.
  */
 function preparePageVariables({
   rawPageVariables,
@@ -603,24 +715,26 @@ function preparePageVariables({
   validInternalTargets,
   allowSlides,
   dependencyCollector,
+  documentNavigation,
 }: PreparePageVariablesInput): Record<string, unknown> {
   rejectReservedFrontMatterKeys(rawPageVariables, filePath);
   const knownPageVariables = dropUnknownFrontMatterKeys(
     rawPageVariables,
     filePath,
   );
+  if (documentNavigation && knownPageVariables.breadcrumbs !== undefined) {
+    throw new Error(
+      `${filePath}: front matter "breadcrumbs" is not allowed on a page listed in ${documentNavigation.indexFile}, whose sidebar shows its ancestors instead`,
+    );
+  }
   if (knownPageVariables.slides === true && !allowSlides) {
     throw new Error(
       `${filePath}: slides mode is only supported on Markdown pages`,
     );
   }
 
-  const vars = getSiteVars(siteVariables);
-  const displayPath = toDisplayPath(filePath);
   const templateString = (value: unknown): unknown =>
-    typeof value === 'string'
-      ? substituteVariables(value, vars, displayPath)
-      : value;
+    substituteFrontMatterValue(value, siteVariables, filePath);
   const pageVariables: Record<string, unknown> = Object.fromEntries(
     Object.entries(knownPageVariables).map(([key, value]) => [
       key,
@@ -643,13 +757,10 @@ function preparePageVariables({
     );
   }
 
-  // Render title and description as inline Markdown
-  const frontMatterMd = createMarkdown(siteVariables, {
-    filePath,
-    slides: pageVariables.slides === true,
-  });
-  renderInlineField(frontMatterMd, pageVariables, 'title');
-  renderInlineField(frontMatterMd, pageVariables, 'description');
+  renderFrontMatterText(pageVariables, siteVariables, filePath);
+  if (documentNavigation) {
+    pageVariables.documentNavigation = documentNavigation;
+  }
 
   validateFrontMatter(pageVariables, filePath, sourceUrlPath);
   resolveAuthor(pageVariables, filePath, dependencyCollector);
@@ -681,21 +792,29 @@ function renderPlainTextContent(
   siteVariables: SiteVariables,
   validInternalTargets: ReadonlySet<string>,
   {
+    authorScripts,
     dependencyCollector,
     traceCache,
     contentDir,
     traceToolAvailability,
+    documentNavigation,
+    pageTitles,
   }: Pick<
     RenderPlainTextOptions,
+    | 'authorScripts'
     | 'dependencyCollector'
     | 'traceCache'
     | 'contentDir'
     | 'traceToolAvailability'
+    | 'documentNavigation'
+    | 'pageTitles'
   >,
 ): {
   content: string | null;
   pageVariables: Record<string, unknown>;
   tocItems: unknown[] | null;
+  /** The page's scripts, as getPageScripts lists them */
+  scripts: string[];
 } {
   const applyBasePath = createApplyBasePath(siteVariables);
 
@@ -709,6 +828,7 @@ function renderPlainTextContent(
     validInternalTargets,
     allowSlides: extensionIsMarkdown(ext),
     dependencyCollector,
+    documentNavigation,
   });
 
   const vars = getSiteVars(siteVariables);
@@ -733,13 +853,77 @@ function renderPlainTextContent(
       vars,
       renderTrace,
       dependencyCollector,
+      pageTitles,
     });
     const env: Record<string, unknown> = {};
     html = md.render(html, env);
     tocItems = (env.tocItems as unknown[] | undefined) || null;
   }
 
-  return { content: addDetailsPreviewSummaries(html), pageVariables, tocItems };
+  const scripts = getPageScripts(
+    siteVariables.scripts,
+    pageVariables.scripts,
+    filePath,
+  );
+  html = renderPageElements({
+    html,
+    authorScripts,
+    scripts,
+    pageVariables,
+    sourceUrlPath,
+    siteVariables,
+    filePath,
+  });
+  return {
+    content: addDetailsPreviewSummaries(html),
+    pageVariables,
+    tocItems,
+    scripts,
+  };
+}
+
+/**
+ * Fills the custom elements that the page's scripts have renderers for. Runs
+ * before the page template, so the output is page content like the rest.
+ */
+function renderPageElements({
+  html,
+  authorScripts,
+  scripts,
+  pageVariables,
+  sourceUrlPath,
+  siteVariables,
+  filePath,
+}: {
+  html: string;
+  authorScripts: AuthorScripts;
+  /** The page's scripts, as getPageScripts lists them */
+  scripts: readonly string[];
+  pageVariables: Record<string, unknown>;
+  sourceUrlPath: string;
+  siteVariables: SiteVariables;
+  filePath: string;
+}): string {
+  const renderers = getPageRenderers(
+    scripts,
+    authorScripts.renderers,
+    filePath,
+  );
+  if (renderers.size === 0) {
+    return html;
+  }
+  const frontMatter = Object.fromEntries(
+    Object.entries(pageVariables).filter(
+      ([key]) => !RESERVED_FRONT_MATTER_KEYS.includes(key),
+    ),
+  );
+  return renderCustomElements(
+    html,
+    renderers,
+    { path: sourceUrlPath, frontMatter },
+    getSiteVars(siteVariables),
+    filePath,
+  );
 }
 
 export function renderLiterateJavaPageAsset({
@@ -755,6 +939,8 @@ export function renderLiterateJavaPageAsset({
   generatedPageTargets,
   codePageSourceTargets,
   dependencyCollector,
+  documentNavigation,
+  pageTitles,
 }: RenderLiterateJavaOptions): Asset[] {
   const { dir, name } = path.parse(filePath);
   const className = deriveClassName(filePath);
@@ -775,6 +961,7 @@ export function renderLiterateJavaPageAsset({
     validInternalTargets,
     allowSlides: false,
     dependencyCollector,
+    documentNavigation,
   });
   const vars = getSiteVars(siteVariables);
   const md = createMarkdown(siteVariables, {
@@ -782,6 +969,7 @@ export function renderLiterateJavaPageAsset({
     vars,
     preserveHtmlComments: true,
     dependencyCollector,
+    pageTitles,
   });
   const env: Record<string, unknown> = {};
   const tokens = md.parse(
@@ -869,8 +1057,21 @@ export function renderLiterateJavaPageAsset({
     return codeHtml;
   };
 
+  const scripts = getPageScripts(
+    siteVariables.scripts,
+    pageVariables.scripts,
+    filePath,
+  );
   const contentHtml = addDetailsPreviewSummaries(
-    stripHtmlComments(md.renderer.render(tokens, md.options, env)),
+    renderPageElements({
+      html: stripHtmlComments(md.renderer.render(tokens, md.options, env)),
+      authorScripts,
+      scripts,
+      pageVariables,
+      sourceUrlPath,
+      siteVariables,
+      filePath,
+    }),
   );
 
   // Build page variables
@@ -889,11 +1090,7 @@ export function renderLiterateJavaPageAsset({
     );
   }
 
-  const authorAssets = getPageAuthorAssets(
-    authorScripts,
-    getPageScripts(siteVariables.scripts, pageVariables.scripts, filePath),
-    filePath,
-  );
+  const authorAssets = getPageAuthorAssets(authorScripts, scripts, filePath);
   const templateParameters = createTemplateParameters({
     pageVariables,
     siteVariables,

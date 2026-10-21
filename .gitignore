@@ -2,7 +2,9 @@ dist
 dist-prod
 example
 .DS_Store
-.claude
+.claude/*
+!.claude/settings.json
+!.claude/skills/
 
 # Java
 .mtj.tmp/

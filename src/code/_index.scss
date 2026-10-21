@@ -1,4 +1,5 @@
 @use '../mixins' as *;
+@use '../type';
 
 body.code {
   --code-gutter-width: 4rem;
@@ -17,8 +18,7 @@ body.code {
 
   tt,
   code {
-    padding: 0;
-    background: none;
+    @include code-plain;
   }
 }
 
@@ -63,8 +63,9 @@ body.code .file-header {
   h1 {
     padding: 0;
     margin: 0;
-    font-size: inherit;
     font-weight: inherit;
+
+    @include type.inherit;
   }
 }
 
@@ -171,8 +172,7 @@ body.code .code-prose {
     // The prose block is on the same background as the inline code chip, so a
     // border delineates inline code instead
     :is(tt, code):not(pre *) {
-      background: none;
-      border: 1px solid var(--fg2-color);
+      @include code-outline;
     }
   }
 }

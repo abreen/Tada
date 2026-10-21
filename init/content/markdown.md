@@ -302,32 +302,6 @@ Homework is worth 40%, the midterm 25%, and the final exam 35%.
 
 </details>
 
-Add the `info` or `warning` class to show an icon in the summary:
-
-```
-<details class="info">
-<summary>Office hours are by appointment during exam weeks</summary>
-
-Book a slot on the course calendar at least a day in advance.
-
-</details>
-```
-
-<details class="info">
-<summary>Office hours are by appointment during exam weeks</summary>
-
-Book a slot on the course calendar at least a day in advance.
-
-</details>
-
-<details class="warning">
-<summary>Known issues with the starter code</summary>
-
-The provided `Makefile` assumes a POSIX shell. On Windows, run the commands
-from WSL or Git Bash.
-
-</details>
-
 Leave out the `<summary>` to make a preview, which shows the start of a long
 body and fades it out behind a "Show more" link:
 

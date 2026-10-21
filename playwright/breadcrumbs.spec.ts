@@ -1,19 +1,19 @@
 import { test, expect, type Page, waitForClientMount } from './test-fixtures';
 
-async function expectVowelTrail(page: Page) {
+async function expectDetailTrail(page: Page) {
   const nav = page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
   await expect(nav.getByRole('listitem')).toHaveText([
-    'Labs',
-    'Lab 0',
-    'Counting vowels',
+    'Home',
+    'Section',
+    'Nested page',
   ]);
-  await expect(nav.getByRole('link')).toHaveText(['Labs', 'Lab 0']);
-  await expect(nav.locator('[aria-current="page"]')).toHaveText(
-    'Counting vowels',
-  );
-  await expect(nav.locator('[aria-current="page"] a')).toHaveCount(0);
+  await expect(nav.getByRole('link')).toHaveText([
+    'Home',
+    'Section',
+    'Nested page',
+  ]);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'Counting vowels',
+    'First detail',
   );
 }
 
@@ -24,24 +24,24 @@ for (const javaScriptEnabled of [true, false]) {
     const context = await browser.newContext({ javaScriptEnabled });
     const page = await context.newPage();
     try {
-      await page.goto('/labs/00/VowelCounter.java.html');
-      await expectVowelTrail(page);
+      await page.goto('/breadcrumb-tests/nested/first.html');
+      await expectDetailTrail(page);
       await page
         .getByRole('navigation', { name: 'Breadcrumb', exact: true })
-        .getByRole('link', { name: 'Lab 0', exact: true })
+        .getByRole('link', { name: 'Nested page', exact: true })
         .click();
-      await expect(page).toHaveURL(/labs\/00\/index\.html$/);
+      await expect(page).toHaveURL(/breadcrumb-tests\/nested\/index\.html$/);
       const nav = page.getByRole('navigation', {
         name: 'Breadcrumb',
         exact: true,
       });
-      await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
-      await nav.getByRole('link', { name: 'Labs', exact: true }).click();
-      await expect(page).toHaveURL(/labs\/index\.html$/);
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Labs');
-      await expect(
-        page.getByRole('navigation', { name: 'Breadcrumb', exact: true }),
-      ).toHaveCount(0);
+      await expect(nav.getByRole('listitem')).toHaveText(['Home', 'Section']);
+      await nav.getByRole('link', { name: 'Section', exact: true }).click();
+      await expect(page).toHaveURL(/breadcrumb-tests\/index\.html$/);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        'Section',
+      );
+      await expect(nav.getByRole('listitem')).toHaveText(['Home']);
     } finally {
       await context.close();
     }
@@ -69,19 +69,19 @@ async function expectNoBreadcrumbTransitionNames(page: Page) {
 test('client navigation replaces trails and clears breadcrumb transition names', async ({
   page,
 }) => {
-  await page.goto('/labs/00/VowelCounter.java.html');
+  await page.goto('/breadcrumb-tests/nested/first.html');
   await waitForClientMount(page);
   await page.evaluate(() => {
     (window as Window & { breadcrumbMarker?: boolean }).breadcrumbMarker = true;
   });
-  await expectVowelTrail(page);
+  await expectDetailTrail(page);
   await page
     .getByRole('navigation', { name: 'Breadcrumb', exact: true })
-    .getByRole('link', { name: 'Lab 0', exact: true })
+    .getByRole('link', { name: 'Nested page', exact: true })
     .click();
-  await expect(page).toHaveURL(/labs\/00\/index\.html$/);
+  await expect(page).toHaveURL(/breadcrumb-tests\/nested\/index\.html$/);
   const nav = page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
-  await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
+  await expect(nav.getByRole('listitem')).toHaveText(['Home', 'Section']);
   await expectNoBreadcrumbTransitionNames(page);
   expect(
     await page.evaluate(
@@ -89,11 +89,11 @@ test('client navigation replaces trails and clears breadcrumb transition names',
         (window as Window & { breadcrumbMarker?: boolean }).breadcrumbMarker,
     ),
   ).toBe(true);
-  await page.getByRole('link', { name: 'VowelCounter program' }).click();
-  await expectVowelTrail(page);
+  await page.getByRole('link', { name: 'First detail', exact: true }).click();
+  await expectDetailTrail(page);
   await expectNoBreadcrumbTransitionNames(page);
   await page.goBack();
-  await expect(nav.getByRole('listitem')).toHaveText(['Labs', 'Lab 0']);
+  await expect(nav.getByRole('listitem')).toHaveText(['Home', 'Section']);
 });
 
 type BreadcrumbSnapshot = {
@@ -216,7 +216,7 @@ test('the whole trail moves as one group when the page layout changes', async ({
   const descending = await lastBreadcrumbTransition(page);
   expectSingleBreadcrumbGroup(descending);
   // The TOC layout positions the trail differently. Geometry is the behavior
-  // under test: every item, including the current one, must travel together.
+  // under test: every item must travel together.
   expect(Math.abs(descending.old.left - descending.next.left)).toBeGreaterThan(
     5,
   );
@@ -250,7 +250,7 @@ for (const mode of ['reduced motion', 'no view transition API'] as const) {
   test(`breadcrumb navigation remains immediate with ${mode}`, async ({
     page,
   }) => {
-    await page.goto('/labs/00/VowelCounter.java.html');
+    await page.goto('/breadcrumb-tests/nested/first.html');
     await trackBreadcrumbTransitions(page);
     if (mode === 'reduced motion') {
       await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -263,9 +263,11 @@ for (const mode of ['reduced motion', 'no view transition API'] as const) {
     }
     await page
       .getByRole('navigation', { name: 'Breadcrumb', exact: true })
-      .getByRole('link', { name: 'Lab 0', exact: true })
+      .getByRole('link', { name: 'Nested page', exact: true })
       .click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Lab 0');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'Nested page',
+    );
     expect(
       await page.evaluate(
         () => (window as BreadcrumbTestWindow).breadcrumbTransitions,

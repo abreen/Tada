@@ -3,11 +3,18 @@
 When a page's front matter sets `toc: true`, a table of contents is generated
 and displayed in a floating sidebar.
 
+The list starts with an "On this page" label at every screen width, so the TOC
+reads as this page's contents rather than site or document navigation. On
+screens at least 900px wide, where the TOC scrolls on its own, the label sticks
+to the top of the TOC while the list scrolls under it.
+
 ## Sources
 
 TOC entries are collected from:
 
-- Headings (with auto-generated IDs for linking)
+- Headings (with auto-generated IDs for linking); links in a heading,
+  including [wikilinks](wikilinks.md), appear as plain text in its entry,
+  because the entry is itself a link
 - Alert blocks (notes and warnings), unless nested inside another alert or a
   question block
 - Horizontal rules (rendered as visual separators in the TOC), under the same
@@ -65,6 +72,9 @@ entry changes, on both regular and code pages. It is positioned relative to
 the list, so it stays on the link when the list moves or the TOC scrolls. The
 highlight is hidden when no entry is current, such as on a code page without a
 line hash, and on narrower screens, where the client does not measure links.
+Inline code in the highlighted entry, and in every entry of the narrow TOC's
+filled box, has no background and a 1px border in the text color; elsewhere it
+is a chip.
 
 The highlight animates its position and size only when the user has no
 reduced-motion preference; with `prefers-reduced-motion: reduce` it moves

@@ -4,6 +4,14 @@ import { runPythonModuleSync } from '../python/module';
 const suite = process.argv[2] ?? 'all';
 const { coverage, extra } = parseTestFlags(process.argv.slice(3));
 
+if (process.env.CLAUDE_CODE_REMOTE === 'true' && suite !== 'unit') {
+  console.error(
+    'Playwright and functional tests do not run in Claude Code cloud sessions. ' +
+      'Run only lint, typecheck, and unit tests here.',
+  );
+  process.exit(1);
+}
+
 function parseTestFlags(args: string[]): {
   coverage: boolean;
   extra: string[];

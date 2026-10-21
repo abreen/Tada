@@ -7,13 +7,21 @@ This codebase is a static site generator written in TypeScript and uses Bun.
 - Watch mode lives under `build/watch/` for planning, runtime state, and file-system events
 - Client-side runtime code and styles live in `src/`, and internal Lodash HTML templates live in `templates/`
 - Default `tada init` content lives in `init/`, feature documentation lives in `spec/`, and end-to-end coverage lives in `functional_tests/` and `playwright/`
-- `examples/` holds small sites that each show one feature; they are not in the npm package
+- `examples/` holds small sites that each show one feature; they are not in the npm package. Do not add to `examples/` unless told to
 
 ## Feature specifications
 
 Each feature is documented in `spec/`. Use the relevant spec to answer behavior questions, and add a matching Markdown file there when you add a new feature.
 
 After changing code, update the relevant spec if behavior, defaults, options, dependencies, or UI details no longer match. For broader audits, use `git log` to spot stale specs, then verify against the code before editing.
+
+## Inline code styles
+
+Inline `<code>` takes its style from the background directly behind it, in each state (hover, focus, press, selected, current):
+
+- On the page background: the default chip, which has a transparent 1px border so switching styles does not shift text
+- On `--bg2-color` or any other fill: `@include code-outline` (from `src/_mixins.scss`)
+- When a label is wholly one `<code>`, such as a code page's file name: `@include code-plain`, in every state
 
 ## Progressive enhancement
 
@@ -44,7 +52,13 @@ This repository is the Tada package, not a Tada site. Do not run `tada dev` or `
 - Run the entire test suite: `bun run test:all`
 - Run all test suites, collecting coverage: `bun run test:coverage`
 
+Playwright tests pick free ports for their servers, so they can run in several worktrees at once. Never hard-code a server port in a Playwright spec or config; use `playwright/ports.ts`.
+
 Functional tests are CPU intensive and may take over 2 minutes, even on powerful machines.
+
+## Cloud sessions
+
+In Claude Code cloud sessions (`CLAUDE_CODE_REMOTE=true`), `scripts/test.ts` and a hook in `.claude/settings.json` block Playwright and functional tests. Run only lint, typecheck, and unit tests there. There, the pre-push hook runs only unit tests.
 
 ## Cross-platform tests
 
@@ -85,6 +99,10 @@ If there is an issue with the Python environment, stop and inform the user.
 ## Code style/formatting
 
 The pre-commit hook runs the code formatter. Do not run formatting commands manually.
+
+## Git hooks
+
+The pre-commit hook runs the formatter, lint, Sass lint, Python lint, and typecheck. The pre-push hook runs the tests. Do not run these checks manually before committing or pushing; let the hooks run them.
 
 ## Security threat model
 

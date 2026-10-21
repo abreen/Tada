@@ -13,7 +13,7 @@ import tabsPlugin from './tabs-plugin';
 import { createMarkdown } from './utils/markdown';
 import { stripHtmlComments, injectKatexStylesheet } from './utils/render';
 import { initHighlighter } from './utils/shiki-highlighter';
-import type { SiteVariables } from './types';
+import type { RenderDependencyCollector, SiteVariables } from './types';
 
 beforeAll(async () => {
   await initHighlighter(['ts']);
@@ -1678,5 +1678,234 @@ describe('footnote rendering', () => {
     expect(html).toContain(
       'class="footnote-ref" href="#fn36" id="fnref36">36</a>',
     );
+  });
+});
+
+describe('wikilink-plugin', () => {
+  const byTitle = new Map<string, string[]>([
+    ['Foo Bar', ['/notes/foo-bar.html']],
+    ['Using `git`', ['/git.html']],
+    ['C# notes', ['/c#/notes and more.html']],
+    ['Twin', ['/a.html', '/b.html']],
+  ]);
+
+  function createWikiMarkdown(
+    dependencyCollector?: RenderDependencyCollector,
+    unlinkableTitles: string[] = [],
+  ) {
+    const pageTitles = { byTitle, unlinkableTitles };
+    return createMarkdown(
+      {
+        base: '',
+        basePath: '/',
+        internalDomains: [],
+        extensionToShikiLanguage: {},
+        shikiLanguages: ['ts'],
+        features: { search: true, favicon: false, footer: true, pickers: true },
+        title: 'Test',
+        titlePostfix: ' - Test',
+        themeColor: 'steelblue',
+      } as SiteVariables,
+      { filePath: 'content/page.md', pageTitles, dependencyCollector },
+    );
+  }
+
+  test('links to the page with the exact title', () => {
+    expect(createWikiMarkdown().render('See [[Foo Bar]].')).toBe(
+      '<p>See <a href="/notes/foo-bar.html">Foo Bar</a>.</p>\n',
+    );
+  });
+
+  test('uses the text after a pipe as the link text', () => {
+    expect(createWikiMarkdown().render('[[Foo Bar|the *other* page]]')).toBe(
+      '<p><a href="/notes/foo-bar.html">the <em>other</em> page</a></p>\n',
+    );
+  });
+
+  test('trims whitespace around the title', () => {
+    expect(createWikiMarkdown().render('[[ Foo Bar | here ]]')).toContain(
+      '<a href="/notes/foo-bar.html"> here </a>',
+    );
+    expect(createWikiMarkdown().render('[[  Foo Bar  ]]')).toContain(
+      '<a href="/notes/foo-bar.html">Foo Bar</a>',
+    );
+  });
+
+  test('renders inline Markdown in a title used as link text', () => {
+    expect(createWikiMarkdown().render('[[Using `git`]]')).toContain(
+      '<a href="/git.html">Using <code>git</code></a>',
+    );
+  });
+
+  test('percent-encodes the page path', () => {
+    expect(createWikiMarkdown().render('[[C# notes]]')).toContain(
+      '<a href="/c%23/notes%20and%20more.html">C# notes</a>',
+    );
+  });
+
+  test('matches titles case-sensitively', () => {
+    expect(() => createWikiMarkdown().render('[[foo bar]]')).toThrow(
+      'content/page.md: broken wikilink "[[foo bar]]": no page has the title "foo bar"',
+    );
+    expect(() => createWikiMarkdown().render('[[Foo  Bar]]')).toThrow(
+      'broken wikilink',
+    );
+  });
+
+  test('fails when more than one page has the title', () => {
+    expect(() => createWikiMarkdown().render('[[Twin]]')).toThrow(
+      'content/page.md: ambiguous wikilink "[[Twin]]": "Twin" is the title of /a.html, /b.html',
+    );
+  });
+
+  test('records the titles it looks up, even unresolved ones', () => {
+    const wikiTitles = new Set<string>();
+    createWikiMarkdown({ wikiTitles }).render('[[Foo Bar|x]] [[Using `git`]]');
+    expect(wikiTitles).toEqual(new Set(['Foo Bar', 'Using `git`']));
+
+    const missing = new Set<string>();
+    expect(() =>
+      createWikiMarkdown({ wikiTitles: missing }).render('[[Nope]]'),
+    ).toThrow();
+    expect(missing).toEqual(new Set(['Nope']));
+  });
+
+  test('leaves code, escapes, and incomplete brackets alone', () => {
+    const md = createWikiMarkdown();
+    for (const source of [
+      '`[[Foo Bar]]`',
+      '\\[[Foo Bar]]',
+      '[[Foo Bar]',
+      '[[]]',
+      '[[ | text]]',
+      '[[Foo Bar|]]',
+      '[[Foo\nBar]]',
+    ]) {
+      expect(md.render(source)).not.toContain('<a');
+    }
+    expect(md.render('```\n[[Foo Bar]]\n```')).not.toContain('<a');
+  });
+
+  test('never nests inside another link', () => {
+    const md = createWikiMarkdown();
+    // As with nested Markdown links, the inner link wins
+    expect(md.render('[see [[Foo Bar]]](/x.html)')).toBe(
+      '<p>[see <a href="/notes/foo-bar.html">Foo Bar</a>](/x.html)</p>\n',
+    );
+    expect(md.render('[See [[Foo Bar]]][description](/x.html)')).toBe(
+      '<p>[See <a href="/notes/foo-bar.html">Foo Bar</a>]' +
+        '<a href="/x.html">description</a></p>\n',
+    );
+    expect(() => md.render('<a href="/x.html">[[Foo Bar]]</a>')).toThrow(
+      'content/page.md: wikilink "[[Foo Bar]]" is inside a link',
+    );
+  });
+
+  test('leaves Markdown links with bracketed text to the link rule', () => {
+    const md = createWikiMarkdown();
+    expect(md.render('See [[1]](/paper.html).')).toBe(
+      '<p>See <a href="/paper.html">[1]</a>.</p>\n',
+    );
+    expect(md.render('[[1]][paper]\n\n[paper]: /paper.html')).toBe(
+      '<p><a href="/paper.html">[1]</a></p>\n',
+    );
+    expect(md.render('[[1]]\n\n[1]: /one.html')).toBe(
+      '<p>[<a href="/one.html">1</a>]</p>\n',
+    );
+    expect(md.render('[[Foo Bar]][[Using `git`]]')).toBe(
+      '<p><a href="/notes/foo-bar.html">Foo Bar</a>' +
+        '<a href="/git.html">Using <code>git</code></a></p>\n',
+    );
+  });
+
+  test('stays a wikilink before a footnote or undefined reference', () => {
+    const md = createWikiMarkdown();
+    expect(md.render('See [[Foo Bar]][^1].\n\n[^1]: Note')).toContain(
+      'See <a href="/notes/foo-bar.html">Foo Bar</a><a class="footnote-ref"',
+    );
+    expect(md.render('[[Foo Bar]][nowhere]')).toBe(
+      '<p><a href="/notes/foo-bar.html">Foo Bar</a>[nowhere]</p>\n',
+    );
+  });
+
+  test('wins over a reference definition when a page has the title', () => {
+    expect(
+      createWikiMarkdown().render('[[Foo Bar]]\n\n[foo bar]: /elsewhere.html'),
+    ).toBe('<p><a href="/notes/foo-bar.html">Foo Bar</a></p>\n');
+  });
+
+  test('accepts an escaped pipe, as in a table cell', () => {
+    const md = createWikiMarkdown();
+    expect(md.render('[[Foo Bar\\|text]]')).toBe(
+      '<p><a href="/notes/foo-bar.html">text</a></p>\n',
+    );
+    expect(md.render('| a |\n|---|\n| [[Foo Bar\\|text]] |\n')).toContain(
+      '<td><a href="/notes/foo-bar.html">text</a></td>',
+    );
+  });
+
+  test('leaves wikilinks in image alt text unresolved', () => {
+    const wikiTitles = new Set<string>();
+    expect(
+      createWikiMarkdown({ wikiTitles }).render(
+        '![From [[Old Lecture]]](d.png)',
+      ),
+    ).toBe('<p><img src="d.png" alt="From Old Lecture"></p>\n');
+    expect(wikiTitles.size).toBe(0);
+  });
+
+  test('resolves wikilinks in inline footnotes', () => {
+    const md = createWikiMarkdown();
+    expect(md.render('Text^[See [[Foo Bar]].]')).toContain(
+      '<a href="/notes/foo-bar.html">Foo Bar</a>',
+    );
+    expect(() => md.render('Text^[See [[Missing]].]')).toThrow(
+      'broken wikilink "[[Missing]]"',
+    );
+  });
+
+  test('keeps links out of table of contents entries', () => {
+    const env: { tocItems?: { innerHtml?: string }[] } = {};
+    createWikiMarkdown().render('## About [[Foo Bar]] and [it](/x.html)', env);
+    expect(env.tocItems?.[0].innerHtml).toBe('About Foo Bar and it');
+  });
+
+  test('names pages whose titles cannot be linked', () => {
+    expect(() =>
+      createWikiMarkdown(undefined, ['content/v.md (why)']).render('[[1.10]]'),
+    ).toThrow(
+      `no page has the title "1.10"; these pages' titles cannot be linked: content/v.md (why)`,
+    );
+  });
+
+  test('fails when the link text contains a link', () => {
+    expect(() =>
+      createWikiMarkdown().render('[[Foo Bar|<https://example.com>]]'),
+    ).toThrow('wikilink "[[Foo Bar|<https://example.com>]]" text cannot');
+  });
+
+  test('leaves footnotes and superlinks working', () => {
+    const md = createWikiMarkdown();
+    expect(md.render('Hi[^1] [[Foo Bar]]\n\n[^1]: Note')).toContain(
+      'class="footnote-ref"',
+    );
+    expect(md.render('[Title][Description](/d.html)')).toContain(
+      'class="button superlink"',
+    );
+  });
+
+  test('is off without page titles', () => {
+    const md = createMarkdown({
+      base: '',
+      basePath: '/',
+      internalDomains: [],
+      extensionToShikiLanguage: {},
+      shikiLanguages: ['ts'],
+      features: { search: true, favicon: false, footer: true, pickers: true },
+      title: 'Test',
+      titlePostfix: ' - Test',
+      themeColor: 'steelblue',
+    } as SiteVariables);
+    expect(md.render('[[Foo Bar]]')).toBe('<p>[[Foo Bar]]</p>\n');
   });
 });

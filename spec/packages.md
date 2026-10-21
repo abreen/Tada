@@ -54,7 +54,9 @@ path fails the build as an output conflict.
 Site config and front matter `scripts` accept `npm:` paths to package modules,
 such as `npm:tada-leaflet` or `npm:tada-leaflet/heatmap`, which are compiled
 with the site's own scripts; see
-[Author Scripts](author-scripts.md#using-packages). Scripts in `src/` can also
+[Author Scripts](author-scripts.md#using-packages). A package script can also
+have a renderer that fills custom elements at build time; see
+[Custom Elements](custom-elements.md#packages). Scripts in `src/` can also
 import packages by name, and their Sass stylesheets can load package files with
 `pkg:` URLs. A package's stylesheets can refer to the package's own images,
 which are published in `_scripts/assets/`.

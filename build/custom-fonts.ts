@@ -121,13 +121,14 @@ export function renderCustomFontFaceScss(
   return rules.join('\n\n');
 }
 
+// The heading steps of the type scale in `src/_base.scss`, relative to 16px
 const HEADING_SIZES = Object.freeze({
   h1: 2.5,
   h2: 1.5,
-  h3: 1.17,
+  h3: 1.1875,
   h4: 1,
-  h5: 0.83,
-  h6: 0.67,
+  h5: 0.8125,
+  h6: 0.75,
 });
 
 function formatCssNumber(value: number): string {

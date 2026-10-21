@@ -1,8 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import { parseFrontMatterAndContent } from './utils/front-matter';
+import {
+  parseFrontMatter,
+  parseFrontMatterAndContent,
+  parseFrontMatterYaml,
+} from './utils/front-matter';
 import { collectScriptEntries } from './author-scripts';
 import { getExtensionToShikiLanguage } from './site-variables';
+import { substituteFrontMatterValue } from './variables';
 import {
   extensionIsMarkdown,
   getProcessedExtensions,
@@ -14,6 +19,7 @@ import {
   getDistDir,
   getPublicDir,
   normalizeOutputPath,
+  toDisplayPath,
   toPosix,
 } from './utils/paths';
 import type { SiteVariables } from './types';
@@ -24,7 +30,8 @@ export type TadaSourceRenderKind =
   | 'literate-java'
   | 'code-page'
   | 'content-copy'
-  | 'public-copy';
+  | 'public-copy'
+  | 'document-index';
 
 /** Render kinds that produce a page */
 export const PAGE_RENDER_KINDS: ReadonlySet<TadaSourceRenderKind> = new Set([
@@ -40,6 +47,23 @@ export interface SourceEntry {
   readonly targets: ReadonlySet<string>;
   /** A page's front matter `scripts` value, as written */
   readonly scripts?: unknown;
+  /** A page's front matter `title`, after site variable substitution */
+  readonly title?: string;
+  /**
+   * A page's front matter fields that its title rendering reads, as written;
+   * absent when the front matter is not valid YAML
+   */
+  readonly titleFields?: PageTitleFields;
+}
+
+export interface PageTitleFields {
+  readonly title?: unknown;
+  readonly slides?: unknown;
+  /**
+   * Read by a lenient parse because rendering rejects the front matter, such
+   * as an unquoted variable; the page's own render reports why
+   */
+  readonly invalid?: true;
 }
 
 export interface TadaProjectScan {
@@ -53,6 +77,15 @@ export interface TadaProjectScan {
   readonly generatedPageTargets: ReadonlySet<string>;
   readonly validTargets: ReadonlySet<string>;
   readonly literateJavaOutputPaths: ReadonlySet<string>;
+  /** Pages by title, for wikilinks */
+  readonly pageTitles: PageTitleIndex;
+}
+
+export interface PageTitleIndex {
+  /** Each page title mapped to the sorted root-relative URLs of its pages */
+  readonly byTitle: ReadonlyMap<string, readonly string[]>;
+  /** Pages with a title that cannot be linked, each with the reason */
+  readonly unlinkableTitles: readonly string[];
 }
 
 export function* sourcePaths(
@@ -71,6 +104,16 @@ export function* sourcePaths(
   }
 }
 
+const DOCUMENT_INDEX_FILE_NAMES: ReadonlySet<string> = new Set([
+  'index.yml',
+  'index.yaml',
+]);
+
+/** Whether a content file defines a document index rather than a page */
+export function isDocumentIndexFile(filePath: string): boolean {
+  return DOCUMENT_INDEX_FILE_NAMES.has(path.basename(filePath));
+}
+
 export function getSourceRenderKind(
   filePath: string,
   kind: SourceEntry['kind'],
@@ -80,6 +123,9 @@ export function getSourceRenderKind(
   const ext = path.extname(filePath).toLowerCase();
   if (kind === 'public') {
     return 'public-copy';
+  }
+  if (isDocumentIndexFile(filePath)) {
+    return 'document-index';
   }
   if (!processedExts.has(ext.slice(1))) {
     return 'content-copy';
@@ -99,6 +145,7 @@ function createSourceEntry(
   scan: Pick<TadaProjectScan, 'contentDir' | 'publicDir' | 'processedExts'>,
   filePath: string,
   kind: SourceEntry['kind'],
+  siteVariables: Pick<SiteVariables, 'vars'>,
 ): SourceEntry {
   const buildContent =
     kind === 'content' && isBuildContentSource(filePath, scan.processedExts);
@@ -108,15 +155,24 @@ function createSourceEntry(
     scan.processedExts,
     buildContent,
   );
+  // Read by the build, not published
+  if (renderKind === 'document-index') {
+    return { kind, renderKind, outputs: new Set(), targets: new Set() };
+  }
   const rootDir = kind === 'content' ? scan.contentDir : scan.publicDir;
-  const scripts =
+  const summary =
     renderKind === 'plain-text-page' || renderKind === 'literate-java'
-      ? readFrontMatterSummary(filePath).scripts
+      ? readFrontMatterSummary(filePath)
       : undefined;
+  const scripts = summary?.scripts;
+  const titleFields = summary?.titleFields;
+  const title = substituteTitle(titleFields?.title, siteVariables, filePath);
   return {
     kind,
     renderKind,
     ...(scripts === undefined ? {} : { scripts }),
+    ...(title === undefined ? {} : { title }),
+    ...(titleFields === undefined ? {} : { titleFields }),
     outputs:
       kind === 'public'
         ? new Set([toPosix(path.relative(rootDir, filePath))])
@@ -148,6 +204,8 @@ export function indexSources(
   const codePageSourceTargets = new Set<string>();
   const validTargets = new Set<string>();
   const literateJavaOutputPaths = new Set<string>();
+  const pageTitles = new Map<string, string[]>();
+  const unlinkableTitles: string[] = [];
   for (const [filePath, entry] of sources) {
     for (const output of entry.outputs) {
       if (!outputProducers.has(output)) {
@@ -159,6 +217,16 @@ export function indexSources(
       for (const output of entry.outputs) {
         if (output.endsWith('.html')) {
           addGeneratedRouteAliases(generatedPageTargets, `/${output}`);
+          if (entry.title !== undefined) {
+            const urls = pageTitles.get(entry.title) ?? [];
+            urls.push(`/${output}`);
+            pageTitles.set(entry.title, urls);
+          } else {
+            const reason = getUnlinkableTitleReason(entry.titleFields);
+            if (reason) {
+              unlinkableTitles.push(`${toDisplayPath(filePath)} (${reason})`);
+            }
+          }
         }
       }
     }
@@ -187,9 +255,20 @@ export function indexSources(
     generatedPageTargets,
     codePageSourceTargets,
     literateJavaOutputPaths,
+    pageTitles: {
+      byTitle: new Map(
+        [...pageTitles].map(([title, urls]) => [title, urls.sort()]),
+      ),
+      unlinkableTitles,
+    },
   };
 }
 
+/**
+ * Scans `content/` and `public/`. Front matter read by an earlier scan is
+ * reused unless a file's size or modification time changed, or
+ * forgetFrontMatter was called for it.
+ */
 export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
   const roots = {
     contentDir: getContentDir(),
@@ -203,7 +282,16 @@ export function scanProject(siteVariables: SiteVariables): TadaProjectScan {
   for (const kind of ['content', 'public'] as const) {
     const dir = kind === 'content' ? roots.contentDir : roots.publicDir;
     for (const filePath of walkFiles(dir).sort()) {
-      sources.set(filePath, createSourceEntry(roots, filePath, kind));
+      sources.set(
+        filePath,
+        createSourceEntry(roots, filePath, kind, siteVariables),
+      );
+    }
+  }
+  // Forget deleted files
+  for (const filePath of frontMatterCache.keys()) {
+    if (!sources.has(filePath)) {
+      frontMatterCache.delete(filePath);
     }
   }
   return indexSources(roots, sources);
@@ -230,6 +318,46 @@ export function assertNoOutputPathConflicts(scan: TadaProjectScan): string[] {
 interface FrontMatterSummary {
   skip: boolean;
   scripts?: unknown;
+  /** Absent when the front matter could not be parsed */
+  titleFields?: PageTitleFields;
+}
+
+/**
+ * Why a page that has a title is not in the title index: its title is not text
+ * or names an unknown variable. Undefined when it has no title.
+ */
+function getUnlinkableTitleReason(
+  fields: PageTitleFields | undefined,
+): string | undefined {
+  const title = fields?.title;
+  if (title === undefined || title === null || title === '') {
+    return undefined;
+  }
+  if (typeof title === 'string') {
+    return 'its title has a variable that cannot be substituted';
+  }
+  return fields?.invalid
+    ? 'its front matter has an error'
+    : 'its title is not text; quote it, as in title: "1.10"';
+}
+
+/**
+ * A page title as rendering will see it, or undefined when there is none or
+ * substitution fails (rendering the page reports the error)
+ */
+function substituteTitle(
+  title: unknown,
+  siteVariables: Pick<SiteVariables, 'vars'>,
+  filePath: string,
+): string | undefined {
+  if (!title || typeof title !== 'string') {
+    return undefined;
+  }
+  try {
+    return substituteFrontMatterValue(title, siteVariables, filePath) as string;
+  } catch {
+    return undefined;
+  }
 }
 
 // Front matter fields the scan needs, reused while a file's size and
@@ -238,6 +366,21 @@ const frontMatterCache = new Map<
   string,
   { size: number; mtimeMs: number; summary: FrontMatterSummary }
 >();
+
+function summarizeFrontMatter(
+  pageVariables: Record<string, unknown> | null,
+  invalid: boolean,
+): FrontMatterSummary {
+  return {
+    skip: pageVariables?.skip === true,
+    scripts: pageVariables?.scripts,
+    titleFields: {
+      title: pageVariables?.title,
+      slides: pageVariables?.slides,
+      ...(invalid ? { invalid } : {}),
+    },
+  };
+}
 
 function readFrontMatterSummary(filePath: string): FrontMatterSummary {
   const ext = path.extname(filePath).toLowerCase();
@@ -254,16 +397,73 @@ function readFrontMatterSummary(filePath: string): FrontMatterSummary {
   const raw = fs.readFileSync(filePath, 'utf-8');
   let summary: FrontMatterSummary = { skip: false };
   try {
-    const { pageVariables } = parseFrontMatterAndContent(raw, ext);
-    summary = {
-      skip: pageVariables?.skip === true,
-      scripts: pageVariables?.scripts,
-    };
+    // Parsed as rendering parses it
+    const { pageVariables } = parseFrontMatterAndContent(
+      raw,
+      ext,
+      toDisplayPath(filePath),
+    );
+    summary = summarizeFrontMatter(pageVariables, false);
   } catch {
-    // Not skipped: rendering the page reports the error for this file.
+    // Rendering the page reports the error. Fields the YAML still yields
+    // are kept, so the page can be skipped and other pages can link to it.
+    try {
+      const { frontMatter } = parseFrontMatter(raw, ext);
+      summary = summarizeFrontMatter(
+        parseFrontMatterYaml(frontMatter ?? ''),
+        true,
+      );
+    } catch {
+      // Not skipped, and not linkable
+    }
   }
   frontMatterCache.set(filePath, { size, mtimeMs, summary });
   return summary;
+}
+
+/** Whether a path is a directory; false if it is gone or under a file */
+function isDirectory(filePath: string): boolean {
+  try {
+    return fs.statSync(filePath).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Makes the next scan read the front matter of the given files, and of the
+ * files under the given directories, even if their size and modification
+ * time look unchanged
+ */
+export function forgetFrontMatter(paths: ReadonlySet<string>): void {
+  const unmatched = new Set<string>();
+  for (const changed of paths) {
+    if (!frontMatterCache.delete(changed)) {
+      unmatched.add(changed);
+    }
+  }
+  // Deleted files are pruned by the next scan, so only existing directories
+  // can still hold files with stale front matter
+  for (const changed of unmatched) {
+    if (!isDirectory(changed)) {
+      unmatched.delete(changed);
+    }
+  }
+  if (unmatched.size === 0) {
+    return;
+  }
+  for (const filePath of frontMatterCache.keys()) {
+    for (
+      let dir = path.dirname(filePath);
+      dir !== path.dirname(dir);
+      dir = path.dirname(dir)
+    ) {
+      if (unmatched.has(dir)) {
+        frontMatterCache.delete(filePath);
+        break;
+      }
+    }
+  }
 }
 
 export function shouldSkipContentFile(filePath: string): boolean {
