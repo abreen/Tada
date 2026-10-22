@@ -119,7 +119,9 @@ slides.
 Each slide stores its own annotation canvas in the presentation deck DOM while
 presentation mode is active, so annotations remain visible when navigating away
 from a slide and then back to it. The canvases cover the presentation viewport
-rather than the slide content box. When the viewport is resized, existing
+rather than the slide content box; each canvas is sized to the annotation
+layer's box rather than `100vw` or `innerWidth`, so a reserved scrollbar gutter
+cannot stretch its pixels away from the pointer. When the viewport is resized, existing
 bitmap pixels stay at their top-left canvas coordinates: shrinking the viewport
 cuts off pixels outside the new bounds, and expanding it adds empty transparent
 space. Leaving Slides Mode removes the annotation canvases.
