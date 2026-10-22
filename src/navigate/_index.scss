@@ -1,11 +1,6 @@
 $duration: 150ms;
 $movement-easing: cubic-bezier(0.2, 0, 0, 1);
 
-:root {
-  --page-transition-duration: #{$duration};
-  --page-transition-movement-easing: #{$movement-easing};
-}
-
 html.navigation-loading,
 html.navigation-loading * {
   cursor: progress !important;
@@ -23,27 +18,14 @@ html.navigation-loading * {
   }
 }
 
-// Page heading parts: crossfade and move to their new layout positions instead
-// of fading with the page
-// view-transition-name is set via inline style by the navigator
-// only when .title-and-info is visible in the viewport. All parts share one
-// duration and easing so they move in step when the layout changes; the
-// crossfades inherit the group timing.
-::view-transition-group(page-breadcrumbs),
-::view-transition-old(page-breadcrumbs),
-::view-transition-new(page-breadcrumbs),
-::view-transition-group(page-title),
-::view-transition-old(page-title),
-::view-transition-new(page-title),
-::view-transition-group(page-info),
-::view-transition-old(page-info),
-::view-transition-new(page-info) {
+// One timing for every layer: groups move to their new positions with the
+// movement curve, and snapshots that are not matched crossfade with the UA's
+// plus-lighter fade over the same duration and curve. Rules below that set
+// animation replace this timing for their layers.
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
   animation-duration: $duration;
-}
-
-::view-transition-group(page-breadcrumbs),
-::view-transition-group(page-title),
-::view-transition-group(page-info) {
   animation-timing-function: $movement-easing;
 }
 
@@ -54,14 +36,6 @@ html.navigation-loading * {
 ::view-transition-old(page-breadcrumbs),
 ::view-transition-new(page-breadcrumbs) {
   inline-size: auto;
-}
-
-// The header stays in place. Parts that change between pages, such as the
-// title shown in it, crossfade in step with the page heading.
-::view-transition-group(site-header),
-::view-transition-old(site-header),
-::view-transition-new(site-header) {
-  animation-duration: $duration;
 }
 
 // A static header scrolls with the page and never changes between pages. Pin
@@ -111,11 +85,6 @@ html.navigation-loading * {
   animation: none;
 }
 
-::view-transition-group(document-index) {
-  animation-duration: $duration;
-  animation-timing-function: $movement-easing;
-}
-
 ::view-transition-old(page-bottom),
 ::view-transition-old(document-index) {
   display: none;
@@ -133,19 +102,22 @@ html.navigation-loading * {
 ::view-transition-old(page-bottom):only-child,
 ::view-transition-old(document-index):only-child {
   display: block;
-  animation: page-fade-out $duration ease-in both;
+  animation: page-fade-out $duration $movement-easing both;
 }
 
 ::view-transition-new(page-bottom):only-child,
 ::view-transition-new(document-index):only-child {
-  animation: page-fade-in $duration ease-out both;
+  animation: page-fade-in $duration $movement-easing both;
 }
 
-// Page content fades out and in place
-::view-transition-old(root) {
-  animation: page-fade-out $duration ease-in;
-}
+// The page content (the root layer) uses the UA crossfade with the timing
+// above. Its plus-lighter blend keeps the old and new opacities summing to 1,
+// so the page background stays constant.
 
-::view-transition-new(root) {
-  animation: page-fade-in $duration ease-out;
+// A named element is its own backdrop root, so the fixed header's snapshot
+// loses the frosted backdrop it has on the page. Blur the page layer behind
+// the header's group instead, so the header looks the same during the
+// transition.
+:root:not(.static-header)::view-transition-group(site-header) {
+  backdrop-filter: var(--backdrop-filter);
 }
