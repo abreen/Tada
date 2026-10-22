@@ -9,6 +9,18 @@ This codebase is a static site generator written in TypeScript and uses Bun.
 - Default `tada init` content lives in `init/`, feature documentation lives in `spec/`, and end-to-end coverage lives in `functional_tests/` and `playwright/`
 - `examples/` holds small sites that each show one feature; they are not in the npm package. Do not add to `examples/` unless told to
 
+## Setup
+
+Before starting development, run these commands:
+
+```
+bun install
+bun run check-deps
+bun run setup:python
+```
+
+See `CONTRIBUTING.md` for more details, or if something goes wrong.
+
 ## Feature specifications
 
 Each feature is documented in `spec/`. Use the relevant spec to answer behavior questions, and add a matching Markdown file there when you add a new feature.
@@ -89,12 +101,6 @@ Use the correct type of test (unit, Playwright, or functional) following the rul
 - Do not use Playwright to lock down incidental styling like exact colors, borders, shadows, fonts, pixel-perfect dimensions, screenshots, or decorative CSS
 - Geometry checks are allowed only when geometry is the behavior under test, such as scroll restoration or target-in-viewport checks, and should use broad user-observable outcomes
 - Prefer role, text, URL, DOM state, accessibility attributes, and interaction outcomes over computed styles or style-only classes
-
-## Python rules
-
-Do not use virtualenv or create temporary environments to work around issues with running Python.
-Follow the rules in `CONTRIBUTING.md` to install the correct version of Python and any dependencies.
-If there is an issue with the Python environment, stop and inform the user.
 
 ## Code style/formatting
 

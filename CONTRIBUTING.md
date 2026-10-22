@@ -30,17 +30,6 @@ To verify your local toolchain, run:
 bun run check-deps
 ```
 
-To test your changes to Tada against a real site, use the `init-example` script:
-
-```
-bun run init-example
-cd example
-../bin/tada.ts dev
-../bin/tada.ts serve
-```
-
-For a shortcut that creates `example/` if needed and then runs watch mode there, use `bun run iew`.
-
 
 ## Development workflow
 
