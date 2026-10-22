@@ -568,11 +568,19 @@ export default function mountSlides(window: Window): void | (() => void) {
     setAnnotationMode(!isAnnotating);
   }
 
+  // The layer's box, not innerWidth or 100vw, which can include the
+  // scrollbar gutter and so stretch the canvas away from the pointer
+  function getAnnotationLayerSize(): { width: number; height: number } {
+    return {
+      width: annotationLayer.clientWidth || window.innerWidth,
+      height: annotationLayer.clientHeight || window.innerHeight,
+    };
+  }
+
   function getViewportPoint(
     event: Pick<PointerEvent, 'clientX' | 'clientY'>,
   ): { x: number; y: number } | null {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const { width, height } = getAnnotationLayerSize();
 
     if (
       width <= 0 ||
@@ -619,8 +627,9 @@ export default function mountSlides(window: Window): void | (() => void) {
   }
 
   function resizeAnnotationCanvas(state: SlideAnnotationState): void {
-    const width = Math.max(1, window.innerWidth);
-    const height = Math.max(1, window.innerHeight);
+    const layerSize = getAnnotationLayerSize();
+    const width = Math.max(1, layerSize.width);
+    const height = Math.max(1, layerSize.height);
     const dpr = Math.max(1, window.devicePixelRatio || 1);
 
     if (state.width === width && state.height === height && state.dpr === dpr) {
