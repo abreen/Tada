@@ -54,7 +54,9 @@ The header keeps its own named `site-header` transition layer, so it does not
 fade with the page. Before that layer's new snapshot is captured, the header
 adopts the destination's page title and shows the title for the destination's
 scroll position without rolling (see [Header Title](header-title.md)); any
-change crossfades in step with the page heading.
+change crossfades in step with the page heading. A named layer cannot see the
+page behind it, so the fixed header's transition group applies the header's
+backdrop blur itself, keeping the header frosted during the transition.
 
 The footer and appearance-picker group gets its own named `page-bottom`
 transition layer on each page where it is in the viewport; like the heading

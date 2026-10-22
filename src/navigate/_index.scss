@@ -113,3 +113,11 @@ html.navigation-loading * {
 // The page content (the root layer) uses the UA crossfade with the timing
 // above. Its plus-lighter blend keeps the old and new opacities summing to 1,
 // so the page background stays constant.
+
+// A named element is its own backdrop root, so the fixed header's snapshot
+// loses the frosted backdrop it has on the page. Blur the page layer behind
+// the header's group instead, so the header looks the same during the
+// transition.
+:root:not(.static-header)::view-transition-group(site-header) {
+  backdrop-filter: var(--backdrop-filter);
+}
