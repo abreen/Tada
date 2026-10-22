@@ -66,7 +66,7 @@ function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const s = net.createServer();
     s.on('error', reject);
-    s.listen(0, () => {
+    s.listen(0, '127.0.0.1', () => {
       const port = (s.address() as net.AddressInfo).port;
       s.close(() => resolve(port));
     });
@@ -101,6 +101,16 @@ async function waitForServer() {
     }
   }
   throw new Error(`tada serve did not start on ${base}`);
+}
+
+// Claude Code cloud sessions preinstall one Chromium that may not match this
+// checkout's Playwright version; use it when Playwright's own is missing
+function chromiumPath(): string | undefined {
+  const cloudChromium = '/opt/pw-browsers/chromium';
+  if (fs.existsSync(chromium.executablePath())) {
+    return undefined;
+  }
+  return fs.existsSync(cloudChromium) ? cloudChromium : undefined;
 }
 
 let browser: Browser | undefined;
@@ -224,7 +234,7 @@ let failed = false;
 try {
   await waitForServer();
   console.log(`serving ${siteDir}/dist at ${base}`);
-  browser = await chromium.launch();
+  browser = await chromium.launch({ executablePath: chromiumPath() });
   await openPage();
   const input = await Bun.stdin.text();
   for (const raw of input.split('\n')) {

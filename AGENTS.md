@@ -58,7 +58,7 @@ Functional tests are CPU intensive and may take over 2 minutes, even on powerful
 
 ## Cloud sessions
 
-In Claude Code cloud sessions (`CLAUDE_CODE_REMOTE=true`), `scripts/test.ts` and a hook in `.claude/settings.json` block Playwright and functional tests. Run only lint, typecheck, and unit tests there. There, the pre-push hook runs only unit tests.
+In Claude Code cloud sessions (`CLAUDE_CODE_REMOTE=true`), `scripts/test.ts` and a hook in `.claude/settings.json` block Playwright and functional tests. Run only lint, typecheck, and unit tests there. There, the pre-push hook runs only unit tests. The `run-tada` skill's browser driver is allowed there.
 
 ## Cross-platform tests
 

@@ -21,6 +21,9 @@ to the repo root.
 - Playwright's Chromium in `~/Library/Caches/ms-playwright` (macOS), the same
   browser `bun run test:playwright` uses. It was already installed when this
   skill was written; installing it was not tested.
+- In Claude Code cloud sessions, run `bun install` first. If Playwright's own
+  Chromium is missing, the driver uses the preinstalled
+  `/opt/pw-browsers/chromium`. Don't run `playwright install`.
 - Optional: `javac` and Python 3 for the trace feature. Without them the
   build logs a warning and disables traces; it does not fail.
 
