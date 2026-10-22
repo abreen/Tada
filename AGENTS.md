@@ -34,6 +34,17 @@ New features must work with client-side JavaScript turned off. Treat JS as progr
 
 Existing patterns: nav and TOCs navigate without client routing; header nav and `<details>` elements expand without JS; code downloads work without the File System Access API.
 
+## Setup
+
+Before your first commit in a session, including in cloud sessions, run:
+
+```
+bun install
+bun run setup:python
+```
+
+Do this even if you will not touch Python or functional tests: the pre-commit hook runs Ruff, which `bun run setup:python` installs. See `CONTRIBUTING.md` for the required Python version.
+
 ## Commands
 
 This repository is the Tada package, not a Tada site. Do not run `tada dev` or `tada prod` in this directory because there is no site here.
@@ -89,12 +100,6 @@ Use the correct type of test (unit, Playwright, or functional) following the rul
 - Do not use Playwright to lock down incidental styling like exact colors, borders, shadows, fonts, pixel-perfect dimensions, screenshots, or decorative CSS
 - Geometry checks are allowed only when geometry is the behavior under test, such as scroll restoration or target-in-viewport checks, and should use broad user-observable outcomes
 - Prefer role, text, URL, DOM state, accessibility attributes, and interaction outcomes over computed styles or style-only classes
-
-## Python rules
-
-Do not use virtualenv or create temporary environments to work around issues with running Python.
-Follow the rules in `CONTRIBUTING.md` to install the correct version of Python and any dependencies.
-If there is an issue with the Python environment, stop and inform the user.
 
 ## Code style/formatting
 
