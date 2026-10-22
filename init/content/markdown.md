@@ -343,6 +343,21 @@ the method would call itself forever, and the program would end with a
 Once opened, a tall details element keeps its summary (or a preview's "Show
 less" link) on screen while you scroll through it, so it can be closed from
 anywhere.
+### Drumroll
+
+For a more dramatic reveal, use
+
+```
+!!! drumroll What does `fib(10)` return?
+It returns **55**.
+!!!
+```
+
+to hide content until the reader clicks. Then there's a drumroll, and... ta-da!
+
+!!! drumroll What does `fib(10)` return?
+It returns **55**.
+!!!
 
 
 ### Two-column layout
