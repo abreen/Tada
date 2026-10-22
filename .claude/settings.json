@@ -6,13 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(*playwright test*)",
-            "command": "[ \"$CLAUDE_CODE_REMOTE\" != true ] || { echo 'Playwright and functional tests do not run in Claude Code cloud sessions. Run only lint, typecheck, and unit tests here.' >&2; exit 2; }"
-          },
-          {
-            "type": "command",
-            "if": "Bash(*pytest*)",
-            "command": "[ \"$CLAUDE_CODE_REMOTE\" != true ] || { echo 'Playwright and functional tests do not run in Claude Code cloud sessions. Run only lint, typecheck, and unit tests here.' >&2; exit 2; }"
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" != true ] || ! grep -Eq '\\bplaywright +test\\b|\\bpytest\\b' || { echo 'Playwright and functional tests do not run in Claude Code cloud sessions. Run only lint, typecheck, and unit tests here. The run-tada skill driver is allowed.' >&2; exit 2; }"
           }
         ]
       }
