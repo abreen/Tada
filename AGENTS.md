@@ -9,6 +9,17 @@ This codebase is a static site generator written in TypeScript and uses Bun.
 - Default `tada init` content lives in `init/`, feature documentation lives in `spec/`, and end-to-end coverage lives in `functional_tests/` and `playwright/`
 - `examples/` holds small sites that each show one feature; they are not in the npm package. Do not add to `examples/` unless told to
 
+## Setup
+
+Before your first commit in a session, including in cloud sessions, run:
+
+```
+bun install
+bun run setup:python
+```
+
+Do this even if you will not touch Python or functional tests: the pre-commit hook runs Ruff, which `bun run setup:python` installs. See `CONTRIBUTING.md` for the required Python version.
+
 ## Feature specifications
 
 Each feature is documented in `spec/`. Use the relevant spec to answer behavior questions, and add a matching Markdown file there when you add a new feature.
@@ -33,17 +44,6 @@ New features must work with client-side JavaScript turned off. Treat JS as progr
 - Use `<noscript>` or build-time fallback HTML when a feature cannot provide equivalent no-JS behavior
 
 Existing patterns: nav and TOCs navigate without client routing; header nav and `<details>` elements expand without JS; code downloads work without the File System Access API.
-
-## Setup
-
-Before your first commit in a session, including in cloud sessions, run:
-
-```
-bun install
-bun run setup:python
-```
-
-Do this even if you will not touch Python or functional tests: the pre-commit hook runs Ruff, which `bun run setup:python` installs. See `CONTRIBUTING.md` for the required Python version.
 
 ## Commands
 
