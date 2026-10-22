@@ -435,3 +435,59 @@ test('code page results keep their template and document', async ({ page }) => {
   await expect(result).toHaveAttribute('data-tada-page', '');
   await expect(result.locator('.document-context')).toHaveText('Labs ›');
 });
+
+test('the index stays on screen without crossfading between indexed pages', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto('/labs/index.html');
+  await waitForClientMount(page);
+  await expect(documentIndex(page)).toBeInViewport();
+  await page.evaluate(() => {
+    const trackedWindow = window as Window & {
+      __documentIndexTransition?: Promise<{
+        oldDisplay: string;
+        animations: string[];
+      }>;
+    };
+    const original = document.startViewTransition.bind(document);
+    trackedWindow.__documentIndexTransition = new Promise(resolve => {
+      document.startViewTransition = callback => {
+        const transition = original(callback);
+        void transition.ready.then(() =>
+          resolve({
+            oldDisplay: getComputedStyle(
+              document.documentElement,
+              '::view-transition-old(document-index)',
+            ).display,
+            // The group may move; only the snapshots must not animate
+            animations: document
+              .getAnimations()
+              .flatMap(animation =>
+                animation.effect instanceof KeyframeEffect &&
+                /^::view-transition-(old|new)\(document-index\)$/.test(
+                  animation.effect.pseudoElement ?? '',
+                )
+                  ? [animation.effect.pseudoElement!]
+                  : [],
+              ),
+          }),
+        );
+        return transition;
+      };
+    });
+  });
+
+  await documentIndex(page)
+    .getByRole('link', { name: 'Lab 0', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/labs\/00\/index\.html$/);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as Window & { __documentIndexTransition?: Promise<unknown> })
+          .__documentIndexTransition,
+    ),
+  ).toEqual({ oldDisplay: 'none', animations: [] });
+});

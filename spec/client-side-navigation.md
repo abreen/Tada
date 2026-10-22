@@ -36,24 +36,25 @@ The cursor is delayed so fast navigations do not flash a transient busy state;
 `progress` also communicates that another link can still be used to replace
 the pending navigation.
 
-Page transitions fade the page content in place over 150ms: outgoing content
-fades with `ease-in`, and incoming content fades with `ease-out`. Link clicks,
-Back, and Forward all use the same transition; there is no directional
-movement.
+Every transition layer uses one timing: 150ms with the movement curve
+`cubic-bezier(0.2, 0, 0, 1)` (the header and search movement curve). Layers
+that move between pages move with it, and snapshots that are not matched
+crossfade with the browser's default `plus-lighter` fade over the same timing.
+The page content crossfades in place this way; because the old and new
+opacities always sum to 1, the page background does not change during the
+crossfade. Link clicks, Back, and Forward all use the same transition; there
+is no directional movement.
 
 When the page heading is visible, the breadcrumb trail, `h1`, and page info
 get their own named transition layers (`page-breadcrumbs`, `page-title`, and
 `page-info`) instead of fading with the page. They crossfade and move to
-their new layout positions over the same 150ms with the
-`cubic-bezier(0.2, 0, 0, 1)` curve, matching the header and search movement
-curve, so they stay in step when the layout
-changes.
+their new layout positions, so they stay in step when the layout changes.
 
 The header keeps its own named `site-header` transition layer, so it does not
 fade with the page. Before that layer's new snapshot is captured, the header
 adopts the destination's page title and shows the title for the destination's
 scroll position without rolling (see [Header Title](header-title.md)); any
-change crossfades over the same 150ms as the page heading.
+change crossfades in step with the page heading.
 
 The footer and appearance-picker group gets its own named `page-bottom`
 transition layer on each page where it is in the viewport; like the heading
@@ -62,8 +63,8 @@ with the page or interpolates its bounds. When the group is on screen on both
 pages, the layer does not crossfade; only the incoming snapshot is shown at its
 destination layout position, so two copies are never visible at once. When it
 is on screen on only one page, such as between a short page and the top of a
-long page, that page's snapshot fades out or in where it is, with the same
-150ms `ease-in` and `ease-out` fades as the page.
+long page, that page's snapshot fades out or in where it is, in step with the
+page.
 The document index (see [Document Index](document-index.md)) gets its own
 `document-index` layer under the same rules, so it does not dim while the page
 fades between two pages that both show it. Because it sits below the page
