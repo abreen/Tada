@@ -27,6 +27,10 @@ Each feature is documented in `spec/`. Use the relevant spec to answer behavior 
 
 After changing code, update the relevant spec if behavior, defaults, options, dependencies, or UI details no longer match. For broader audits, use `git log` to spot stale specs, then verify against the code before editing.
 
+## Changelog
+
+Before a change merges to `main`, add a line for it under `## Unreleased` in `CHANGELOG.md`. Write for site authors, not Tada developers: start with "Added:", "Changed:", "Fixed:", "Removed:", or "Security:", and keep it short. Describe internal work such as refactors, efficiency changes, or bug fixes in plain terms (for example, "Watch mode was made more efficient for files in doc indexes"). Skip changes that only touch tests, CI, or development tooling.
+
 ## Inline code styles
 
 Inline `<code>` takes its style from the background directly behind it, in each state (hover, focus, press, selected, current):
