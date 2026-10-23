@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$CLAUDE_CODE_REMOTE\" != true ] || ! grep -Eq '\\bplaywright +test\\b|\\bpytest\\b' || { echo 'Playwright and functional tests do not run in Claude Code cloud sessions. Run only lint, typecheck, and unit tests here. The run-tada skill driver is allowed.' >&2; exit 2; }"
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" != true ] || ! jq -r '.tool_input.command // empty' | grep -Eq '\\bplaywright +test\\b|\\bpytest\\b' || { echo 'Playwright and functional tests do not run in Claude Code cloud sessions. Run only lint, typecheck, and unit tests here. The run-tada skill driver is allowed.' >&2; exit 2; }"
           }
         ]
       }
