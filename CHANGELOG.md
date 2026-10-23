@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.22.7
 
 - Fixed: Slide annotations line up with the pointer when a scrollbar gutter is reserved
 
