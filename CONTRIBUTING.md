@@ -108,7 +108,17 @@ TADA_LOG_LEVEL=debug ../bin/tada.ts dev
 
 1. Create a feature branch
 2. Make your changes
-3. Open a pull request against `main`
+3. Add a line under `## Unreleased` in `CHANGELOG.md` describing the change for
+   site authors (skip this for changes to tests, CI, or development tooling)
+4. Open a pull request against `main`
+
+
+## Publishing
+
+Before publishing, rename `## Unreleased` in `CHANGELOG.md` to the new version
+(for example, `## 1.22.7`), add an empty `## Unreleased` above it, and commit.
+Then run `bun run publish-patch`, `publish-minor`, or `publish-major`. These
+scripts stop if `CHANGELOG.md` has no section for the new version.
 
 
 ## License
