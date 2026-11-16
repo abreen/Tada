@@ -1,10 +1,11 @@
 import { globals } from '../globals';
+import { createHeaderIndicator } from '../header-indicator';
 import { PREVIEW_CLASS } from '../details/preview-class';
 import { getHashTarget } from '../hash-target';
 import { isScrollRestored } from '../navigate/restored-scroll';
 import { panelsAround, revealInTabs } from '../tabs';
 import { applyBasePath } from '../util';
-import { HIGHLIGHT_PARAM } from './param';
+import { HIGHLIGHT_PARAM, removeHighlightParam } from './param';
 
 const CLASS_NAME = 'search-highlight';
 
@@ -228,20 +229,53 @@ export default async (window: Window) => {
   });
   marks.forEach(mark => observer.observe(mark));
 
-  // Focusing the search box clears the highlights, as the reader is done with
-  // that search. The URL keeps the search terms.
-  const handleFocusIn = (event: FocusEvent) => {
-    if (!(event.target as Element).matches?.('input.quick-search')) {
-      return;
-    }
+  const indicator = createHeaderIndicator(document, {
+    text: `Highlighting ${terms
+      .map(term => term.trim())
+      .filter(Boolean)
+      .join(' ')}`,
+    buttonLabel: 'Clear highlights',
+    icon: 'close',
+  });
+  document
+    .getElementById('search-highlight-container')
+    ?.appendChild(indicator.element);
+
+  function clear() {
     document.removeEventListener('focusin', handleFocusIn);
+    indicator.button.removeEventListener('click', handleClearClick);
     observer.disconnect();
     removeMarks(marks);
-  };
+    indicator.element.remove();
+  }
+
+  // The clear button also drops the search terms from the URL, so reloading
+  // the page does not highlight them again
+  function handleClearClick() {
+    clear();
+    const { pathname, search, hash } = window.location;
+    window.history.replaceState(
+      window.history.state,
+      '',
+      removeHighlightParam(pathname + search + hash),
+    );
+  }
+
+  // Focusing the search box clears the highlights, as the reader is done with
+  // that search. The URL keeps the search terms.
+  function handleFocusIn(event: FocusEvent) {
+    if ((event.target as Element).matches?.('input.quick-search')) {
+      clear();
+    }
+  }
+
+  indicator.button.addEventListener('click', handleClearClick);
   document.addEventListener('focusin', handleFocusIn);
 
   return () => {
     document.removeEventListener('focusin', handleFocusIn);
+    indicator.button.removeEventListener('click', handleClearClick);
     observer.disconnect();
+    indicator.element.remove();
   };
 };

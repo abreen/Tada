@@ -36,12 +36,19 @@ the controls take a second column sized to their rendered content. The title
 area shows the site title, or the page title once the page heading has
 scrolled under the header (see [Header Title](header-title.md)). It
 therefore uses exactly the width left by the controls that are currently
-present and visible, the search field above its narrow breakpoint and the
-back-to-top button after scrolling, and truncates with an ellipsis only as
+present and visible, the search field above its narrow breakpoint, the
+back-to-top button after scrolling, and the page update and search highlight
+indicators, and truncates with an ellipsis only as
 needed. No control widths are hard-coded, so fonts, labels, and text sizes
 cannot make the title overlap the controls or leave unused space before them.
 The controls always keep their full width. The open navigation spans the full
 header width beneath both columns.
+
+From left to right, the trailing controls are the page update indicator (see
+[Page Update](page-update.md)), the search highlight indicator (see
+[Search Highlighting](search-highlighting.md#clearing)), the back-to-top
+button, and the search field. The indicators are client-only and fill empty
+containers rendered at build time.
 
 The back-to-top button is client-only and appears only on long pages: the page
 must be at least 3 viewports tall, and the reader must scroll past 1.5 viewports
@@ -99,9 +106,10 @@ column, and the title rolls to the page title while scrolling (see
 
 When search is also disabled, the header is static. The root element gets the
 `static-header` class, the header sits in the normal page flow, and the logo
-and site title are centered at the top of each page with no background. It has
-no trailing controls: the back-to-top button is not rendered and its client
-component does not mount. The header scrolls away with the page, so it shows
+and site title are centered at the top of each page with no background. Its only
+trailing control is the page update indicator, positioned at the right of the
+header: the back-to-top button is not rendered and its client component does
+not mount. The header scrolls away with the page, so it shows
 only the site title, with no page title reel. Page content, the sticky TOC,
 and fragment scroll positions no longer reserve space for a fixed header; the
 `--header-offset` custom property is `0px` instead of the collapsed header

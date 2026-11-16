@@ -37,6 +37,8 @@ the shared SVG attributes.
 | `check` | 18px | Checked checkboxes |
 | `question-correct` | 22px | Correct multiple-choice answers |
 | `question-incorrect` | 22px | Incorrect multiple-choice selections |
+| `close` | 24px | The search highlight indicator's clear button |
+| `refresh` | 24px | The page update indicator's refresh button |
 
 Inline elements use the `.mask-icon` class with a `.mask-icon-<name>` modifier,
 which sets `--mask-icon` and `--mask-icon-size`. Pseudo-elements consume the

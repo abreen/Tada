@@ -89,6 +89,9 @@ describe('_top.html template', () => {
       );
       expect(html).toContain('name="quick-search"');
       expect(html).toContain('id="to-top-container"');
+      expect(html).toMatch(
+        /id="page-update-container"[^]*id="search-highlight-container"[^]*id="to-top-container"[^]*name="quick-search"/,
+      );
       expect(html).not.toContain('static-header');
     });
 
@@ -99,7 +102,8 @@ describe('_top.html template', () => {
       expect(openingTag).toContain('class="static-header"');
       expect(html).not.toContain('<details');
       expect(html).not.toContain('menu-icon');
-      expect(html).not.toContain('header-controls');
+      expect(html).toContain('id="page-update-container"');
+      expect(html).not.toContain('search-highlight-container');
       expect(html).not.toContain('to-top-container');
       expect(html).not.toContain('quick-search');
       expect(html).not.toContain('header-title-reel');

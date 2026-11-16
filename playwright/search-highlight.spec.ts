@@ -139,6 +139,29 @@ test('keeps the tab with the link target selected', async ({ page }) => {
   );
 });
 
+test('the clear button removes the highlights and the search terms from the URL', async ({
+  page,
+}) => {
+  await page.goto(REMAINDER_URL);
+  const marks = page.locator('mark.search-highlight');
+  await expect(marks.first()).toBeInViewport();
+  const status = page.locator('#search-highlight-container');
+  await expect(status).toContainText('Highlighting remainder');
+  const top = await page.evaluate(() => window.scrollY);
+
+  await page.getByRole('button', { name: 'Clear highlights' }).click();
+
+  await expect(marks).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Clear highlights' }),
+  ).toHaveCount(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(top);
+  await expect(page).toHaveURL(/\/markdown\.html$/);
+  await page.reload();
+  await expect(page.getByText('remainder').first()).toBeAttached();
+  await expect(marks).toHaveCount(0);
+});
+
 test('focusing the search box clears the highlights', async ({ page }) => {
   await page.goto(REMAINDER_URL);
   const marks = page.locator('mark.search-highlight');
@@ -149,6 +172,9 @@ test('focusing the search box clears the highlights', async ({ page }) => {
 
   await expect(page.locator('input.quick-search')).toBeFocused();
   await expect(marks).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Clear highlights' }),
+  ).toHaveCount(0);
   // The reader stays where they were, in the tab the highlight opened
   await expect(page.getByRole('tab', { name: 'Prose' })).toHaveAttribute(
     'aria-selected',

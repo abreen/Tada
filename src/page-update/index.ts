@@ -1,6 +1,5 @@
 import {
   EMPTY_RESPONSE_VALIDATORS,
-  getPreferredValidatorKey,
   getResponseValidators,
   hasResponseValidatorsChanged,
   hasUsableResponseValidators,
@@ -8,6 +7,7 @@ import {
 } from '../validators';
 import { NAVIGATION_EVENT, refreshCurrentPage } from '../navigate/runtime';
 import { globals } from '../globals';
+import { createHeaderIndicator } from '../header-indicator';
 
 const POLL_INTERVAL_MS = 600_000;
 export const PAGE_UPDATE_REFRESH_EVENT = 'tada:page-update-refresh';
@@ -17,78 +17,42 @@ interface PageUpdateOptions {
   refreshPage?: (window: Window) => Promise<void>;
 }
 
-function createToast(document: Document): {
-  container: HTMLDivElement;
-  toast: HTMLDivElement;
-  reloadButton: HTMLButtonElement;
-  dismissButton: HTMLButtonElement;
-} {
-  const container = document.createElement('div');
-  container.className = 'page-update-container';
-
-  const toast = document.createElement('div');
-  toast.className = 'page-update-toast';
-  toast.setAttribute('role', 'status');
-  toast.setAttribute('aria-live', 'polite');
-
-  const body = document.createElement('div');
-  body.className = 'page-update-body';
-
-  const message = document.createElement('div');
-  message.className = 'page-update-message';
-  message.textContent = 'A newer version of this page is available.';
-
-  const actions = document.createElement('div');
-  actions.className = 'page-update-actions';
-
-  const reloadButton = document.createElement('button');
-  reloadButton.type = 'button';
-  reloadButton.textContent = 'Reload';
-
-  const dismissButton = document.createElement('button');
-  dismissButton.type = 'button';
-  dismissButton.textContent = 'Dismiss';
-
-  actions.append(reloadButton, dismissButton);
-  body.append(message, actions);
-  toast.appendChild(body);
-  container.appendChild(toast);
-  document.body.appendChild(container);
-
-  return { container, toast, reloadButton, dismissButton };
-}
-
 export function mountPageUpdate(
   window: Window,
   options: PageUpdateOptions = {},
 ): (() => void) | undefined {
   const { document } = window;
-  if (!document.body) {
+  const mountParent = document.getElementById('page-update-container');
+  if (!mountParent) {
     return;
   }
+  const container: HTMLElement = mountParent;
 
   const pollIntervalMs = options.pollIntervalMs ?? POLL_INTERVAL_MS;
   const refreshPage = options.refreshPage ?? refreshCurrentPage;
-  const { container, toast, reloadButton, dismissButton } =
-    createToast(document);
+  const indicator = createHeaderIndicator(document, {
+    text: 'Page updated',
+    buttonLabel: 'Reload page',
+    icon: 'refresh',
+  });
 
   let currentPath = window.location.pathname + window.location.search;
   let navigationGeneration = 0;
   let disposed = false;
   let baseline = EMPTY_RESPONSE_VALIDATORS;
-  let dismissedValidatorKey: string | null = null;
-  let nextValidator: ResponseValidators | null = null;
   let hasBaseline = false;
   let timer: number | null = null;
   let checkInFlight = false;
   let rerunAfterCurrentCheck = false;
 
-  function hideToast() {
-    toast.classList.remove('is-showing');
+  function hideIndicator() {
+    indicator.element.remove();
   }
 
-  function showToast() {
-    toast.classList.add('is-showing');
+  function showIndicator() {
+    if (!indicator.element.isConnected) {
+      container.appendChild(indicator.element);
+    }
   }
 
   function clearTimer() {
@@ -170,14 +134,7 @@ export function mountPageUpdate(
         return;
       }
 
-      nextValidator = validators;
-      const validatorKey = getPreferredValidatorKey(validators);
-      if (validatorKey !== null && validatorKey === dismissedValidatorKey) {
-        hideToast();
-        return;
-      }
-
-      showToast();
+      showIndicator();
     } catch {
       // best-effort
     } finally {
@@ -202,10 +159,8 @@ export function mountPageUpdate(
     rerunAfterCurrentCheck = false;
     currentPath = window.location.pathname + window.location.search;
     baseline = validators;
-    dismissedValidatorKey = null;
-    nextValidator = null;
     hasBaseline = hasUsableResponseValidators(validators);
-    hideToast();
+    hideIndicator();
     clearTimer();
     scheduleNextCheck();
   }
@@ -237,12 +192,6 @@ export function mountPageUpdate(
     );
   }
 
-  function handleDismiss() {
-    dismissedValidatorKey =
-      nextValidator === null ? null : getPreferredValidatorKey(nextValidator);
-    hideToast();
-  }
-
   function handleWindowFocus() {
     if (__IS_DEV__) {
       console.log(
@@ -266,8 +215,7 @@ export function mountPageUpdate(
     });
   }
 
-  reloadButton.addEventListener('click', handleReloadClick);
-  dismissButton.addEventListener('click', handleDismiss);
+  indicator.button.addEventListener('click', handleReloadClick);
   document.addEventListener('visibilitychange', handleVisibilityChange);
   window.addEventListener('focus', handleWindowFocus);
   window.addEventListener('blur', handleWindowBlur);
@@ -290,9 +238,8 @@ export function mountPageUpdate(
     window.removeEventListener('focus', handleWindowFocus);
     window.removeEventListener('blur', handleWindowBlur);
     window.removeEventListener(NAVIGATION_EVENT, handleNavigation);
-    dismissButton.removeEventListener('click', handleDismiss);
-    reloadButton.removeEventListener('click', handleReloadClick);
-    container.remove();
+    indicator.button.removeEventListener('click', handleReloadClick);
+    indicator.element.remove();
   };
 }
 

@@ -52,8 +52,23 @@ following a table of contents link, does not cancel highlighting.
 
 ## Clearing
 
+While highlights are on the page, the header controls show
+"Highlighting" followed by the search terms, with a circular X button labeled
+"Clear highlights", to the left of the search field (see
+[Navigation](navigation.md)). The indicator is added to a build-time
+`#search-highlight-container` element with `role="status"`. Long terms are
+truncated with an ellipsis, and below the header's narrow breakpoint (400px)
+only the button shows. No indicator appears when no text matched.
+
+Choosing the X button removes the marks and the indicator, and removes the
+`pagefind-highlight` parameters from the URL with `history.replaceState`,
+keeping the rest of the query, the fragment, and the history state, so
+reloading the page does not highlight the words again. The scroll position and
+any tabs or details the highlight opened are kept.
+
 Focusing the search box, by clicking it or pressing `/`, clears the
-highlights: the marks are removed, leaving the text as it was. The URL, the
+highlights: the marks and the indicator are removed, leaving the text as it
+was. The URL, the
 scroll position, and any tabs or details the highlight opened are kept, so
 reloading the page highlights the same words again. Highlights are cleared only
 once they are on the page; focusing the search box while Pagefind's highlighter

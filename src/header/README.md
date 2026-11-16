@@ -15,6 +15,10 @@ If JavaScript is turned off in the web browser, the `<details>` element is still
 functional and its disclosure content opens immediately, and the header shows
 only the site title.
 
+The header's trailing controls include empty containers for the page update
+and search highlight indicators. Those components fill them with a label and a
+circular `button.icon-button` built by `src/header-indicator`.
+
 A site without a nav renders a `.header-brand` element instead of `<details>`.
 The component then rolls the title there, if the header has a title reel, and
 skips the menu dismissal behavior.

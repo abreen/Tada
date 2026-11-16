@@ -436,4 +436,89 @@ describe('search highlighting', () => {
     expect(highlightOptions).toBeNull();
     expect(win.document.querySelector('mark')).toBeNull();
   });
+
+  describe('indicator', () => {
+    const PAGE_WITH_HEADER = `
+      <div id="search-highlight-container" role="status"></div>
+      <input type="search" class="quick-search" />
+      ${PAGE}
+    `;
+
+    test('shows the search terms with a clear button', async () => {
+      const { win } = create(
+        'http://localhost/page.html?pagefind-highlight=odd&pagefind-highlight=line',
+        PAGE_WITH_HEADER,
+      );
+      await mount(win);
+      const container = win.document.getElementById(
+        'search-highlight-container',
+      )!;
+      expect(
+        container.querySelector('.header-indicator-text')?.textContent,
+      ).toBe('Highlighting odd line');
+      const button = container.querySelector('button')!;
+      expect(button.getAttribute('aria-label')).toBe('Clear highlights');
+    });
+
+    test('shows nothing when no text matches', async () => {
+      const { win } = create(
+        'http://localhost/page.html?pagefind-highlight=absent',
+        PAGE_WITH_HEADER,
+      );
+      await mount(win);
+      expect(
+        win.document.getElementById('search-highlight-container')!.innerHTML,
+      ).toBe('');
+    });
+
+    test('the clear button removes the highlights and the URL terms', async () => {
+      const { win } = create(
+        'http://localhost/page.html?view=full&pagefind-highlight=odd#section',
+        PAGE_WITH_HEADER,
+      );
+      win.history.replaceState({ key: 1 }, '');
+      await mount(win);
+      const container = win.document.getElementById(
+        'search-highlight-container',
+      )!;
+      container.querySelector('button')!.click();
+
+      expect(win.document.querySelector('mark')).toBeNull();
+      expect(win.document.querySelector('#intro')!.textContent).toBe(
+        'An odd intro.',
+      );
+      expect(container.innerHTML).toBe('');
+      expect(disconnects).toBe(1);
+      expect(win.location.search).toBe('?view=full');
+      expect(win.location.hash).toBe('#section');
+      expect(win.history.state).toEqual({ key: 1 });
+    });
+
+    test('focusing the search box clears the highlights and keeps the URL', async () => {
+      const url = 'http://localhost/page.html?pagefind-highlight=odd';
+      const { win } = create(url, PAGE_WITH_HEADER);
+      await mount(win);
+      win.document
+        .querySelector<HTMLInputElement>('input.quick-search')!
+        .focus();
+
+      expect(win.document.querySelector('mark')).toBeNull();
+      expect(
+        win.document.getElementById('search-highlight-container')!.innerHTML,
+      ).toBe('');
+      expect(win.location.href).toBe(url);
+    });
+
+    test('cleanup removes the indicator', async () => {
+      const { win } = create(
+        'http://localhost/page.html?pagefind-highlight=odd',
+        PAGE_WITH_HEADER,
+      );
+      const cleanup = await mount(win);
+      cleanup!();
+      expect(
+        win.document.getElementById('search-highlight-container')!.innerHTML,
+      ).toBe('');
+    });
+  });
 });

@@ -189,8 +189,12 @@
   <% const documentRoot = page.documentNavigation && page.documentNavigation.ancestors[0]; %>
   <body class="<%= page.template %><% if (page.tocHtml) { %> toc-is-active<% } %><% if (page.documentNavigation) { %> document-index-is-active<% } %>" data-pagefind-meta="template[data-template]<% if (documentRoot) { %>, document_root[data-document-root]<% } %>" data-template="<%- page.template %>"<% if (documentRoot) { %> data-document-root="<%- documentRoot.title %>"<% } %>>
     <header data-pagefind-ignore>
-      <% if (isHeaderFloating) { %>
       <div class="header-controls">
+        <div id="page-update-container" class="header-indicator-container" role="status"></div>
+        <% if (site.features.search) { %>
+        <div id="search-highlight-container" class="header-indicator-container" role="status"></div>
+        <% } %>
+        <% if (isHeaderFloating) { %>
         <div id="to-top-container" class="to-top-container"></div>
         <% if (site.features.search) { %>
         <div class="search-controls" role="search">
@@ -202,8 +206,8 @@
                  disabled />
         </div>
         <% } %>
+        <% } %>
       </div>
-      <% } %>
       <% if (site.features.search) { %>
       <div id="quick-search-results" class="results-container" role="region"
            aria-label="Search results"

@@ -355,6 +355,42 @@ header > .header-controls {
   }
 }
 
+// "Page updated" and "Highlighting ..." indicators, filled in by client code
+header .header-indicator-container {
+  display: none;
+  align-items: center;
+  height: var(--header-collapsed-height);
+  white-space: nowrap;
+
+  &:has(.header-indicator) {
+    display: flex;
+  }
+}
+
+header .header-indicator {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+}
+
+header .header-indicator-text {
+  max-width: 16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  @media (width <= 400px) {
+    display: none;
+  }
+}
+
+// A static header centers the site title, so its controls sit at the right
+:root.static-header header > .header-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
 header .to-top-container {
   display: none;
   align-items: center;

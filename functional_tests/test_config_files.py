@@ -239,6 +239,6 @@ class TestConfigFileErrors:
         html = (site / 'dist' / 'index.html').read_text()
         assert '<details' not in html
         assert 'class="static-header"' in html
-        assert 'header-controls' not in html
+        assert 'id="page-update-container"' in html
         assert 'to-top-container' not in html
         assert HOME_LINK_PATTERN.search(html)

@@ -109,7 +109,7 @@ test('back across pages keeps the saved scroll when the page adds a stylesheet',
 
 test('page update refresh keeps the line target', async ({ page }) => {
   const savedScroll = await selectLineAndScrollAway(page);
-  // Report a different Last-Modified on every check so the update toast shows
+  // Report a different Last-Modified on every check so the page update indicator shows
   let version = 0;
   await page.route(`**${CODE_PAGE}`, async route => {
     if (route.request().method() !== 'HEAD') {
@@ -134,7 +134,7 @@ test('page update refresh keeps the line target', async ({ page }) => {
     el.dataset.beforeRefresh = '';
   });
 
-  const reload = page.getByRole('button', { name: 'Reload' });
+  const reload = page.getByRole('button', { name: 'Reload page' });
   await reload.click();
   await expect(reload).toBeHidden();
   await expect(page.locator('#L30[data-before-refresh]')).toHaveCount(0);

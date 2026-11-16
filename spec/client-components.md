@@ -39,8 +39,9 @@ are in `src/util.ts`.
   scrolls under a fixed header (see [Header Title](header-title.md)). Without
   a nav, only the title roll applies (see
   [Navigation](navigation.md#without-a-nav-file))
-- **Page update toast**: floating bottom toast that checks the current page
-  for newer validators and offers an in-place refresh
+- **Page update indicator**: a "Page updated" label and refresh button in the
+  header controls when the current page has newer validators; refreshes in
+  place (see [Page Update](page-update.md))
 - **Slides**: page-local presentation mode for Markdown pages with
   `slides: true`; it reads slide wrapper markup, opens from a `Present` button,
   chooses fullscreen from a `Full screen` checkbox, opens from slide-heading

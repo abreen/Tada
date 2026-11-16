@@ -29,8 +29,18 @@ function mockGlobals(overrides: Partial<import('../globals').Globals> = {}) {
 }
 
 function create(url = 'http://localhost/page?view=full') {
-  const dom = new JSDOM('<body></body>', { url, pretendToBeVisual: true });
+  const dom = new JSDOM(
+    '<body><div id="page-update-container" role="status"></div></body>',
+    { url, pretendToBeVisual: true },
+  );
   return dom.window;
+}
+
+function isShowing(win: Window) {
+  return (
+    win.document.querySelector('#page-update-container .header-indicator') !==
+    null
+  );
 }
 
 function responseWithHeaders(headers: Record<string, string>, ok = true) {
@@ -62,12 +72,20 @@ afterEach(() => {
 });
 
 describe('page-update mount', () => {
-  test('creates a floating toast container', () => {
+  test('does nothing without a header container', () => {
+    const dom = new JSDOM('<body></body>', { url: 'http://localhost/page' });
+    const fetchMock = mock(async () => responseWithHeaders({ ETag: '"v1"' }));
+    mockGlobals({ fetch: fetchMock });
+
+    expect(mount(dom.window as unknown as Window)).toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('starts with the indicator hidden', () => {
     const win = create();
     const cleanup = mount(win);
 
-    expect(win.document.querySelector('.page-update-container')).not.toBeNull();
-    expect(win.document.querySelector('.page-update-toast')).not.toBeNull();
+    expect(isShowing(win)).toBe(false);
 
     cleanup?.();
   });
@@ -79,7 +97,7 @@ describe('page-update mount', () => {
 });
 
 describe('page-update behavior', () => {
-  test('uses the first validator as the baseline without showing the toast', async () => {
+  test('uses the first validator as the baseline without showing the indicator', async () => {
     const win = create();
     mockGlobals({
       fetch: mock(async () =>
@@ -90,16 +108,12 @@ describe('page-update behavior', () => {
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     await flush();
 
-    expect(
-      win.document
-        .querySelector('.page-update-toast')
-        ?.classList.contains('is-showing'),
-    ).toBe(false);
+    expect(isShowing(win)).toBe(false);
 
     cleanup?.();
   });
 
-  test('shows the toast when the validator changes', async () => {
+  test('shows the indicator when the validator changes', async () => {
     jest.useFakeTimers();
     const win = create();
     let count = 0;
@@ -114,11 +128,7 @@ describe('page-update behavior', () => {
     await flush();
     await advancePolling(10);
 
-    expect(
-      win.document
-        .querySelector('.page-update-toast')
-        ?.classList.contains('is-showing'),
-    ).toBe(true);
+    expect(isShowing(win)).toBe(true);
 
     cleanup?.();
   });
@@ -140,11 +150,7 @@ describe('page-update behavior', () => {
     await flush();
     await advancePolling(10);
 
-    expect(
-      win.document
-        .querySelector('.page-update-toast')
-        ?.classList.contains('is-showing'),
-    ).toBe(true);
+    expect(isShowing(win)).toBe(true);
 
     cleanup?.();
   });
@@ -158,90 +164,7 @@ describe('page-update behavior', () => {
     await flush();
     await advancePolling(10);
 
-    expect(
-      win.document
-        .querySelector('.page-update-toast')
-        ?.classList.contains('is-showing'),
-    ).toBe(false);
-
-    cleanup?.();
-  });
-
-  test('dismiss hides the toast for the same detected validator', async () => {
-    jest.useFakeTimers();
-    const win = create();
-    let count = 0;
-    mockGlobals({
-      fetch: mock(async () => {
-        count += 1;
-        return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
-      }),
-    });
-
-    const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
-    await flush();
-    await advancePolling(10);
-
-    const dismiss = win.document.querySelectorAll(
-      '.page-update-toast button',
-    )[1] as HTMLButtonElement;
-    dismiss.click();
-    await advancePolling(10);
-
-    expect(
-      win.document
-        .querySelector('.page-update-toast')
-        ?.classList.contains('is-showing'),
-    ).toBe(false);
-
-    cleanup?.();
-  });
-
-  test('shows the toast again when a later validator differs from a dismissed one', async () => {
-    const win = create();
-    const visibility = { hidden: false };
-    let count = 0;
-    mockGlobals({
-      fetch: mock(async () => {
-        count += 1;
-        if (count === 1) {
-          return responseWithHeaders({ ETag: '"v1"' });
-        }
-        if (count < 4) {
-          return responseWithHeaders({ ETag: '"v2"' });
-        }
-        return responseWithHeaders({ ETag: '"v3"' });
-      }),
-      isDocumentHidden() {
-        return visibility.hidden;
-      },
-    });
-
-    const cleanup = mountPageUpdate(win, { pollIntervalMs: 1000 });
-    await flush();
-
-    win.document.dispatchEvent(new win.Event('visibilitychange'));
-    await flush();
-
-    const dismiss = win.document.querySelectorAll(
-      '.page-update-toast button',
-    )[1] as HTMLButtonElement;
-    dismiss.click();
-
-    win.document.dispatchEvent(new win.Event('visibilitychange'));
-    await flush();
-
-    visibility.hidden = true;
-    win.document.dispatchEvent(new win.Event('visibilitychange'));
-    visibility.hidden = false;
-    win.document.dispatchEvent(new win.Event('visibilitychange'));
-    await flush();
-
-    expect(
-      win.document
-        .querySelector('.page-update-toast')
-        ?.classList.contains('is-showing'),
-    ).toBe(true);
+    expect(isShowing(win)).toBe(false);
 
     cleanup?.();
   });
@@ -270,9 +193,10 @@ describe('page-update behavior', () => {
     await flush();
     await advancePolling(10);
 
-    const reload = win.document.querySelectorAll(
-      '.page-update-toast button',
-    )[0] as HTMLButtonElement;
+    const reload = win.document.querySelector(
+      '#page-update-container button',
+    ) as HTMLButtonElement;
+    expect(reload.getAttribute('aria-label')).toBe('Reload page');
     reload.click();
     await flush();
 
@@ -332,26 +256,40 @@ describe('page-update behavior', () => {
     await flush();
     await advancePolling(10);
 
-    expect(
-      win.document
-        .querySelector('.page-update-toast')
-        ?.classList.contains('is-showing'),
-    ).toBe(true);
+    expect(isShowing(win)).toBe(true);
 
     win.history.pushState({}, '', '/other');
     win.dispatchEvent(new win.Event(NAVIGATION_EVENT));
     await flush();
 
-    expect(
-      win.document
-        .querySelector('.page-update-toast')
-        ?.classList.contains('is-showing'),
-    ).toBe(false);
+    expect(isShowing(win)).toBe(false);
 
     cleanup?.();
   });
 
-  test('cleanup removes the toast container', () => {
+  test('cleanup removes the indicator', async () => {
+    jest.useFakeTimers();
+    const win = create();
+    let count = 0;
+    mockGlobals({
+      fetch: mock(async () => {
+        count += 1;
+        return responseWithHeaders({ ETag: count === 1 ? '"v1"' : '"v2"' });
+      }),
+    });
+
+    const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
+    await flush();
+    await advancePolling(10);
+    expect(isShowing(win)).toBe(true);
+
+    cleanup?.();
+
+    expect(isShowing(win)).toBe(false);
+    expect(win.document.getElementById('page-update-container')).not.toBeNull();
+  });
+
+  test('cleanup before an update leaves the container empty', () => {
     const win = create();
     mockGlobals({
       fetch: mock(async () => responseWithHeaders({ ETag: '"v1"' })),
@@ -360,7 +298,9 @@ describe('page-update behavior', () => {
     const cleanup = mountPageUpdate(win, { pollIntervalMs: 10 });
     cleanup?.();
 
-    expect(win.document.querySelector('.page-update-container')).toBeNull();
+    expect(
+      win.document.getElementById('page-update-container')!.innerHTML,
+    ).toBe('');
   });
 });
 
@@ -390,7 +330,7 @@ test('adopts navigation GET validators without an immediate HEAD', async () => {
     method: 'HEAD',
     cache: 'no-cache',
   });
-  expect(win.document.querySelector('.is-showing')).toBeNull();
+  expect(isShowing(win)).toBe(false);
   cleanup?.();
 });
 
@@ -414,10 +354,10 @@ test('discards stale checks across A to B to A and suppresses queued baseline ch
   pending.resolve(responseWithHeaders({ ETag: '"stale"' }));
   await flush();
   expect(fetchMock).toHaveBeenCalledTimes(1);
-  expect(win.document.querySelector('.is-showing')).toBeNull();
+  expect(isShowing(win)).toBe(false);
   await advancePolling(100);
   expect(fetchMock).toHaveBeenCalledTimes(2);
-  expect(win.document.querySelector('.is-showing')).not.toBeNull();
+  expect(isShowing(win)).toBe(true);
   cleanup?.();
 });
 
@@ -433,7 +373,7 @@ test('navigation without validators defers baseline checking to the normal poll'
   expect(fetchMock).toHaveBeenCalledTimes(1);
   await advancePolling(100);
   expect(fetchMock).toHaveBeenCalledTimes(2);
-  expect(win.document.querySelector('.is-showing')).toBeNull();
+  expect(isShowing(win)).toBe(false);
   cleanup?.();
 });
 

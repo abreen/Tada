@@ -81,7 +81,7 @@ scripts load before it (see [Author scripts](#author-scripts)). Other per-page
 components mount after the transition finishes.
 
 Persistent components (header, search, back-to-top, navigate) mount
-once at startup. The page update toast also stays mounted and resets its
+once at startup. The page update indicator also stays mounted and resets its
 tracking state when navigation completes, adopting validators from the successful
 HTML GET. The `tada:navigation` event includes `{ path, validators }` for clicks,
 Back/Forward, and in-place refreshes. Per-page components are torn down and
@@ -169,7 +169,7 @@ fetched page is missing the Tada generator meta tag or it was generated
 by a different Tada version.
 
 The same fetch, swap, and fallback path is also used when the page update
-toast refreshes the current URL in place. In that case, navigation preserves
+indicator refreshes the current URL in place. In that case, navigation preserves
 the current scroll position, does not push a new history entry, and does not
 run a View Transition.
 

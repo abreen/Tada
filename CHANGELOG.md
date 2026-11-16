@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Changed: The page update notice is now a compact "Page updated" label with a refresh button in the header
+- Removed: The page update notice can no longer be dismissed
+- Added: A "Highlighting" label in the header after following a search result, with a button that clears the highlights
+
 ## 1.22.7
 
 - Fixed: Slide annotations line up with the pointer when a scrollbar gutter is reserved
