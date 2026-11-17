@@ -1,0 +1,56 @@
+name: PR preview
+
+permissions:
+  contents: read
+  deployments: write
+
+on:
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-preview:
+    # Secrets are not available to pull requests from forks
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'tada-preview' }}
+      ALIAS: pr-${{ github.event.pull_request.number }}
+
+    environment:
+      name: preview
+      url: https://pr-${{ github.event.pull_request.number }}.${{ vars.CLOUDFLARE_PAGES_PROJECT || 'tada-preview' }}.pages.dev
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Use Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+    - run: bun install
+
+    - name: Initialize example site
+      run: >
+        bun run bin/tada.ts init example --no-interactive
+        --prod-base "https://$ALIAS.$PROJECT.pages.dev"
+        --prod-base-path /
+
+    - name: Build example site
+      run: ../bin/tada.ts prod
+      working-directory: example
+
+    - name: Deploy to Cloudflare Pages
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      run: >
+        bunx wrangler@4.156.0 pages deploy example/dist-prod/v1/
+        --project-name "$PROJECT"
+        --branch "$ALIAS"
+        --commit-hash "${{ github.event.pull_request.head.sha }}"
+        --commit-dirty=true
